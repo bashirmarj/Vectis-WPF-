@@ -297,7 +297,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
             // Environment & Lighting
             envMapIntensity={0.0}
             // Shading & Rendering
-            flatShading={false}
+            flatShading={true}
             side={THREE.DoubleSide}
             toneMapped={true}
           />
