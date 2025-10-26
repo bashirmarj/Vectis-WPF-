@@ -180,7 +180,15 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       boundingBox.center[2] + distance * 0.707,
     ] as [number, number, number];
   }, [boundingBox]);
-
+  // Dynamic fog distances based on bounding box
+  const fogDistances = useMemo(() => {
+    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
+    const cameraDistance = maxDim * 1.5;
+    return {
+      near: cameraDistance * 2,
+      far: cameraDistance * 4,
+    };
+  }, [boundingBox]);
   const handleViewChange = useCallback(
     (viewType: "front" | "top" | "side" | "isometric" | "home") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -366,13 +374,21 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 powerPreference: "high-performance",
               }}
               onCreated={({ gl }) => {
-                gl.domElement.addEventListener('webglcontextlost', (e) => {
-                  e.preventDefault();
-                  console.warn('WebGL context lost');
-                }, false);
-                gl.domElement.addEventListener('webglcontextrestored', () => {
-                  console.log('WebGL context restored');
-                }, false);
+                gl.domElement.addEventListener(
+                  "webglcontextlost",
+                  (e) => {
+                    e.preventDefault();
+                    console.warn("WebGL context lost");
+                  },
+                  false,
+                );
+                gl.domElement.addEventListener(
+                  "webglcontextrestored",
+                  () => {
+                    console.log("WebGL context restored");
+                  },
+                  false,
+                );
               }}
             >
               <color attach="background" args={["#f8f9fa"]} />
