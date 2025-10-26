@@ -581,43 +581,39 @@ def compute_smooth_vertex_normals(vertices, indices):
 
 def tessellate_shape(shape):
     """
-    === SECTION 1: MESH GENERATION ONLY ===
-    Generate display mesh with adaptive quality.
-    NO color classification here - purely geometric mesh creation.
+    Create ultra-high-quality mesh using GLOBAL adaptive tessellation.
+    Uses industry-standard 12-degree angular deflection for professional CAD quality.
+    
+    This is the CORRECTED VERSION that eliminates horizontal lines on curved surfaces.
     """
     try:
-        bbox_diagonal, bbox_coords = calculate_bbox_diagonal(shape)
-        base_deflection = min(bbox_diagonal * 0.008, 0.2)
+        # Calculate bounding box for adaptive tessellation
+        diagonal, bbox_coords = calculate_bbox_diagonal(shape)
         
-        logger.info(f"🔧 Tessellation: diagonal={bbox_diagonal:.2f}mm, deflection={base_deflection:.4f}mm")
+        # Professional CAD-quality tessellation parameters (SolidWorks/Fusion 360/Onshape standard)
+        linear_deflection = diagonal * 0.0001  # 0.01% of diagonal - very fine tessellation
+        angular_deflection = 12.0  # ✅ 12 DEGREES - Industry standard for smooth curved surfaces
         
-        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-        while face_explorer.More():
-            face = topods.Face(face_explorer.Current())
-            surface = BRepAdaptor_Surface(face)
-            surf_type = surface.GetType()
-            
-            if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, 
-                           GeomAbs_Torus, GeomAbs_BSplineSurface, GeomAbs_BezierSurface]:
-                face_deflection = base_deflection / 8.0
-                angular_deflection = 0.15
-            else:
-                face_deflection = base_deflection
-                angular_deflection = 0.5
-            
-            try:
-                face_mesh = BRepMesh_IncrementalMesh(face, face_deflection, False, angular_deflection, True)
-                face_mesh.Perform()
-            except Exception as e:
-                logger.warning(f"Face tessellation failed: {e}")
-            
-            face_explorer.Next()
-
+        logger.info(f"🎨 Using professional tessellation (linear={linear_deflection:.4f}mm, angular={angular_deflection}°)...")
+        
+        # GLOBAL tessellation - ONE PASS for entire shape
+        # This is critical to avoid discontinuities at face boundaries
+        mesher = BRepMesh_IncrementalMesh(shape, linear_deflection, False, angular_deflection, True)
+        mesher.Perform()
+        
+        if not mesher.IsDone():
+            logger.warning("Tessellation did not complete successfully, trying with coarser settings...")
+            linear_deflection = diagonal * 0.001
+            angular_deflection = 15.0
+            mesher = BRepMesh_IncrementalMesh(shape, linear_deflection, False, angular_deflection, True)
+            mesher.Perform()
+        
+        # Calculate bbox center for normal orientation
         bbox = Bnd_Box()
         brepbndlib.Add(shape, bbox)
         xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
         cx, cy, cz = (xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2
-
+        
         logger.info("📊 Extracting mesh geometry (no classification)...")
         
         vertices, indices, normals = [], [], []
@@ -626,7 +622,7 @@ def tessellate_shape(shape):
         
         face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
         face_idx = 0
-
+        
         while face_explorer.More():
             face = face_explorer.Current()
             loc = TopLoc_Location()
@@ -635,7 +631,7 @@ def tessellate_shape(shape):
                 face_explorer.Next()
                 face_idx += 1
                 continue
-
+            
             transform = loc.Transformation()
             surface = BRepAdaptor_Surface(face)
             reversed_face = face.Orientation() == 1
@@ -656,7 +652,7 @@ def tessellate_shape(shape):
                 vertices.extend([p.X(), p.Y(), p.Z()])
                 face_vertices.append(current_index)
                 current_index += 1
-
+            
             face_start_index = len(indices)
             
             for i in range(1, triangulation.NbTriangles() + 1):
@@ -694,41 +690,39 @@ def tessellate_shape(shape):
                 'triangle_count': (len(indices) - face_start_index) // 3,
                 'face_object': face
             })
-
+            
             face_explorer.Next()
             face_idx += 1
-
+        
         vertex_count = len(vertices) // 3
         triangle_count = len(indices) // 3
         logger.info(f"✅ Mesh generation complete: {vertex_count} vertices, {triangle_count} triangles")
         
-        # Compute smooth vertex normals for professional CAD rendering
-        # This eliminates horizontal banding on curved surfaces
+        # PASS 2: Generate PURE SMOOTH NORMALS (no hybrid - professional CAD standard)
+        # This ensures seamless transitions between all surface types
+        logger.info("🎨 Computing professional smooth vertex normals...")
         smooth_normals = compute_smooth_vertex_normals(vertices, indices)
         logger.info(f"✅ Smooth normals computed for {vertex_count} vertices")
         
         return {
             "vertices": vertices,
             "indices": indices,
-            "normals": normals,  # Keep original flat normals for backward compatibility
-            "smooth_normals": smooth_normals,  # NEW: Add smooth normals for curved surfaces
+            "normals": smooth_normals,  # ✅ Use smooth normals as primary normals
             "face_data": face_data,
             "bbox": (xmin, ymin, zmin, xmax, ymax, zmax),
             "triangle_count": triangle_count,
         }
-
+    
     except Exception as e:
         logger.error(f"Tessellation error: {e}")
         return {
             "vertices": [],
             "indices": [],
             "normals": [],
-            "smooth_normals": [],  # Add for consistency
             "face_data": [],
             "bbox": (0, 0, 0, 0, 0, 0),
             "triangle_count": 0,
         }
-
 
 def classify_mesh_faces(mesh_data, shape):
     """
