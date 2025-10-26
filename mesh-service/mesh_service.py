@@ -119,7 +119,6 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             #
             # For a hole to have N segments, element size must be: (π * diameter) / N
             # Conservative: Ensure even 3mm holes get proper segmentation
-            import math
             min_feature_diameter = 3.0  # mm (assume smallest holes are 3mm)
             required_element_size_for_curvature = (math.pi * min_feature_diameter) / preset['curvature_points']
             
@@ -224,7 +223,7 @@ def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
         
         v1 = np.array(vertices[i1*3:i1*3+3])
         v2 = np.array(vertices[i2*3:i2*3+3])
-        v3 = np.array(vertices[i3*3:i3+3])
+        v3 = np.array(vertices[i3*3:i3*3+3])
         
         edge1 = v2 - v1
         edge2 = v3 - v1
