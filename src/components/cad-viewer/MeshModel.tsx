@@ -295,7 +295,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const mat = new THREE.LineBasicMaterial({
             color: "#000000",
             linewidth: 2.5,
-            toneMapped: false,
+            toneMapped: true,
           });
           wireframeEdgesRef.current.add(new THREE.LineSegments(geo, mat));
         }
