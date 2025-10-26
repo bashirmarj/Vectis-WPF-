@@ -44,7 +44,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
 
-  const { measurementMode, setMeasurementMode, clearMeasurements, measurements } = useMeasurementStore();
+  const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -296,15 +296,15 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         setShowEdges(!showEdges);
       } else if (e.code === "Escape") {
         e.preventDefault();
-        if (measurementMode) {
-          setMeasurementMode(null);
+        if (activeTool) {
+          setActiveTool(null);
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [handleFitView, showEdges, measurementMode, setMeasurementMode]);
+  }, [handleFitView, showEdges, activeTool, setActiveTool]);
 
   return (
     <div className="relative w-full h-full">
@@ -330,10 +330,10 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               onDisplayModeChange={setDisplayMode}
               showEdges={showEdges}
               onToggleEdges={() => setShowEdges(!showEdges)}
-              measurementMode={measurementMode}
-              onMeasurementModeChange={setMeasurementMode}
+              measurementMode={activeTool}
+              onMeasurementModeChange={setActiveTool}
               measurementCount={measurements.length}
-              onClearMeasurements={clearMeasurements}
+              onClearMeasurements={clearAllMeasurements}
               sectionPlane={sectionPlane}
               onSectionPlaneChange={setSectionPlane}
               sectionPosition={sectionPosition}
@@ -363,6 +363,16 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 antialias: true,
                 alpha: true,
                 preserveDrawingBuffer: true,
+                powerPreference: "high-performance",
+              }}
+              onCreated={({ gl }) => {
+                gl.domElement.addEventListener('webglcontextlost', (e) => {
+                  e.preventDefault();
+                  console.warn('WebGL context lost');
+                }, false);
+                gl.domElement.addEventListener('webglcontextrestored', () => {
+                  console.log('WebGL context restored');
+                }, false);
               }}
             >
               <color attach="background" args={["#f8f9fa"]} />
