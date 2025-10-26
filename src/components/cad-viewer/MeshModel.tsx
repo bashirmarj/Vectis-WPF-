@@ -377,7 +377,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
             color={topologyColors ? "#ffffff" : SOLID_COLOR}
             vertexColors={topologyColors}
             flatShading={topologyColors}
-            toneMapped={false}
+            toneMapped={true}
           />
         </mesh>
 
