@@ -355,7 +355,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         clipIntersection: true,
         metalness: 0.3,
         roughness: 0.8,
-        envMapIntensity: 1.2,
+        envMapIntensity: 0.8,
       };
 
       if (displayStyle === "wireframe") {
