@@ -285,22 +285,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
       <group>
         {/* Mesh surface (hidden in wireframe mode) */}
         <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
-          <meshPhysicalMaterial
-            {...materialProps}
-            color={SOLID_COLOR}
-            // PBR Properties
-            metalness={0.05}
-            roughness={0.85}
-            // Physical Properties (unique to meshPhysicalMaterial)
-            clearcoat={0.0}
-            clearcoatRoughness={1.0}
-            // Environment & Lighting
-            envMapIntensity={0.3}
-            // Shading & Rendering
-            flatShading={false}
-            side={THREE.DoubleSide}
-            toneMapped={false}
-          />
+          <meshBasicMaterial {...materialProps} color={SOLID_COLOR} side={THREE.DoubleSide} toneMapped={false} />
         </mesh>
 
         {/* Dynamic edges for solid mode */}
