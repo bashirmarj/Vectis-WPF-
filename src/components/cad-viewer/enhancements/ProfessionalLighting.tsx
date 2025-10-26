@@ -37,7 +37,7 @@ export function ProfessionalLighting({
         args={[
           "#ffffff", // Sky color (cool white)
           "#444444", // Ground color (warm gray)
-          0.3 * intensity,
+          0.9 * intensity,
         ]}
       />
 
