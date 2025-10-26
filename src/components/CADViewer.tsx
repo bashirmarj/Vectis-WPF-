@@ -49,6 +49,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<THREE.Mesh>(null);
+  const mainViewportRef = useRef<HTMLDivElement>(null);
   const orientationViewportRef = useRef<HTMLDivElement>(null);
 
   // File extension detection
@@ -358,10 +359,13 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* Orientation Cube Viewport */}
+            {/* Main viewport - fills entire area */}
+            <div ref={mainViewportRef} className="absolute inset-0" />
+
+            {/* Orientation Cube Viewport - overlay */}
             <div 
               ref={orientationViewportRef}
-              className="absolute top-4 right-4 w-[140px] h-[140px] border rounded bg-background/80 backdrop-blur-sm shadow-lg"
+              className="absolute top-4 right-4 w-[140px] h-[140px] border rounded bg-background/80 backdrop-blur-sm shadow-lg z-10"
             />
 
             <Canvas
@@ -392,52 +396,55 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
             >
               <color attach="background" args={["#f8f9fa"]} />
 
-              <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
+              {/* Main Scene View */}
+              <View index={0} track={mainViewportRef as React.MutableRefObject<HTMLElement>}>
+                <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
-              <Suspense fallback={null}>
-                {/* ✅ Use ProfessionalLighting instead of missing LightingRig */}
-                <ProfessionalLighting intensity={1.0} enableShadows={shadowsEnabled} shadowQuality="high" />
+                <Suspense fallback={null}>
+                  {/* ✅ Use ProfessionalLighting instead of missing LightingRig */}
+                  <ProfessionalLighting intensity={1.0} enableShadows={shadowsEnabled} shadowQuality="high" />
 
-                {/* ✅ FIXED: Convert null to "none" for MeshModel */}
-                <MeshModel
-                  ref={meshRef}
-                  meshData={meshData}
-                  displayStyle={displayMode}
-                  showEdges={showEdges}
-                  sectionPlane={sectionPlane || "none"}
-                  sectionPosition={sectionPosition}
-                />
+                  {/* ✅ FIXED: Convert null to "none" for MeshModel */}
+                  <MeshModel
+                    ref={meshRef}
+                    meshData={meshData}
+                    displayStyle={displayMode}
+                    showEdges={showEdges}
+                    sectionPlane={sectionPlane || "none"}
+                    sectionPosition={sectionPosition}
+                  />
 
-                <DimensionAnnotations boundingBox={boundingBox} />
+                  <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* ✅ Removed VisualEffects - not needed for basic rendering */}
+                  {/* ✅ Removed VisualEffects - not needed for basic rendering */}
 
-                <TrackballControls
-                  ref={controlsRef}
-                  makeDefault
-                  target={boundingBox.center}
-                  dynamicDampingFactor={0.2}
-                  minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
-                  maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
-                  rotateSpeed={1.8}
-                  panSpeed={0.8}
-                  zoomSpeed={1.2}
-                  staticMoving={false}
-                  noPan={false}
-                  noRotate={false}
-                />
-              </Suspense>
+                  <TrackballControls
+                    ref={controlsRef}
+                    makeDefault
+                    target={boundingBox.center}
+                    dynamicDampingFactor={0.2}
+                    minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
+                    maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
+                    rotateSpeed={1.8}
+                    panSpeed={0.8}
+                    zoomSpeed={1.2}
+                    staticMoving={false}
+                    noPan={false}
+                    noRotate={false}
+                  />
+                </Suspense>
 
-              <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
-                <GizmoViewport
-                  axisColors={["#ff0000", "#00ff00", "#0000ff"]}
-                  labelColor="white"
-                  labels={["X", "Y", "Z"]}
-                />
-              </GizmoHelper>
+                <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+                  <GizmoViewport
+                    axisColors={["#ff0000", "#00ff00", "#0000ff"]}
+                    labelColor="white"
+                    labels={["X", "Y", "Z"]}
+                  />
+                </GizmoHelper>
+              </View>
 
               {/* Orientation Cube View */}
-              <View track={orientationViewportRef as React.MutableRefObject<HTMLElement>}>
+              <View index={1} track={orientationViewportRef as React.MutableRefObject<HTMLElement>}>
                 <PerspectiveCamera makeDefault={false} position={[5, 5, 5]} fov={50} />
                 <OrbitControls enableZoom={false} enablePan={false} />
                 <OrientationCubeMesh onCubeClick={handleCubeClick} displayMode={displayMode} />
