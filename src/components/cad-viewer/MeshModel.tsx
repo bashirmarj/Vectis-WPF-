@@ -18,31 +18,124 @@ interface MeshModelProps {
   showEdges: boolean;
   showHiddenEdges?: boolean;
   displayStyle?: "solid" | "wireframe" | "translucent";
+  topologyColors?: boolean;
 }
 
 // Professional solid color for CAD rendering
-const SOLID_COLOR = "#FF6B6B"; // Solid red - classic CAD color
+const SOLID_COLOR = "#CCCCCC"; // Light gray
+
+// Fusion 360 Analysis colors
+const TOPOLOGY_COLORS = {
+  internal: "#FF6B6B",
+  cylindrical: "#FF6B6B",
+  planar: "#FF6B6B",
+  external: "#FF6B6B",
+  through: "#FF6B6B",
+  default: "#FF6B6B",
+};
 
 export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
-  ({ meshData, sectionPlane, sectionPosition, showEdges, showHiddenEdges = false, displayStyle = "solid" }, ref) => {
+  (
+    {
+      meshData,
+      sectionPlane,
+      sectionPosition,
+      showEdges,
+      showHiddenEdges = false,
+      displayStyle = "solid",
+      topologyColors = true,
+    },
+    ref,
+  ) => {
     const { camera } = useThree();
     const internalMeshRef = useRef<THREE.Mesh>(null);
     const meshRef = (ref as React.RefObject<THREE.Mesh>) || internalMeshRef;
     const dynamicEdgesRef = useRef<THREE.Group>(null);
     const wireframeEdgesRef = useRef<THREE.Group>(null);
 
-    // Create indexed geometry with smooth normals
+    // Create single unified geometry for professional solid rendering
     const geometry = useMemo(() => {
       const geo = new THREE.BufferGeometry();
 
-      // Use indexed geometry for proper normal calculation
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(meshData.vertices, 3));
-      geo.setIndex(meshData.indices);
-      geo.setAttribute("normal", new THREE.Float32BufferAttribute(meshData.normals, 3));
+      if (!topologyColors) {
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(meshData.vertices, 3));
+        geo.setIndex(meshData.indices);
+        geo.setAttribute("normal", new THREE.Float32BufferAttribute(meshData.normals, 3));
+        geo.computeVertexNormals();
+        geo.normalizeNormals();
+      } else {
+        const triangleCount = meshData.indices.length / 3;
+        const positions = new Float32Array(triangleCount * 9);
+
+        for (let i = 0; i < triangleCount; i++) {
+          const idx0 = meshData.indices[i * 3];
+          const idx1 = meshData.indices[i * 3 + 1];
+          const idx2 = meshData.indices[i * 3 + 2];
+
+          positions[i * 9 + 0] = meshData.vertices[idx0 * 3];
+          positions[i * 9 + 1] = meshData.vertices[idx0 * 3 + 1];
+          positions[i * 9 + 2] = meshData.vertices[idx0 * 3 + 2];
+
+          positions[i * 9 + 3] = meshData.vertices[idx1 * 3];
+          positions[i * 9 + 4] = meshData.vertices[idx1 * 3 + 1];
+          positions[i * 9 + 5] = meshData.vertices[idx1 * 3 + 2];
+
+          positions[i * 9 + 6] = meshData.vertices[idx2 * 3];
+          positions[i * 9 + 7] = meshData.vertices[idx2 * 3 + 1];
+          positions[i * 9 + 8] = meshData.vertices[idx2 * 3 + 2];
+        }
+
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      }
 
       geo.computeBoundingSphere();
       return geo;
-    }, [meshData]);
+    }, [meshData, topologyColors]);
+
+    // Apply vertex colors
+    useEffect(() => {
+      if (!geometry) return;
+
+      if (topologyColors) {
+        if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
+          const triangleCount = meshData.indices.length / 3;
+          const colors = new Float32Array(triangleCount * 9);
+
+          for (let triIdx = 0; triIdx < triangleCount; triIdx++) {
+            const vertexIdx = meshData.indices[triIdx * 3];
+            const faceType = meshData.vertex_colors[vertexIdx] || "default";
+            const colorHex = TOPOLOGY_COLORS[faceType as keyof typeof TOPOLOGY_COLORS] || TOPOLOGY_COLORS.default;
+            const color = new THREE.Color(colorHex);
+
+            for (let v = 0; v < 3; v++) {
+              colors[triIdx * 9 + v * 3 + 0] = color.r;
+              colors[triIdx * 9 + v * 3 + 1] = color.g;
+              colors[triIdx * 9 + v * 3 + 2] = color.b;
+            }
+          }
+
+          geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+          geometry.attributes.color.needsUpdate = true;
+        } else {
+          const triangleCount = meshData.indices.length / 3;
+          const colors = new Float32Array(triangleCount * 9);
+          const silverColor = new THREE.Color("#CCCCCC");
+
+          for (let i = 0; i < triangleCount * 3; i++) {
+            colors[i * 3] = silverColor.r;
+            colors[i * 3 + 1] = silverColor.g;
+            colors[i * 3 + 2] = silverColor.b;
+          }
+
+          geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+          geometry.attributes.color.needsUpdate = true;
+        }
+      } else {
+        if (geometry.attributes.color) {
+          geometry.deleteAttribute("color");
+        }
+      }
+    }, [geometry, topologyColors, meshData]);
 
     // Pre-compute edge connectivity for ALL edges (used by both modes)
     const edgeMap = useMemo(() => {
@@ -139,7 +232,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           return;
         }
 
-        // Sharp feature edges & silhouette edges (2 adjacent faces)
+        // Silhouette edges (2 adjacent faces with opposite facing)
         if (edgeData.normals.length === 2) {
           const n1 = edgeData.normals[0];
           const n2 = edgeData.normals[1];
@@ -150,18 +243,8 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const dot1 = n1.dot(viewDir);
           const dot2 = n2.dot(viewDir);
 
-          // Calculate angle between normals for sharp features
-          const dotProduct = n1.dot(n2);
-          const angle = Math.acos(Math.max(-1, Math.min(1, dotProduct))) * (180 / Math.PI);
-
-          // Show sharp feature edges (angle > 30°)
-          const isSharpFeature = angle > 30;
-
-          // Show silhouette edges (one face visible, one hidden)
-          const isSilhouette = (dot1 > 0.01 && dot2 < -0.01) || (dot1 < -0.01 && dot2 > 0.01);
-
-          // Render edge if it's sharp AND at least one face is visible, OR if it's a silhouette
-          if ((isSharpFeature && (dot1 > 0 || dot2 > 0)) || isSilhouette) {
+          // Silhouette: one face visible, one hidden
+          if ((dot1 > 0.01 && dot2 < -0.01) || (dot1 < -0.01 && dot2 > 0.01)) {
             visibleEdges.push(v1World.x, v1World.y, v1World.z, v2World.x, v2World.y, v2World.z);
           }
         }
@@ -185,9 +268,9 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const mat = new THREE.LineBasicMaterial({
             color: "#000000",
             linewidth: 1.5,
-            toneMapped: true,
+            toneMapped: false,
             depthTest: true,
-            depthWrite: true,
+            depthWrite: false,
           });
           dynamicEdgesRef.current.add(new THREE.LineSegments(geo, mat));
         }
@@ -266,9 +349,13 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
 
     const materialProps = useMemo(() => {
       const base = {
+        color: "#5b9bd5",
         side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
         clipIntersection: false,
+        metalness: 0,
+        roughness: 0.8,
+        envMapIntensity: 0,
       };
 
       if (displayStyle === "wireframe") {
@@ -285,7 +372,13 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
       <group>
         {/* Mesh surface (hidden in wireframe mode) */}
         <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
-          <meshBasicMaterial {...materialProps} color={SOLID_COLOR} side={THREE.DoubleSide} toneMapped={false} />
+          <meshStandardMaterial
+            {...materialProps}
+            color={topologyColors ? "#ffffff" : SOLID_COLOR}
+            vertexColors={topologyColors}
+            flatShading={topologyColors}
+            toneMapped={false}
+          />
         </mesh>
 
         {/* Dynamic edges for solid mode */}
