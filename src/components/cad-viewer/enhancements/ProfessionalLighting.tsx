@@ -17,6 +17,8 @@ interface ProfessionalLightingProps {
  * - Rim Light 1: Edge definition (back-left-top)
  * - Rim Light 2: Edge definition (back-right-top)
  * - Hemisphere: Ambient base lighting (sky-ground gradient)
+ *
+ * FIXED VERSION: Balanced lighting that doesn't amplify geometry artifacts
  */
 export function ProfessionalLighting({
   intensity = 1.0,
@@ -41,10 +43,10 @@ export function ProfessionalLighting({
         ]}
       />
 
-      {/* Key Light - Main illumination (front-top-right) */}
+      {/* Key Light - Main illumination (front-top-right) - SOFTER */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={1.2 * intensity}
+        intensity={0.8 * intensity}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
@@ -57,8 +59,8 @@ export function ProfessionalLighting({
         shadow-bias={-0.0001}
       />
 
-      {/* Fill Light - Softens shadows (front-left, lower intensity) */}
-      <directionalLight position={[-4, 4, 4]} intensity={0.5 * intensity} castShadow={false} />
+      {/* Fill Light - Softens shadows (front-left) - BRIGHTER */}
+      <directionalLight position={[-4, 4, 4]} intensity={0.7 * intensity} castShadow={false} />
 
       {/* Rim Light 1 - Edge definition (back-left-top) */}
       <directionalLight
