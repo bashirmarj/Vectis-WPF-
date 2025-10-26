@@ -1,4 +1,6 @@
 import React from "react";
+import { useThree } from "@react-three/fiber";
+import * as THREE from "three";
 
 interface ProfessionalLightingProps {
   intensity?: number;
@@ -7,37 +9,70 @@ interface ProfessionalLightingProps {
 }
 
 /**
- * Simplified Professional Lighting System
+ * Professional 5-Light PBR Lighting System
  *
- * Uses proven Three.js lighting configuration
+ * Based on industry-standard photography/3D lighting:
+ * - Key Light: Main illumination (front-top-right)
+ * - Fill Light: Softens shadows (front-left, lower intensity)
+ * - Rim Light 1: Edge definition (back-left-top)
+ * - Rim Light 2: Edge definition (back-right-top)
+ * - Hemisphere: Ambient base lighting (sky-ground gradient)
  */
 export function ProfessionalLighting({
   intensity = 1.0,
   enableShadows = true,
   shadowQuality = "medium",
 }: ProfessionalLightingProps) {
+  // Shadow map size based on quality
+  const shadowMapSize = {
+    low: 512,
+    medium: 1024,
+    high: 2048,
+  }[shadowQuality];
+
   return (
     <>
-      {/* Hemisphere Light - Ambient base */}
-      <hemisphereLight args={["#ffffff", "#444444", 0.3 * intensity]} />
+      {/* Hemisphere Light - Ambient base (sky + ground) */}
+      <hemisphereLight
+        args={[
+          "#ffffff", // Sky color (cool white)
+          "#444444", // Ground color (warm gray)
+          0.3 * intensity,
+        ]}
+      />
 
-      {/* Key Light - Main illumination */}
+      {/* Key Light - Main illumination (front-top-right) */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={0.8 * intensity} // ← CHANGED from 1.2 (softer to reduce edge highlighting)
+        intensity={1.2 * intensity}
         castShadow={enableShadows}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
+        shadow-camera-near={0.1}
+        shadow-camera-far={50}
+        shadow-bias={-0.0001}
       />
 
-      {/* Fill Light - Softens shadows */}
+      {/* Fill Light - Softens shadows (front-left, lower intensity) */}
+      <directionalLight position={[-4, 4, 4]} intensity={0.5 * intensity} castShadow={false} />
+
+      {/* Rim Light 1 - Edge definition (back-left-top) */}
       <directionalLight
-        position={[-4, 4, 4]}
-        intensity={0.7 * intensity} // ← CHANGED from 0.5 (brighter to soften harsh edges)
+        position={[-5, 6, -5]}
+        intensity={0.6 * intensity}
+        castShadow={enableShadows && shadowQuality !== "low"}
+        shadow-mapSize-width={shadowMapSize / 2}
+        shadow-mapSize-height={shadowMapSize / 2}
       />
 
-      {/* Rim Light - Edge definition */}
-      <directionalLight position={[-5, 6, -5]} intensity={0.6 * intensity} />
+      {/* Rim Light 2 - Edge definition (back-right-top) */}
+      <directionalLight position={[5, 6, -5]} intensity={0.6 * intensity} castShadow={false} />
 
-      {/* Ambient light to prevent pure black shadows */}
+      {/* Subtle ambient light to prevent pure black shadows */}
       <ambientLight intensity={0.15 * intensity} />
     </>
   );
