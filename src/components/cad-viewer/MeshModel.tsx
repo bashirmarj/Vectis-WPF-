@@ -247,7 +247,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
           <meshStandardMaterial
             {...materialProps}
-            color={topologyColors ? "#ffffff" : SOLID_COLOR}
+            color={topologyColors && meshData.vertex_colors?.length > 0 ? "#ffffff" : "#FF6B6B"}
             vertexColors={topologyColors}
             flatShading={false} // ✅ ALWAYS smooth shading - backend normals are smooth
             toneMapped={false}
