@@ -952,13 +952,6 @@ def analyze_cad():
         logger.info("🎨 Generating display mesh with 12° angular deflection...")
         mesh_data = tessellate_shape(shape)
 
-        # Face classification disabled for performance (~80% speedup)
-        # Default all faces to "external" for fast processing
-        num_vertices = len(mesh_data['vertices']) // 3
-        vertex_colors = ["external"] * num_vertices
-        mesh_data["vertex_colors"] = vertex_colors
-        logger.info("⚡ Face classification skipped (performance mode)")
-
         logger.info("📐 Extracting significant BREP edges with 30 segments/circle...")
         feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         mesh_data["feature_edges"] = feature_edges
