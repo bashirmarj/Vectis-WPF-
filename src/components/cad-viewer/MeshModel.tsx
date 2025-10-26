@@ -353,9 +353,9 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
         clipIntersection: true,
-        metalness: 0.9,
+        metalness: 1.9,
         roughness: 0.8,
-        envMapIntensity: 0.9,
+        envMapIntensity: 0.2,
       };
 
       if (displayStyle === "wireframe") {
