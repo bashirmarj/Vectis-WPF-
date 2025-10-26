@@ -442,12 +442,13 @@ def tessellate_shape(shape):
         
         face_exp.Next()
     
-    # PASS 2: Hybrid normal generation (flat for planes, smooth for cylinders)
+    # PASS 2: Generate PURE SMOOTH NORMALS (no hybrid - professional CAD standard)
+    # This ensures seamless transitions between all surface types
     vertex_normals = [0.0] * len(vertices)
-    vertex_normal_counts = [0] * (len(vertices) // 3)  # Track how many normals averaged per vertex
+    vertex_normal_counts = [0] * (len(vertices) // 3)
     num_vertices = len(vertices) // 3
     
-    # First pass: Accumulate normals for each vertex
+    # First pass: Accumulate normals for ALL vertices (no surface type discrimination)
     for tri_idx in range(len(indices) // 3):
         idx0, idx1, idx2 = indices[tri_idx*3], indices[tri_idx*3+1], indices[tri_idx*3+2]
         
@@ -466,29 +467,16 @@ def tessellate_shape(shape):
         else:
             face_normal = np.array([0, 0, 1])
         
-        # Get surface type for this triangle
-        surface_type = face_surface_types.get(tri_idx, "cylinder")
-        
-        if surface_type == "plane":
-            # FLAT SHADING: Assign face normal directly (no averaging)
-            for idx in [idx0, idx1, idx2]:
-                vertex_normals[idx*3] = face_normal[0]
-                vertex_normals[idx*3+1] = face_normal[1]
-                vertex_normals[idx*3+2] = face_normal[2]
-                vertex_normal_counts[idx] = -1  # Mark as "locked" - don't average
-        else:
-            # SMOOTH SHADING: Accumulate normals for averaging
-            for idx in [idx0, idx1, idx2]:
-                # Only accumulate if not locked by planar surface
-                if vertex_normal_counts[idx] != -1:
-                    vertex_normals[idx*3] += face_normal[0]
-                    vertex_normals[idx*3+1] += face_normal[1]
-                    vertex_normals[idx*3+2] += face_normal[2]
-                    vertex_normal_counts[idx] += 1
+        # SMOOTH SHADING FOR ALL: Accumulate normals at shared vertices
+        for idx in [idx0, idx1, idx2]:
+            vertex_normals[idx*3] += face_normal[0]
+            vertex_normals[idx*3+1] += face_normal[1]
+            vertex_normals[idx*3+2] += face_normal[2]
+            vertex_normal_counts[idx] += 1
     
-    # Second pass: Normalize accumulated normals for cylindrical surfaces
+    # Second pass: Normalize all accumulated normals
     for v_idx in range(num_vertices):
-        if vertex_normal_counts[v_idx] > 0:  # Cylindrical vertex - needs normalization
+        if vertex_normal_counts[v_idx] > 0:
             nx = vertex_normals[v_idx*3]
             ny = vertex_normals[v_idx*3+1]
             nz = vertex_normals[v_idx*3+2]
@@ -498,19 +486,21 @@ def tessellate_shape(shape):
                 vertex_normals[v_idx*3] = nx / length
                 vertex_normals[v_idx*3+1] = ny / length
                 vertex_normals[v_idx*3+2] = nz / length
-    
-    # Count how many vertices got each treatment
-    planar_vertices = sum(1 for c in vertex_normal_counts if c == -1)
-    cylindrical_vertices = sum(1 for c in vertex_normal_counts if c > 0)
+            else:
+                # Fallback for degenerate cases
+                vertex_normals[v_idx*3] = 0
+                vertex_normals[v_idx*3+1] = 0
+                vertex_normals[v_idx*3+2] = 1
     
     logger.info(f"✅ Tessellation complete: {num_vertices} vertices, {len(indices)//3} triangles")
-    logger.info(f"   ├─ HYBRID NORMALS: {planar_vertices} planar (flat), {cylindrical_vertices} cylindrical (smooth)")
+    logger.info(f"   ├─ SMOOTH NORMALS: All {num_vertices} vertices use averaged normals (professional CAD standard)")
     
     return {
         'vertices': vertices,
         'indices': indices,
         'normals': vertex_normals
     }
+
 
 def extract_feature_edges(shape, max_edges=2000, angle_threshold_degrees=20):
     """
