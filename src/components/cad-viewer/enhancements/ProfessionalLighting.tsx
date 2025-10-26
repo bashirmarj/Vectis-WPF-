@@ -44,7 +44,7 @@ export function ProfessionalLighting({
       {/* Key Light - Main illumination (front-top-right) */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={1.8 * intensity}
+        intensity={1.2 * intensity}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
