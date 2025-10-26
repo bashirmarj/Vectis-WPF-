@@ -19,7 +19,7 @@ interface ProfessionalLightingProps {
  * - Hemisphere: Ambient base lighting (sky-ground gradient)
  */
 export function ProfessionalLighting({
-  intensity = 2.0,
+  intensity = 5.0,
   enableShadows = true,
   shadowQuality = "medium",
 }: ProfessionalLightingProps) {
