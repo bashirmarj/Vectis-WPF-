@@ -270,7 +270,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
             linewidth: 1.5,
             toneMapped: false,
             depthTest: true,
-            depthWrite: true,
+            depthWrite: false,
           });
           dynamicEdgesRef.current.add(new THREE.LineSegments(geo, mat));
         }
@@ -294,7 +294,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           geo.setAttribute("position", new THREE.Float32BufferAttribute(visibleEdges, 3));
           const mat = new THREE.LineBasicMaterial({
             color: "#000000",
-            linewidth: 1.5,
+            linewidth: 2.5,
             toneMapped: false,
           });
           wireframeEdgesRef.current.add(new THREE.LineSegments(geo, mat));
