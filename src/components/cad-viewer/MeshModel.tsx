@@ -294,8 +294,8 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           geo.setAttribute("position", new THREE.Float32BufferAttribute(visibleEdges, 3));
           const mat = new THREE.LineBasicMaterial({
             color: "#000000",
-            linewidth: 2.5,
-            toneMapped: true,
+            linewidth: 1.5,
+            toneMapped: false,
           });
           wireframeEdgesRef.current.add(new THREE.LineSegments(geo, mat));
         }
@@ -352,10 +352,10 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         color: "#5b9bd5",
         side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
-        clipIntersection: false,
-        metalness: 0,
+        clipIntersection: true,
+        metalness: 0.2,
         roughness: 0.8,
-        envMapIntensity: 0,
+        envMapIntensity: 0.2,
       };
 
       if (displayStyle === "wireframe") {
