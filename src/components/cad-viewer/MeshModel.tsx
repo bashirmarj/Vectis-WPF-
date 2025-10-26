@@ -18,7 +18,7 @@ interface MeshModelProps {
   showEdges: boolean;
   showHiddenEdges?: boolean;
   displayStyle?: "solid" | "wireframe" | "translucent";
-  topologyColors?: "#FF6B6B";
+  topologyColors?: #FF6B6B;
 }
 
 // Professional solid color for CAD rendering
