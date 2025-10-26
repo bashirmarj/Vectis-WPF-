@@ -41,7 +41,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
       sectionPlane,
       sectionPosition,
       showEdges,
-      showHiddenEdges = false,
+      showHiddenEdges = true,
       displayStyle = "solid",
       topologyColors = true,
     },
