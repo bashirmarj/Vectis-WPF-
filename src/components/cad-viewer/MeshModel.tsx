@@ -289,17 +289,17 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
             {...materialProps}
             color={SOLID_COLOR}
             // PBR Properties
-            metalness={0.0}
-            roughness={1.0}
+            metalness={0.05}
+            roughness={0.85}
             // Physical Properties (unique to meshPhysicalMaterial)
             clearcoat={0.0}
             clearcoatRoughness={1.0}
             // Environment & Lighting
-            envMapIntensity={0.0}
+            envMapIntensity={0.3}
             // Shading & Rendering
-            flatShading={true}
+            flatShading={false}
             side={THREE.DoubleSide}
-            toneMapped={true}
+            toneMapped={false}
           />
         </mesh>
 
