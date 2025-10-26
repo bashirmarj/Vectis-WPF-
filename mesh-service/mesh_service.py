@@ -134,9 +134,9 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1)  # Enable curvature-based sizing
             
             # Set mesh size constraints
-            gmsh.option.setNumber("Mesh.MeshSizeMin", base_size * 0.05)  # Very fine for small features
+            gmsh.option.setNumber("Mesh.MeshSizeMin", base_size * 0.15)  # Prevent over-refinement (15% of base)
             gmsh.option.setNumber("Mesh.MeshSizeMax", max_element_size)  # Respects curvature target
-            gmsh.option.setNumber("Mesh.CharacteristicLengthMin", base_size * 0.05)
+            gmsh.option.setNumber("Mesh.CharacteristicLengthMin", base_size * 0.15)  # Prevent over-refinement
             gmsh.option.setNumber("Mesh.CharacteristicLengthMax", max_element_size)
             
             # Additional refinement controls
