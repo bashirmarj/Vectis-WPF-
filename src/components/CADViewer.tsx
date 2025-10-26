@@ -181,16 +181,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     ] as [number, number, number];
   }, [boundingBox]);
 
-  // Dynamic fog distances based on bounding box
-  const fogDistances = useMemo(() => {
-    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-    const cameraDistance = maxDim * 1.5;
-    return {
-      near: cameraDistance * 2,
-      far: cameraDistance * 4
-    };
-  }, [boundingBox]);
-
   const handleViewChange = useCallback(
     (viewType: "front" | "top" | "side" | "isometric" | "home") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -386,7 +376,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             >
               <color attach="background" args={["#f8f9fa"]} />
-              <fog attach="fog" args={["#f8f9fa", fogDistances.near, fogDistances.far]} />
+              <fog attach="fog" args={["#f8f9fa", 100, 500]} />
 
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
