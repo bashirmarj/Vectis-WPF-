@@ -22,7 +22,7 @@ interface MeshModelProps {
 }
 
 // Professional solid color for CAD rendering
-const SOLID_COLOR = "#CCCCCC";
+const SOLID_COLOR = "#FF6B6B"; // ← CHANGED to red per user preference
 
 // Fusion 360 Analysis colors
 const TOPOLOGY_COLORS = {
@@ -219,14 +219,15 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
     }, [sectionPlane, gl]);
 
     // Material properties with conditional color
+    // ✅ OPTIMIZED: Reduced metalness and increased roughness to minimize visible triangle edges
     const materialProps = useMemo(() => {
       const base = {
         side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
         clipIntersection: false,
-        metalness: 0.15,
-        roughness: 0.6,
-        envMapIntensity: 0.5,
+        metalness: 0.0, // ← CHANGED from 0.15 (removes metallic reflections that highlight edges)
+        roughness: 0.9, // ← CHANGED from 0.6 (more diffuse = smoother appearance)
+        envMapIntensity: 0.3, // ← CHANGED from 0.5 (reduced environment reflections)
         toneMapped: false,
         castShadow: true,
         receiveShadow: true,
@@ -247,7 +248,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
           <meshStandardMaterial
             {...materialProps}
-            color={topologyColors && meshData.vertex_colors?.length > 0 ? "#ffffff" : "#FF6B6B"}
+            color={topologyColors ? "#ffffff" : SOLID_COLOR}
             vertexColors={topologyColors}
             flatShading={false} // ✅ ALWAYS smooth shading - backend normals are smooth
             toneMapped={false}
