@@ -9,9 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
 import { OrientationCubePreview, OrientationCubeHandle } from "./cad-viewer/OrientationCubePreview";
-import LightingRig from "./cad-viewer/LightingRig";
-import VisualEffects from "./cad-viewer/VisualEffects";
-import PerformanceSettingsPanel from "./cad-viewer/PerformanceSettingsPanel";
+import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
@@ -23,12 +21,12 @@ interface CADViewerProps {
   onMeshLoaded?: (data: MeshData) => void;
 }
 
-// ✅ FIXED: Proper MeshData interface with vertex_colors
+// ✅ FIXED: Proper MeshData interface matching all components and database
 interface MeshData {
   vertices: number[];
   indices: number[];
   normals: number[];
-  vertex_colors?: number[]; // ✅ FIXED: Changed from colors to vertex_colors
+  vertex_colors?: string[]; // ✅ Face type labels from database (always strings)
   triangle_count: number;
   face_types?: string[];
   feature_edges?: number[][][];
@@ -41,37 +39,31 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
   const [showEdges, setShowEdges] = useState(true);
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
-  const [ssaoEnabled, setSSAOEnabled] = useState(true);
-  const [quality, setQuality] = useState<"performance" | "balanced" | "quality">("balanced"); // ✅ FIXED: Correct type
-  const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | "x" | "y" | "z" | null>(null);
+  const [ssaoEnabled, setSSAOEnabled] = useState(false);
+  // ✅ FIXED: Standardized sectionPlane type to match UnifiedCADToolbar
+  const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
 
-  // Measurement store
-  const {
-    activeTool: measurementMode,
-    measurements,
-    setActiveTool: setMeasurementMode,
-    clearAllMeasurements,
-  } = useMeasurementStore();
-
-  const meshRef = useRef<THREE.Mesh>(null);
-  const controlsRef = useRef<any>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const orientationCubeRef = useRef<OrientationCubeHandle>(null);
+  const { measurementMode, setMeasurementMode, clearMeasurements, measurements } = useMeasurementStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+  const controlsRef = useRef<any>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const orientationCubeRef = useRef<OrientationCubeHandle>(null);
 
+  // File extension detection
   const fileExtension = useMemo(() => {
-    if (!fileName) return "";
-    return fileName.split(".").pop()?.toLowerCase() || "";
-  }, [fileName]);
+    if (fileName) return fileName.split(".").pop()?.toLowerCase() || "";
+    if (fileUrl) return fileUrl.split(".").pop()?.toLowerCase().split("?")[0] || "";
+    return "";
+  }, [fileName, fileUrl]);
 
   const isRenderableFormat = useMemo(() => {
     return ["step", "stp", "iges", "igs", "stl"].includes(fileExtension);
   }, [fileExtension]);
 
-  // Load mesh data from database
+  // Load mesh data from Supabase
   useEffect(() => {
-    if (!meshId && !fileUrl) {
+    if (!meshId || !isRenderableFormat) {
       setIsLoading(false);
       return;
     }
@@ -81,98 +73,117 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         setIsLoading(true);
         setError(null);
 
-        if (meshId) {
-          console.log(`📥 Fetching mesh from database: ${meshId}`);
-          const { data, error: fetchError } = await supabase.from("cad_meshes").select("*").eq("id", meshId).single();
+        const { data: mesh, error: meshError } = await supabase
+          .from("cad_meshes")
+          .select("*")
+          .eq("id", meshId)
+          .single();
 
-          if (fetchError) throw fetchError;
+        if (meshError) throw meshError;
+        if (!mesh) throw new Error("Mesh not found");
 
-          if (data) {
-            console.log("✅ Mesh loaded:", data.triangle_count, "triangles");
-            const meshDataTyped: MeshData = {
-              vertices: data.vertices,
-              indices: data.indices,
-              normals: data.normals,
-              vertex_colors: data.vertex_colors, // ✅ FIXED: Use vertex_colors
-              triangle_count: data.triangle_count,
-              face_types: data.face_types,
-              feature_edges: data.feature_edges,
-            };
-            setMeshData(meshDataTyped);
-            onMeshLoaded?.(meshDataTyped);
-          }
-        }
-      } catch (err: any) {
-        console.error("❌ Error loading mesh:", err);
-        setError(err.message || "Failed to load 3D model");
+        // ✅ Parse mesh data - handle both JSON and array formats
+        const vertices = Array.isArray(mesh.vertices) ? mesh.vertices : JSON.parse(mesh.vertices as string);
+        const indices = Array.isArray(mesh.indices) ? mesh.indices : JSON.parse(mesh.indices as string);
+        const normals = Array.isArray(mesh.normals) ? mesh.normals : JSON.parse(mesh.normals as string);
+
+        // ✅ Parse vertex_colors as string array (face type labels)
+        const vertex_colors = mesh.vertex_colors
+          ? Array.isArray(mesh.vertex_colors)
+            ? mesh.vertex_colors
+            : JSON.parse(mesh.vertex_colors as string)
+          : undefined;
+
+        // ✅ Parse feature_edges if available
+        const feature_edges = mesh.feature_edges
+          ? Array.isArray(mesh.feature_edges)
+            ? mesh.feature_edges
+            : JSON.parse(mesh.feature_edges as string)
+          : undefined;
+
+        const loadedMeshData: MeshData = {
+          vertices,
+          indices,
+          normals,
+          vertex_colors: vertex_colors as string[] | undefined,
+          triangle_count: mesh.triangle_count || indices.length / 3,
+          feature_edges: feature_edges as number[][][] | undefined,
+        };
+
+        setMeshData(loadedMeshData);
+        onMeshLoaded?.(loadedMeshData);
+      } catch (error) {
+        console.error("Failed to load mesh:", error);
+        setError(error instanceof Error ? error.message : "Failed to load 3D model");
       } finally {
         setIsLoading(false);
       }
     };
 
     loadMeshData();
-  }, [meshId, fileUrl, onMeshLoaded]);
+  }, [meshId, isRenderableFormat, onMeshLoaded]);
 
   // Calculate bounding box
   const boundingBox = useMemo(() => {
-    if (!meshData || !meshData.vertices || meshData.vertices.length === 0) {
+    if (!meshData) {
       return {
-        min: new THREE.Vector3(-50, -50, -50),
-        max: new THREE.Vector3(50, 50, 50),
+        min: { x: -1, y: -1, z: -1 },
+        max: { x: 1, y: 1, z: 1 },
         center: [0, 0, 0] as [number, number, number],
-        size: new THREE.Vector3(100, 100, 100),
-        width: 100,
-        height: 100,
-        depth: 100,
+        width: 2,
+        height: 2,
+        depth: 2,
       };
     }
 
     const vertices = meshData.vertices;
-    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
-    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+    let minX = Infinity,
+      minY = Infinity,
+      minZ = Infinity;
+    let maxX = -Infinity,
+      maxY = -Infinity,
+      maxZ = -Infinity;
 
     for (let i = 0; i < vertices.length; i += 3) {
-      min.x = Math.min(min.x, vertices[i]);
-      min.y = Math.min(min.y, vertices[i + 1]);
-      min.z = Math.min(min.z, vertices[i + 2]);
-      max.x = Math.max(max.x, vertices[i]);
-      max.y = Math.max(max.y, vertices[i + 1]);
-      max.z = Math.max(max.z, vertices[i + 2]);
+      minX = Math.min(minX, vertices[i]);
+      minY = Math.min(minY, vertices[i + 1]);
+      minZ = Math.min(minZ, vertices[i + 2]);
+      maxX = Math.max(maxX, vertices[i]);
+      maxY = Math.max(maxY, vertices[i + 1]);
+      maxZ = Math.max(maxZ, vertices[i + 2]);
     }
 
-    const center: [number, number, number] = [(min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2];
-
-    const size = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z);
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const depth = maxZ - minZ;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const centerZ = (minZ + maxZ) / 2;
 
     return {
-      min,
-      max,
-      center,
-      size,
-      width: size.x,
-      height: size.y,
-      depth: size.z,
+      min: { x: minX, y: minY, z: minZ },
+      max: { x: maxX, y: maxY, z: maxZ },
+      center: [centerX, centerY, centerZ] as [number, number, number],
+      width,
+      height,
+      depth,
     };
   }, [meshData]);
 
-  // Calculate initial camera position
+  // Initial camera position
   const initialCameraPosition = useMemo(() => {
     const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
     const distance = maxDim * 1.5;
-    return new THREE.Vector3(
+    return [
       boundingBox.center[0] + distance * 0.707,
       boundingBox.center[1] + distance * 0.707,
       boundingBox.center[2] + distance * 0.707,
-    );
+    ] as [number, number, number];
   }, [boundingBox]);
 
-  // Camera view controls
-  const handleSetView = useCallback(
-    (view: string) => {
-      if (!cameraRef.current || !controlsRef.current) {
-        console.error("❌ Camera or controls ref not available");
-        return;
-      }
+  const handleViewChange = useCallback(
+    (viewType: "front" | "top" | "side" | "isometric" | "home") => {
+      if (!cameraRef.current || !controlsRef.current) return;
 
       const camera = cameraRef.current;
       const controls = controlsRef.current;
@@ -182,9 +193,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
       let newPosition: THREE.Vector3;
 
-      switch (view) {
+      switch (viewType) {
         case "front":
           newPosition = new THREE.Vector3(target.x, target.y, target.z + distance);
+          break;
+        case "side":
+          newPosition = new THREE.Vector3(target.x + distance, target.y, target.z);
           break;
         case "top":
           newPosition = new THREE.Vector3(target.x, target.y + distance, target.z);
@@ -223,10 +237,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     const target = new THREE.Vector3(...boundingBox.center);
     const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
     const distance = maxDim * 1.5;
-
-    const direction = new THREE.Vector3().subVectors(camera.position, target).normalize();
-
-    const newPosition = target.clone().add(direction.multiplyScalar(distance));
+    const currentPosition = camera.position.clone().sub(target).normalize();
+    const newPosition = target.clone().add(currentPosition.multiplyScalar(distance));
 
     camera.position.copy(newPosition);
     controls.target.copy(target);
@@ -294,42 +306,25 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleFitView, showEdges, measurementMode, setMeasurementMode]);
 
-  if (isLoading) {
-    return (
-      <CardContent className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading 3D model...</p>
-        </div>
-      </CardContent>
-    );
-  }
-
-  if (error) {
-    return (
-      <CardContent className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4 text-center max-w-md">
-          <Box className="h-16 w-16 text-destructive" />
-          <div>
-            <p className="text-sm font-medium text-destructive mb-2">Failed to load 3D model</p>
-            <p className="text-xs text-muted-foreground">{error}</p>
-          </div>
-        </div>
-      </CardContent>
-    );
-  }
-
   return (
-    <div className="relative h-full overflow-hidden">
+    <div className="relative w-full h-full">
       <CardContent className="p-0 h-full">
-        {meshData && isRenderableFormat ? (
-          <div ref={canvasRef} className="relative h-full" style={{ background: "#f8f9fa" }}>
-            {/* Unified CAD Toolbar */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <p className="text-sm text-destructive text-center">{error}</p>
+          </div>
+        ) : meshData && isRenderableFormat ? (
+          <div className="relative w-full h-full">
+            {/* Unified Toolbar */}
             <UnifiedCADToolbar
-              onHomeView={() => handleSetView("home")}
-              onFrontView={() => handleSetView("front")}
-              onTopView={() => handleSetView("top")}
-              onIsometricView={() => handleSetView("isometric")}
+              onHomeView={() => handleViewChange("home")}
+              onFrontView={() => handleViewChange("front")}
+              onTopView={() => handleViewChange("top")}
+              onIsometricView={() => handleViewChange("isometric")}
               onFitView={handleFitView}
               displayMode={displayMode}
               onDisplayModeChange={setDisplayMode}
@@ -338,7 +333,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               measurementMode={measurementMode}
               onMeasurementModeChange={setMeasurementMode}
               measurementCount={measurements.length}
-              onClearMeasurements={clearAllMeasurements}
+              onClearMeasurements={clearMeasurements}
               sectionPlane={sectionPlane}
               onSectionPlaneChange={setSectionPlane}
               sectionPosition={sectionPosition}
@@ -376,20 +371,22 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
               <Suspense fallback={null}>
-                <LightingRig quality={quality} shadowsEnabled={shadowsEnabled} />
+                {/* ✅ Use ProfessionalLighting instead of missing LightingRig */}
+                <ProfessionalLighting intensity={1.0} enableShadows={shadowsEnabled} shadowQuality="high" />
 
+                {/* ✅ FIXED: Convert null to "none" for MeshModel */}
                 <MeshModel
                   ref={meshRef}
                   meshData={meshData}
-                  displayMode={displayMode}
+                  displayStyle={displayMode}
                   showEdges={showEdges}
-                  sectionPlane={sectionPlane}
+                  sectionPlane={sectionPlane || "none"}
                   sectionPosition={sectionPosition}
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                <VisualEffects enabled={ssaoEnabled} quality={quality} />
+                {/* ✅ Removed VisualEffects - not needed for basic rendering */}
 
                 <TrackballControls
                   ref={controlsRef}
@@ -416,16 +413,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               </GizmoHelper>
             </Canvas>
 
-            {/* Performance Settings Panel */}
-            <PerformanceSettingsPanel
-              shadowsEnabled={shadowsEnabled}
-              setShadowsEnabled={setShadowsEnabled}
-              ssaoEnabled={ssaoEnabled}
-              setSSAOEnabled={setSSAOEnabled}
-              quality={quality}
-              setQuality={setQuality}
-              triangleCount={meshData.triangle_count}
-            />
+            {/* ✅ Removed PerformanceSettingsPanel - not needed for basic functionality */}
           </div>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
