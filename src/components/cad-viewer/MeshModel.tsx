@@ -268,7 +268,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const mat = new THREE.LineBasicMaterial({
             color: "#000000",
             linewidth: 1.5,
-            toneMapped: false,
+            toneMapped: true,
             depthTest: true,
             depthWrite: false,
           });
