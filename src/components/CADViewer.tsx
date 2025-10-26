@@ -196,7 +196,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
         case "top":
           newPosition = new THREE.Vector3(target.x, target.y + distance, target.z);
-          newUp = new THREE.Vector3(0, 0, -1);
+          newUp = new THREE.Vector3(0, 0, 1);
           break;
         case "isometric":
           newPosition = new THREE.Vector3(
@@ -304,9 +304,18 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           newPosition.applyAxisAngle(right, -ROTATION_ANGLE); // Rotate up
           newPosition.normalize();
 
-          // Adjust up vector if we're near poles
-          if (Math.abs(newPosition.y) > 0.95) {
-            newUp.set(0, 0, newPosition.y > 0 ? -1 : 1);
+          // ✅ IMPROVED: Better pole handling - calculate proper up vector
+          if (Math.abs(newPosition.y) > 0.99) {
+            // At poles, maintain forward direction for up vector
+            const forward = new THREE.Vector3(0, 0, 1);
+            if (Math.abs(newPosition.dot(forward)) > 0.99) {
+              // If looking along Z, use X as reference
+              newUp = new THREE.Vector3(1, 0, 0);
+            } else {
+              newUp = forward;
+            }
+            // Ensure up is perpendicular to view direction
+            newUp.sub(newPosition.clone().multiplyScalar(newUp.dot(newPosition))).normalize();
           }
           break;
         }
@@ -317,9 +326,18 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           newPosition.applyAxisAngle(right, ROTATION_ANGLE); // Rotate down
           newPosition.normalize();
 
-          // Adjust up vector if we're near poles
-          if (Math.abs(newPosition.y) > 0.95) {
-            newUp.set(0, 0, newPosition.y > 0 ? -1 : 1);
+          // ✅ IMPROVED: Better pole handling - calculate proper up vector
+          if (Math.abs(newPosition.y) > 0.99) {
+            // At poles, maintain forward direction for up vector
+            const forward = new THREE.Vector3(0, 0, 1);
+            if (Math.abs(newPosition.dot(forward)) > 0.99) {
+              // If looking along Z, use X as reference
+              newUp = new THREE.Vector3(1, 0, 0);
+            } else {
+              newUp = forward;
+            }
+            // Ensure up is perpendicular to view direction
+            newUp.sub(newPosition.clone().multiplyScalar(newUp.dot(newPosition))).normalize();
           }
           break;
         }
