@@ -45,22 +45,25 @@ gmsh_lock = threading.Lock()
 # === QUALITY PRESETS ===
 QUALITY_PRESETS = {
     'fast': {
-        'base_size_factor': 0.004,      # 0.4% of diagonal (balanced detail)
-        'planar_factor': 2.5,           # 2.5x coarser on flat surfaces  
-        'curvature_points': 48,         # 48 elements per 2π = ~7.5° between points (smooth circles)
-        'target_triangles': 10000       # Target ~10k triangles (reduced for memory)
+        'base_size_factor': 0.003,      # 0.3% of diagonal (slightly finer for smoother curves)
+        'planar_factor': 3.0,           # 3x coarser on flat surfaces (efficient)
+        'curvature_points': 64,         # 64 elements per 2π = ~5.6° between points (very smooth)
+        'target_triangles': 40000,      # Target ~40k triangles (balanced)
+        'sharp_edge_threshold': 30.0    # 30° angle for sharp edge detection
     },
     'balanced': {
-        'base_size_factor': 0.0015,     # 0.15% of diagonal (10x finer)
-        'planar_factor': 2.0,           # 2x coarser on flats
-        'curvature_points': 48,         # 48 elements per 2π = ~7.5° between points
-        'target_triangles': 150000      # Target ~150k triangles
+        'base_size_factor': 0.0015,     # 0.15% of diagonal (fine detail)
+        'planar_factor': 2.5,           # 2.5x coarser on flats
+        'curvature_points': 80,         # 80 elements per 2π = ~4.5° between points (excellent)
+        'target_triangles': 150000,     # Target ~150k triangles
+        'sharp_edge_threshold': 25.0    # 25° angle for sharp edge detection
     },
     'ultra': {
-        'base_size_factor': 0.0006,     # 0.06% of diagonal (10x finer)
-        'planar_factor': 1.5,           # Less coarsening
-        'curvature_points': 72,         # 72 elements per 2π = ~5° between points
-        'target_triangles': 500000      # Target ~500k triangles
+        'base_size_factor': 0.0006,     # 0.06% of diagonal (very fine)
+        'planar_factor': 2.0,           # Less coarsening
+        'curvature_points': 96,         # 96 elements per 2π = ~3.75° between points (ultra smooth)
+        'target_triangles': 500000,     # Target ~500k triangles
+        'sharp_edge_threshold': 20.0    # 20° angle for sharp edge detection (preserve more detail)
     }
 }
 
@@ -112,12 +115,35 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             logger.info(f"📏 Model diagonal: {diagonal:.2f}mm, base mesh size: {base_size:.4f}mm")
             
             # Use Gmsh's built-in curvature-adaptive meshing (industry standard)
+            # CRITICAL FIX: Calculate MeshSizeMax to GUARANTEE curvature_points is respected
+            #
+            # For a hole to have N segments, element size must be: (π * diameter) / N
+            # Conservative: Ensure even 3mm holes get proper segmentation
+            import math
+            min_feature_diameter = 3.0  # mm (assume smallest holes are 3mm)
+            required_element_size_for_curvature = (math.pi * min_feature_diameter) / preset['curvature_points']
+            
+            # Use the SMALLER of:
+            # 1. What's needed for curvature refinement
+            # 2. What's allowed by planar face sizing
+            max_element_size = min(required_element_size_for_curvature, base_size * preset['planar_factor'])
+            
+            logger.info(f"📐 Curvature refinement: max_element={max_element_size:.4f}mm (ensures {preset['curvature_points']} segments on 3mm features)")
+            
+            # Set curvature refinement parameters
             gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", preset['curvature_points'])
-            gmsh.option.setNumber("Mesh.MeshSizeMin", base_size * 0.1)
-            gmsh.option.setNumber("Mesh.MeshSizeMax", base_size * preset['planar_factor'])
-            gmsh.option.setNumber("Mesh.CharacteristicLengthMin", base_size * 0.1)
-            gmsh.option.setNumber("Mesh.CharacteristicLengthMax", base_size * preset['planar_factor'])
-            gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1)
+            gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1)  # Enable curvature-based sizing
+            
+            # Set mesh size constraints
+            gmsh.option.setNumber("Mesh.MeshSizeMin", base_size * 0.05)  # Very fine for small features
+            gmsh.option.setNumber("Mesh.MeshSizeMax", max_element_size)  # Respects curvature target
+            gmsh.option.setNumber("Mesh.CharacteristicLengthMin", base_size * 0.05)
+            gmsh.option.setNumber("Mesh.CharacteristicLengthMax", max_element_size)
+            
+            # Additional refinement controls
+            gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 1)  # Extend size from boundaries
+            gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)  # Don't use point sizes
+            gmsh.option.setNumber("Mesh.MeshSizeFromParametricPoints", 0)  # Don't use parametric sizes
             
             logger.info(f"📊 Using global adaptive meshing (base: {base_size:.4f}mm, curvature points: {preset['curvature_points']})")
             
@@ -140,12 +166,15 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             
             triangle_count = len(indices) // 3
             
-            # Calculate per-vertex normals
-            normals = calculate_vertex_normals(vertices, indices)
+            # Calculate per-vertex normals with sharp edge detection
+            sharp_edge_threshold = preset.get('sharp_edge_threshold', 30.0)
+            logger.info(f"🎨 Calculating normals with {sharp_edge_threshold}° sharp edge threshold...")
+            normals = calculate_vertex_normals(vertices, indices, sharp_edge_threshold)
             
             gmsh.finalize()
             
             logger.info(f"✅ Generated {triangle_count} triangles ({len(vertices)//3} vertices)")
+            logger.info(f"   └─ Smooth shading on curves, sharp edges preserved at {sharp_edge_threshold}°")
             
             return {
                 'vertices': vertices,
@@ -166,57 +195,67 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             raise
 
 
-def calculate_vertex_normals(vertices, indices):
-    """Calculate normals with angle-based sharp edge detection (30° threshold)"""
+def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
+    """
+    Calculate vertex normals with angle-based sharp edge detection.
+    
+    This is the industry-standard approach used by SolidWorks, Fusion 360, and Onshape:
+    - Smooth surfaces: Average normals when angle < threshold
+    - Sharp edges: Don't average when angle > threshold
+    
+    Args:
+        vertices: Flat list of vertex coordinates [x,y,z, x,y,z, ...]
+        indices: Triangle indices
+        sharp_edge_threshold: Angle in degrees (default 30°)
+    
+    Returns:
+        Flat list of vertex normals
+    """
     num_vertices = len(vertices) // 3
-    normals = np.zeros((num_vertices, 3))
+    threshold_rad = np.radians(sharp_edge_threshold)
+    threshold_cos = np.cos(threshold_rad)
     
     # Step 1: Calculate face normals
-    face_normals = []
     num_faces = len(indices) // 3
+    face_normals = np.zeros((num_faces, 3))
     
-    for i in range(0, len(indices), 3):
-        i1, i2, i3 = indices[i], indices[i+1], indices[i+2]
+    for i in range(num_faces):
+        i1, i2, i3 = indices[i*3], indices[i*3+1], indices[i*3+2]
         
         v1 = np.array(vertices[i1*3:i1*3+3])
         v2 = np.array(vertices[i2*3:i2*3+3])
-        v3 = np.array(vertices[i3*3:i3*3+3])
+        v3 = np.array(vertices[i3*3:i3+3])
         
         edge1 = v2 - v1
         edge2 = v3 - v1
         
-        face_normal = np.cross(edge1, edge2)
-        length = np.linalg.norm(face_normal)
+        normal = np.cross(edge1, edge2)
+        length = np.linalg.norm(normal)
         
         if length > 1e-10:
-            face_normal = face_normal / length  # Normalize
+            face_normals[i] = normal / length
         else:
-            face_normal = np.array([0, 0, 1])
-        
-        face_normals.append(face_normal)
+            face_normals[i] = np.array([0, 0, 1])
     
-    # Step 2: Build vertex-to-faces adjacency map
+    # Step 2: Build vertex-to-faces connectivity
     vertex_faces = [[] for _ in range(num_vertices)]
-    
     for face_idx in range(num_faces):
-        i = face_idx * 3
-        i1, i2, i3 = indices[i], indices[i+1], indices[i+2]
-        
+        i1, i2, i3 = indices[face_idx*3], indices[face_idx*3+1], indices[face_idx*3+2]
         vertex_faces[i1].append(face_idx)
         vertex_faces[i2].append(face_idx)
         vertex_faces[i3].append(face_idx)
     
-    # Step 3: Calculate vertex normals with angle-based smoothing
-    SMOOTH_THRESHOLD = np.cos(np.radians(30))  # 30° threshold
+    # Step 3: Calculate vertex normals with sharp edge detection
+    vertex_normals = np.zeros((num_vertices, 3))
     
-    for vertex_idx in range(num_vertices):
-        adjacent_faces = vertex_faces[vertex_idx]
+    for v_idx in range(num_vertices):
+        adjacent_faces = vertex_faces[v_idx]
         
         if not adjacent_faces:
-            normals[vertex_idx] = np.array([0, 0, 1])
+            vertex_normals[v_idx] = np.array([0, 0, 1])
             continue
         
-        # For each face adjacent to this vertex
+        # For each face, check if it should contribute to this vertex's normal
         accumulated_normal = np.zeros(3)
         
         for face_idx in adjacent_faces:
@@ -224,34 +263,36 @@ def calculate_vertex_normals(vertices, indices):
             
             # Check angle with all other adjacent faces
             should_smooth = True
-            
             for other_face_idx in adjacent_faces:
                 if face_idx == other_face_idx:
                     continue
                 
                 other_normal = face_normals[other_face_idx]
                 
-                # Calculate angle using dot product
-                dot = np.dot(face_normal, other_normal)
-                dot = np.clip(dot, -1.0, 1.0)  # Clamp for numerical stability
+                # Calculate angle between normals using dot product
+                dot_product = np.dot(face_normal, other_normal)
+                dot_product = np.clip(dot_product, -1.0, 1.0)  # Handle numerical errors
                 
-                # If angle >= 30°, don't smooth
-                if dot < SMOOTH_THRESHOLD:
+                # If angle > threshold, this is a sharp edge - don't smooth
+                if dot_product < threshold_cos:
                     should_smooth = False
                     break
             
             if should_smooth:
                 accumulated_normal += face_normal
+            else:
+                # Sharp edge: use face normal directly (no averaging)
+                accumulated_normal = face_normal
+                break
         
-        # Normalize the result
+        # Normalize the accumulated normal
         length = np.linalg.norm(accumulated_normal)
         if length > 1e-10:
-            normals[vertex_idx] = accumulated_normal / length
+            vertex_normals[v_idx] = accumulated_normal / length
         else:
-            # Fallback: use first adjacent face normal
-            normals[vertex_idx] = face_normals[adjacent_faces[0]]
+            vertex_normals[v_idx] = face_normals[adjacent_faces[0]]
     
-    return normals.flatten().tolist()
+    return vertex_normals.flatten().tolist()
 
 
 # === API ENDPOINTS ===
