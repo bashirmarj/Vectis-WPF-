@@ -24,17 +24,7 @@ interface MeshModelProps {
 const SOLID_COLOR = "#FF6B6B"; // Solid red - classic CAD color
 
 export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
-  (
-    {
-      meshData,
-      sectionPlane,
-      sectionPosition,
-      showEdges,
-      showHiddenEdges = false,
-      displayStyle = "solid",
-    },
-    ref,
-  ) => {
+  ({ meshData, sectionPlane, sectionPosition, showEdges, showHiddenEdges = false, displayStyle = "solid" }, ref) => {
     const { camera } = useThree();
     const internalMeshRef = useRef<THREE.Mesh>(null);
     const meshRef = (ref as React.RefObject<THREE.Mesh>) || internalMeshRef;
@@ -44,16 +34,15 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
     // Create indexed geometry with smooth normals
     const geometry = useMemo(() => {
       const geo = new THREE.BufferGeometry();
-      
+
       // Use indexed geometry for proper normal calculation
       geo.setAttribute("position", new THREE.Float32BufferAttribute(meshData.vertices, 3));
       geo.setIndex(meshData.indices);
       geo.setAttribute("normal", new THREE.Float32BufferAttribute(meshData.normals, 3));
-      
+
       geo.computeBoundingSphere();
       return geo;
     }, [meshData]);
-
 
     // Pre-compute edge connectivity for ALL edges (used by both modes)
     const edgeMap = useMemo(() => {
@@ -167,7 +156,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
 
           // Show sharp feature edges (angle > 30°)
           const isSharpFeature = angle > 30;
-          
+
           // Show silhouette edges (one face visible, one hidden)
           const isSilhouette = (dot1 > 0.01 && dot2 < -0.01) || (dot1 < -0.01 && dot2 > 0.01);
 
@@ -299,22 +288,18 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           <meshPhysicalMaterial
             {...materialProps}
             color={SOLID_COLOR}
-            
             // PBR Properties
             metalness={0.0}
             roughness={1.0}
-            
             // Physical Properties (unique to meshPhysicalMaterial)
             clearcoat={0.0}
             clearcoatRoughness={1.0}
-            
             // Environment & Lighting
             envMapIntensity={0.0}
-            
             // Shading & Rendering
             flatShading={false}
             side={THREE.DoubleSide}
-            toneMapped={false}
+            toneMapped={true}
           />
         </mesh>
 
