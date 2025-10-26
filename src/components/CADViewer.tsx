@@ -1,6 +1,7 @@
-import { Canvas } from "@react-three/fiber";
-import { TrackballControls, PerspectiveCamera, ContactShadows, GizmoHelper, GizmoViewport } from "@react-three/drei";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { TrackballControls, PerspectiveCamera, ContactShadows, GizmoHelper, GizmoViewport, View, OrbitControls } from "@react-three/drei";
 import { Suspense, useMemo, useEffect, useState, useRef, useCallback } from "react";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { CardContent } from "@/components/ui/card";
 import { Loader2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,8 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-import { OrientationCubePreview, OrientationCubeHandle } from "./cad-viewer/OrientationCubePreview";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
+import { OrientationCubeMesh } from "./cad-viewer/OrientationCubeMesh";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
@@ -48,7 +49,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const orientationCubeRef = useRef<OrientationCubeHandle>(null);
+  const orientationViewportRef = useRef<HTMLDivElement>(null);
 
   // File extension detection
   const fileExtension = useMemo(() => {
@@ -357,12 +358,10 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* Orientation Cube */}
-            <OrientationCubePreview
-              ref={orientationCubeRef}
-              onCubeClick={handleCubeClick}
-              displayMode={displayMode}
-              onDisplayModeChange={setDisplayMode}
+            {/* Orientation Cube Viewport */}
+            <div 
+              ref={orientationViewportRef}
+              className="absolute top-4 right-4 w-[140px] h-[140px] border rounded bg-background/80 backdrop-blur-sm shadow-lg"
             />
 
             <Canvas
@@ -436,6 +435,13 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                   labels={["X", "Y", "Z"]}
                 />
               </GizmoHelper>
+
+              {/* Orientation Cube View */}
+              <View track={orientationViewportRef as React.MutableRefObject<HTMLElement>}>
+                <PerspectiveCamera makeDefault={false} position={[5, 5, 5]} fov={50} />
+                <OrbitControls enableZoom={false} enablePan={false} />
+                <OrientationCubeMesh onCubeClick={handleCubeClick} displayMode={displayMode} />
+              </View>
             </Canvas>
 
             {/* ✅ Removed PerformanceSettingsPanel - not needed for basic functionality */}
