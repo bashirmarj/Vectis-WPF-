@@ -331,11 +331,11 @@ def tessellate_shape(shape):
     """
     diagonal, bbox = calculate_bbox_diagonal(shape)
     
-    # Ultra-fine global tessellation (temporary baseline for stability)
+    # Professional CAD-quality tessellation (SolidWorks/Fusion 360/Onshape standard)
     linear_deflection = diagonal * 0.0001  # 0.01% of diagonal
-    angular_deflection = 1.0  # 1 degree
+    angular_deflection = 12.0  # 12 degrees - Industry standard for smooth curved surfaces
     
-    logger.info(f"🎨 Using ultra-fine global tessellation (linear={linear_deflection:.4f}mm, angular={angular_deflection}°)...")
+    logger.info(f"🎨 Using professional tessellation (linear={linear_deflection:.4f}mm, angular={angular_deflection}°)...")
     
     mesher = BRepMesh_IncrementalMesh(shape, linear_deflection, False, angular_deflection, True)
     mesher.Perform()
@@ -942,6 +942,17 @@ def analyze_cad():
         logger.info("🎨 Generating display mesh with 12° angular deflection...")
         mesh_data = tessellate_shape(shape)
 
+        logger.info("🎨 Classifying mesh topology for color visualization...")
+        vertex_colors = classify_mesh_faces(mesh_data, shape)
+        mesh_data["vertex_colors"] = vertex_colors
+        logger.info(f"   ├─ Generated {len(vertex_colors)} vertex colors")
+        
+        # Count color types for debugging
+        color_counts = {}
+        for color in vertex_colors:
+            color_counts[color] = color_counts.get(color, 0) + 1
+        logger.info(f"   ├─ Color distribution: {color_counts}")
+
         logger.info("📐 Extracting significant BREP edges with 30 segments/circle...")
         feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         mesh_data["feature_edges"] = feature_edges
@@ -1000,10 +1011,11 @@ def analyze_cad():
                 'vertices': mesh_data['vertices'],
                 'indices': mesh_data['indices'],
                 'normals': mesh_data['normals'],
+                'vertex_colors': mesh_data.get('vertex_colors', []),  # Add topology colors
                 'feature_edges': feature_edges,
                 'triangle_count': mesh_data['triangle_count'],
                 'edge_extraction_method': 'smart_filtering_20deg_30segments',
-                'tessellation_quality': 'professional_8deg_angular_deflection'
+                'tessellation_quality': 'professional_12deg_angular_deflection'
             },
             'volume_cm3': exact_props['volume'] / 1000,
             'surface_area_cm2': exact_props['surface_area'] / 100,
