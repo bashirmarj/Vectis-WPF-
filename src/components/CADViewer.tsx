@@ -392,7 +392,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             >
               <color attach="background" args={["#f8f9fa"]} />
-              <fog attach="fog" args={["#f8f9fa", 100, 500]} />
 
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
