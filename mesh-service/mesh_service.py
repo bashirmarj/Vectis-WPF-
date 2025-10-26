@@ -45,25 +45,25 @@ gmsh_lock = threading.Lock()
 # === QUALITY PRESETS ===
 QUALITY_PRESETS = {
     'fast': {
-        'base_size_factor': 0.003,      # 0.3% of diagonal (slightly finer for smoother curves)
-        'planar_factor': 3.0,           # 3x coarser on flat surfaces (efficient)
-        'curvature_points': 64,         # 64 elements per 2π = ~5.6° between points (very smooth)
-        'target_triangles': 40000,      # Target ~40k triangles (balanced)
-        'sharp_edge_threshold': 30.0    # 30° angle for sharp edge detection
+        'base_size_factor': 0.005,      # Coarser base (was 0.003)
+        'planar_factor': 3.0,
+        'curvature_points': 32,         # Reduced from 64 (fewer segments)
+        'target_triangles': 15000,      # Reduced from 40000 (62% less memory)
+        'sharp_edge_threshold': 30.0
     },
     'balanced': {
-        'base_size_factor': 0.0015,     # 0.15% of diagonal (fine detail)
-        'planar_factor': 2.5,           # 2.5x coarser on flats
-        'curvature_points': 80,         # 80 elements per 2π = ~4.5° between points (excellent)
-        'target_triangles': 150000,     # Target ~150k triangles
-        'sharp_edge_threshold': 25.0    # 25° angle for sharp edge detection
+        'base_size_factor': 0.003,      # Coarser (was 0.0015)
+        'planar_factor': 2.5,
+        'curvature_points': 48,         # Reduced from 80
+        'target_triangles': 30000,      # Reduced from 150000 (80% less memory)
+        'sharp_edge_threshold': 25.0
     },
     'ultra': {
-        'base_size_factor': 0.0006,     # 0.06% of diagonal (very fine)
-        'planar_factor': 2.0,           # Less coarsening
-        'curvature_points': 96,         # 96 elements per 2π = ~3.75° between points (ultra smooth)
-        'target_triangles': 500000,     # Target ~500k triangles
-        'sharp_edge_threshold': 20.0    # 20° angle for sharp edge detection (preserve more detail)
+        'base_size_factor': 0.002,      # Coarser (was 0.0006)
+        'planar_factor': 2.0,
+        'curvature_points': 64,         # Reduced from 96
+        'target_triangles': 60000,      # Reduced from 500000 (88% less memory)
+        'sharp_edge_threshold': 20.0
     }
 }
 
@@ -267,7 +267,7 @@ def mesh_cad():
             return jsonify({'success': False, 'error': 'No file provided'}), 400
         
         file = request.files['file']
-        quality = request.form.get('quality', 'balanced')
+        quality = request.form.get('quality', 'fast')
         
         if quality not in QUALITY_PRESETS:
             return jsonify({'success': False, 'error': f'Invalid quality: {quality}'}), 400
