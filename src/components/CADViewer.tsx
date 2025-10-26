@@ -446,7 +446,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               {/* Orientation Cube View */}
               <View index={1} track={orientationViewportRef as React.MutableRefObject<HTMLElement>}>
                 <PerspectiveCamera makeDefault={false} position={[5, 5, 5]} fov={50} />
-                <OrbitControls enableZoom={false} enablePan={false} />
+                <ambientLight intensity={0.6} />
+                <directionalLight position={[5, 5, 5]} intensity={0.8} />
                 <OrientationCubeMesh onCubeClick={handleCubeClick} displayMode={displayMode} />
               </View>
             </Canvas>

@@ -99,11 +99,13 @@ export function OrientationCubeMesh({ onCubeClick, displayMode }: OrientationCub
       onPointerMove={handlePointerMove}
       onPointerOut={handlePointerOut}
     >
-      <meshBasicMaterial
+      <meshStandardMaterial
         color={0x4a5568}
         transparent={displayMode === "translucent"}
         opacity={displayMode === "translucent" ? 0.5 : 1}
         wireframe={displayMode === "wireframe"}
+        roughness={0.7}
+        metalness={0.3}
       />
       
       {/* Edge lines */}
