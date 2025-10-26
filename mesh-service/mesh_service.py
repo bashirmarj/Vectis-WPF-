@@ -165,15 +165,15 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             
             triangle_count = len(indices) // 3
             
-            # Calculate per-vertex normals with sharp edge detection
+            # Calculate per-vertex normals with fast averaging
             sharp_edge_threshold = preset.get('sharp_edge_threshold', 30.0)
-            logger.info(f"🎨 Calculating normals with {sharp_edge_threshold}° sharp edge threshold...")
+            logger.info(f"🎨 Calculating normals using fast averaging (O(F) complexity)...")
             normals = calculate_vertex_normals(vertices, indices, sharp_edge_threshold)
             
             gmsh.finalize()
             
             logger.info(f"✅ Generated {triangle_count} triangles ({len(vertices)//3} vertices)")
-            logger.info(f"   └─ Smooth shading on curves, sharp edges preserved at {sharp_edge_threshold}°")
+            logger.info(f"   └─ Smooth averaged normals for {len(vertices)//3} vertices")
             
             return {
                 'vertices': vertices,
@@ -196,28 +196,26 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
 
 def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
     """
-    Calculate vertex normals with angle-based sharp edge detection.
+    Calculate vertex normals using fast averaging (sharp_edge_threshold ignored for performance).
     
-    This is the industry-standard approach used by SolidWorks, Fusion 360, and Onshape:
-    - Smooth surfaces: Average normals when angle < threshold
-    - Sharp edges: Don't average when angle > threshold
+    This simplified approach averages face normals at each vertex without angle checking,
+    providing smooth shading while maintaining O(F) complexity instead of O(V×F²).
     
     Args:
         vertices: Flat list of vertex coordinates [x,y,z, x,y,z, ...]
         indices: Triangle indices
-        sharp_edge_threshold: Angle in degrees (default 30°)
+        sharp_edge_threshold: Ignored (kept for API compatibility)
     
     Returns:
         Flat list of vertex normals
     """
     num_vertices = len(vertices) // 3
-    threshold_rad = np.radians(sharp_edge_threshold)
-    threshold_cos = np.cos(threshold_rad)
-    
-    # Step 1: Calculate face normals
     num_faces = len(indices) // 3
-    face_normals = np.zeros((num_faces, 3))
     
+    # Initialize normal accumulator
+    vertex_normals = np.zeros((num_vertices, 3))
+    
+    # Calculate face normals and accumulate at vertices (O(F) complexity)
     for i in range(num_faces):
         i1, i2, i3 = indices[i*3], indices[i*3+1], indices[i*3+2]
         
@@ -225,71 +223,20 @@ def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
         v2 = np.array(vertices[i2*3:i2*3+3])
         v3 = np.array(vertices[i3*3:i3*3+3])
         
+        # Calculate face normal
         edge1 = v2 - v1
         edge2 = v3 - v1
-        
         normal = np.cross(edge1, edge2)
-        length = np.linalg.norm(normal)
         
-        if length > 1e-10:
-            face_normals[i] = normal / length
-        else:
-            face_normals[i] = np.array([0, 0, 1])
+        # Accumulate at all three vertices (simple averaging)
+        vertex_normals[i1] += normal
+        vertex_normals[i2] += normal
+        vertex_normals[i3] += normal
     
-    # Step 2: Build vertex-to-faces connectivity
-    vertex_faces = [[] for _ in range(num_vertices)]
-    for face_idx in range(num_faces):
-        i1, i2, i3 = indices[face_idx*3], indices[face_idx*3+1], indices[face_idx*3+2]
-        vertex_faces[i1].append(face_idx)
-        vertex_faces[i2].append(face_idx)
-        vertex_faces[i3].append(face_idx)
-    
-    # Step 3: Calculate vertex normals with sharp edge detection
-    vertex_normals = np.zeros((num_vertices, 3))
-    
-    for v_idx in range(num_vertices):
-        adjacent_faces = vertex_faces[v_idx]
-        
-        if not adjacent_faces:
-            vertex_normals[v_idx] = np.array([0, 0, 1])
-            continue
-        
-        # For each face, check if it should contribute to this vertex's normal
-        accumulated_normal = np.zeros(3)
-        
-        for face_idx in adjacent_faces:
-            face_normal = face_normals[face_idx]
-            
-            # Check angle with all other adjacent faces
-            should_smooth = True
-            for other_face_idx in adjacent_faces:
-                if face_idx == other_face_idx:
-                    continue
-                
-                other_normal = face_normals[other_face_idx]
-                
-                # Calculate angle between normals using dot product
-                dot_product = np.dot(face_normal, other_normal)
-                dot_product = np.clip(dot_product, -1.0, 1.0)  # Handle numerical errors
-                
-                # If angle > threshold, this is a sharp edge - don't smooth
-                if dot_product < threshold_cos:
-                    should_smooth = False
-                    break
-            
-            if should_smooth:
-                accumulated_normal += face_normal
-            else:
-                # Sharp edge: use face normal directly (no averaging)
-                accumulated_normal = face_normal
-                break
-        
-        # Normalize the accumulated normal
-        length = np.linalg.norm(accumulated_normal)
-        if length > 1e-10:
-            vertex_normals[v_idx] = accumulated_normal / length
-        else:
-            vertex_normals[v_idx] = face_normals[adjacent_faces[0]]
+    # Normalize all vertex normals
+    norms = np.linalg.norm(vertex_normals, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0  # Prevent division by zero
+    vertex_normals /= norms
     
     return vertex_normals.flatten().tolist()
 

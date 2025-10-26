@@ -1010,10 +1010,8 @@ def analyze_cad():
                 'vertices': mesh_data['vertices'],
                 'indices': mesh_data['indices'],
                 'normals': mesh_data['normals'],
-                'vertex_colors': mesh_data['vertex_colors'],
                 'feature_edges': feature_edges,
                 'triangle_count': mesh_data['triangle_count'],
-                'face_classification_method': 'mesh_based_with_propagation',
                 'edge_extraction_method': 'smart_filtering_20deg_30segments',
                 'tessellation_quality': 'professional_8deg_angular_deflection'
             },
