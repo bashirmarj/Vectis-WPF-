@@ -1227,12 +1227,22 @@ const handler = async (req: Request): Promise<Response> => {
       }
     } else if (file_data && (isSTEP || isIGES)) {
       // STEP/IGES: Use DUAL-SERVICE architecture
+      // 🧪 TEMPORARILY USING GEOMETRY SERVICE MESH ONLY
       // Service 1: Feature analysis (app.py) - Manufacturing intelligence
-      // Service 2: High-quality mesh (mesh_service.py) - Visual quality
-      console.log(`🔧 Starting dual-service analysis for: ${file_name}`);
+      // Service 2: High-quality mesh (mesh_service.py) - DISABLED FOR TESTING
+      console.log(`🔧 Starting geometry service analysis for: ${file_name}`);
       
       try {
-        // Call both services in PARALLEL for maximum efficiency
+        // 🔇 MESH SERVICE DISABLED - Using geometry service mesh only
+        const featureResult = await analyzeSTEPViaService(
+          file_data, 
+          file_name, 
+          material, 
+          tolerance, 
+          force_reanalyze
+        );
+        
+        /* 🔇 MESH SERVICE CALL COMMENTED OUT FOR TESTING
         const [featureResult, meshResult] = await Promise.all([
           // Service 1: Feature analysis + routing
           analyzeSTEPViaService(file_data, file_name, material, tolerance, force_reanalyze),
@@ -1243,10 +1253,12 @@ const handler = async (req: Request): Promise<Response> => {
             return null;
           })
         ]);
+        */
 
         if (featureResult && featureResult.mesh_id) {
           analysis = featureResult;
           
+          /* 🔇 HIGH-QUALITY MESH OVERRIDE DISABLED FOR TESTING
           // If high-quality mesh is available, STORE IT and override mesh_id
           if (meshResult && meshResult.vertices) {
             console.log(`✅ Received high-quality mesh: ${meshResult.triangle_count} triangles`);
@@ -1277,8 +1289,9 @@ const handler = async (req: Request): Promise<Response> => {
               console.log(`⚠️ Failed to store high-quality mesh, keeping original mesh_id`);
             }
           }
+          */
           
-          console.log(`✅ Dual-service analysis complete`);
+          console.log(`✅ Using geometry service mesh: ${featureResult.mesh_data?.triangle_count || 'unknown'} triangles`);
         } else if (featureResult) {
           analysis = featureResult;
           console.log(`⚠️ Feature analysis successful, mesh service unavailable`);
