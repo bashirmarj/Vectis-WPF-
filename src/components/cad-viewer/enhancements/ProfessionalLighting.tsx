@@ -19,9 +19,9 @@ interface ProfessionalLightingProps {
  * - Hemisphere: Ambient base lighting (sky-ground gradient)
  */
 export function ProfessionalLighting({
-  intensity = 5.0,
+  intensity = 1.0,
   enableShadows = true,
-  shadowQuality = "medium",
+  shadowQuality = "high",
 }: ProfessionalLightingProps) {
   // Shadow map size based on quality
   const shadowMapSize = {
