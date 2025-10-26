@@ -113,7 +113,6 @@ interface AnalysisResult {
   feature_tree?: FeatureTree;
   mesh_id?: string;
   mesh_data?: MeshData; // ✅ Add mesh_data to interface
-  mesh_quality?: any; // Quality stats from mesh service
   // Industrial routing enhancements
   recommended_routings?: string[];
   routing_reasoning?: string[];
@@ -446,61 +445,6 @@ function detectRequiredProcesses(features: DetectedFeatures, complexity: number)
 }
 
 // Test Flask backend connectivity
-/**
- * Fetch high-quality mesh from mesh service (Gmsh-based)
- */
-async function fetchHighQualityMesh(
-  fileData: ArrayBuffer,
-  fileName: string,
-  quality: 'fast' | 'balanced' | 'ultra' = 'fast'
-): Promise<{ vertices: number[]; indices: number[]; normals: number[]; triangle_count: number; quality_stats: any } | null> {
-  const MESH_SERVICE_URL = Deno.env.get("MESH_SERVICE_URL");
-  
-  if (!MESH_SERVICE_URL) {
-    console.log("⚠️ MESH_SERVICE_URL not configured, skipping high-quality mesh");
-    return null;
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append("file", new Blob([fileData]), fileName);
-    formData.append("quality", quality);
-
-    const startTime = Date.now();
-    const response = await fetch(`${MESH_SERVICE_URL}/mesh-cad`, {
-      method: "POST",
-      body: formData,
-    });
-
-    const latency = Date.now() - startTime;
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Mesh service error (${response.status}): ${errorText}`);
-      return null;
-    }
-
-    const result = await response.json();
-    console.log(`✅ Mesh service responded in ${latency}ms`);
-
-    if (result.success) {
-      return {
-        vertices: result.vertices,
-        indices: result.indices,
-        normals: result.normals,
-        triangle_count: result.triangle_count,
-        quality_stats: result.quality_stats
-      };
-    } else {
-      console.error("❌ Mesh service returned failure:", result.error);
-      return null;
-    }
-  } catch (error: any) {
-    console.error("❌ Mesh service request failed:", error.message);
-    return null;
-  }
-}
-
 async function testFlaskConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
   const GEOMETRY_SERVICE_URL = Deno.env.get("GEOMETRY_SERVICE_URL");
 
@@ -664,19 +608,6 @@ async function analyzeSTEPViaService(
       },
     });
 
-    // 💾 Store mesh data in database (fresh analysis every time)
-    let mesh_id: string | undefined;
-    if (data.mesh_data && data.mesh_data.vertices && data.mesh_data.vertices.length > 0) {
-      console.log(`💾 Storing mesh data from Flask response: ${data.mesh_data.triangle_count} triangles`);
-      mesh_id = await storeMeshData(data.mesh_data, fileName);
-      if (mesh_id) {
-        console.log(`✅ Geometry service analysis successful with mesh_id: ${mesh_id}`);
-        console.log(`📐 Mesh includes ${(data.mesh_data.feature_edges || []).length} feature edges`);
-      }
-    } else {
-      console.log(`⚠️ No mesh data in Flask response to store`);
-    }
-
     // Map service response to our result format with BREP data
     const detected_features: DetectedFeatures = {
       is_cylindrical:
@@ -724,6 +655,17 @@ async function analyzeSTEPViaService(
     // Build feature tree organized by orientation
     const feature_tree: FeatureTree | undefined = detailed_features ? buildFeatureTree(detailed_features) : undefined;
 
+    // Store mesh data in database if available
+    let mesh_id: string | undefined;
+    if (data.mesh_data && data.mesh_data.vertices && data.mesh_data.vertices.length > 0) {
+      console.log(`💾 Storing mesh data: ${data.mesh_data.triangle_count} triangles`);
+      mesh_id = await storeMeshData(data.mesh_data, fileName, fileData, forceReanalyze);
+      console.log(`✅ Mesh stored with ID: ${mesh_id}`);
+      console.log(`📐 Mesh includes ${(data.mesh_data.feature_edges || []).length} feature edges`);
+    } else {
+      console.log(`⚠️ No mesh data available to store`);
+    }
+
     return {
       // Use exact BREP-based calculations for quotation
       volume_cm3: (data.exact_volume || data.volume_cm3) / 1000, // mm³ to cm³
@@ -753,26 +695,50 @@ async function analyzeSTEPViaService(
   }
 }
 
-// Store mesh data in database (no caching)
+// Calculate SHA-256 hash of file data for caching
+async function calculateFileHash(fileData: ArrayBuffer): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", fileData);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Store mesh data in database with caching
 async function storeMeshData(
   meshData: MeshData,
   fileName: string,
+  fileData: ArrayBuffer,
+  forceReanalyze?: boolean,
 ): Promise<string | undefined> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Generate a unique hash for this upload (timestamp-based)
-    const uniqueHash = crypto.randomUUID();
+    // Calculate file hash for caching
+    const fileHash = await calculateFileHash(fileData);
 
-    console.log(`💾 Storing fresh mesh data for ${fileName}`);
+    // Check if mesh already exists (unless force reanalyze is enabled)
+    if (!forceReanalyze) {
+      console.log(`🔍 Checking cache for file hash: ${fileHash}`);
+      const { data: existingMesh } = await supabase
+        .from("cad_meshes")
+        .select("id")
+        .eq("file_hash", fileHash)
+        .maybeSingle();
+
+      if (existingMesh) {
+        console.log(`Mesh already cached for ${fileName} (hash: ${fileHash})`);
+        return existingMesh.id;
+      }
+    } else {
+      console.log(`🔄 Force reanalyze enabled - bypassing cache for ${fileName}`);
+    }
 
     // Store new mesh
     const { data: newMesh, error } = await supabase
       .from("cad_meshes")
       .insert({
-        file_hash: uniqueHash,
+        file_hash: fileHash,
         file_name: fileName,
         vertices: meshData.vertices,
         indices: meshData.indices,
@@ -789,7 +755,7 @@ async function storeMeshData(
       return undefined;
     }
 
-    console.log(`✅ Stored mesh data for ${fileName}: ${meshData.triangle_count} triangles, mesh_id: ${newMesh.id}`);
+    console.log(`Stored mesh data for ${fileName}: ${meshData.triangle_count} triangles, mesh_id: ${newMesh.id}`);
     return newMesh.id;
   } catch (error) {
     console.error("Error in storeMeshData:", error);
@@ -1226,85 +1192,20 @@ const handler = async (req: Request): Promise<Response> => {
         analysis = enhancedHeuristic(file_name, file_size);
       }
     } else if (file_data && (isSTEP || isIGES)) {
-      // STEP/IGES: Use DUAL-SERVICE architecture
-      // 🧪 TEMPORARILY USING GEOMETRY SERVICE MESH ONLY
-      // Service 1: Feature analysis (app.py) - Manufacturing intelligence
-      // Service 2: High-quality mesh (mesh_service.py) - DISABLED FOR TESTING
-      console.log(`🔧 Starting geometry service analysis for: ${file_name}`);
-      
-      try {
-        // 🔇 MESH SERVICE DISABLED - Using geometry service mesh only
-        const featureResult = await analyzeSTEPViaService(
-          file_data, 
-          file_name, 
-          material, 
-          tolerance, 
-          force_reanalyze
-        );
-        
-        /* 🔇 MESH SERVICE CALL COMMENTED OUT FOR TESTING
-        const [featureResult, meshResult] = await Promise.all([
-          // Service 1: Feature analysis + routing
-          analyzeSTEPViaService(file_data, file_name, material, tolerance, force_reanalyze),
-          
-          // Service 2: High-quality mesh (optional, fallback if service unavailable)
-          fetchHighQualityMesh(file_data, file_name).catch(err => {
-            console.log(`⚠️ Mesh service unavailable: ${err.message}`);
-            return null;
-          })
-        ]);
-        */
+      // STEP/IGES: Always call Python microservice for accurate geometry analysis
+      console.log(`🔧 Attempting geometry service analysis for: ${file_name}`);
+      const serviceResult = await analyzeSTEPViaService(file_data, file_name, material, tolerance, force_reanalyze);
 
-        if (featureResult && featureResult.mesh_id) {
-          analysis = featureResult;
-          
-          /* 🔇 HIGH-QUALITY MESH OVERRIDE DISABLED FOR TESTING
-          // If high-quality mesh is available, STORE IT and override mesh_id
-          if (meshResult && meshResult.vertices) {
-            console.log(`✅ Received high-quality mesh: ${meshResult.triangle_count} triangles`);
-            
-            // Store the high-quality mesh to database
-            const hq_mesh_id = await storeMeshData(
-              {
-                vertices: meshResult.vertices,
-                indices: meshResult.indices,
-                normals: meshResult.normals,
-                triangle_count: meshResult.triangle_count,
-                feature_edges: featureResult.mesh_data?.feature_edges || []
-              },
-              file_name
-            );
-            
-            if (hq_mesh_id) {
-              console.log(`✅ Stored high-quality mesh with mesh_id: ${hq_mesh_id}`);
-              analysis.mesh_id = hq_mesh_id;  // Override with new mesh_id
-              analysis.mesh_data = {
-                vertices: meshResult.vertices,
-                indices: meshResult.indices,
-                normals: meshResult.normals,
-                triangle_count: meshResult.triangle_count
-              };
-              analysis.mesh_quality = meshResult.quality_stats;
-            } else {
-              console.log(`⚠️ Failed to store high-quality mesh, keeping original mesh_id`);
-            }
-          }
-          */
-          
-          console.log(`✅ Using geometry service mesh: ${featureResult.mesh_data?.triangle_count || 'unknown'} triangles`);
-        } else if (featureResult) {
-          analysis = featureResult;
-          console.log(`⚠️ Feature analysis successful, mesh service unavailable`);
-        } else {
-          console.log("❌ Both services unavailable, falling back to heuristic");
-          analysis = enhancedHeuristic(file_name, file_size);
-          analysis.confidence = 0.3;
-          analysis.method = "fallback_heuristic";
-        }
-      } catch (error: any) {
-        console.error("❌ Dual-service analysis failed:", error);
+      if (serviceResult && serviceResult.mesh_id) {
+        analysis = serviceResult;
+        console.log(`✅ Geometry service analysis successful with mesh_id: ${serviceResult.mesh_id}`);
+      } else if (serviceResult) {
+        analysis = serviceResult;
+        console.log(`⚠️ Geometry service analysis successful but no mesh data`);
+      } else {
+        console.log("❌ Geometry service unavailable, falling back to heuristic (reduced confidence)");
         analysis = enhancedHeuristic(file_name, file_size);
-        analysis.confidence = 0.3;
+        analysis.confidence = 0.3; // Mark low confidence for fallback
         analysis.method = "fallback_heuristic";
       }
     } else {
