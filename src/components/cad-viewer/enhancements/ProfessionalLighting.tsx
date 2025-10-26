@@ -37,14 +37,14 @@ export function ProfessionalLighting({
         args={[
           "#ffffff", // Sky color (cool white)
           "#444444", // Ground color (warm gray)
-          0.9 * intensity,
+          0.3 * intensity,
         ]}
       />
 
       {/* Key Light - Main illumination (front-top-right) */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={1.2 * intensity}
+        intensity={1.8 * intensity}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
