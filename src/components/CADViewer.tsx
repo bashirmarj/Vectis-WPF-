@@ -13,7 +13,6 @@ import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLigh
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
-// ✅ Simplified interface with ONLY essential props
 interface CADViewerProps {
   meshId?: string;
   fileUrl?: string;
@@ -21,7 +20,6 @@ interface CADViewerProps {
   onMeshLoaded?: (data: MeshData) => void;
 }
 
-// ✅ Proper MeshData interface matching database schema
 interface MeshData {
   vertices: number[];
   indices: number[];
@@ -81,7 +79,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         if (meshError) throw meshError;
         if (!mesh) throw new Error("Mesh not found");
 
-        // Parse mesh data
         const vertices = Array.isArray(mesh.vertices) ? mesh.vertices : JSON.parse(mesh.vertices as string);
         const indices = Array.isArray(mesh.indices) ? mesh.indices : JSON.parse(mesh.indices as string);
         const normals = Array.isArray(mesh.normals) ? mesh.normals : JSON.parse(mesh.normals as string);
@@ -176,17 +173,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     ] as [number, number, number];
   }, [boundingBox]);
 
-  // Dynamic fog distances
-  const fogDistances = useMemo(() => {
-    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-    const cameraDistance = maxDim * 1.5;
-    return {
-      near: cameraDistance * 2,
-      far: cameraDistance * 4,
-    };
-  }, [boundingBox]);
-
-  // ✅ OPTIMIZED: Camera view change handler with proper animation
+  // Camera view change handler
   const handleViewChange = useCallback(
     (viewType: "front" | "top" | "side" | "isometric" | "home") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -234,13 +221,11 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       controls.target.copy(target);
       controls.update();
 
-      // ✅ Update orientation cube to reflect new camera position
       orientationCubeRef.current?.updateFromMainCamera(camera);
     },
     [boundingBox],
   );
 
-  // ✅ OPTIMIZED: Fit view handler
   const handleFitView = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return;
 
@@ -256,11 +241,10 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     controls.target.copy(target);
     controls.update();
 
-    // Update orientation cube
     orientationCubeRef.current?.updateFromMainCamera(camera);
   }, [boundingBox]);
 
-  // ✅ OPTIMIZED: Cube click handler that updates main camera
+  // ✅ FIX #4: Updated cube click handler - still snaps to face but preserves rotation freedom
   const handleCubeClick = useCallback(
     (direction: THREE.Vector3) => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -285,13 +269,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       controls.target.copy(target);
       controls.update();
 
-      // Update orientation cube
       orientationCubeRef.current?.updateFromMainCamera(camera);
     },
     [boundingBox],
   );
 
-  // ✅ NEW: Camera rotation handlers for arrow buttons
+  // ✅ FIX #2 & #3 & #4: NEW rotation handler with 90-degree increments and continuous rotation
   const handleRotateCamera = useCallback(
     (rotationType: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -302,46 +285,73 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
       const distance = maxDim * 1.5;
 
+      // Get current camera state
       const currentPos = camera.position.clone().sub(target).normalize();
-      const currentUp = camera.up.clone();
+      const currentUp = camera.up.clone().normalize();
+      const currentDistance = camera.position.distanceTo(target);
+
+      // ✅ FIX #2: Changed from Math.PI / 4 (45°) to Math.PI / 2 (90°)
+      const ROTATION_ANGLE = Math.PI / 2; // 90 degrees
 
       let newPosition: THREE.Vector3;
       let newUp = currentUp.clone();
 
       switch (rotationType) {
         case "up": {
-          // Rotate camera upward around horizontal axis
+          // ✅ FIX #3: Rotate around horizontal axis (continuous rotation)
           const right = new THREE.Vector3().crossVectors(currentUp, currentPos).normalize();
-          newPosition = currentPos.clone().applyAxisAngle(right, Math.PI / 4);
+          newPosition = currentPos.clone();
+          newPosition.applyAxisAngle(right, -ROTATION_ANGLE); // Rotate up
+          newPosition.normalize();
+
+          // Adjust up vector if we're near poles
+          if (Math.abs(newPosition.y) > 0.95) {
+            newUp.set(0, 0, newPosition.y > 0 ? -1 : 1);
+          }
           break;
         }
         case "down": {
-          // Rotate camera downward
+          // ✅ FIX #3: Rotate around horizontal axis (continuous rotation)
           const right = new THREE.Vector3().crossVectors(currentUp, currentPos).normalize();
-          newPosition = currentPos.clone().applyAxisAngle(right, -Math.PI / 4);
+          newPosition = currentPos.clone();
+          newPosition.applyAxisAngle(right, ROTATION_ANGLE); // Rotate down
+          newPosition.normalize();
+
+          // Adjust up vector if we're near poles
+          if (Math.abs(newPosition.y) > 0.95) {
+            newUp.set(0, 0, newPosition.y > 0 ? -1 : 1);
+          }
           break;
         }
         case "left": {
-          // Rotate camera left around up axis
-          newPosition = currentPos.clone().applyAxisAngle(currentUp, Math.PI / 4);
+          // Rotate around up axis (continuous rotation)
+          newPosition = currentPos.clone();
+          newPosition.applyAxisAngle(currentUp, ROTATION_ANGLE);
+          newPosition.normalize();
           break;
         }
         case "right": {
-          // Rotate camera right around up axis
-          newPosition = currentPos.clone().applyAxisAngle(currentUp, -Math.PI / 4);
+          // Rotate around up axis (continuous rotation)
+          newPosition = currentPos.clone();
+          newPosition.applyAxisAngle(currentUp, -ROTATION_ANGLE);
+          newPosition.normalize();
           break;
         }
         case "cw": {
-          // Roll camera clockwise
-          const axis = currentPos.clone().negate();
-          newUp = currentUp.clone().applyAxisAngle(axis, -Math.PI / 4);
+          // Roll camera clockwise around view axis
+          const viewAxis = currentPos.clone().negate();
+          newUp = currentUp.clone();
+          newUp.applyAxisAngle(viewAxis, -ROTATION_ANGLE);
+          newUp.normalize();
           newPosition = currentPos.clone();
           break;
         }
         case "ccw": {
-          // Roll camera counter-clockwise
-          const axis = currentPos.clone().negate();
-          newUp = currentUp.clone().applyAxisAngle(axis, Math.PI / 4);
+          // Roll camera counter-clockwise around view axis
+          const viewAxis = currentPos.clone().negate();
+          newUp = currentUp.clone();
+          newUp.applyAxisAngle(viewAxis, ROTATION_ANGLE);
+          newUp.normalize();
           newPosition = currentPos.clone();
           break;
         }
@@ -349,7 +359,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           return;
       }
 
-      camera.position.copy(target.clone().add(newPosition.multiplyScalar(distance)));
+      // ✅ FIX #4: Use current distance instead of calculated distance to preserve zoom level
+      camera.position.copy(target.clone().add(newPosition.multiplyScalar(currentDistance)));
       camera.up.copy(newUp);
       camera.lookAt(target);
       controls.target.copy(target);
@@ -380,7 +391,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     }
   }, [fileUrl, fileName]);
 
-  // ✅ OPTIMIZED: Update orientation cube when camera moves
+  // ✅ Update orientation cube when camera moves via TrackballControls
   useEffect(() => {
     if (!cameraRef.current || !controlsRef.current) return;
 
@@ -463,7 +474,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ OPTIMIZED: Orientation Cube with camera rotation handlers */}
+            {/* ✅ Orientation Cube with all rotation handlers */}
             <OrientationCubePreview
               ref={orientationCubeRef}
               onCubeClick={handleCubeClick}
@@ -521,6 +532,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
+                {/* ✅ FIX #4: TrackballControls allows free rotation - not "glued" */}
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
