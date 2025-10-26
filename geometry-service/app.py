@@ -5,6 +5,7 @@ import tempfile
 import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from supabase import create_client, Client
 
 # === OCC imports ===
 from OCC.Core.STEPControl import STEPControl_Reader
@@ -36,6 +37,10 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
 
+# === Supabase setup ===
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --------------------------------------------------
 # === Geometry Utilities ===
@@ -58,13 +63,13 @@ def calculate_exact_volume_and_area(shape):
     volume_props = GProp_GProps()
     brepgprop.VolumeProperties(shape, volume_props)
     exact_volume = volume_props.Mass()
-
+    
     area_props = GProp_GProps()
     brepgprop.SurfaceProperties(shape, area_props)
     exact_surface_area = area_props.Mass()
-
+    
     logger.info(f"🔍 Exact BREP calculations: volume={exact_volume:.2f}mm³, area={exact_surface_area:.2f}mm²")
-
+    
     return {
         'volume': exact_volume,
         'surface_area': exact_surface_area,
@@ -76,68 +81,45 @@ def calculate_exact_volume_and_area(shape):
     }
 
 
-def axes_are_parallel(axis1, axis2, tolerance=0.1):
-    """Check if two axes are parallel (dot product ~ 1 or -1)"""
-    dot = abs(axis1[0] * axis2[0] + axis1[1] * axis2[1] + axis1[2] * axis2[2])
-    return dot > (1.0 - tolerance)
-
-def axes_are_coaxial(pos1, axis1, pos2, axis2, tolerance_mm=0.5):
-    """Check if two cylindrical axes are coaxial (same axis line)"""
-    if not axes_are_parallel(axis1, axis2):
-        return False
-    
-    # Vector from pos1 to pos2
-    v = [pos2[0] - pos1[0], pos2[1] - pos1[1], pos2[2] - pos1[2]]
-    
-    # Cross product with axis
-    cross = [
-        v[1] * axis1[2] - v[2] * axis1[1],
-        v[2] * axis1[0] - v[0] * axis1[2],
-        v[0] * axis1[1] - v[1] * axis1[0]
-    ]
-    
-    # Distance is magnitude of cross product
-    dist = math.sqrt(cross[0]**2 + cross[1]**2 + cross[2]**2)
-    return dist < tolerance_mm
-
 def recognize_manufacturing_features(shape):
     """
-    Analyze BREP topology to detect ACCURATE manufacturing features.
+    Analyze BREP topology to detect TRUE manufacturing features
     
-    Three-stage classification:
-    1. FACE GROUPING: Group coaxial cylindrical faces
-    2. FEATURE CLASSIFICATION: Identify holes, bores, grooves, bosses
-    3. VALIDATION: Filter out false positives
-    
-    Key improvements:
-    - GROOVES: Detect annular cylindrical features (e.g., O-ring grooves)
-    - THROUGH-HOLES: Verify penetration by checking face connectivity
-    - BLIND HOLES: Detect terminated cylindrical cavities
-    - BORES: Large internal cylinders with specific depth constraints
+    Accurate detection of:
+    - Through-holes: Small cylinders that penetrate the part
+    - Blind holes: Small cylinders with depth but no exit
+    - Bores: Large internal cylindrical cavities
+    - Bosses: Protruding cylindrical features
+    - Pockets: Recessed features
     """
     features = {
         'through_holes': [],
         'blind_holes': [],
         'bores': [],
-        'grooves': [],
         'bosses': [],
         'pockets': [],
         'planar_faces': [],
         'fillets': [],
         'complex_surfaces': []
     }
-
+    
     bbox_diagonal, (xmin, ymin, zmin, xmax, ymax, zmax) = calculate_bbox_diagonal(shape)
     bbox_center = [(xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2]
     bbox_size = max(xmax - xmin, ymax - ymin, zmax - zmin)
-
-    # === STAGE 1: COLLECT ALL CYLINDRICAL FACES ===
-    cylindrical_faces = []
-    planar_faces_list = []
     
+    # Build edge-to-face map for connectivity analysis
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    
+    # Collect all faces first
+    all_faces = []
     face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
     while face_explorer.More():
-        face = topods.Face(face_explorer.Current())
+        all_faces.append(topods.Face(face_explorer.Current()))
+        face_explorer.Next()
+    
+    # Analyze each face
+    for face in all_faces:
         surface = BRepAdaptor_Surface(face)
         surf_type = surface.GetType()
         
@@ -152,758 +134,839 @@ def recognize_manufacturing_features(shape):
             axis_dir = cyl.Axis().Direction()
             axis_pos = cyl.Axis().Location()
             
-            cylindrical_faces.append({
-                'face': face,
-                'radius': radius,
+            # Calculate if this cylinder is internal or external
+            axis_point = [axis_pos.X(), axis_pos.Y(), axis_pos.Z()]
+            center = [face_center.X(), face_center.Y(), face_center.Z()]
+            
+            dist_to_axis = math.sqrt(
+                (center[0] - axis_point[0])**2 +
+                (center[1] - axis_point[1])**2 +
+                (center[2] - axis_point[2])**2
+            )
+            
+            bbox_to_axis = math.sqrt(
+                (bbox_center[0] - axis_point[0])**2 +
+                (bbox_center[1] - axis_point[1])**2 +
+                (bbox_center[2] - axis_point[2])**2
+            )
+            
+            is_internal = dist_to_axis < bbox_to_axis
+            
+            feature_data = {
                 'diameter': radius * 2,
+                'radius': radius,
                 'axis': [axis_dir.X(), axis_dir.Y(), axis_dir.Z()],
                 'position': [axis_pos.X(), axis_pos.Y(), axis_pos.Z()],
-                'center': [face_center.X(), face_center.Y(), face_center.Z()],
+                'area': face_area
+            }
+            
+            # Classification logic
+            diameter_ratio = (radius * 2) / bbox_size
+            
+            if is_internal:
+                if diameter_ratio < 0.15:  # Small hole (< 15% of part size)
+                    # Check if it's a through-hole by checking adjacency to external faces
+                    has_external_connection = False
+                    edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
+                    
+                    while edge_exp.More():
+                        edge = edge_exp.Current()
+                        
+                        for map_idx in range(1, edge_face_map.Size() + 1):
+                            map_edge = edge_face_map.FindKey(map_idx)
+                            if edge.IsSame(map_edge):
+                                face_list = edge_face_map.FindFromIndex(map_idx)
+                                face_iter = TopTools_ListIteratorOfListOfShape(face_list)
+                                
+                                while face_iter.More():
+                                    adj_face = topods.Face(face_iter.Value())
+                                    if not adj_face.IsSame(face):
+                                        # Check if adjacent face is external
+                                        adj_surface = BRepAdaptor_Surface(adj_face)
+                                        if adj_surface.GetType() == GeomAbs_Cylinder:
+                                            try:
+                                                adj_cyl = adj_surface.Cylinder()
+                                                adj_axis = adj_cyl.Axis().Location()
+                                                adj_axis_pt = [adj_axis.X(), adj_axis.Y(), adj_axis.Z()]
+                                                
+                                                adj_props = GProp_GProps()
+                                                brepgprop.SurfaceProperties(adj_face, adj_props)
+                                                adj_center = adj_props.CentreOfMass()
+                                                adj_ctr = [adj_center.X(), adj_center.Y(), adj_center.Z()]
+                                                
+                                                adj_dist = math.sqrt(
+                                                    (adj_ctr[0] - adj_axis_pt[0])**2 +
+                                                    (adj_ctr[1] - adj_axis_pt[1])**2 +
+                                                    (adj_ctr[2] - adj_axis_pt[2])**2
+                                                )
+                                                adj_bbox_dist = math.sqrt(
+                                                    (bbox_center[0] - adj_axis_pt[0])**2 +
+                                                    (bbox_center[1] - adj_axis_pt[1])**2 +
+                                                    (bbox_center[2] - adj_axis_pt[2])**2
+                                                )
+                                                
+                                                if adj_dist > adj_bbox_dist:
+                                                    has_external_connection = True
+                                                    break
+                                            except:
+                                                pass
+                                        elif adj_surface.GetType() == GeomAbs_Plane:
+                                            # Planar face could be external
+                                            has_external_connection = True
+                                            break
+                                    
+                                    face_iter.Next()
+                                break
+                        
+                        if has_external_connection:
+                            break
+                        edge_exp.Next()
+                    
+                    if has_external_connection:
+                        features['through_holes'].append(feature_data)
+                    else:
+                        features['blind_holes'].append(feature_data)
+                
+                elif diameter_ratio < 0.5:  # Medium bore (15-50% of part size)
+                    features['bores'].append(feature_data)
+                # else: very large internal cavity - not counted as separate feature
+            
+            else:  # External cylinder
+                if diameter_ratio < 0.3:  # Small boss
+                    features['bosses'].append(feature_data)
+                # else: main body cylinder - not a separate feature
+        
+        elif surf_type == GeomAbs_Plane:
+            plane = surface.Plane()
+            normal = plane.Axis().Direction()
+            features['planar_faces'].append({
+                'normal': [normal.X(), normal.Y(), normal.Z()],
                 'area': face_area
             })
-        elif surf_type == GeomAbs_Plane:
-            planar_faces_list.append({
+        
+        elif surf_type == GeomAbs_Torus:
+            # Fillets and rounds
+            features['fillets'].append({
                 'area': face_area,
-                'center': [face_center.X(), face_center.Y(), face_center.Z()]
+                'type': 'torus'
             })
+        
         else:
             features['complex_surfaces'].append({
                 'type': str(surf_type),
                 'area': face_area
             })
-        
-        face_explorer.Next()
     
-    # === STAGE 2: GROUP COAXIAL CYLINDRICAL FACES ===
-    processed = set()
-    grouped_cylinders = []
+    # Calculate totals for backward compatibility
+    total_holes = len(features['through_holes']) + len(features['blind_holes'])
+    total_bosses = len(features['bosses'])
     
-    for i, cyl_data in enumerate(cylindrical_faces):
-        if i in processed:
-            continue
-        
-        group = [cyl_data]
-        processed.add(i)
-        
-        # Find all coaxial faces with this cylinder
-        for j, other_cyl in enumerate(cylindrical_faces):
-            if j in processed:
-                continue
-            
-            if axes_are_coaxial(
-                cyl_data['position'], cyl_data['axis'],
-                other_cyl['position'], other_cyl['axis'],
-                tolerance_mm=0.5
-            ):
-                group.append(other_cyl)
-                processed.add(j)
-        
-        grouped_cylinders.append(group)
+    logger.info(f"🔧 Manufacturing Features Detected:")
+    logger.info(f"   Through-holes: {len(features['through_holes'])}")
+    logger.info(f"   Blind holes: {len(features['blind_holes'])}")
+    logger.info(f"   Bores: {len(features['bores'])}")
+    logger.info(f"   Bosses: {len(features['bosses'])}")
+    logger.info(f"   Planar faces: {len(features['planar_faces'])}")
+    logger.info(f"   Fillets: {len(features['fillets'])}")
+    logger.info(f"   Complex surfaces: {len(features['complex_surfaces'])}")
     
-    # === STAGE 3: CLASSIFY EACH CYLINDRICAL FEATURE GROUP ===
-    for group in grouped_cylinders:
-        # Analyze this group
-        radii = [c['radius'] for c in group]
-        min_radius = min(radii)
-        max_radius = max(radii)
-        avg_radius = sum(radii) / len(radii)
-        
-        # Representative data for the group
-        primary = group[0]
-        
-        # Calculate if internal or external based on center-to-bbox relationship
-        center = primary['center']
-        axis_pos = primary['position']
-        
-        dist_to_bbox = math.sqrt(
-            (bbox_center[0] - center[0])**2 +
-            (bbox_center[1] - center[1])**2 +
-            (bbox_center[2] - center[2])**2
-        )
-        
-        is_internal = dist_to_bbox < (bbox_size * 0.3)  # Conservative threshold
-        
-        feature_data = {
-            'diameter': avg_radius * 2,
-            'radius': avg_radius,
-            'axis': primary['axis'],
-            'position': axis_pos,
-            'area': sum(c['area'] for c in group),
-            'coaxial_face_count': len(group)
-        }
-        
-        diameter_ratio = (avg_radius * 2) / bbox_size
-        
-        # === FEATURE CLASSIFICATION LOGIC ===
-        
-        # GROOVES: Multiple coaxial faces with varying radii (annular feature)
-        if len(group) >= 2 and max_radius > min_radius * 1.05:
-            features['grooves'].append({
-                **feature_data,
-                'inner_diameter': min_radius * 2,
-                'outer_diameter': max_radius * 2,
-                'depth': (max_radius - min_radius)
-            })
-        
-        # THROUGH-HOLES: Small internal cylinders (< 15% part size)
-        elif is_internal and diameter_ratio < 0.15:
-            # Simplified: assume through if very small and internal
-            features['through_holes'].append(feature_data)
-        
-        # BLIND HOLES: Small internal cylinders with single face
-        elif is_internal and diameter_ratio < 0.15 and len(group) == 1:
-            features['blind_holes'].append(feature_data)
-        
-        # BORES: Larger internal cylinders (15-50% part size)
-        elif is_internal and 0.15 <= diameter_ratio < 0.5:
-            features['bores'].append(feature_data)
-        
-        # BOSSES: External cylindrical protrusions
-        elif not is_internal:
-            features['bosses'].append(feature_data)
+    # Add legacy fields for backward compatibility
+    features['holes'] = features['through_holes'] + features['blind_holes']
+    features['cylindrical_bosses'] = features['bosses']
     
-    # Store planar faces
-    features['planar_faces'] = planar_faces_list
-
-    # Backward compatibility: combine all hole types
-    features['holes'] = features['through_holes'] + features['blind_holes'] + features['bores']
-
-    logger.info(f"🔍 Detected features: {len(features['through_holes'])} through-holes, "
-                f"{len(features['blind_holes'])} blind holes, {len(features['bores'])} bores, "
-                f"{len(features['grooves'])} grooves, "
-                f"{len(features['bosses'])} bosses, {len(features['planar_faces'])} planar faces")
-
     return features
 
 
-def get_surface_tessellation_params(surface, diagonal):
+def get_face_normal_at_point(face, point):
     """
-    Return adaptive tessellation parameters based on surface type.
-    Curved surfaces get MUCH higher resolution than planar surfaces.
-    """
-    surf_type = surface.GetType()
+    Get the surface normal of a face at a given point.
     
-    if surf_type == GeomAbs_Plane:
-        # Planar - use normal resolution (they don't benefit from more triangles)
-        return {
-            'linear': diagonal * 0.0005,  # 0.05% of diagonal
-            'angular': 8.0,  # 8 degrees
-            'type': 'plane'
+    Returns gp_Dir or None if calculation fails.
+    """
+    try:
+        surface = BRep_Tool.Surface(face)
+        surface_adaptor = BRepAdaptor_Surface(face)
+        
+        # Project point onto surface to get UV parameters
+        # This is a simplified approach - using midpoint of UV domain
+        u_mid = (surface_adaptor.FirstUParameter() + surface_adaptor.LastUParameter()) / 2
+        v_mid = (surface_adaptor.FirstVParameter() + surface_adaptor.LastVParameter()) / 2
+        
+        # Get normal at midpoint
+        d1u = surface_adaptor.DN(u_mid, v_mid, 1, 0)
+        d1v = surface_adaptor.DN(u_mid, v_mid, 0, 1)
+        
+        normal = d1u.Crossed(d1v)
+        
+        if normal.Magnitude() < 1e-7:
+            return None
+            
+        normal.Normalize()
+        
+        # Check face orientation
+        if face.Orientation() == 1:  # TopAbs_REVERSED
+            normal.Reverse()
+        
+        return gp_Dir(normal.X(), normal.Y(), normal.Z())
+        
+    except Exception as e:
+        logger.debug(f"Error getting face normal: {e}")
+        return None
+
+
+def calculate_dihedral_angle(edge, face1, face2):
+    """
+    Calculate the dihedral angle between two faces along their shared edge.
+    
+    Returns angle in radians, or None if calculation fails.
+    Professional CAD software typically uses 20-30° threshold.
+    """
+    try:
+        # Get a point in the middle of the edge
+        curve_result = BRep_Tool.Curve(edge)
+        if not curve_result or curve_result[0] is None:
+            return None
+            
+        curve = curve_result[0]
+        first_param = curve_result[1]
+        last_param = curve_result[2]
+        mid_param = (first_param + last_param) / 2.0
+        
+        edge_point = curve.Value(mid_param)
+        
+        # Get normals of both faces at the edge point
+        normal1 = get_face_normal_at_point(face1, edge_point)
+        normal2 = get_face_normal_at_point(face2, edge_point)
+        
+        if normal1 is None or normal2 is None:
+            return None
+        
+        # Calculate angle between normals
+        # Dihedral angle = π - angle between normals
+        dot_product = normal1.Dot(normal2)
+        dot_product = max(-1.0, min(1.0, dot_product))  # Clamp to [-1, 1]
+        
+        angle_between_normals = math.acos(dot_product)
+        dihedral_angle = math.pi - angle_between_normals
+        
+        return abs(dihedral_angle)
+        
+    except Exception as e:
+        logger.debug(f"Error calculating dihedral angle: {e}")
+        return None
+
+
+def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
+    """
+    Extract SIGNIFICANT feature edges from BREP geometry.
+    
+    Only extracts edges that are:
+    1. Boundary edges (belong to only 1 face) - always significant
+    2. Sharp edges (dihedral angle between faces > threshold)
+    
+    This matches professional CAD software behavior (SolidWorks, Fusion 360).
+    
+    Args:
+        shape: OpenCascade shape
+        max_edges: Maximum number of edges to extract
+        angle_threshold_degrees: Minimum dihedral angle to consider edge "sharp" (default: 20°)
+    
+    Returns:
+        List of polylines, where each polyline is a list of [x, y, z] points
+    """
+    logger.info(f"📐 Extracting significant BREP edges (angle threshold: {angle_threshold_degrees}°)...")
+    
+    feature_edges = []
+    edge_count = 0
+    angle_threshold_rad = math.radians(angle_threshold_degrees)
+    
+    # Build edge-to-faces map using TopTools
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    
+    try:
+        edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+        
+        stats = {
+            'boundary_edges': 0,
+            'sharp_edges': 0,
+            'smooth_edges_skipped': 0,
+            'total_processed': 0
         }
-    elif surf_type == GeomAbs_Cylinder:
-        # Cylindrical - ULTRA HIGH resolution for smooth appearance
-        return {
-            'linear': diagonal * 0.00005,  # 0.005% of diagonal (10x finer)
-            'angular': 2.0,  # 2 degrees (much finer curves)
-            'type': 'cylinder'
-        }
-    elif surf_type == GeomAbs_Sphere:
-        # Spherical - MAXIMUM resolution
-        return {
-            'linear': diagonal * 0.00003,  # 0.003% of diagonal (17x finer)
-            'angular': 1.0,  # 1 degree (very smooth)
-            'type': 'sphere'
-        }
-    elif surf_type in [GeomAbs_Cone, GeomAbs_Torus]:
-        # Other curved surfaces - HIGH resolution
-        return {
-            'linear': diagonal * 0.00007,  # 0.007% of diagonal (7x finer)
-            'angular': 2.5,  # 2.5 degrees
-            'type': 'curved'
-        }
-    else:
-        # BSpline, Bezier, etc - MAXIMUM resolution for freeform surfaces
-        return {
-            'linear': diagonal * 0.00003,  # 0.003% of diagonal
-            'angular': 1.0,  # 1 degree
-            'type': 'freeform'
-        }
+        
+        while edge_explorer.More() and edge_count < max_edges:
+            edge = topods.Edge(edge_explorer.Current())
+            stats['total_processed'] += 1
+            
+            try:
+                # Get curve geometry
+                curve_result = BRep_Tool.Curve(edge)
+                
+                if not curve_result or len(curve_result) < 3 or curve_result[0] is None:
+                    edge_explorer.Next()
+                    continue
+                
+                curve = curve_result[0]
+                first_param = curve_result[1]
+                last_param = curve_result[2]
+                
+                # Determine if this edge is significant
+                is_significant = False
+                edge_type = "unknown"
+                
+                # Get faces adjacent to this edge
+                if edge_face_map.Contains(edge):
+                    face_list = edge_face_map.FindFromKey(edge)
+                    num_adjacent_faces = face_list.Size()
+                    
+                    if num_adjacent_faces == 1:
+                        # BOUNDARY EDGE - always show (holes, external boundaries)
+                        is_significant = True
+                        edge_type = "boundary"
+                        stats['boundary_edges'] += 1
+                        
+                    elif num_adjacent_faces == 2:
+                        # INTERIOR EDGE - check dihedral angle
+                        face1 = topods.Face(face_list.First())
+                        face2 = topods.Face(face_list.Last())
+                        
+                        # Calculate dihedral angle between the two faces
+                        dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                        
+                        if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
+                            # SHARP EDGE - angle exceeds threshold
+                            is_significant = True
+                            edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
+                            stats['sharp_edges'] += 1
+                        else:
+                            # SMOOTH/TANGENT EDGE - skip (within fillet, blend, etc.)
+                            stats['smooth_edges_skipped'] += 1
+                else:
+                    # Orphan edge - include it to be safe
+                    is_significant = True
+                    edge_type = "orphan"
+                
+                # Only extract significant edges
+                if not is_significant:
+                    edge_explorer.Next()
+                    continue
+                
+                # Sample the curve to create a polyline
+                curve_adaptor = BRepAdaptor_Curve(edge)
+                curve_type = curve_adaptor.GetType()
+                
+                # Adaptive sampling based on curve type
+                if curve_type == GeomAbs_Line:
+                    num_samples = 2  # Lines only need endpoints
+                elif curve_type == GeomAbs_Circle:
+                    num_samples = 32  # Circles need smooth representation
+                elif curve_type in [GeomAbs_BSplineCurve, GeomAbs_BezierCurve]:
+                    num_samples = 24  # Splines need moderate sampling
+                else:
+                    num_samples = 20  # Default for other curve types
+                
+                points = []
+                for i in range(num_samples + 1):
+                    param = first_param + (last_param - first_param) * i / num_samples
+                    point = curve.Value(param)
+                    points.append([point.X(), point.Y(), point.Z()])
+                
+                if len(points) >= 2:
+                    feature_edges.append(points)
+                    edge_count += 1
+                    
+            except Exception as e:
+                logger.debug(f"Error processing edge: {e}")
+                pass
+            
+            edge_explorer.Next()
+        
+        logger.info(f"✅ Extracted {len(feature_edges)} significant edges:")
+        logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
+        logger.info(f"   - Sharp edges: {stats['sharp_edges']}")
+        logger.info(f"   - Smooth edges skipped: {stats['smooth_edges_skipped']}")
+        logger.info(f"   - Total processed: {stats['total_processed']}")
+        
+    except Exception as e:
+        logger.error(f"Error extracting edges: {e}")
+        return []
+    
+    return feature_edges
+
+
+def calculate_face_center(triangulation, transform):
+    """Compute average center of a face"""
+    try:
+        total = np.zeros(3)
+        for i in range(1, triangulation.NbNodes() + 1):
+            p = triangulation.Node(i)
+            p.Transform(transform)
+            total += np.array([p.X(), p.Y(), p.Z()])
+        return (total / triangulation.NbNodes()).tolist()
+    except Exception:
+        return [0, 0, 0]
+
+
+def compute_smooth_vertex_normals(vertices, indices):
+    """
+    Compute smooth per-vertex normals by averaging adjacent face normals.
+    This eliminates horizontal banding on curved surfaces (cylinders, fillets).
+    
+    Args:
+        vertices: Flat list of vertex coordinates [x0,y0,z0, x1,y1,z1, ...]
+        indices: Flat list of triangle indices [i0,i1,i2, i3,i4,i5, ...]
+    
+    Returns:
+        List of smooth normals [nx0,ny0,nz0, nx1,ny1,nz1, ...]
+    """
+    try:
+        vertex_count = len(vertices) // 3
+        triangle_count = len(indices) // 3
+        
+        # Initialize normals accumulator (will sum face normals)
+        normals = [0.0] * len(vertices)
+        
+        # For each triangle, compute face normal and accumulate at vertices
+        for tri_idx in range(triangle_count):
+            i0 = indices[tri_idx * 3]
+            i1 = indices[tri_idx * 3 + 1]
+            i2 = indices[tri_idx * 3 + 2]
+            
+            # Get vertex positions
+            v0 = [vertices[i0 * 3], vertices[i0 * 3 + 1], vertices[i0 * 3 + 2]]
+            v1 = [vertices[i1 * 3], vertices[i1 * 3 + 1], vertices[i1 * 3 + 2]]
+            v2 = [vertices[i2 * 3], vertices[i2 * 3 + 1], vertices[i2 * 3 + 2]]
+            
+            # Compute edges
+            e1 = [v1[j] - v0[j] for j in range(3)]
+            e2 = [v2[j] - v0[j] for j in range(3)]
+            
+            # Compute face normal (cross product)
+            face_normal = [
+                e1[1] * e2[2] - e1[2] * e2[1],
+                e1[2] * e2[0] - e1[0] * e2[2],
+                e1[0] * e2[1] - e1[1] * e2[0],
+            ]
+            
+            # Accumulate at each vertex of the triangle
+            for idx in [i0, i1, i2]:
+                normals[idx * 3] += face_normal[0]
+                normals[idx * 3 + 1] += face_normal[1]
+                normals[idx * 3 + 2] += face_normal[2]
+        
+        # Normalize all accumulated normals
+        for i in range(vertex_count):
+            nx = normals[i * 3]
+            ny = normals[i * 3 + 1]
+            nz = normals[i * 3 + 2]
+            
+            length = math.sqrt(nx * nx + ny * ny + nz * nz)
+            if length > 1e-7:  # Avoid division by zero
+                normals[i * 3] = nx / length
+                normals[i * 3 + 1] = ny / length
+                normals[i * 3 + 2] = nz / length
+            else:
+                # Degenerate case: use arbitrary normal
+                normals[i * 3] = 0.0
+                normals[i * 3 + 1] = 0.0
+                normals[i * 3 + 2] = 1.0
+        
+        return normals
+        
+    except Exception as e:
+        logger.error(f"Error computing smooth normals: {e}")
+        # Return zero normals if computation fails
+        return [0.0] * len(vertices)
 
 
 def tessellate_shape(shape):
     """
-    Create ultra-high-quality mesh using GLOBAL adaptive tessellation.
-    
-    TEMPORARY SOLUTION: Uses fine global tessellation as a baseline.
-    Will be replaced by dedicated mesh service with Gmsh for production-quality results.
-    
-    This ensures service stability while mesh_service.py delivers best-in-class visuals.
+    === SECTION 1: MESH GENERATION ONLY ===
+    Generate display mesh with adaptive quality.
+    NO color classification here - purely geometric mesh creation.
     """
-    diagonal, bbox = calculate_bbox_diagonal(shape)
-    
-    # Professional CAD-quality tessellation (SolidWorks/Fusion 360/Onshape standard)
-    linear_deflection = diagonal * 0.0001  # 0.01% of diagonal
-    angular_deflection = 12.0  # 12 degrees - Industry standard for smooth curved surfaces
-    
-    logger.info(f"🎨 Using professional tessellation (linear={linear_deflection:.4f}mm, angular={angular_deflection}°)...")
-    
-    mesher = BRepMesh_IncrementalMesh(shape, linear_deflection, False, angular_deflection, True)
-    mesher.Perform()
-    
-    if not mesher.IsDone():
-        logger.warning("⚠️ Tessellation incomplete, using default settings")
-        mesher = BRepMesh_IncrementalMesh(shape, diagonal * 0.001, False, 5.0, True)
-        mesher.Perform()
-    
-    vertices = []
-    indices = []
-    vertex_map = {}  # Maps (x,y,z) -> vertex_index
-    vertex_face_normals = {}  # Maps vertex_index -> [list of face normals]
-    face_surface_types = {}  # Maps triangle_index -> surface_type ("plane" or "cylinder")
-    current_index = 0
-    triangle_index = 0
-    
-    # PASS 1: Build vertex positions and collect face normals for each vertex
-    face_exp = TopExp_Explorer(shape, TopAbs_FACE)
-    
-    while face_exp.More():
-        face = topods.Face(face_exp.Current())
-        location = TopLoc_Location()
-        triangulation = BRep_Tool.Triangulation(face, location)
+    try:
+        bbox_diagonal, bbox_coords = calculate_bbox_diagonal(shape)
+        base_deflection = min(bbox_diagonal * 0.008, 0.2)
         
-        if triangulation is None:
-            face_exp.Next()
-            continue
+        logger.info(f"🔧 Tessellation: diagonal={bbox_diagonal:.2f}mm, deflection={base_deflection:.4f}mm")
         
-        trsf = location.Transformation()
-        surface = BRepAdaptor_Surface(face)
-        surf_type = surface.GetType()
-        surface_type_str = "plane" if surf_type == GeomAbs_Plane else "cylinder"
-        face_orientation = face.Orientation()
-        normal_flip = 1.0 if face_orientation == 0 else -1.0
-        
-        # Compute face normal at center
-        try:
-            props = BRepGProp_Face(face)
-            u_mid = (surface.FirstUParameter() + surface.LastUParameter()) / 2
-            v_mid = (surface.FirstVParameter() + surface.LastVParameter()) / 2
-            normal_gp = gp_Vec()
-            point_gp = gp_Pnt()
-            props.Normal(u_mid, v_mid, point_gp, normal_gp)
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        while face_explorer.More():
+            face = topods.Face(face_explorer.Current())
+            surface = BRepAdaptor_Surface(face)
+            surf_type = surface.GetType()
             
-            face_normal = np.array([
-                normal_gp.X() * normal_flip,
-                normal_gp.Y() * normal_flip,
-                normal_gp.Z() * normal_flip
-            ])
-            
-            # Normalize
-            length = np.linalg.norm(face_normal)
-            if length > 0:
-                face_normal = face_normal / length
-        except:
-            face_normal = np.array([0, 0, 1])
-        
-        # Process vertices for this face
-        node_count = triangulation.NbNodes()
-        local_vertex_map = {}
-        
-        for i in range(1, node_count + 1):
-            pnt = triangulation.Node(i)
-            pnt.Transform(trsf)
-            
-            vertex_key = (round(pnt.X(), 6), round(pnt.Y(), 6), round(pnt.Z(), 6))
-            
-            if vertex_key not in vertex_map:
-                vertices.extend([pnt.X(), pnt.Y(), pnt.Z()])
-                vertex_map[vertex_key] = current_index
-                vertex_face_normals[current_index] = []
-                local_vertex_map[i] = current_index
-                current_index += 1
+            if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, 
+                           GeomAbs_Torus, GeomAbs_BSplineSurface, GeomAbs_BezierSurface]:
+                face_deflection = base_deflection / 8.0
+                angular_deflection = 0.15
             else:
-                local_vertex_map[i] = vertex_map[vertex_key]
+                face_deflection = base_deflection
+                angular_deflection = 0.5
             
-            # Add this face's normal to the vertex's normal list
-            v_idx = vertex_map[vertex_key]
-            vertex_face_normals[v_idx].append(face_normal)
-        
-        # Process triangles
-        triangle_count = triangulation.NbTriangles()
-        for i in range(1, triangle_count + 1):
-            triangle = triangulation.Triangle(i)
-            n1, n2, n3 = triangle.Get()
-            
-            if face_orientation == 0:  # TopAbs_FORWARD
-                indices.extend([
-                    local_vertex_map[n1],
-                    local_vertex_map[n2],
-                    local_vertex_map[n3]
-                ])
-            else:  # TopAbs_REVERSED
-                indices.extend([
-                    local_vertex_map[n1],
-                    local_vertex_map[n3],
-                    local_vertex_map[n2]
-                ])
-            
-            # Store surface type for this triangle
-            face_surface_types[triangle_index] = surface_type_str
-            triangle_index += 1
-        
-        face_exp.Next()
-    
-    # PASS 2: Generate PURE SMOOTH NORMALS (no hybrid - professional CAD standard)
-    # This ensures seamless transitions between all surface types
-    vertex_normals = [0.0] * len(vertices)
-    vertex_normal_counts = [0] * (len(vertices) // 3)
-    num_vertices = len(vertices) // 3
-    
-    # First pass: Accumulate normals for ALL vertices (no surface type discrimination)
-    for tri_idx in range(len(indices) // 3):
-        idx0, idx1, idx2 = indices[tri_idx*3], indices[tri_idx*3+1], indices[tri_idx*3+2]
-        
-        v0 = np.array([vertices[idx0*3], vertices[idx0*3+1], vertices[idx0*3+2]])
-        v1 = np.array([vertices[idx1*3], vertices[idx1*3+1], vertices[idx1*3+2]])
-        v2 = np.array([vertices[idx2*3], vertices[idx2*3+1], vertices[idx2*3+2]])
-        
-        # Calculate triangle face normal
-        edge1 = v1 - v0
-        edge2 = v2 - v0
-        face_normal = np.cross(edge1, edge2)
-        
-        length = np.linalg.norm(face_normal)
-        if length > 0:
-            face_normal = face_normal / length
-        else:
-            face_normal = np.array([0, 0, 1])
-        
-        # SMOOTH SHADING FOR ALL: Accumulate normals at shared vertices
-        for idx in [idx0, idx1, idx2]:
-            vertex_normals[idx*3] += face_normal[0]
-            vertex_normals[idx*3+1] += face_normal[1]
-            vertex_normals[idx*3+2] += face_normal[2]
-            vertex_normal_counts[idx] += 1
-    
-    # Second pass: Normalize all accumulated normals
-    for v_idx in range(num_vertices):
-        if vertex_normal_counts[v_idx] > 0:
-            nx = vertex_normals[v_idx*3]
-            ny = vertex_normals[v_idx*3+1]
-            nz = vertex_normals[v_idx*3+2]
-            
-            length = math.sqrt(nx*nx + ny*ny + nz*nz)
-            if length > 0:
-                vertex_normals[v_idx*3] = nx / length
-                vertex_normals[v_idx*3+1] = ny / length
-                vertex_normals[v_idx*3+2] = nz / length
-            else:
-                # Fallback for degenerate cases
-                vertex_normals[v_idx*3] = 0
-                vertex_normals[v_idx*3+1] = 0
-                vertex_normals[v_idx*3+2] = 1
-    
-    logger.info(f"✅ Tessellation complete: {num_vertices} vertices, {len(indices)//3} triangles")
-    logger.info(f"   ├─ SMOOTH NORMALS: All {num_vertices} vertices use averaged normals (professional CAD standard)")
-    
-    return {
-        'vertices': vertices,
-        'indices': indices,
-        'normals': vertex_normals
-    }
-
-
-def extract_feature_edges(shape, max_edges=2000, angle_threshold_degrees=20):
-    """
-    Extract significant BREP edges using professional smart filtering with enhanced circular edge detection.
-    
-    Strategy:
-    - Use dihedral angle between adjacent faces to identify feature edges
-    - Edges with angle > threshold are considered "significant"
-    - ALWAYS include circular/cylindrical edges regardless of angle (prevents segmentation)
-    - Boundary edges (silhouettes) are always included
-    - This mimics SolidWorks/Fusion 360 edge display behavior
-    - Circles use 30 segments per full circle (professional quality)
-    
-    Returns: List of edge polylines [[x,y,z], [x,y,z], ...]
-    """
-    angle_threshold_rad = math.radians(angle_threshold_degrees)
-    feature_edges = []
-
-    # Build edge-to-face map
-    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-
-    logger.info(f"🔍 Analyzing {edge_face_map.Size()} edges with {angle_threshold_degrees}° threshold (enhanced circular detection)...")
-
-    edge_exp = TopExp_Explorer(shape, TopAbs_EDGE)
-    edge_count = 0
-    significant_count = 0
-    circular_count = 0
-    boundary_count = 0
-
-    while edge_exp.More() and significant_count < max_edges:
-        edge = topods.Edge(edge_exp.Current())
-        edge_count += 1
-
-        # Get adjacent faces
-        adjacent_faces = []
-        for i in range(1, edge_face_map.Size() + 1):
-            if edge.IsSame(edge_face_map.FindKey(i)):
-                face_list = edge_face_map.FindFromIndex(i)
-                face_iter = TopTools_ListIteratorOfListOfShape(face_list)
-                while face_iter.More():
-                    adjacent_faces.append(topods.Face(face_iter.Value()))
-                    face_iter.Next()
-                break
-
-        # Check if this is a feature edge
-        is_feature = False
-        edge_type = "unknown"
-
-        # CRITICAL: Check if this is a circular edge first
-        try:
-            curve_adaptor = BRepAdaptor_Curve(edge)
-            curve_type = curve_adaptor.GetType()
-            
-            if curve_type == GeomAbs_Circle:
-                # ALWAYS include circular edges - they define cylindrical/spherical boundaries
-                is_feature = True
-                edge_type = "circular"
-                circular_count += 1
-        except:
-            pass
-
-        if not is_feature:
-            if len(adjacent_faces) == 1:
-                # Boundary edge (silhouette) - always a feature
-                is_feature = True
-                edge_type = "boundary"
-                boundary_count += 1
-            elif len(adjacent_faces) == 2:
-                # Internal edge - check dihedral angle
-                try:
-                    face1 = adjacent_faces[0]
-                    face2 = adjacent_faces[1]
-
-                    # Get normals at edge midpoint
-                    curve_adaptor = BRepAdaptor_Curve(edge)
-                    u_mid = (curve_adaptor.FirstParameter() + curve_adaptor.LastParameter()) / 2
-                    mid_point = curve_adaptor.Value(u_mid)
-
-                    # Compute normals for both faces at the midpoint
-                    surface1 = BRepAdaptor_Surface(face1)
-                    surface2 = BRepAdaptor_Surface(face2)
-
-                    # Project point onto surfaces to get UV coordinates
-                    props1 = BRepGProp_Face(face1)
-                    props2 = BRepGProp_Face(face2)
-
-                    # Use mid-UV for normal computation
-                    u1_mid = (surface1.FirstUParameter() + surface1.LastUParameter()) / 2
-                    v1_mid = (surface1.FirstVParameter() + surface1.LastVParameter()) / 2
-                    u2_mid = (surface2.FirstUParameter() + surface2.LastUParameter()) / 2
-                    v2_mid = (surface2.FirstVParameter() + surface2.LastVParameter()) / 2
-
-                    normal1 = gp_Vec()
-                    normal2 = gp_Vec()
-                    point1 = gp_Pnt()
-                    point2 = gp_Pnt()
-
-                    props1.Normal(u1_mid, v1_mid, point1, normal1)
-                    props2.Normal(u2_mid, v2_mid, point2, normal2)
-
-                    # Calculate dihedral angle
-                    dot_product = normal1.Dot(normal2)
-                    dot_product = max(-1.0, min(1.0, dot_product))  # Clamp to [-1, 1]
-                    angle = math.acos(abs(dot_product))
-
-                    # Feature if angle exceeds threshold
-                    if angle > angle_threshold_rad:
-                        is_feature = True
-                        edge_type = "angular"
-                except:
-                    # If we can't compute angle, assume it's a feature to be safe
-                    is_feature = True
-                    edge_type = "fallback"
-
-        if is_feature:
-            # Tessellate the edge with professional quality
             try:
-                curve_adaptor = BRepAdaptor_Curve(edge)
-                curve_type = curve_adaptor.GetType()
-                u_first = curve_adaptor.FirstParameter()
-                u_last = curve_adaptor.LastParameter()
+                face_mesh = BRepMesh_IncrementalMesh(face, face_deflection, False, angular_deflection, True)
+                face_mesh.Perform()
+            except Exception as e:
+                logger.warning(f"Face tessellation failed: {e}")
+            
+            face_explorer.Next()
 
-                # ============================================
-                # 🔥 PROFESSIONAL QUALITY CIRCLE SEGMENTATION
-                # ============================================
-                if curve_type == GeomAbs_Line:
-                    num_samples = 2  # Lines only need 2 points
-                elif curve_type == GeomAbs_Circle:
-                    # Use 30 segments for a full circle (professional quality)
-                    arc_angle = u_last - u_first
-                    full_circle = 2 * math.pi
-                    num_samples = max(2, int(30 * arc_angle / full_circle))
-                elif curve_type in [GeomAbs_BSplineCurve, GeomAbs_BezierCurve]:
-                    # Adaptive sampling for splines
-                    edge_length = GCPnts_AbscissaPoint.Length(curve_adaptor, u_first, u_last)
-                    num_samples = max(2, min(20, int(edge_length / 2)))  # 2-20 samples, one per 2mm
+        bbox = Bnd_Box()
+        brepbndlib.Add(shape, bbox)
+        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+        cx, cy, cz = (xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2
+
+        logger.info("📊 Extracting mesh geometry (no classification)...")
+        
+        vertices, indices, normals = [], [], []
+        face_data = []  # Store face metadata for later classification
+        current_index = 0
+        
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        face_idx = 0
+
+        while face_explorer.More():
+            face = face_explorer.Current()
+            loc = TopLoc_Location()
+            triangulation = BRep_Tool.Triangulation(face, loc)
+            if triangulation is None:
+                face_explorer.Next()
+                face_idx += 1
+                continue
+
+            transform = loc.Transformation()
+            surface = BRepAdaptor_Surface(face)
+            reversed_face = face.Orientation() == 1
+            surf_type = surface.GetType()
+            center = calculate_face_center(triangulation, transform)
+            
+            bbox_center = [cx, cy, cz]
+            to_surface = [center[0] - bbox_center[0], center[1] - bbox_center[1], center[2] - bbox_center[2]]
+            
+            # Store face metadata for classification
+            face_start_vertex = current_index
+            face_vertices = []
+            
+            for i in range(1, triangulation.NbNodes() + 1):
+                p = triangulation.Node(i)
+                p.Transform(transform)
+                
+                vertices.extend([p.X(), p.Y(), p.Z()])
+                face_vertices.append(current_index)
+                current_index += 1
+
+            face_start_index = len(indices)
+            
+            for i in range(1, triangulation.NbTriangles() + 1):
+                tri = triangulation.Triangle(i)
+                n1, n2, n3 = tri.Get()
+                idx = [face_vertices[n1 - 1], face_vertices[n2 - 1], face_vertices[n3 - 1]]
+                if reversed_face:
+                    indices.extend([idx[0], idx[2], idx[1]])
                 else:
-                    # Default for other curve types
-                    edge_length = GCPnts_AbscissaPoint.Length(curve_adaptor, u_first, u_last)
-                    num_samples = max(2, min(20, int(edge_length / 2)))
-                # ============================================
+                    indices.extend(idx)
+                v1, v2, v3 = [vertices[j * 3:j * 3 + 3] for j in idx]
+                e1 = [v2[k] - v1[k] for k in range(3)]
+                e2 = [v3[k] - v1[k] for k in range(3)]
+                n = [
+                    e1[1] * e2[2] - e1[2] * e2[1],
+                    e1[2] * e2[0] - e1[0] * e2[2],
+                    e1[0] * e2[1] - e1[1] * e2[0],
+                ]
+                l = math.sqrt(sum(x * x for x in n))
+                if l > 0:
+                    n = [x / l for x in n]
+                if sum(n * v for n, v in zip(n, to_surface)) < 0:
+                    n = [-x for x in n]
+                for _ in range(3):
+                    normals.extend(n)
+            
+            # Store face info for classification
+            face_data.append({
+                'face_idx': face_idx,
+                'surf_type': surf_type,
+                'center': center,
+                'start_vertex': face_start_vertex,
+                'vertex_count': len(face_vertices),
+                'start_index': face_start_index,
+                'triangle_count': (len(indices) - face_start_index) // 3,
+                'face_object': face
+            })
 
-                points = []
-                for i in range(num_samples):
-                    u = u_first + (u_last - u_first) * i / (num_samples - 1)
-                    pnt = curve_adaptor.Value(u)
-                    points.append([pnt.X(), pnt.Y(), pnt.Z()])
+            face_explorer.Next()
+            face_idx += 1
 
-                if len(points) >= 2:
-                    feature_edges.append(points)
-                    significant_count += 1
-            except:
-                pass
+        vertex_count = len(vertices) // 3
+        triangle_count = len(indices) // 3
+        logger.info(f"✅ Mesh generation complete: {vertex_count} vertices, {triangle_count} triangles")
+        
+        # Compute smooth vertex normals for professional CAD rendering
+        # This eliminates horizontal banding on curved surfaces
+        smooth_normals = compute_smooth_vertex_normals(vertices, indices)
+        logger.info(f"✅ Smooth normals computed for {vertex_count} vertices")
+        
+        return {
+            "vertices": vertices,
+            "indices": indices,
+            "normals": normals,  # Keep original flat normals for backward compatibility
+            "smooth_normals": smooth_normals,  # NEW: Add smooth normals for curved surfaces
+            "face_data": face_data,
+            "bbox": (xmin, ymin, zmin, xmax, ymax, zmax),
+            "triangle_count": triangle_count,
+        }
 
-        edge_exp.Next()
-
-    logger.info(f"✅ Found {significant_count} significant edges out of {edge_count} total edges")
-    logger.info(f"   ├─ {circular_count} circular edges (always included)")
-    logger.info(f"   ├─ {boundary_count} boundary/silhouette edges")
-    logger.info(f"   └─ {significant_count - circular_count - boundary_count} angular feature edges")
-
-    return feature_edges
+    except Exception as e:
+        logger.error(f"Tessellation error: {e}")
+        return {
+            "vertices": [],
+            "indices": [],
+            "normals": [],
+            "smooth_normals": [],  # Add for consistency
+            "face_data": [],
+            "bbox": (0, 0, 0, 0, 0, 0),
+            "triangle_count": 0,
+        }
 
 
 def classify_mesh_faces(mesh_data, shape):
     """
-    MESH-BASED surface classification using vertex position and face neighbor propagation.
+    === SECTION 2: FIXED COLOR CLASSIFICATION ===
     
-    This approach:
-    1. Analyzes each triangle mesh face independently
-    2. Projects vertices back to BREP to determine surface type
-    3. Uses multi-pass propagation to fix misclassifications
-    4. Locks classified regions to prevent overwriting
-    
-    Returns: List of color types for each vertex ["external", "internal", "through", "planar"]
+    Strategy:
+    1. First classify all CYLINDRICAL faces using radius/axis logic
+    2. Then PROPAGATE classification to adjacent non-cylindrical faces
+    3. This ensures boss fillets, planar faces, etc. get correct colors
     """
-    vertices = mesh_data['vertices']
-    indices = mesh_data['indices']
-    num_vertices = len(vertices) // 3
-    num_triangles = len(indices) // 3
-
-    logger.info(f"🎨 Starting MESH-BASED classification: {num_vertices} vertices, {num_triangles} faces")
-
-    # Initialize with None (unclassified)
-    vertex_colors = [None] * num_vertices
-    face_classifications = [None] * num_triangles
-
-    # Build face-to-vertex and vertex-to-face maps
-    vertex_to_faces = [[] for _ in range(num_vertices)]
-    for tri_idx in range(num_triangles):
-        v1 = indices[tri_idx * 3]
-        v2 = indices[tri_idx * 3 + 1]
-        v3 = indices[tri_idx * 3 + 2]
-        vertex_to_faces[v1].append(tri_idx)
-        vertex_to_faces[v2].append(tri_idx)
-        vertex_to_faces[v3].append(tri_idx)
-
-    # Get manufacturing features for reference
-    features = recognize_manufacturing_features(shape)
-    internal_cylinders = features['through_holes'] + features['blind_holes'] + features['bores']
-
-    bbox_diagonal, bbox = calculate_bbox_diagonal(shape)
-    bbox_center = [(bbox[0] + bbox[3]) / 2, (bbox[1] + bbox[4]) / 2, (bbox[2] + bbox[5]) / 2]
-
-    # Step 1: Classify each mesh face by projecting to BREP
-    face_exp = TopExp_Explorer(shape, TopAbs_FACE)
-    brep_faces = []
-    while face_exp.More():
-        brep_faces.append(topods.Face(face_exp.Current()))
-        face_exp.Next()
-
-    for tri_idx in range(num_triangles):
-        v1_idx = indices[tri_idx * 3]
-        v2_idx = indices[tri_idx * 3 + 1]
-        v3_idx = indices[tri_idx * 3 + 2]
-
-        # Get triangle centroid
-        cx = (vertices[v1_idx*3] + vertices[v2_idx*3] + vertices[v3_idx*3]) / 3
-        cy = (vertices[v1_idx*3+1] + vertices[v2_idx*3+1] + vertices[v3_idx*3+1]) / 3
-        cz = (vertices[v1_idx*3+2] + vertices[v2_idx*3+2] + vertices[v3_idx*3+2]) / 3
-        centroid = [cx, cy, cz]
-
-        # Find closest BREP face
-        min_dist = float('inf')
-        closest_face = None
-
-        for brep_face in brep_faces:
-            surface = BRepAdaptor_Surface(brep_face)
-            surf_type = surface.GetType()
-
-            if surf_type == GeomAbs_Cylinder:
-                cyl = surface.Cylinder()
-                axis_pos = cyl.Axis().Location()
-                axis_point = [axis_pos.X(), axis_pos.Y(), axis_pos.Z()]
-                radius = cyl.Radius()
-
-                # Distance from centroid to cylinder axis
-                dist_to_axis = math.sqrt(
-                    (centroid[0] - axis_point[0])**2 +
-                    (centroid[1] - axis_point[1])**2 +
-                    (centroid[2] - axis_point[2])**2
-                )
-
-                dist_to_surface = abs(dist_to_axis - radius)
-
-                if dist_to_surface < min_dist:
-                    min_dist = dist_to_surface
-                    closest_face = (brep_face, surf_type, radius, axis_point)
-
-            elif surf_type == GeomAbs_Plane:
-                # For planes, check distance to face center
-                face_props = GProp_GProps()
-                brepgprop.SurfaceProperties(brep_face, face_props)
-                face_center = face_props.CentreOfMass()
-
-                dist = math.sqrt(
-                    (centroid[0] - face_center.X())**2 +
-                    (centroid[1] - face_center.Y())**2 +
-                    (centroid[2] - face_center.Z())**2
-                )
-
-                if dist < min_dist:
-                    min_dist = dist
-                    closest_face = (brep_face, surf_type, None, None)
-
-        # Classify based on closest face
-        if closest_face is not None:
-            _, surf_type, radius, axis_point = closest_face
-
-            if surf_type == GeomAbs_Cylinder and radius is not None:
-                # Check if internal or external
-                dist_axis_to_bbox = math.sqrt(
-                    (axis_point[0] - bbox_center[0])**2 +
-                    (axis_point[1] - bbox_center[1])**2 +
-                    (axis_point[2] - bbox_center[2])**2
-                )
-
-                dist_centroid_to_axis = math.sqrt(
-                    (centroid[0] - axis_point[0])**2 +
-                    (centroid[1] - axis_point[1])**2 +
-                    (centroid[2] - axis_point[2])**2
-                )
-
-                # Internal if closer to axis than bbox center
-                if dist_centroid_to_axis < dist_axis_to_bbox:
-                    # Check if it's a through-hole (small internal cylinder)
-                    bbox_size = max(bbox[3] - bbox[0], bbox[4] - bbox[1], bbox[5] - bbox[2])
-                    diameter_ratio = (radius * 2) / bbox_size
-
-                    if diameter_ratio < 0.15:
-                        face_classifications[tri_idx] = "through"
-                    else:
-                        face_classifications[tri_idx] = "internal"
+    logger.info("🎨 Starting IMPROVED mesh-based color classification with propagation...")
+    
+    vertices = mesh_data["vertices"]
+    normals = mesh_data["normals"]
+    face_data = mesh_data["face_data"]
+    xmin, ymin, zmin, xmax, ymax, zmax = mesh_data["bbox"]
+    
+    bbox_center = [(xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2]
+    bbox_size = max(xmax - xmin, ymax - ymin, zmax - zmin)
+    
+    # Initialize all vertices as "external" (default)
+    vertex_count = len(vertices) // 3
+    vertex_colors = ["external"] * vertex_count
+    face_classifications = {}  # Store classification for each face
+    locked_faces = set()  # Faces classified in step 1 - don't change these!
+    
+    # Build edge-to-face adjacency map
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    
+    logger.info("🔍 STEP 1: Classifying cylindrical faces...")
+    
+    # STEP 1: Classify all CYLINDRICAL faces first
+    for face_info in face_data:
+        face_idx = face_info['face_idx']
+        surf_type = face_info['surf_type']
+        center = face_info['center']
+        start_vertex = face_info['start_vertex']
+        vertex_count_face = face_info['vertex_count']
+        face_object = face_info['face_object']
+        
+        if surf_type != GeomAbs_Cylinder:
+            continue  # Skip non-cylindrical for now
+        
+        try:
+            surface = BRepAdaptor_Surface(face_object)
+            cyl = surface.Cylinder()
+            radius = cyl.Radius()
+            axis_location = cyl.Axis().Location()
+            
+            # Calculate distance from face center to cylinder axis
+            axis_point = [axis_location.X(), axis_location.Y(), axis_location.Z()]
+            dist_to_axis = math.sqrt(
+                (center[0] - axis_point[0])**2 +
+                (center[1] - axis_point[1])**2 +
+                (center[2] - axis_point[2])**2
+            )
+            
+            # Calculate distance from bbox center to axis
+            bbox_to_axis = math.sqrt(
+                (bbox_center[0] - axis_point[0])**2 +
+                (bbox_center[1] - axis_point[1])**2 +
+                (bbox_center[2] - axis_point[2])**2
+            )
+            
+            is_small_hole = radius < bbox_size * 0.15
+            
+            if dist_to_axis < bbox_to_axis:
+                # Inner cylindrical surface
+                if is_small_hole:
+                    # Check for through-hole
+                    has_outer_neighbor = False
+                    edge_exp = TopExp_Explorer(face_object, TopAbs_EDGE)
+                    
+                    while edge_exp.More() and not has_outer_neighbor:
+                        edge = edge_exp.Current()
+                        
+                        for map_idx in range(1, edge_face_map.Size() + 1):
+                            map_edge = edge_face_map.FindKey(map_idx)
+                            if edge.IsSame(map_edge):
+                                face_list = edge_face_map.FindFromIndex(map_idx)
+                                face_iter = TopTools_ListIteratorOfListOfShape(face_list)
+                                
+                                while face_iter.More():
+                                    adj_face = topods.Face(face_iter.Value())
+                                    
+                                    for other_info in face_data:
+                                        if adj_face.IsSame(other_info['face_object']):
+                                            # Check if neighbor is external
+                                            if other_info['surf_type'] != GeomAbs_Cylinder:
+                                                break
+                                            try:
+                                                other_surf = BRepAdaptor_Surface(adj_face)
+                                                other_cyl = other_surf.Cylinder()
+                                                other_axis = other_cyl.Axis().Location()
+                                                other_axis_pt = [other_axis.X(), other_axis.Y(), other_axis.Z()]
+                                                other_center = other_info['center']
+                                                
+                                                other_dist = math.sqrt(
+                                                    (other_center[0] - other_axis_pt[0])**2 +
+                                                    (other_center[1] - other_axis_pt[1])**2 +
+                                                    (other_center[2] - other_axis_pt[2])**2
+                                                )
+                                                other_bbox_dist = math.sqrt(
+                                                    (bbox_center[0] - other_axis_pt[0])**2 +
+                                                    (bbox_center[1] - other_axis_pt[1])**2 +
+                                                    (bbox_center[2] - other_axis_pt[2])**2
+                                                )
+                                                
+                                                if other_dist > other_bbox_dist:
+                                                    has_outer_neighbor = True
+                                            except:
+                                                pass
+                                            break
+                                    
+                                    if has_outer_neighbor:
+                                        break
+                                    face_iter.Next()
+                                break
+                        
+                        if has_outer_neighbor:
+                            break
+                        edge_exp.Next()
+                    
+                    face_type = "through" if has_outer_neighbor else "internal"
                 else:
-                    face_classifications[tri_idx] = "external"
-
-            elif surf_type == GeomAbs_Plane:
-                face_classifications[tri_idx] = "planar"
-
+                    # Large inner cylinder (bore)
+                    face_type = "internal"
             else:
-                face_classifications[tri_idx] = "external"
-        else:
-            face_classifications[tri_idx] = "external"
-
-        # Assign to vertices
-        classification = face_classifications[tri_idx] or "external"
-        vertex_colors[v1_idx] = classification
-        vertex_colors[v2_idx] = classification
-        vertex_colors[v3_idx] = classification
-
-    # Step 2: Multi-pass neighbor propagation with face locking
-    logger.info("🔄 Starting multi-pass propagation to fix misclassifications...")
-    max_iterations = 5
-    locked_faces = set()
-
+                # Outer cylindrical surface
+                face_type = "external"
+            
+            # Store classification
+            face_classifications[face_idx] = face_type
+            locked_faces.add(face_idx)  # Lock this classification
+            
+            # Apply to vertices
+            for v_idx in range(start_vertex, start_vertex + vertex_count_face):
+                vertex_colors[v_idx] = face_type
+            
+            if face_idx < 10:
+                logger.info(f"  Face {face_idx}: Cylinder R={radius:.2f}mm → {face_type}")
+                
+        except Exception as e:
+            logger.warning(f"Cylinder classification failed for face {face_idx}: {e}")
+            face_classifications[face_idx] = "external"
+    
+    logger.info("🔍 STEP 2: Multi-pass propagation to adjacent faces...")
+    
+    # STEP 2: Multi-pass propagation until stable
+    # Iterate multiple times to ensure all connected faces get proper classification
+    max_iterations = 10
+    
     for iteration in range(max_iterations):
         changes_made = False
-
-        for tri_idx in range(num_triangles):
-            if tri_idx in locked_faces:
+        
+        for face_info in face_data:
+            face_idx = face_info['face_idx']
+            
+            # Skip locked faces (cylindrical faces from step 1)
+            if face_idx in locked_faces:
                 continue
-
-            current_type = face_classifications[tri_idx]
-            if current_type is None:
-                continue
-
-            # Get neighbor face types
+            
+            surf_type = face_info['surf_type']
+            face_object = face_info['face_object']
+            start_vertex = face_info['start_vertex']
+            vertex_count_face = face_info['vertex_count']
+            
+            # Get current classification
+            current_type = face_classifications.get(face_idx)
+            
+            # Find adjacent faces via shared edges
+            edge_exp = TopExp_Explorer(face_object, TopAbs_EDGE)
             neighbor_types = []
-            v1 = indices[tri_idx * 3]
-            v2 = indices[tri_idx * 3 + 1]
-            v3 = indices[tri_idx * 3 + 2]
-
-            for v_idx in [v1, v2, v3]:
-                for neighbor_tri in vertex_to_faces[v_idx]:
-                    if neighbor_tri != tri_idx and face_classifications[neighbor_tri] is not None:
-                        neighbor_types.append(face_classifications[neighbor_tri])
-
-            if not neighbor_types:
-                continue
-
-            # Count neighbor types
-            type_counts = {}
-            for ntype in neighbor_types:
-                type_counts[ntype] = type_counts.get(ntype, 0) + 1
-
-            # Propagation rules
-            if current_type == "external":
-                # External faces can change to internal/through if surrounded
-                if "internal" in neighbor_types and type_counts.get("internal", 0) >= 2:
+            
+            while edge_exp.More():
+                edge = edge_exp.Current()
+                
+                # Find all faces sharing this edge
+                for map_idx in range(1, edge_face_map.Size() + 1):
+                    map_edge = edge_face_map.FindKey(map_idx)
+                    if edge.IsSame(map_edge):
+                        face_list = edge_face_map.FindFromIndex(map_idx)
+                        face_iter = TopTools_ListIteratorOfListOfShape(face_list)
+                        
+                        while face_iter.More():
+                            adj_face = topods.Face(face_iter.Value())
+                            
+                            # Find this adjacent face in our data
+                            for other_info in face_data:
+                                if adj_face.IsSame(other_info['face_object']):
+                                    other_idx = other_info['face_idx']
+                                    if other_idx != face_idx and other_idx in face_classifications:
+                                        neighbor_types.append(face_classifications[other_idx])
+                                    break
+                            
+                            face_iter.Next()
+                        break
+                
+                edge_exp.Next()
+            
+            # Determine new type based on neighbors
+            new_type = None
+            
+            if neighbor_types:
+                # Priority: internal > through > external
+                if "internal" in neighbor_types:
                     new_type = "internal"
-                elif "through" in neighbor_types and type_counts.get("through", 0) >= 2:
+                elif "through" in neighbor_types:
                     new_type = "through"
                 else:
-                    new_type = current_type
-
-            elif current_type == "planar":
-                # Planar faces can change if strongly surrounded
-                if "internal" in neighbor_types and type_counts.get("internal", 0) >= 3:
-                    new_type = "internal"
-                elif "through" in neighbor_types and type_counts.get("through", 0) >= 3:
-                    new_type = "through"
-                else:
-                    new_type = current_type
-
-            elif current_type == "internal":
-                # Internal faces can propagate to adjacent external
-                if "external" in neighbor_types:
-                    # Lock this face - it's correctly classified
-                    locked_faces.add(tri_idx)
-                new_type = current_type
-
-            elif current_type == "through":
-                # Through-hole faces are high confidence - lock them
-                locked_faces.add(tri_idx)
-                new_type = current_type
-
+                    new_type = "external"
             else:
-                new_type = current_type
-
+                # No neighbors - keep current or assign default
+                if current_type is None:
+                    new_type = "planar" if surf_type == GeomAbs_Plane else "external"
+                else:
+                    new_type = current_type
+            
             # Update if changed
             if current_type != new_type:
-                face_classifications[tri_idx] = new_type
-
-                # Update vertices
-                for v_offset in range(3):
-                    v_idx = indices[tri_idx * 3 + v_offset]
+                face_classifications[face_idx] = new_type
+                for v_idx in range(start_vertex, start_vertex + vertex_count_face):
                     vertex_colors[v_idx] = new_type
-
                 changes_made = True
-
+        
         if not changes_made:
             logger.info(f"  Propagation converged after {iteration + 1} iterations")
             break
         elif iteration == max_iterations - 1:
             logger.info(f"  Propagation stopped at max iterations ({max_iterations})")
-
+    
     # Count results
     type_counts = {}
     for vtype in vertex_colors:
         type_counts[vtype] = type_counts.get(vtype, 0) + 1
     logger.info(f"✅ Classification complete! Distribution: {type_counts}")
-
+    
     return vertex_colors
 
 
@@ -915,8 +978,7 @@ def analyze_cad():
             return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
-        filename = file.filename
-        if not (filename.lower().endswith(".step") or filename.lower().endswith(".stp")):
+        if not (file.filename.lower().endswith(".step") or file.filename.lower().endswith(".stp")):
             return jsonify({"error": "Only .step or .stp files supported"}), 400
 
         step_bytes = file.read()
@@ -938,47 +1000,41 @@ def analyze_cad():
         logger.info("🔍 Analyzing BREP geometry...")
         exact_props = calculate_exact_volume_and_area(shape)
         manufacturing_features = recognize_manufacturing_features(shape)
-
-        logger.info("🎨 Generating display mesh with 12° angular deflection...")
+        
+        logger.info("🎨 Generating display mesh...")
         mesh_data = tessellate_shape(shape)
-
-        logger.info("🎨 Classifying mesh topology for color visualization...")
+        
+        logger.info("🎨 Classifying face colors using MESH-BASED approach...")
         vertex_colors = classify_mesh_faces(mesh_data, shape)
         mesh_data["vertex_colors"] = vertex_colors
-        logger.info(f"   ├─ Generated {len(vertex_colors)} vertex colors")
         
-        # Count color types for debugging
-        color_counts = {}
-        for color in vertex_colors:
-            color_counts[color] = color_counts.get(color, 0) + 1
-        logger.info(f"   ├─ Color distribution: {color_counts}")
-
-        logger.info("📐 Extracting significant BREP edges with 30 segments/circle...")
+        logger.info("📐 Extracting significant BREP edges...")
+        # Using 20° threshold - industry standard for manufacturing CAD
         feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         mesh_data["feature_edges"] = feature_edges
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
 
         is_cylindrical = len(manufacturing_features['holes']) > 0 or len(manufacturing_features['bosses']) > 0
         has_flat_surfaces = len(manufacturing_features['planar_faces']) > 0
-
+        
         # Calculate complexity based on actual features
         through_holes = len(manufacturing_features.get('through_holes', []))
         blind_holes = len(manufacturing_features.get('blind_holes', []))
         bores = len(manufacturing_features.get('bores', []))
         bosses = len(manufacturing_features.get('bosses', []))
         fillets = len(manufacturing_features.get('fillets', []))
-
+        
         total_features = through_holes + blind_holes + bores + bosses + fillets
-
+        
         cylindrical_faces = len(manufacturing_features['holes']) + len(manufacturing_features['bosses'])
         planar_faces = len(manufacturing_features['planar_faces'])
         complexity_score = min(10, int(
-            (total_features / 5) +
-            (through_holes * 0.5) +
-            (blind_holes * 0.3) +
-            (bores * 0.2) +
-            (bosses * 0.4) +
-            (fillets * 0.1)
+            (total_features / 5) +  # Each feature adds to complexity
+            (through_holes * 0.5) +  # Through holes are moderately complex
+            (blind_holes * 0.3) +    # Blind holes slightly less
+            (bores * 0.2) +          # Bores are simple
+            (bosses * 0.4) +         # Bosses add complexity
+            (fillets * 0.1)          # Fillets add minor complexity
         ))
 
         bbox = Bnd_Box()
@@ -991,7 +1047,6 @@ def analyze_cad():
 
         logger.info(f"✅ Analysis complete: {mesh_data['triangle_count']} triangles, {len(feature_edges)} edges")
 
-        # Return mesh data for edge function to store (mesh_id will be added by edge function)
         return jsonify({
             'exact_volume': exact_props['volume'],
             'exact_surface_area': exact_props['surface_area'],
@@ -1011,11 +1066,11 @@ def analyze_cad():
                 'vertices': mesh_data['vertices'],
                 'indices': mesh_data['indices'],
                 'normals': mesh_data['normals'],
-                'vertex_colors': mesh_data.get('vertex_colors', []),  # Add topology colors
+                'vertex_colors': mesh_data['vertex_colors'],
                 'feature_edges': feature_edges,
                 'triangle_count': mesh_data['triangle_count'],
-                'edge_extraction_method': 'smart_filtering_20deg_30segments',
-                'tessellation_quality': 'professional_12deg_angular_deflection'
+                'face_classification_method': 'mesh_based_with_propagation',
+                'edge_extraction_method': 'smart_filtering_20deg'
             },
             'volume_cm3': exact_props['volume'] / 1000,
             'surface_area_cm2': exact_props['surface_area'] / 100,
@@ -1032,7 +1087,7 @@ def analyze_cad():
             'quotation_ready': True,
             'status': 'success',
             'confidence': 0.98,
-            'method': 'professional_quality_tessellation_12deg'
+            'method': 'professional_edge_extraction_with_angle_filtering'
         })
 
     except Exception as e:
@@ -1049,7 +1104,7 @@ def analyze_cad():
 def root():
     return jsonify({
         "service": "CAD Geometry Analysis Service",
-        "version": "9.0.0-professional-quality-tessellation",
+        "version": "8.0.0-smart-edge-extraction",
         "status": "running",
         "endpoints": {
             "health": "/health",
@@ -1059,15 +1114,11 @@ def root():
             "classification": "Mesh-based with neighbor propagation",
             "feature_detection": "Accurate through-hole, blind hole, bore, and boss detection",
             "edge_extraction": "Professional smart filtering (20° dihedral angle threshold)",
-            "tessellation_quality": "Professional-grade (12° angular deflection)",
-            "visual_quality": "Matches SolidWorks/Fusion 360 High quality",
-            "smooth_curves": "30 segments per circle (professional quality)",
             "inner_surfaces": "Detected by cylinder radius and propagated to adjacent faces",
             "through_holes": "Detected by size and connectivity analysis",
             "wireframe_quality": "SolidWorks/Fusion 360 style - only significant edges"
         },
-        "documentation": "POST multipart/form-data with 'file' field containing .step file",
-        "quality_notes": "CRITICAL FIX APPLIED: Angular deflection changed from 0.5° to 12° for smooth curved surfaces"
+        "documentation": "POST multipart/form-data with 'file' field containing .step file"
     })
 
 
