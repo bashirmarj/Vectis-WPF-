@@ -354,7 +354,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         clippingPlanes: clippingPlane,
         clipIntersection: true,
         metalness: 0,
-        roughness: 2.8,
+        roughness: 5.8,
         envMapIntensity: 0,
       };
 
