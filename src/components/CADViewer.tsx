@@ -274,7 +274,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox],
   );
 
-  // ✅ FIX #2 & #3 & #4: NEW rotation handler with 90-degree increments and continuous rotation
+  // ✅ PURE VIEW-RELATIVE: Rotation handler matching SolidWorks behavior
   const handleRotateCamera = useCallback(
     (rotationType: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -282,102 +282,111 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const camera = cameraRef.current;
       const controls = controlsRef.current;
       const target = new THREE.Vector3(...boundingBox.center);
-      const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-      const distance = maxDim * 1.5;
-
-      // Get current camera state
-      const currentPos = camera.position.clone().sub(target).normalize();
-      const currentUp = camera.up.clone().normalize();
       const currentDistance = camera.position.distanceTo(target);
 
-      // ✅ FIX #2: Changed from Math.PI / 4 (45°) to Math.PI / 2 (90°)
       const ROTATION_ANGLE = Math.PI / 2; // 90 degrees
 
+      // ✅ PURE VIEW-RELATIVE: Calculate screen axes from view direction
+      const viewDirection = camera.position.clone().sub(target).normalize();
+      const worldUp = new THREE.Vector3(0, 1, 0);
+
+      // Calculate screen-right (horizontal on screen)
+      let screenRight = new THREE.Vector3().crossVectors(worldUp, viewDirection).normalize();
+
+      // Handle special case: looking straight up or down (viewDirection parallel to worldUp)
+      if (screenRight.length() < 0.001) {
+        // Use world X as fallback when looking straight up/down
+        screenRight = new THREE.Vector3(1, 0, 0);
+      }
+
+      // Calculate screen-up (vertical on screen)
+      const screenUp = new THREE.Vector3().crossVectors(viewDirection, screenRight).normalize();
+
       let newPosition: THREE.Vector3;
-      let newUp = currentUp.clone();
+      let newUp: THREE.Vector3;
 
       switch (rotationType) {
         case "up": {
-          // ✅ FIX #3: Rotate around horizontal axis (continuous rotation)
-          const right = new THREE.Vector3().crossVectors(currentUp, currentPos).normalize();
-          newPosition = currentPos.clone();
-          newPosition.applyAxisAngle(right, -ROTATION_ANGLE); // Rotate up
+          // ✅ VIEW-RELATIVE: Rotate around screen-horizontal axis (screen right)
+          newPosition = viewDirection.clone();
+          newPosition.applyAxisAngle(screenRight, -ROTATION_ANGLE); // Negative for intuitive up
           newPosition.normalize();
 
-          // ✅ IMPROVED: Better pole handling - calculate proper up vector
-          if (Math.abs(newPosition.y) > 0.99) {
-            // At poles, maintain forward direction for up vector
-            const forward = new THREE.Vector3(0, 0, 1);
-            if (Math.abs(newPosition.dot(forward)) > 0.99) {
-              // If looking along Z, use X as reference
-              newUp = new THREE.Vector3(1, 0, 0);
-            } else {
-              newUp = forward;
-            }
-            // Ensure up is perpendicular to view direction
-            newUp.sub(newPosition.clone().multiplyScalar(newUp.dot(newPosition))).normalize();
+          // Recalculate screen-up for new position
+          const newViewDir = newPosition.clone();
+          const newScreenRight = new THREE.Vector3().crossVectors(worldUp, newViewDir).normalize();
+          if (newScreenRight.length() < 0.001) {
+            // At poles, maintain current screen orientation
+            newUp = screenRight.clone();
+          } else {
+            newUp = new THREE.Vector3().crossVectors(newViewDir, newScreenRight).normalize();
           }
           break;
         }
+
         case "down": {
-          // ✅ FIX #3: Rotate around horizontal axis (continuous rotation)
-          const right = new THREE.Vector3().crossVectors(currentUp, currentPos).normalize();
-          newPosition = currentPos.clone();
-          newPosition.applyAxisAngle(right, ROTATION_ANGLE); // Rotate down
+          // ✅ VIEW-RELATIVE: Rotate around screen-horizontal axis (screen right)
+          newPosition = viewDirection.clone();
+          newPosition.applyAxisAngle(screenRight, ROTATION_ANGLE); // Positive for intuitive down
           newPosition.normalize();
 
-          // ✅ IMPROVED: Better pole handling - calculate proper up vector
-          if (Math.abs(newPosition.y) > 0.99) {
-            // At poles, maintain forward direction for up vector
-            const forward = new THREE.Vector3(0, 0, 1);
-            if (Math.abs(newPosition.dot(forward)) > 0.99) {
-              // If looking along Z, use X as reference
-              newUp = new THREE.Vector3(1, 0, 0);
-            } else {
-              newUp = forward;
-            }
-            // Ensure up is perpendicular to view direction
-            newUp.sub(newPosition.clone().multiplyScalar(newUp.dot(newPosition))).normalize();
+          // Recalculate screen-up for new position
+          const newViewDir = newPosition.clone();
+          const newScreenRight = new THREE.Vector3().crossVectors(worldUp, newViewDir).normalize();
+          if (newScreenRight.length() < 0.001) {
+            // At poles, maintain current screen orientation
+            newUp = screenRight.clone();
+          } else {
+            newUp = new THREE.Vector3().crossVectors(newViewDir, newScreenRight).normalize();
           }
           break;
         }
+
         case "left": {
-          // Rotate around up axis (continuous rotation)
-          newPosition = currentPos.clone();
-          newPosition.applyAxisAngle(currentUp, ROTATION_ANGLE);
+          // ✅ VIEW-RELATIVE: Rotate around screen-vertical axis (screen up)
+          newPosition = viewDirection.clone();
+          newPosition.applyAxisAngle(screenUp, ROTATION_ANGLE); // Positive for counterclockwise
           newPosition.normalize();
+
+          // Screen-up remains the same after left/right rotation
+          newUp = screenUp.clone();
           break;
         }
+
         case "right": {
-          // Rotate around up axis (continuous rotation)
-          newPosition = currentPos.clone();
-          newPosition.applyAxisAngle(currentUp, -ROTATION_ANGLE);
+          // ✅ VIEW-RELATIVE: Rotate around screen-vertical axis (screen up)
+          newPosition = viewDirection.clone();
+          newPosition.applyAxisAngle(screenUp, -ROTATION_ANGLE); // Negative for clockwise
           newPosition.normalize();
+
+          // Screen-up remains the same after left/right rotation
+          newUp = screenUp.clone();
           break;
         }
+
         case "cw": {
-          // Roll camera clockwise around view axis
-          const viewAxis = currentPos.clone().negate();
-          newUp = currentUp.clone();
-          newUp.applyAxisAngle(viewAxis, -ROTATION_ANGLE);
+          // ✅ VIEW-RELATIVE: Roll clockwise around view axis
+          newPosition = viewDirection.clone();
+          newUp = screenUp.clone();
+          newUp.applyAxisAngle(viewDirection, -ROTATION_ANGLE); // Negative for clockwise roll
           newUp.normalize();
-          newPosition = currentPos.clone();
           break;
         }
+
         case "ccw": {
-          // Roll camera counter-clockwise around view axis
-          const viewAxis = currentPos.clone().negate();
-          newUp = currentUp.clone();
-          newUp.applyAxisAngle(viewAxis, ROTATION_ANGLE);
+          // ✅ VIEW-RELATIVE: Roll counter-clockwise around view axis
+          newPosition = viewDirection.clone();
+          newUp = screenUp.clone();
+          newUp.applyAxisAngle(viewDirection, ROTATION_ANGLE); // Positive for counter-clockwise roll
           newUp.normalize();
-          newPosition = currentPos.clone();
           break;
         }
+
         default:
           return;
       }
 
-      // ✅ FIX #4: Use current distance instead of calculated distance to preserve zoom level
+      // Apply new camera position and orientation
       camera.position.copy(target.clone().add(newPosition.multiplyScalar(currentDistance)));
       camera.up.copy(newUp);
       camera.lookAt(target);
