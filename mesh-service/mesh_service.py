@@ -45,24 +45,24 @@ gmsh_lock = threading.Lock()
 # === QUALITY PRESETS ===
 QUALITY_PRESETS = {
     'fast': {
-        'base_size_factor': 0.005,      # Coarser base (was 0.003)
+        'base_size_factor': 0.005,
         'planar_factor': 3.0,
-        'curvature_points': 32,         # Reduced from 64 (fewer segments)
-        'target_triangles': 15000,      # Reduced from 40000 (62% less memory)
+        'curvature_points': 64,         # Increased from 32 → smoother curves
+        'target_triangles': 30000,      # Increased from 15000 → better detail
         'sharp_edge_threshold': 30.0
     },
     'balanced': {
-        'base_size_factor': 0.003,      # Coarser (was 0.0015)
+        'base_size_factor': 0.003,
         'planar_factor': 2.5,
-        'curvature_points': 48,         # Reduced from 80
-        'target_triangles': 30000,      # Reduced from 150000 (80% less memory)
+        'curvature_points': 80,         # Increased from 48 → very smooth curves
+        'target_triangles': 60000,      # Increased from 30000 → high detail
         'sharp_edge_threshold': 25.0
     },
     'ultra': {
-        'base_size_factor': 0.002,      # Coarser (was 0.0006)
+        'base_size_factor': 0.002,
         'planar_factor': 2.0,
-        'curvature_points': 64,         # Reduced from 96
-        'target_triangles': 60000,      # Reduced from 500000 (88% less memory)
+        'curvature_points': 96,         # Increased from 64 → near-perfect curves
+        'target_triangles': 120000,     # Increased from 60000 → excellent detail
         'sharp_edge_threshold': 20.0
     }
 }
@@ -194,15 +194,16 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
 
 def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
     """
-    Calculate vertex normals using fast averaging (sharp_edge_threshold ignored for performance).
+    Calculate vertex normals using angle-weighted averaging with sharp edge detection.
     
-    This simplified approach averages face normals at each vertex without angle checking,
-    providing smooth shading while maintaining O(F) complexity instead of O(V×F²).
+    This approach:
+    1. Averages face normals at each vertex (smooth shading)
+    2. BUT splits normals across edges where angle > sharp_edge_threshold (preserves hard edges)
     
     Args:
         vertices: Flat list of vertex coordinates [x,y,z, x,y,z, ...]
         indices: Triangle indices
-        sharp_edge_threshold: Ignored (kept for API compatibility)
+        sharp_edge_threshold: Angle in degrees above which edges are considered sharp
     
     Returns:
         Flat list of vertex normals
@@ -210,31 +211,77 @@ def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
     num_vertices = len(vertices) // 3
     num_faces = len(indices) // 3
     
-    # Initialize normal accumulator
-    vertex_normals = np.zeros((num_vertices, 3))
-    
-    # Calculate face normals and accumulate at vertices (O(F) complexity)
+    # Step 1: Calculate face normals
+    face_normals = []
     for i in range(num_faces):
         i1, i2, i3 = indices[i*3], indices[i*3+1], indices[i*3+2]
         
         v1 = np.array(vertices[i1*3:i1*3+3])
         v2 = np.array(vertices[i2*3:i2*3+3])
-        v3 = np.array(vertices[i3*3:i3*3+3])
+        v3 = np.array(vertices[i3*3:i3+3])
         
-        # Calculate face normal
         edge1 = v2 - v1
         edge2 = v3 - v1
         normal = np.cross(edge1, edge2)
         
-        # Accumulate at all three vertices (simple averaging)
-        vertex_normals[i1] += normal
-        vertex_normals[i2] += normal
-        vertex_normals[i3] += normal
+        # Normalize
+        norm = np.linalg.norm(normal)
+        if norm > 0:
+            normal = normal / norm
+        
+        face_normals.append(normal)
     
-    # Normalize all vertex normals
-    norms = np.linalg.norm(vertex_normals, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0  # Prevent division by zero
-    vertex_normals /= norms
+    # Step 2: Build face adjacency (which faces share each vertex)
+    vertex_faces = [[] for _ in range(num_vertices)]
+    for face_idx in range(num_faces):
+        i1, i2, i3 = indices[face_idx*3], indices[face_idx*3+1], indices[face_idx*3+2]
+        vertex_faces[i1].append(face_idx)
+        vertex_faces[i2].append(face_idx)
+        vertex_faces[i3].append(face_idx)
+    
+    # Step 3: Average normals at each vertex (with sharp edge detection)
+    vertex_normals = np.zeros((num_vertices, 3))
+    sharp_threshold_cos = np.cos(np.radians(sharp_edge_threshold))
+    
+    for vertex_idx in range(num_vertices):
+        adjacent_faces = vertex_faces[vertex_idx]
+        
+        if len(adjacent_faces) == 0:
+            continue
+        
+        # Group faces by normal similarity (sharp edge detection)
+        # If two face normals differ by > sharp_edge_threshold, they're in different groups
+        normal_groups = []
+        
+        for face_idx in adjacent_faces:
+            face_normal = face_normals[face_idx]
+            
+            # Try to find an existing group this face belongs to
+            added = False
+            for group in normal_groups:
+                group_normal = group[0]  # Representative normal of the group
+                dot_product = np.dot(face_normal, group_normal)
+                
+                # If normals are similar (angle < threshold), add to this group
+                if dot_product > sharp_threshold_cos:
+                    group.append(face_normal)
+                    added = True
+                    break
+            
+            # If no suitable group found, create new group
+            if not added:
+                normal_groups.append([face_normal])
+        
+        # Average the largest group (most representative smooth surface)
+        largest_group = max(normal_groups, key=len)
+        avg_normal = np.mean(largest_group, axis=0)
+        
+        # Normalize
+        norm = np.linalg.norm(avg_normal)
+        if norm > 0:
+            avg_normal = avg_normal / norm
+        
+        vertex_normals[vertex_idx] = avg_normal
     
     return vertex_normals.flatten().tolist()
 
