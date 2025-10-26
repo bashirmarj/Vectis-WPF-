@@ -381,24 +381,23 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 target={new THREE.Vector3(boundingBox.center[0], boundingBox.center[1], boundingBox.center[2])}
               />
               <Suspense fallback={null}>
-                {/* Professional Enhancements: Lighting, Materials, Post-Processing */}
-                <SceneEnhancementWrapper
-                  showSettingsPanel={false}
-                  defaultSettings={visualSettings}
-                  onSettingsChange={setVisualSettings}
-                >
-                  {/* ✅ FIXED: Pass displayMode prop to MeshModel */}
-                  <MeshModel
-                    ref={meshRef}
-                    meshData={meshData}
-                    displayStyle={displayMode}
-                    showEdges={showEdges}
-                    sectionPlane={sectionPlane || "none"}
-                    sectionPosition={sectionPosition}
-                  />
+                {/* DEBUGGING: Basic lighting without enhancements */}
+                <ambientLight intensity={0.6} />
+                <directionalLight position={[10, 10, 10]} intensity={0.8} castShadow />
+                <directionalLight position={[-10, -10, -5]} intensity={0.3} />
+                
+                {/* ✅ EXPLICIT: Force topology colors ON for debugging */}
+                <MeshModel
+                  ref={meshRef}
+                  meshData={meshData}
+                  displayStyle={displayMode}
+                  showEdges={showEdges}
+                  sectionPlane={sectionPlane || "none"}
+                  sectionPosition={sectionPosition}
+                  topologyColors={true}
+                />
 
-                  <DimensionAnnotations boundingBox={boundingBox} />
-                </SceneEnhancementWrapper>
+                <DimensionAnnotations boundingBox={boundingBox} />
 
                 <TrackballControls
                   ref={controlsRef}
