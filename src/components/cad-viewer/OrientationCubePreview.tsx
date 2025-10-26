@@ -1,8 +1,10 @@
 import { useRef, useState, forwardRef, useImperativeHandle, useEffect, useMemo } from "react";
 import * as THREE from "three";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { Button } from "@/components/ui/button";
 import { Box, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import orientationCubeSTL from "@/assets/orientation-cube.stl?url";
 
 interface OrientationCubePreviewProps {
   onCubeClick?: (direction: THREE.Vector3) => void;
@@ -20,7 +22,54 @@ export interface OrientationCubeHandle {
   updateFromMainCamera: (camera: THREE.Camera) => void;
 }
 
-// ✅ OPTIMIZED: Create textures once and cache them
+// ✅ FIX #1: STL FILE LOADING - Cache STL geometry globally
+let cachedSTLGeometry: THREE.BufferGeometry | null = null;
+let isLoadingSTL = false;
+const stlLoadCallbacks: ((geometry: THREE.BufferGeometry) => void)[] = [];
+
+const loadSTLGeometry = (callback: (geometry: THREE.BufferGeometry) => void) => {
+  // If already cached, return immediately
+  if (cachedSTLGeometry) {
+    callback(cachedSTLGeometry);
+    return;
+  }
+
+  // Add callback to queue
+  stlLoadCallbacks.push(callback);
+
+  // If already loading, wait for it
+  if (isLoadingSTL) {
+    return;
+  }
+
+  // Start loading
+  isLoadingSTL = true;
+  const loader = new STLLoader();
+
+  loader.load(
+    orientationCubeSTL,
+    (geometry) => {
+      geometry.computeBoundingBox();
+      geometry.center();
+      geometry.computeVertexNormals();
+
+      cachedSTLGeometry = geometry;
+      isLoadingSTL = false;
+
+      // Execute all queued callbacks
+      stlLoadCallbacks.forEach((cb) => cb(geometry));
+      stlLoadCallbacks.length = 0;
+    },
+    undefined,
+    (error) => {
+      console.error("❌ Error loading orientation cube STL:", error);
+      isLoadingSTL = false;
+      stlLoadCallbacks.length = 0;
+    },
+  );
+};
+
+// ✅ OPTIMIZED: Create face label textures once and cache them
 const createFaceTextures = () => {
   const faces = [
     { text: "FRONT", color: "#4A5568" },
@@ -59,14 +108,13 @@ const createFaceTextures = () => {
   });
 };
 
-// ✅ Cache textures globally to prevent recreation
-let cachedTextures: THREE.Texture[] | null = null;
+let cachedFaceTextures: THREE.Texture[] | null = null;
 
 const getFaceTextures = () => {
-  if (!cachedTextures) {
-    cachedTextures = createFaceTextures();
+  if (!cachedFaceTextures) {
+    cachedFaceTextures = createFaceTextures();
   }
-  return cachedTextures;
+  return cachedFaceTextures;
 };
 
 export const OrientationCubePreview = forwardRef<OrientationCubeHandle, OrientationCubePreviewProps>(
@@ -89,6 +137,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
     const sceneRef = useRef<THREE.Scene | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const cubeRef = useRef<THREE.Mesh | null>(null);
+    const labelGroupRef = useRef<THREE.Group | null>(null);
     const animationFrameRef = useRef<number | null>(null);
 
     const [hoveredRegion, setHoveredRegion] = useState<{
@@ -117,7 +166,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
         alpha: true,
       });
       renderer.setSize(110, 110);
-      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       rendererRef.current = renderer;
 
       // Create scene
@@ -130,31 +179,80 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
 
-      // Create cube with cached textures
-      const geometry = new THREE.BoxGeometry(2, 2, 2);
-      const textures = getFaceTextures();
+      // ✅ FIX #1: Load STL geometry
+      loadSTLGeometry((geometry) => {
+        if (!sceneRef.current) return;
 
-      const materials = [
-        new THREE.MeshBasicMaterial({ map: textures[2], transparent: true }), // Right
-        new THREE.MeshBasicMaterial({ map: textures[3], transparent: true }), // Left
-        new THREE.MeshBasicMaterial({ map: textures[4], transparent: true }), // Top
-        new THREE.MeshBasicMaterial({ map: textures[5], transparent: true }), // Bottom
-        new THREE.MeshBasicMaterial({ map: textures[0], transparent: true }), // Front
-        new THREE.MeshBasicMaterial({ map: textures[1], transparent: true }), // Back
-      ];
+        // Scale the geometry appropriately
+        const boundingBox = geometry.boundingBox;
+        if (boundingBox) {
+          const size = boundingBox.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scale = 2 / maxDim; // Scale to fit in 2-unit cube
+          geometry.scale(scale, scale, scale);
+        }
 
-      const cube = new THREE.Mesh(geometry, materials);
-      scene.add(cube);
-      cubeRef.current = cube;
+        const textures = getFaceTextures();
 
-      // Add edge lines
-      const edges = new THREE.EdgesGeometry(geometry);
-      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 }));
-      cube.add(line);
+        // Create materials for the STL cube
+        const materials = [
+          new THREE.MeshStandardMaterial({
+            color: 0x4a5568,
+            metalness: 0.1,
+            roughness: 0.7,
+            transparent: true,
+            opacity: 1,
+          }),
+        ];
 
-      // Add subtle ambient light
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        const cube = new THREE.Mesh(geometry, materials[0]);
+        sceneRef.current.add(cube);
+        cubeRef.current = cube;
+
+        // Add edge lines
+        const edges = new THREE.EdgesGeometry(geometry, 30);
+        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 }));
+        cube.add(line);
+
+        // Create label group
+        const labelGroup = new THREE.Group();
+
+        // Add face labels
+        const facePositions = [
+          { position: [0, 0, 1], rotation: [0, 0, 0], texture: textures[0] }, // Front
+          { position: [0, 0, -1], rotation: [0, Math.PI, 0], texture: textures[1] }, // Back
+          { position: [1, 0, 0], rotation: [0, Math.PI / 2, 0], texture: textures[2] }, // Right
+          { position: [-1, 0, 0], rotation: [0, -Math.PI / 2, 0], texture: textures[3] }, // Left
+          { position: [0, 1, 0], rotation: [-Math.PI / 2, 0, 0], texture: textures[4] }, // Top
+          { position: [0, -1, 0], rotation: [Math.PI / 2, 0, Math.PI], texture: textures[5] }, // Bottom
+        ];
+
+        facePositions.forEach(({ position, rotation, texture }) => {
+          const labelMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.8, 0.8),
+            new THREE.MeshBasicMaterial({
+              map: texture,
+              transparent: true,
+              depthWrite: false,
+              side: THREE.DoubleSide,
+            }),
+          );
+          labelMesh.position.set(position[0] * 1.05, position[1] * 1.05, position[2] * 1.05);
+          labelMesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+          labelGroup.add(labelMesh);
+        });
+
+        cube.add(labelGroup);
+        labelGroupRef.current = labelGroup;
+      });
+
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
+      directionalLight.position.set(5, 5, 5);
+      scene.add(directionalLight);
 
       // Animation loop
       const animate = () => {
@@ -169,9 +267,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
           cancelAnimationFrame(animationFrameRef.current);
         }
         renderer.dispose();
-        geometry.dispose();
-        materials.forEach((mat) => mat.dispose());
-        edges.dispose();
+        // Note: Don't dispose cached geometry or textures
       };
     }, []);
 
@@ -179,13 +275,11 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
     useEffect(() => {
       if (!cubeRef.current) return;
 
-      const materials = cubeRef.current.material as THREE.MeshBasicMaterial[];
-      materials.forEach((mat) => {
-        mat.wireframe = displayStyle === "wireframe";
-        mat.opacity = displayStyle === "translucent" ? 0.5 : 1;
-        mat.transparent = displayStyle === "translucent" || displayStyle === "wireframe";
-        mat.needsUpdate = true;
-      });
+      const material = cubeRef.current.material as THREE.MeshStandardMaterial;
+      material.wireframe = displayStyle === "wireframe";
+      material.opacity = displayStyle === "translucent" ? 0.5 : 1;
+      material.transparent = displayStyle === "translucent" || displayStyle === "wireframe";
+      material.needsUpdate = true;
     }, [displayStyle]);
 
     // ✅ CRITICAL: Imperative method to sync with main camera
