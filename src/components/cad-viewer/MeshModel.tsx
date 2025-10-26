@@ -268,9 +268,9 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const mat = new THREE.LineBasicMaterial({
             color: "#000000",
             linewidth: 1.5,
-            toneMapped: true,
+            toneMapped: false,
             depthTest: true,
-            depthWrite: false,
+            depthWrite: true,
           });
           dynamicEdgesRef.current.add(new THREE.LineSegments(geo, mat));
         }
