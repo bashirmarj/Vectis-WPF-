@@ -112,32 +112,30 @@ def generate_adaptive_mesh(step_file_path, quality='balanced'):
             diagonal = math.sqrt(dx*dx + dy*dy + dz*dz)
             base_size = diagonal * preset['base_size_factor']
             
-            logger.info(f"📏 Model diagonal: {diagonal:.2f}mm, base mesh size: {base_size:.4f}mm")
+            # Calculate mesh sizing based on target triangle count (not arbitrary feature assumptions)
+            target_triangles = preset['target_triangles']
+            model_surface_area_estimate = diagonal * diagonal * 2  # Rough estimate (2x bounding box face)
+            avg_triangle_area = model_surface_area_estimate / target_triangles
+            avg_element_size = math.sqrt(avg_triangle_area) * 1.2  # Target average size with margin
             
-            # Use Gmsh's built-in curvature-adaptive meshing (industry standard)
-            # CRITICAL FIX: Calculate MeshSizeMax to GUARANTEE curvature_points is respected
-            #
-            # For a hole to have N segments, element size must be: (π * diameter) / N
-            # Conservative: Ensure even 3mm holes get proper segmentation
-            min_feature_diameter = 3.0  # mm (assume smallest holes are 3mm)
-            required_element_size_for_curvature = (math.pi * min_feature_diameter) / preset['curvature_points']
+            # Allow local refinement on curved features (5x finer than average)
+            min_feature_diameter = 3.0  # mm (smallest expected curved features)
+            local_refinement_size = (math.pi * min_feature_diameter) / preset['curvature_points']
+            min_element_size = max(local_refinement_size, avg_element_size * 0.15)  # Don't go below 15% of average
             
-            # Use the SMALLER of:
-            # 1. What's needed for curvature refinement
-            # 2. What's allowed by planar face sizing
-            max_element_size = min(required_element_size_for_curvature, base_size * preset['planar_factor'])
+            logger.info(f"📏 Model diagonal: {diagonal:.2f}mm")
+            logger.info(f"📊 Target mesh: {target_triangles} triangles → avg_size={avg_element_size:.4f}mm, min_size={min_element_size:.4f}mm")
+            logger.info(f"📐 Curvature refinement: {preset['curvature_points']} segments on {min_feature_diameter}mm features")
             
-            logger.info(f"📐 Curvature refinement: max_element={max_element_size:.4f}mm (ensures {preset['curvature_points']} segments on 3mm features)")
+            # Set Gmsh mesh sizing - CRITICAL: MeshSizeMax controls total triangle count
+            gmsh.option.setNumber("Mesh.MeshSizeMin", min_element_size)
+            gmsh.option.setNumber("Mesh.MeshSizeMax", avg_element_size * 2.5)  # Allow coarse elements on flat areas
+            gmsh.option.setNumber("Mesh.CharacteristicLengthMin", min_element_size)
+            gmsh.option.setNumber("Mesh.CharacteristicLengthMax", avg_element_size * 2.5)
             
-            # Set curvature refinement parameters
+            # Enable curvature-based LOCAL refinement (within global size constraints)
             gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", preset['curvature_points'])
-            gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1)  # Enable curvature-based sizing
-            
-            # Set mesh size constraints
-            gmsh.option.setNumber("Mesh.MeshSizeMin", base_size * 0.15)  # Prevent over-refinement (15% of base)
-            gmsh.option.setNumber("Mesh.MeshSizeMax", max_element_size)  # Respects curvature target
-            gmsh.option.setNumber("Mesh.CharacteristicLengthMin", base_size * 0.15)  # Prevent over-refinement
-            gmsh.option.setNumber("Mesh.CharacteristicLengthMax", max_element_size)
+            gmsh.option.setNumber("Mesh.CharacteristicLengthFromCurvature", 1)
             
             # Additional refinement controls
             gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 1)  # Extend size from boundaries
