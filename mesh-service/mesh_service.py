@@ -218,7 +218,7 @@ def calculate_vertex_normals(vertices, indices, sharp_edge_threshold=30.0):
         
         v1 = np.array(vertices[i1*3:i1*3+3])
         v2 = np.array(vertices[i2*3:i2*3+3])
-        v3 = np.array(vertices[i3*3:i3+3])
+        v3 = np.array(vertices[i3*3:i3*3+3])
         
         edge1 = v2 - v1
         edge2 = v3 - v1
