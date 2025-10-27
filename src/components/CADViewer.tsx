@@ -8,7 +8,9 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-import { OrientationCubePreview, OrientationCubeHandle } from "./cad-viewer/OrientationCubePreview";
+// ✅ FIXED: Import both cube components
+import { OrientationCubeControls } from "./cad-viewer/OrientationCubeControls";
+import { OrientationCubeInScene } from "./cad-viewer/OrientationCubeInScene";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
@@ -45,7 +47,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const orientationCubeRef = useRef<OrientationCubeHandle>(null);
 
   // File extension detection
   const fileExtension = useMemo(() => {
@@ -98,15 +99,22 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           indices,
           normals,
           vertex_colors: vertex_colors as string[] | undefined,
-          triangle_count: mesh.triangle_count || indices.length / 3,
+          triangle_count: indices.length / 3,
+          face_types: mesh.face_types
+            ? Array.isArray(mesh.face_types)
+              ? mesh.face_types
+              : JSON.parse(mesh.face_types as string)
+            : undefined,
           feature_edges: feature_edges as number[][][] | undefined,
         };
 
         setMeshData(loadedMeshData);
-        onMeshLoaded?.(loadedMeshData);
-      } catch (error) {
-        console.error("Failed to load mesh:", error);
-        setError(error instanceof Error ? error.message : "Failed to load 3D model");
+        if (onMeshLoaded) {
+          onMeshLoaded(loadedMeshData);
+        }
+      } catch (err) {
+        console.error("Error loading mesh:", err);
+        setError(err instanceof Error ? err.message : "Failed to load mesh");
       } finally {
         setIsLoading(false);
       }
@@ -119,103 +127,87 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const boundingBox = useMemo(() => {
     if (!meshData) {
       return {
-        min: { x: -1, y: -1, z: -1 },
-        max: { x: 1, y: 1, z: 1 },
+        min: new THREE.Vector3(0, 0, 0),
+        max: new THREE.Vector3(1, 1, 1),
         center: [0, 0, 0] as [number, number, number],
-        width: 2,
-        height: 2,
-        depth: 2,
+        width: 1,
+        height: 1,
+        depth: 1,
       };
     }
 
     const vertices = meshData.vertices;
-    let minX = Infinity,
-      minY = Infinity,
-      minZ = Infinity;
-    let maxX = -Infinity,
-      maxY = -Infinity,
-      maxZ = -Infinity;
+    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
 
     for (let i = 0; i < vertices.length; i += 3) {
-      minX = Math.min(minX, vertices[i]);
-      minY = Math.min(minY, vertices[i + 1]);
-      minZ = Math.min(minZ, vertices[i + 2]);
-      maxX = Math.max(maxX, vertices[i]);
-      maxY = Math.max(maxY, vertices[i + 1]);
-      maxZ = Math.max(maxZ, vertices[i + 2]);
+      min.x = Math.min(min.x, vertices[i]);
+      min.y = Math.min(min.y, vertices[i + 1]);
+      min.z = Math.min(min.z, vertices[i + 2]);
+      max.x = Math.max(max.x, vertices[i]);
+      max.y = Math.max(max.y, vertices[i + 1]);
+      max.z = Math.max(max.z, vertices[i + 2]);
     }
 
-    const width = maxX - minX;
-    const height = maxY - minY;
-    const depth = maxZ - minZ;
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const centerZ = (minZ + maxZ) / 2;
+    const center = new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5);
 
     return {
-      min: { x: minX, y: minY, z: minZ },
-      max: { x: maxX, y: maxY, z: maxZ },
-      center: [centerX, centerY, centerZ] as [number, number, number],
-      width,
-      height,
-      depth,
+      min,
+      max,
+      center: [center.x, center.y, center.z] as [number, number, number],
+      width: max.x - min.x,
+      height: max.y - min.y,
+      depth: max.z - min.z,
     };
   }, [meshData]);
 
-  // ✅ NEW: Auto-detect coordinate system based on part geometry
+  // Determine coordinate system based on bounding box dimensions
   const coordinateSystem = useMemo(() => {
-    const { width, height, depth } = boundingBox;
-
-    // Most CAD files (STEP/IGES) use Z-up coordinate system
-    // If the part's Z dimension is significantly larger than Y, assume Z-up
-    // If the part's Y dimension is significantly larger than Z, assume Y-up
-    const isZUp = depth > height * 1.2;
-
-    console.log("📊 Coordinate system detection:", {
-      width: width.toFixed(2),
-      height: height.toFixed(2),
-      depth: depth.toFixed(2),
-      ratio: (depth / height).toFixed(2),
-      detected: isZUp ? "Z-up (STEP/IGES standard)" : "Y-up (Three.js standard)",
-    });
-
-    return isZUp ? "Z-up" : "Y-up";
+    const aspectRatio = boundingBox.width / boundingBox.height;
+    if (aspectRatio > 1.2 || aspectRatio < 0.8) {
+      return "y-up";
+    }
+    return "z-up";
   }, [boundingBox]);
 
-  // ✅ NEW: Transform direction vector based on coordinate system
+  // Transform direction from cube space to model space
   const transformDirection = useCallback(
-    (direction: THREE.Vector3): THREE.Vector3 => {
-      if (coordinateSystem === "Z-up") {
-        // Convert from Y-up (orientation cube) to Z-up (CAD model)
-        // Y-up system: X=right, Y=up,      Z=forward
-        // Z-up system: X=right, Y=backward, Z=up
-        return new THREE.Vector3(
-          direction.x, // X stays the same (right is right)
-          -direction.z, // Y becomes -Z (forward becomes backward)
-          direction.y, // Z becomes Y (up becomes up)
-        );
+    (cubeDir: THREE.Vector3): THREE.Vector3 => {
+      if (coordinateSystem === "z-up") {
+        return new THREE.Vector3(cubeDir.x, -cubeDir.z, cubeDir.y);
       }
-      // Y-up system: no transformation needed
-      return direction.clone();
+      return cubeDir.clone();
     },
     [coordinateSystem],
   );
 
-  // Initial camera position (isometric view)
+  const modelBounds = useMemo(
+    () => ({
+      min: { x: boundingBox.min.x, y: boundingBox.min.y, z: boundingBox.min.z },
+      max: { x: boundingBox.max.x, y: boundingBox.max.y, z: boundingBox.max.z },
+      center: { x: boundingBox.center[0], y: boundingBox.center[1], z: boundingBox.center[2] },
+    }),
+    [boundingBox],
+  );
+
+  // Calculate initial camera position
   const initialCameraPosition = useMemo(() => {
     const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
     const distance = maxDim * 1.5;
-    return [
+    return new THREE.Vector3(
       boundingBox.center[0] + distance * 0.707,
       boundingBox.center[1] + distance * 0.707,
       boundingBox.center[2] + distance * 0.707,
-    ] as [number, number, number];
+    );
   }, [boundingBox]);
 
-  // Camera view change handler
-  const handleViewChange = useCallback(
-    (viewType: "front" | "top" | "side" | "isometric" | "home") => {
-      if (!cameraRef.current || !controlsRef.current) return;
+  // Camera view controls
+  const handleSetView = useCallback(
+    (view: string) => {
+      if (!cameraRef.current || !controlsRef.current) {
+        console.error("❌ Camera or controls ref not available");
+        return;
+      }
 
       const camera = cameraRef.current;
       const controls = controlsRef.current;
@@ -223,51 +215,56 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
       const distance = maxDim * 1.5;
 
-      let direction: THREE.Vector3;
-      let newUp = new THREE.Vector3(0, 1, 0);
+      let newPosition: THREE.Vector3;
 
-      switch (viewType) {
+      switch (view) {
         case "front":
-          direction = new THREE.Vector3(0, 0, 1);
-          break;
-        case "side":
-          direction = new THREE.Vector3(1, 0, 0);
+          newPosition = new THREE.Vector3(target.x, target.y, target.z + distance);
           break;
         case "top":
-          direction = new THREE.Vector3(0, 1, 0);
-          newUp = new THREE.Vector3(0, 0, 1);
+          newPosition = new THREE.Vector3(target.x, target.y + distance, target.z);
           break;
         case "isometric":
-        case "home":
-        default:
-          direction = new THREE.Vector3(0.707, 0.707, 0.707);
+          newPosition = new THREE.Vector3(
+            target.x + distance * 0.707,
+            target.y + distance * 0.707,
+            target.z + distance * 0.707,
+          );
           break;
+        case "home":
+          newPosition = new THREE.Vector3(
+            target.x + distance * 0.707,
+            target.y + distance * 0.707,
+            target.z + distance * 0.707,
+          );
+          break;
+        default:
+          return;
       }
 
-      // ✅ FIXED: Transform direction to match model coordinate system
-      const transformedDirection = transformDirection(direction);
-      const newPosition = target.clone().add(transformedDirection.multiplyScalar(distance));
-
-      console.log(`📐 View change: ${viewType}`, {
-        cubeDirection: { x: direction.x.toFixed(2), y: direction.y.toFixed(2), z: direction.z.toFixed(2) },
-        modelDirection: {
-          x: transformedDirection.x.toFixed(2),
-          y: transformedDirection.y.toFixed(2),
-          z: transformedDirection.z.toFixed(2),
-        },
-      });
-
       camera.position.copy(newPosition);
-      camera.up.copy(newUp);
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      // Update orientation cube
-      orientationCubeRef.current?.updateFromMainCamera(camera);
     },
-    [boundingBox, transformDirection],
+    [boundingBox],
   );
+
+  const handleFitView = useCallback(() => {
+    if (!cameraRef.current || !controlsRef.current) return;
+
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const target = new THREE.Vector3(...boundingBox.center);
+    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
+    const distance = maxDim * 1.5;
+    const currentPosition = camera.position.clone().sub(target).normalize();
+    const newPosition = target.clone().add(currentPosition.multiplyScalar(distance));
+
+    camera.position.copy(newPosition);
+    controls.target.copy(target);
+    controls.update();
+  }, [boundingBox]);
 
   // ✅ FIXED: Orientation cube face click handler with coordinate transform
   const handleCubeClick = useCallback(
@@ -291,7 +288,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         newUp = new THREE.Vector3(0, 0, 1);
       }
 
-      console.log("🎯 Cube face clicked:", direction);
       console.log("🎯 Cube face clicked:", {
         cubeDirection: { x: direction.x, y: direction.y, z: direction.z },
         modelDirection: {
@@ -307,9 +303,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      // Update orientation cube to match new camera position
-      orientationCubeRef.current?.updateFromMainCamera(camera);
 
       console.log("✅ Camera repositioned to face");
     },
@@ -408,33 +401,32 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           return;
       }
     } else {
-      const screenUp = camera.up.clone().normalize();
-      const screenRight = new THREE.Vector3().crossVectors(viewDir, screenUp).normalize();
+      // Normal rotation using screen-relative axes
+      const screenRight = new THREE.Vector3();
+      const screenUp = new THREE.Vector3();
 
-      if (screenRight.lengthSq() < 0.01) {
-        console.warn("⚠️ Degenerate screen-right vector");
-        return;
-      }
+      screenRight.crossVectors(worldUp, viewDir).normalize();
+      screenUp.crossVectors(viewDir, screenRight).normalize();
 
       switch (direction) {
         case "left":
-          console.log("⬅️ Rotating LEFT around screen-up axis (90°)");
+          console.log("⬅️ Rotating LEFT around screen UP-axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenUp, rotationAngle);
           newPosition.add(target);
-          newUp = camera.up.clone();
+          newUp = camera.up.clone().applyAxisAngle(screenUp, rotationAngle);
           break;
 
         case "right":
-          console.log("➡️ Rotating RIGHT around screen-up axis (90°)");
+          console.log("➡️ Rotating RIGHT around screen UP-axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenUp, -rotationAngle);
           newPosition.add(target);
-          newUp = camera.up.clone();
+          newUp = camera.up.clone().applyAxisAngle(screenUp, -rotationAngle);
           break;
 
         case "up":
-          console.log("⬆️ Rotating UP around screen-right axis (90°)");
+          console.log("⬆️ Rotating UP around screen RIGHT-axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenRight, rotationAngle);
           newPosition.add(target);
@@ -442,7 +434,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "down":
-          console.log("⬇️ Rotating DOWN around screen-right axis (90°)");
+          console.log("⬇️ Rotating DOWN around screen RIGHT-axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenRight, -rotationAngle);
           newPosition.add(target);
@@ -466,47 +458,20 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       }
     }
 
-    console.log("📊 Camera state after rotation:", {
+    camera.position.copy(newPosition);
+    camera.up.copy(newUp);
+    camera.lookAt(target);
+    controls.target.copy(target);
+    controls.update();
+
+    console.log("✅ Camera rotated", {
       newPosition: {
         x: newPosition.x.toFixed(2),
         y: newPosition.y.toFixed(2),
         z: newPosition.z.toFixed(2),
       },
-      newUp: { x: newUp.x.toFixed(2), y: newUp.y.toFixed(2), z: newUp.z.toFixed(2) },
     });
-
-    camera.position.copy(newPosition);
-    camera.up.copy(newUp);
-    camera.lookAt(target);
-    controls.update();
-
-    // Update orientation cube to match new camera position
-    orientationCubeRef.current?.updateFromMainCamera(camera);
-
-    console.log("✅ Controls updated");
-    console.log("✅ Handler executed for:", direction.toUpperCase());
   }, []);
-
-  const handleFitView = useCallback(() => {
-    if (!cameraRef.current || !controlsRef.current) return;
-
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    const target = new THREE.Vector3(...boundingBox.center);
-    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-    const distance = maxDim * 1.5;
-
-    // Maintain current viewing direction
-    const currentDir = camera.position.clone().sub(target).normalize();
-    const newPosition = target.clone().add(currentDir.multiplyScalar(distance));
-
-    camera.position.copy(newPosition);
-    controls.target.copy(target);
-    controls.update();
-
-    // Update orientation cube
-    orientationCubeRef.current?.updateFromMainCamera(camera);
-  }, [boundingBox]);
 
   const handleDownload = useCallback(async () => {
     if (!fileUrl) return;
@@ -522,81 +487,50 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download failed:", error);
+    } catch (err) {
+      console.error("Error downloading file:", err);
     }
   }, [fileUrl, fileName]);
-
-  // ✅ Update orientation cube when camera moves via TrackballControls
-  useEffect(() => {
-    if (!cameraRef.current || !controlsRef.current) return;
-
-    const controls = controlsRef.current;
-    const handleControlsChange = () => {
-      if (cameraRef.current) {
-        orientationCubeRef.current?.updateFromMainCamera(cameraRef.current);
-      }
-    };
-
-    controls.addEventListener("change", handleControlsChange);
-    return () => {
-      controls.removeEventListener("change", handleControlsChange);
-    };
-  }, []);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        handleFitView();
-      } else if (e.code === "KeyE") {
-        e.preventDefault();
-        setShowEdges(!showEdges);
-      } else if (e.code === "Escape") {
-        e.preventDefault();
-        if (activeTool) {
-          setActiveTool(null);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [handleFitView, showEdges, activeTool, setActiveTool]);
 
   return (
     <div className="relative w-full h-full">
       <CardContent className="p-0 h-full">
-        {isLoading ? (
+        {isLoading && (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <p className="text-sm text-destructive text-center">{error}</p>
+        )}
+
+        {error && (
+          <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
+            <div className="text-destructive text-center">
+              <p className="font-semibold">Error loading 3D model</p>
+              <p className="text-sm mt-2">{error}</p>
+            </div>
+            {fileUrl && (
+              <Button variant="outline" onClick={handleDownload}>
+                Download File
+              </Button>
+            )}
           </div>
-        ) : meshData && isRenderableFormat ? (
+        )}
+
+        {!isLoading && !error && meshData && isRenderableFormat ? (
           <div className="relative w-full h-full">
-            {/* Unified Toolbar */}
+            {/* ✅ Unified Toolbar - OUTSIDE Canvas */}
             <UnifiedCADToolbar
-              onHomeView={() => handleViewChange("home")}
-              onFrontView={() => handleViewChange("front")}
-              onTopView={() => handleViewChange("top")}
-              onIsometricView={() => handleViewChange("isometric")}
+              onSetView={handleSetView}
               onFitView={handleFitView}
+              activeTool={activeTool}
+              onSetActiveTool={setActiveTool}
+              onClearMeasurements={clearAllMeasurements}
+              measurementCount={measurements.length}
               displayMode={displayMode}
               onDisplayModeChange={setDisplayMode}
               showEdges={showEdges}
               onToggleEdges={() => setShowEdges(!showEdges)}
-              measurementMode={activeTool}
-              onMeasurementModeChange={setActiveTool}
-              measurementCount={measurements.length}
-              onClearMeasurements={clearAllMeasurements}
-              sectionPlane={sectionPlane}
-              onSectionPlaneChange={setSectionPlane}
+              sectionPlane={sectionPlane || "none"}
+              onSectionPlaneChange={(plane) => setSectionPlane(plane === "none" ? null : plane)}
               sectionPosition={sectionPosition}
               onSectionPositionChange={setSectionPosition}
               shadowsEnabled={shadowsEnabled}
@@ -610,10 +544,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ Orientation Cube with all rotation handlers */}
-            <OrientationCubePreview
-              ref={orientationCubeRef}
-              onCubeClick={handleCubeClick}
+            {/* ✅ FIXED: Orientation Cube Controls - UI buttons OUTSIDE Canvas */}
+            <OrientationCubeControls
               onRotateUp={() => handleRotateCamera("up")}
               onRotateDown={() => handleRotateCamera("down")}
               onRotateLeft={() => handleRotateCamera("left")}
@@ -667,6 +599,9 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
+
+                {/* ✅ FIXED: Orientation Cube INSIDE Canvas - syncs with camera */}
+                <OrientationCubeInScene mainCameraRef={cameraRef} onCubeClick={handleCubeClick} />
 
                 {/* ✅ TrackballControls allows free rotation */}
                 <TrackballControls
