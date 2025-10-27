@@ -21,24 +21,34 @@ interface OrientationCubeMeshProps {
 export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hoveredFace, setHoveredFace] = useState<string | null>(null);
 
-  // Simple single material - no face labels needed
-
-  // Simple single material with hover effect
-  const material = useMemo(() => {
+  // Simple single material - always white/semi-transparent
+  const baseMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: hoveredIndex !== null ? '#60a5fa' : '#ffffff', // Blue on hover, white for default
+      color: '#ffffff',
       metalness: 0.2,
       roughness: 0.7,
       transparent: true,
-      opacity: hoveredIndex !== null ? 1.0 : 0.6, // 60% opacity when not hovered
+      opacity: 0.6,
       envMapIntensity: 1.2,
-      emissive: hoveredIndex !== null ? new THREE.Color('#3b82f6') : new THREE.Color(0x000000),
-      emissiveIntensity: hoveredIndex !== null ? 0.3 : 0,
       flatShading: false,
     });
-  }, [hoveredIndex]);
+  }, []);
+
+  // Highlight material for hovered face overlay
+  const highlightMaterial = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: '#60a5fa',
+      metalness: 0.2,
+      roughness: 0.7,
+      transparent: true,
+      opacity: 0.4,
+      emissive: new THREE.Color('#3b82f6'),
+      emissiveIntensity: 0.3,
+      flatShading: false,
+    });
+  }, []);
 
   // Load the STL geometry with error handling
   let stlGeometry: THREE.BufferGeometry | null = null;
@@ -76,22 +86,38 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     return geometry;
   }, [stlGeometry]);
 
+  // Determine which logical face is hovered based on normal
+  const getFaceFromNormal = (normal: THREE.Vector3): string => {
+    const absX = Math.abs(normal.x);
+    const absY = Math.abs(normal.y);
+    const absZ = Math.abs(normal.z);
+
+    if (absX > absY && absX > absZ) {
+      return normal.x > 0 ? 'right' : 'left';
+    } else if (absY > absX && absY > absZ) {
+      return normal.y > 0 ? 'top' : 'bottom';
+    } else {
+      return normal.z > 0 ? 'front' : 'back';
+    }
+  };
+
   // Handle pointer events
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     document.body.style.cursor = "pointer";
 
-    // Get the face that was hovered
-    if (event.face && event.faceIndex !== undefined) {
-      const faceIndex = Math.floor(event.faceIndex / 2); // Each face has 2 triangles
-      setHoveredIndex(faceIndex);
+    if (event.face && meshRef.current) {
+      const normal = event.face.normal.clone();
+      normal.transformDirection(meshRef.current.matrixWorld);
+      const face = getFaceFromNormal(normal);
+      setHoveredFace(face);
     }
   };
 
   const handlePointerLeave = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     document.body.style.cursor = "default";
-    setHoveredIndex(null);
+    setHoveredFace(null);
   };
 
   // Handle face clicks
@@ -140,13 +166,23 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     console.log("   - Geometry:", cubeGeometry.type);
   }, [cubeGeometry]);
 
+  // Face overlay positions (thin boxes on each face)
+  const faceOverlays = useMemo(() => [
+    { face: 'right', position: [0.95, 0, 0] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] },
+    { face: 'left', position: [-0.95, 0, 0] as [number, number, number], rotation: [0, -Math.PI / 2, 0] as [number, number, number] },
+    { face: 'top', position: [0, 0.95, 0] as [number, number, number], rotation: [-Math.PI / 2, 0, 0] as [number, number, number] },
+    { face: 'bottom', position: [0, -0.95, 0] as [number, number, number], rotation: [Math.PI / 2, 0, 0] as [number, number, number] },
+    { face: 'front', position: [0, 0, 0.95] as [number, number, number], rotation: [0, 0, 0] as [number, number, number] },
+    { face: 'back', position: [0, 0, -0.95] as [number, number, number], rotation: [0, Math.PI, 0] as [number, number, number] },
+  ], []);
+
   return (
     <group ref={groupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-      {/* Simple cube with single material */}
+      {/* Main cube with single material */}
       <mesh
         ref={meshRef}
         geometry={cubeGeometry}
-        material={material}
+        material={baseMaterial}
         onClick={handleClick}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
@@ -154,6 +190,19 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         receiveShadow
         scale={0.95}
       />
+
+      {/* Per-face highlight overlays */}
+      {faceOverlays.map(({ face, position, rotation }) => (
+        <mesh
+          key={face}
+          position={position}
+          rotation={rotation}
+          visible={hoveredFace === face}
+        >
+          <planeGeometry args={[1.8, 1.8]} />
+          <primitive object={highlightMaterial} />
+        </mesh>
+      ))}
 
       {/* Edge lines for visual definition */}
       <lineSegments>
