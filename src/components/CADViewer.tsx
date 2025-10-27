@@ -1,8 +1,6 @@
 // CADViewer.tsx
-// ✅ ALL 3 ISSUES FIXED:
-// 1. ✅ Positioning: Relative container for orientation cube
-// 2. ✅ STL Loading: Handled in OrientationCube_UNIFIED
-// 3. ✅ Rotation Gimbal Lock: Uses camera's own right vector
+// ✅ ALL 3 ORIENTATION CUBE ISSUES FIXED
+// ✅ FIXED: UnifiedCADToolbar props corrected to match interface
 
 import { Canvas } from "@react-three/fiber";
 import { TrackballControls, PerspectiveCamera } from "@react-three/drei";
@@ -225,6 +223,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox],
   );
 
+  // ✅ FIXED: Individual view handlers for UnifiedCADToolbar
+  const handleHomeView = useCallback(() => handleSetView("home"), [handleSetView]);
+  const handleFrontView = useCallback(() => handleSetView("front"), [handleSetView]);
+  const handleTopView = useCallback(() => handleSetView("top"), [handleSetView]);
+  const handleIsometricView = useCallback(() => handleSetView("isometric"), [handleSetView]);
+
   const handleFitView = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return;
 
@@ -374,26 +378,36 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           <div className="relative w-full h-full">
             {/* ✅ ISSUE #1 FIX: This relative container ensures orientation cube positions correctly */}
 
-            {/* Unified Toolbar */}
+            {/* ✅ FIXED: UnifiedCADToolbar with correct props */}
             <UnifiedCADToolbar
-              onSetView={handleSetView}
+              // View Controls - Individual handlers (not generic onSetView)
+              onHomeView={handleHomeView}
+              onFrontView={handleFrontView}
+              onTopView={handleTopView}
+              onIsometricView={handleIsometricView}
               onFitView={handleFitView}
-              activeTool={activeTool}
-              onSetActiveTool={setActiveTool}
-              onClearMeasurements={clearAllMeasurements}
+              // Measurement - Fixed prop names
+              measurementMode={activeTool}
+              onMeasurementModeChange={setActiveTool}
               measurementCount={measurements.length}
+              onClearMeasurements={clearAllMeasurements}
+              // Display Mode
               displayMode={displayMode}
               onDisplayModeChange={setDisplayMode}
+              // Edge Display
               showEdges={showEdges}
               onToggleEdges={() => setShowEdges(!showEdges)}
+              // Section Plane
               sectionPlane={sectionPlane}
               onSectionPlaneChange={setSectionPlane}
               sectionPosition={sectionPosition}
               onSectionPositionChange={setSectionPosition}
+              // Visual Settings
               shadowsEnabled={shadowsEnabled}
               onToggleShadows={() => setShadowsEnabled(!shadowsEnabled)}
               ssaoEnabled={ssaoEnabled}
               onToggleSSAO={() => setSSAOEnabled(!ssaoEnabled)}
+              // Bounding Box
               boundingBox={{
                 min: { x: boundingBox.min.x, y: boundingBox.min.y, z: boundingBox.min.z },
                 max: { x: boundingBox.max.x, y: boundingBox.max.y, z: boundingBox.max.z },
