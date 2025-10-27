@@ -25,56 +25,29 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
   // Simple single material - no face labels needed
 
-  // Simple single material with hover effect
-  const material = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: hoveredIndex !== null ? '#60a5fa' : '#ffffff', // Blue on hover, white for default
-      metalness: 0.2,
-      roughness: 0.7,
-      transparent: true,
-      opacity: hoveredIndex !== null ? 1.0 : 0.6, // 60% opacity when not hovered
-      envMapIntensity: 1.2,
-      emissive: hoveredIndex !== null ? new THREE.Color('#3b82f6') : new THREE.Color(0x000000),
-      emissiveIntensity: hoveredIndex !== null ? 0.3 : 0,
-      flatShading: false,
+  // Array of 6 materials (one per face) for individual face highlighting
+  const materials = useMemo(() => {
+    return [0, 1, 2, 3, 4, 5].map((faceIndex) => {
+      const isHovered = hoveredIndex === faceIndex;
+      return new THREE.MeshStandardMaterial({
+        color: isHovered ? '#60a5fa' : '#ffffff',
+        metalness: 0.2,
+        roughness: 0.7,
+        transparent: true,
+        opacity: isHovered ? 1.0 : 0.6,
+        envMapIntensity: 1.2,
+        emissive: isHovered ? new THREE.Color('#3b82f6') : new THREE.Color(0x000000),
+        emissiveIntensity: isHovered ? 0.3 : 0,
+        flatShading: false,
+      });
     });
   }, [hoveredIndex]);
 
-  // Load the STL geometry with error handling
-  let stlGeometry: THREE.BufferGeometry | null = null;
-  try {
-    stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
-    console.log("✅ STL loaded successfully:", stlGeometry);
-  } catch (error) {
-    console.warn("⚠️ Failed to load STL, using fallback BoxGeometry:", error);
-  }
-  
-  // Scale and center the STL geometry or use fallback
+  // Simple BoxGeometry for clean face detection
   const cubeGeometry = useMemo(() => {
-    if (!stlGeometry) {
-      console.log("📦 Using fallback BoxGeometry (1.8x1.8x1.8)");
-      return new THREE.BoxGeometry(1.8, 1.8, 1.8);
-    }
-    
-    const geometry = stlGeometry.clone();
-    geometry.computeBoundingBox();
-    const boundingBox = geometry.boundingBox!;
-    const center = new THREE.Vector3();
-    boundingBox.getCenter(center);
-    
-    // Center the geometry
-    geometry.translate(-center.x, -center.y, -center.z);
-    
-    // Scale to fit in viewport - larger for better visibility
-    const size = new THREE.Vector3();
-    boundingBox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 1.8 / maxDim;
-    geometry.scale(scale, scale, scale);
-    
-    console.log("✅ STL geometry processed, scale:", scale);
-    return geometry;
-  }, [stlGeometry]);
+    console.log("📦 Using BoxGeometry (1.8x1.8x1.8) for orientation cube");
+    return new THREE.BoxGeometry(1.8, 1.8, 1.8);
+  }, []);
 
   // Handle pointer events
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
@@ -141,12 +114,12 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   }, [cubeGeometry]);
 
   return (
-    <group ref={groupRef} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
-      {/* Simple cube with single material */}
+    <group ref={groupRef} rotation={[0, 0, 0]}>
+      {/* Cube with per-face materials for individual highlighting */}
       <mesh
         ref={meshRef}
         geometry={cubeGeometry}
-        material={material}
+        material={materials}
         onClick={handleClick}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
