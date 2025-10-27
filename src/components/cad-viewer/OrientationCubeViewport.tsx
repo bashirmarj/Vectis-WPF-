@@ -141,7 +141,7 @@ export function OrientationCubeViewport({
             </Tooltip>
 
             {/* Center - Cube viewport in the grid */}
-            <div className="h-20 w-20 relative -m-1">
+            <div className="h-14 w-14 relative -m-1">
               <Canvas
                 gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
@@ -150,8 +150,8 @@ export function OrientationCubeViewport({
                 <OrthographicCamera
                   ref={cubeCameraRef}
                   makeDefault
-                  position={[5, 5, 10]}
-                  zoom={30}
+                  position={[0, 0, 10]}
+                  zoom={35}
                   near={0.1}
                   far={100}
                 />
