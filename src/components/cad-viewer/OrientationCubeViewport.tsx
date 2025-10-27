@@ -197,11 +197,35 @@ export function OrientationCubeViewport({
             {/* Center - Cube Canvas */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]">
               <Canvas
-                gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+                gl={{
+                  antialias: false, // ✅ FIXED: Disable for small viewport - saves GPU memory
+                  alpha: true,
+                  powerPreference: "low-power", // ✅ FIXED: Use integrated GPU to avoid conflicts
+                  preserveDrawingBuffer: true, // ✅ FIXED: Prevent context loss
+                  failIfMajorPerformanceCaveat: false, // ✅ FIXED: Allow fallback rendering
+                }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
-                dpr={[1, 2]}
-                onCreated={() => {
+                dpr={1} // ✅ FIXED: Single pixel ratio - no need for retina on small cube
+                onCreated={({ gl }) => {
                   console.log("🔍 DIAGNOSTIC: Cube Canvas created, cubeCameraRef:", !!cubeCameraRef.current);
+
+                  // ✅ FIXED: Add context loss/restore handlers
+                  gl.domElement.addEventListener(
+                    "webglcontextlost",
+                    (e) => {
+                      e.preventDefault();
+                      console.warn("⚠️ Orientation Cube: WebGL context lost, attempting restore...");
+                    },
+                    false,
+                  );
+
+                  gl.domElement.addEventListener(
+                    "webglcontextrestored",
+                    () => {
+                      console.log("✅ Orientation Cube: WebGL context restored");
+                    },
+                    false,
+                  );
                 }}
               >
                 <OrthographicCamera
