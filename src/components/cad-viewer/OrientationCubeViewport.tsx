@@ -100,10 +100,38 @@ export function OrientationCubeViewport({
 
   return (
     <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 select-none">
-      {/* Rotation Arrow Controls */}
-      <div className="bg-background/98 backdrop-blur-md rounded-xl p-3 shadow-2xl border-2 border-border/50 hover:border-border/70 transition-all">
+      {/* Rotation Arrow Controls with Cube Overlay */}
+      <div className="relative bg-background/98 backdrop-blur-md rounded-xl p-3 shadow-2xl border-2 border-border/50 hover:border-border/70 transition-all">
+        
+        {/* Large Cube Canvas - Absolute Overlay Behind Arrows */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="h-32 w-32 pointer-events-auto">
+            <Canvas
+              gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+              style={{ width: "100%", height: "100%", borderRadius: "0.75rem" }}
+              dpr={[1, 2]}
+            >
+              <OrthographicCamera
+                ref={cubeCameraRef}
+                makeDefault
+                position={[5, 5, 10]}
+                zoom={30}
+                near={0.1}
+                far={100}
+              />
+              <color attach="background" args={["transparent"]} />
+              <ambientLight intensity={0.3} />
+              <directionalLight position={[2, 3, 2]} intensity={0.7} />
+              <directionalLight position={[-2, -1, -2]} intensity={0.4} />
+              <directionalLight position={[0, -2, 0]} intensity={0.3} />
+              <OrientationCubeMesh onFaceClick={onCubeClick} />
+            </Canvas>
+          </div>
+        </div>
+
+        {/* Arrow Grid - Relative Positioned on Top */}
         <TooltipProvider delayDuration={300}>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="relative z-10 grid grid-cols-3 gap-1.5">
             {/* Top Row */}
             <div />
             <Tooltip>
@@ -111,7 +139,7 @@ export function OrientationCubeViewport({
                 <Button
                   variant={activeButton === "up" ? "default" : "ghost"}
                   size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
+                  className="h-9 w-9 bg-background/80 hover:bg-background/90 backdrop-blur-sm transition-all hover:scale-110"
                   onClick={() => handleButtonClick("up", onRotateUp)}
                 >
                   <ChevronUp className="h-5 w-5" />
@@ -129,7 +157,7 @@ export function OrientationCubeViewport({
                 <Button
                   variant={activeButton === "left" ? "default" : "ghost"}
                   size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
+                  className="h-9 w-9 bg-background/80 hover:bg-background/90 backdrop-blur-sm transition-all hover:scale-110"
                   onClick={() => handleButtonClick("left", onRotateLeft)}
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -140,36 +168,15 @@ export function OrientationCubeViewport({
               </TooltipContent>
             </Tooltip>
 
-            {/* Center - Cube viewport in the grid */}
-            <div className="h-14 w-14 relative -m-1">
-              <Canvas
-                gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-                style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
-                dpr={[1, 2]}
-              >
-                <OrthographicCamera
-                  ref={cubeCameraRef}
-                  makeDefault
-                  position={[0, 0, 10]}
-                  zoom={35}
-                  near={0.1}
-                  far={100}
-                />
-                <color attach="background" args={["#f8fafc"]} />
-                <ambientLight intensity={0.3} />
-                <directionalLight position={[2, 3, 2]} intensity={0.7} />
-                <directionalLight position={[-2, -1, -2]} intensity={0.4} />
-                <directionalLight position={[0, -2, 0]} intensity={0.3} />
-                <OrientationCubeMesh onFaceClick={onCubeClick} />
-              </Canvas>
-            </div>
+            {/* Center - Empty space for cube visibility */}
+            <div className="h-14 w-14 -m-1" />
 
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant={activeButton === "right" ? "default" : "ghost"}
                   size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
+                  className="h-9 w-9 bg-background/80 hover:bg-background/90 backdrop-blur-sm transition-all hover:scale-110"
                   onClick={() => handleButtonClick("right", onRotateRight)}
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -186,7 +193,7 @@ export function OrientationCubeViewport({
                 <Button
                   variant={activeButton === "ccw" ? "default" : "ghost"}
                   size="icon"
-                  className="h-8 w-8 transition-all hover:scale-110"
+                  className="h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm transition-all hover:scale-110"
                   onClick={() => handleButtonClick("ccw", onRotateCounterClockwise)}
                 >
                   <RotateCcw className="h-4 w-4" />
@@ -202,7 +209,7 @@ export function OrientationCubeViewport({
                 <Button
                   variant={activeButton === "down" ? "default" : "ghost"}
                   size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
+                  className="h-9 w-9 bg-background/80 hover:bg-background/90 backdrop-blur-sm transition-all hover:scale-110"
                   onClick={() => handleButtonClick("down", onRotateDown)}
                 >
                   <ChevronDown className="h-5 w-5" />
@@ -218,7 +225,7 @@ export function OrientationCubeViewport({
                 <Button
                   variant={activeButton === "cw" ? "default" : "ghost"}
                   size="icon"
-                  className="h-8 w-8 transition-all hover:scale-110"
+                  className="h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm transition-all hover:scale-110"
                   onClick={() => handleButtonClick("cw", onRotateClockwise)}
                 >
                   <RotateCw className="h-4 w-4" />
