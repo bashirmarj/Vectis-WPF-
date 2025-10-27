@@ -141,7 +141,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   }, [cubeGeometry]);
 
   return (
-    <group ref={groupRef} rotation={[0, 0, 0]}>
+    <group ref={groupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
       {/* Simple cube with single material */}
       <mesh
         ref={meshRef}
@@ -152,6 +152,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         onPointerLeave={handlePointerLeave}
         castShadow
         receiveShadow
+        scale={0.95}
       />
 
       {/* Edge lines for visual definition */}
