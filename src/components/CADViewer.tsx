@@ -269,7 +269,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox],
   );
 
-  // ✅ Arrow rotation handler with 90-degree increments
+  // ✅ FIXED: Simplified rotation logic - eliminates gimbal lock issues
   const handleRotateCamera = useCallback(
     (direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -280,119 +280,88 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const controls = controlsRef.current;
       const target = controls.target.clone();
 
+      // Get current camera state
       const currentPosition = camera.position.clone();
-      const viewDir = currentPosition.clone().sub(target).normalize();
+      const currentUp = camera.up.clone();
 
-      const rotationAngle = Math.PI / 2; // 90° rotation
+      // Calculate view direction (from camera to target)
+      const viewDir = target.clone().sub(currentPosition).normalize();
 
-      // Detect gimbal lock condition
-      const worldUp = new THREE.Vector3(0, 1, 0);
-      const dotProduct = Math.abs(viewDir.dot(worldUp));
-      const isGimbalLock = dotProduct > 0.98;
+      // 90-degree rotation
+      const rotationAngle = Math.PI / 2;
 
       let newPosition: THREE.Vector3;
       let newUp: THREE.Vector3;
 
-      if (isGimbalLock) {
-        const worldZ = new THREE.Vector3(0, 0, 1);
-        const isLookingDown = viewDir.y > 0;
+      // ✅ SIMPLIFIED LOGIC: Always use view-relative rotation axes
+      // This eliminates the gimbal lock complexity that was causing issues
 
-        switch (direction) {
-          case "left":
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(worldUp, rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(worldUp, rotationAngle);
-            break;
+      // Calculate screen-space axes relative to current view
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      const screenRight = new THREE.Vector3().crossVectors(worldUp, viewDir).normalize();
 
-          case "right":
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(worldUp, -rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(worldUp, -rotationAngle);
-            break;
-
-          case "up":
-            const upAxis = isLookingDown ? worldZ : worldZ.clone().negate();
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(upAxis, rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(upAxis, rotationAngle);
-            break;
-
-          case "down":
-            const downAxis = isLookingDown ? worldZ.clone().negate() : worldZ;
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(downAxis, rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(downAxis, rotationAngle);
-            break;
-
-          case "cw":
-            newPosition = currentPosition.clone();
-            newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
-            break;
-
-          case "ccw":
-            newPosition = currentPosition.clone();
-            newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
-            break;
-
-          default:
-            return;
-        }
-      } else {
-        // Normal rotation using screen-relative axes
-        const screenRight = new THREE.Vector3();
-        const screenUp = new THREE.Vector3();
-
-        screenRight.crossVectors(worldUp, viewDir).normalize();
-        screenUp.crossVectors(viewDir, screenRight).normalize();
-
-        switch (direction) {
-          case "left":
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(screenUp, rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(screenUp, rotationAngle);
-            break;
-
-          case "right":
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(screenUp, -rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(screenUp, -rotationAngle);
-            break;
-
-          case "up":
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(screenRight, rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(screenRight, rotationAngle);
-            break;
-
-          case "down":
-            newPosition = currentPosition.clone().sub(target);
-            newPosition.applyAxisAngle(screenRight, -rotationAngle);
-            newPosition.add(target);
-            newUp = camera.up.clone().applyAxisAngle(screenRight, -rotationAngle);
-            break;
-
-          case "cw":
-            newPosition = currentPosition.clone();
-            newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
-            break;
-
-          case "ccw":
-            newPosition = currentPosition.clone();
-            newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
-            break;
-
-          default:
-            return;
-        }
+      // If screenRight is near zero (looking straight up/down), use world X as fallback
+      if (screenRight.length() < 0.01) {
+        screenRight.set(1, 0, 0);
       }
 
+      // Calculate screen up (perpendicular to both viewDir and screenRight)
+      const screenUp = new THREE.Vector3().crossVectors(viewDir, screenRight).normalize();
+
+      switch (direction) {
+        case "left":
+          // Rotate camera position around screenUp axis (horizontal rotation)
+          newPosition = currentPosition.clone().sub(target);
+          newPosition.applyAxisAngle(screenUp, rotationAngle);
+          newPosition.add(target);
+          // Up vector also rotates around the same axis
+          newUp = currentUp.clone().applyAxisAngle(screenUp, rotationAngle);
+          break;
+
+        case "right":
+          // Rotate camera position around screenUp axis (horizontal rotation, opposite direction)
+          newPosition = currentPosition.clone().sub(target);
+          newPosition.applyAxisAngle(screenUp, -rotationAngle);
+          newPosition.add(target);
+          // Up vector also rotates around the same axis
+          newUp = currentUp.clone().applyAxisAngle(screenUp, -rotationAngle);
+          break;
+
+        case "up":
+          // Rotate camera position around screenRight axis (vertical rotation)
+          newPosition = currentPosition.clone().sub(target);
+          newPosition.applyAxisAngle(screenRight, rotationAngle);
+          newPosition.add(target);
+          // Up vector also rotates around the same axis
+          newUp = currentUp.clone().applyAxisAngle(screenRight, rotationAngle);
+          break;
+
+        case "down":
+          // Rotate camera position around screenRight axis (vertical rotation, opposite direction)
+          newPosition = currentPosition.clone().sub(target);
+          newPosition.applyAxisAngle(screenRight, -rotationAngle);
+          newPosition.add(target);
+          // Up vector also rotates around the same axis
+          newUp = currentUp.clone().applyAxisAngle(screenRight, -rotationAngle);
+          break;
+
+        case "cw":
+          // Roll clockwise: rotate up vector around view direction
+          newPosition = currentPosition.clone();
+          newUp = currentUp.clone().applyAxisAngle(viewDir, -rotationAngle);
+          break;
+
+        case "ccw":
+          // Roll counter-clockwise: rotate up vector around view direction
+          newPosition = currentPosition.clone();
+          newUp = currentUp.clone().applyAxisAngle(viewDir, rotationAngle);
+          break;
+
+        default:
+          return;
+      }
+
+      // Apply new camera position and orientation
       camera.position.copy(newPosition);
       camera.up.copy(newUp);
       camera.lookAt(target);
@@ -400,6 +369,16 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       controls.update();
 
       console.log("✅ Camera rotated");
+      console.log("   New position:", {
+        x: newPosition.x.toFixed(2),
+        y: newPosition.y.toFixed(2),
+        z: newPosition.z.toFixed(2),
+      });
+      console.log("   New up vector:", {
+        x: newUp.x.toFixed(2),
+        y: newUp.y.toFixed(2),
+        z: newUp.z.toFixed(2),
+      });
     },
     [boundingBox],
   );
