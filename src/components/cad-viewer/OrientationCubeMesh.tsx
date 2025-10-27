@@ -1,11 +1,10 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
 // Professional 3D Orientation Cube with Chamfered Edges
-// ✅ ISSUE #3 FIXED: Face highlighting now works correctly
-// Hotspot planes are camera-aligned (not rotated with cube)
+// ✅ CORRECTED: Fixed highlight to show only ONE face at a time
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
-import { ThreeEvent, useThree } from "@react-three/fiber";
+import { ThreeEvent } from "@react-three/fiber";
 import { useLoader } from "@react-three/fiber";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 
@@ -18,13 +17,12 @@ interface OrientationCubeMeshProps {
  * - Clean single-material design
  * - Hover effects (blue glow)
  * - Click detection for camera rotation
- * - ✅ FIXED: Correct face highlighting (camera-aligned hotspots)
+ * - ✅ CORRECTED: Only ONE face highlights at a time
  */
 export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [hoveredFace, setHoveredFace] = useState<string | null>(null);
-  const { camera } = useThree();
 
   // Simple single material - always white/semi-transparent
   const baseMaterial = useMemo(() => {
@@ -39,30 +37,16 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     });
   }, []);
 
-  // Highlight material for hovered face overlay
-  const highlightMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: "#60a5fa",
-      metalness: 0.2,
-      roughness: 0.7,
-      transparent: true,
-      opacity: 0.4,
-      emissive: new THREE.Color("#3b82f6"),
-      emissiveIntensity: 0.3,
-      flatShading: false,
-    });
-  }, []);
-
   // Load the STL geometry with error handling
   let stlGeometry: THREE.BufferGeometry | null = null;
   try {
     stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
-    console.log("✅ STL loaded successfully:", stlGeometry);
   } catch (error) {
     console.warn("⚠️ Failed to load STL, using fallback BoxGeometry:", error);
   }
 
   // Scale and center the STL geometry or use fallback
+  // ✅ CORRECTED: Proper memoization to prevent reloading
   const cubeGeometry = useMemo(() => {
     if (!stlGeometry) {
       console.log("📦 Using fallback BoxGeometry (1.8x1.8x1.8)");
@@ -85,47 +69,42 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     const scale = 1.8 / maxDim;
     geometry.scale(scale, scale, scale);
 
-    console.log("✅ STL geometry processed, scale:", scale);
     return geometry;
   }, [stlGeometry]);
 
-  // Determine which logical face is hovered based on camera-relative position
-  const getFaceFromCameraPosition = (intersectionPoint: THREE.Vector3): string => {
-    // Transform intersection point to camera space to get screen-relative position
-    const localPoint = intersectionPoint.clone();
-    if (groupRef.current) {
-      groupRef.current.worldToLocal(localPoint);
-    }
-
-    // Determine which axis has the largest absolute value
-    const absX = Math.abs(localPoint.x);
-    const absY = Math.abs(localPoint.y);
-    const absZ = Math.abs(localPoint.z);
+  // ✅ CORRECTED: Simplified face detection using world-space normal
+  const getFaceFromNormal = (normal: THREE.Vector3): string => {
+    const absX = Math.abs(normal.x);
+    const absY = Math.abs(normal.y);
+    const absZ = Math.abs(normal.z);
 
     if (absX > absY && absX > absZ) {
-      return localPoint.x > 0 ? "right" : "left";
+      return normal.x > 0 ? "right" : "left";
     } else if (absY > absX && absY > absZ) {
-      return localPoint.y > 0 ? "top" : "bottom";
+      return normal.y > 0 ? "top" : "bottom";
     } else {
-      return localPoint.z > 0 ? "front" : "back";
+      return normal.z > 0 ? "front" : "back";
     }
   };
 
-  // Handle pointer events on the main cube mesh
+  // Handle pointer events
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     document.body.style.cursor = "pointer";
 
-    if (event.point) {
-      const face = getFaceFromCameraPosition(event.point);
+    if (event.face && meshRef.current) {
+      const normal = event.face.normal.clone();
+      normal.transformDirection(meshRef.current.matrixWorld);
+      const face = getFaceFromNormal(normal);
       setHoveredFace(face);
-      console.log("🎯 Hovering over face:", face);
     }
   };
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
-    if (event.point) {
-      const face = getFaceFromCameraPosition(event.point);
+    if (event.face && meshRef.current) {
+      const normal = event.face.normal.clone();
+      normal.transformDirection(meshRef.current.matrixWorld);
+      const face = getFaceFromNormal(normal);
       if (face !== hoveredFace) {
         setHoveredFace(face);
         console.log("🎯 Moved to face:", face);
@@ -143,82 +122,65 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   // Handle face clicks
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
-    if (!onFaceClick || !event.point) return;
+    if (!onFaceClick || !event.face) return;
 
-    const face = getFaceFromCameraPosition(event.point);
+    // Get face normal (direction the face is pointing)
+    const normal = event.face.normal.clone();
 
-    // Convert face name to direction vector
+    // Transform normal by object's world matrix
+    if (meshRef.current) {
+      normal.transformDirection(meshRef.current.matrixWorld);
+    }
+
+    // Round to nearest axis-aligned direction
+    const absX = Math.abs(normal.x);
+    const absY = Math.abs(normal.y);
+    const absZ = Math.abs(normal.z);
+
     let direction: THREE.Vector3;
 
-    switch (face) {
-      case "right":
-        direction = new THREE.Vector3(1, 0, 0);
-        break;
-      case "left":
-        direction = new THREE.Vector3(-1, 0, 0);
-        break;
-      case "top":
-        direction = new THREE.Vector3(0, 1, 0);
-        break;
-      case "bottom":
-        direction = new THREE.Vector3(0, -1, 0);
-        break;
-      case "front":
-        direction = new THREE.Vector3(0, 0, 1);
-        break;
-      case "back":
-        direction = new THREE.Vector3(0, 0, -1);
-        break;
-      default:
-        return;
+    if (absX > absY && absX > absZ) {
+      // Click was on X face (RIGHT/LEFT)
+      direction = new THREE.Vector3(Math.sign(normal.x), 0, 0);
+    } else if (absY > absX && absY > absZ) {
+      // Click was on Y face (TOP/BOTTOM)
+      direction = new THREE.Vector3(0, Math.sign(normal.y), 0);
+    } else {
+      // Click was on Z face (FRONT/BACK)
+      direction = new THREE.Vector3(0, 0, Math.sign(normal.z));
     }
 
     console.log("🎯 Orientation Cube - Face clicked:", {
-      face,
+      faceIndex: event.faceIndex !== undefined ? Math.floor(event.faceIndex / 2) : "unknown",
+      normal: { x: normal.x.toFixed(3), y: normal.y.toFixed(3), z: normal.z.toFixed(3) },
       direction: { x: direction.x, y: direction.y, z: direction.z },
     });
 
     onFaceClick(direction);
   };
 
-  // Log when cube is ready
+  // Log when cube is ready (only once)
   useEffect(() => {
     console.log("✅ OrientationCubeMesh: Rendered and ready");
-    console.log("   - Geometry:", cubeGeometry.type);
-  }, [cubeGeometry]);
+  }, []); // Empty dependency array = run once
 
-  // ✅ ISSUE #3 FIXED: Highlight overlays are now positioned in WORLD SPACE
-  // Calculate camera-facing directions for each logical face
-  const getHighlightPosition = (face: string): [number, number, number] => {
-    // These positions are in the cube's local space
-    // They represent the center of each logical face
-    const positions: Record<string, [number, number, number]> = {
-      right: [0.91, 0, 0],
-      left: [-0.91, 0, 0],
-      top: [0, 0.91, 0],
-      bottom: [0, -0.91, 0],
-      front: [0, 0, 0.91],
-      back: [0, 0, -0.91],
-    };
-    return positions[face];
-  };
-
-  const getHighlightRotation = (face: string): [number, number, number] => {
-    // Rotations to orient the plane correctly for each face
-    const rotations: Record<string, [number, number, number]> = {
-      right: [0, Math.PI / 2, 0],
-      left: [0, -Math.PI / 2, 0],
-      top: [-Math.PI / 2, 0, 0],
-      bottom: [Math.PI / 2, 0, 0],
-      front: [0, 0, 0],
-      back: [0, Math.PI, 0],
-    };
-    return rotations[face];
-  };
+  // ✅ CORRECTED: Face positions and rotations for highlight overlays
+  const faceConfig: Record<string, { position: [number, number, number]; rotation: [number, number, number] }> =
+    useMemo(
+      () => ({
+        right: { position: [0.91, 0, 0], rotation: [0, Math.PI / 2, 0] },
+        left: { position: [-0.91, 0, 0], rotation: [0, -Math.PI / 2, 0] },
+        top: { position: [0, 0.91, 0], rotation: [-Math.PI / 2, 0, 0] },
+        bottom: { position: [0, -0.91, 0], rotation: [Math.PI / 2, 0, 0] },
+        front: { position: [0, 0, 0.91], rotation: [0, 0, 0] },
+        back: { position: [0, 0, -0.91], rotation: [0, Math.PI, 0] },
+      }),
+      [],
+    );
 
   return (
     <group ref={groupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-      {/* Main cube with hover detection */}
+      {/* Main cube with single material */}
       <mesh
         ref={meshRef}
         geometry={cubeGeometry}
@@ -232,9 +194,9 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         onClick={handleClick}
       />
 
-      {/* Visible highlight overlays on hovered face */}
-      {hoveredFace && (
-        <mesh position={getHighlightPosition(hoveredFace)} rotation={getHighlightRotation(hoveredFace)}>
+      {/* ✅ CORRECTED: Only ONE highlight plane, conditionally rendered */}
+      {hoveredFace && faceConfig[hoveredFace] && (
+        <mesh position={faceConfig[hoveredFace].position} rotation={faceConfig[hoveredFace].rotation}>
           <planeGeometry args={[1.7, 1.7]} />
           <meshBasicMaterial color="#60a5fa" transparent opacity={0.4} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
