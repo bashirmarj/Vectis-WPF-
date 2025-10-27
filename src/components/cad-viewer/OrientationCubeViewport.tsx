@@ -151,14 +151,15 @@ export function OrientationCubeViewport({
                   ref={cubeCameraRef} 
                   makeDefault 
                   position={[0, 0, 10]} 
-                  zoom={50} 
+                  zoom={45} 
                   near={0.1} 
                   far={100} 
                 />
                 <color attach="background" args={["#f8fafc"]} />
-                <ambientLight intensity={0.4} />
-                <directionalLight position={[3, 5, 3]} intensity={0.6} />
-                <directionalLight position={[-3, -2, -3]} intensity={0.3} />
+                <ambientLight intensity={0.3} />
+                <directionalLight position={[2, 3, 2]} intensity={0.7} />
+                <directionalLight position={[-2, -1, -2]} intensity={0.4} />
+                <directionalLight position={[0, -2, 0]} intensity={0.3} />
                 <OrientationCubeMesh onFaceClick={onCubeClick} />
               </Canvas>
             </div>

@@ -29,11 +29,12 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const material = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: hoveredIndex !== null ? '#60a5fa' : '#64748b', // Blue on hover, darker slate for contrast
-      metalness: 0.4,
-      roughness: 0.5,
+      metalness: 0.2,
+      roughness: 0.7,
       envMapIntensity: 1.2,
       emissive: hoveredIndex !== null ? new THREE.Color('#3b82f6') : new THREE.Color(0x000000),
       emissiveIntensity: hoveredIndex !== null ? 0.3 : 0,
+      flatShading: false,
     });
   }, [hoveredIndex]);
 
@@ -66,7 +67,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     const size = new THREE.Vector3();
     boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 2.5 / maxDim;
+    const scale = 3.0 / maxDim;
     geometry.scale(scale, scale, scale);
     
     console.log("✅ STL geometry processed, scale:", scale);
@@ -138,7 +139,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   }, [cubeGeometry]);
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
       {/* Simple cube with single material */}
       <mesh
         ref={meshRef}
