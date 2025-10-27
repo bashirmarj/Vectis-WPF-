@@ -226,6 +226,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox],
   );
 
+  // Fit view to model
   const handleFitView = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return;
 
@@ -244,10 +245,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     orientationCubeRef.current?.updateFromMainCamera(camera);
   }, [boundingBox]);
 
-  // ✅ FIX #4: Updated cube click handler - still snaps to face but preserves rotation freedom
+  // Cube face click handler
   const handleCubeClick = useCallback(
     (direction: THREE.Vector3) => {
       if (!cameraRef.current || !controlsRef.current) return;
+
+      console.log("🎯 Cube face clicked:", direction);
 
       const camera = cameraRef.current;
       const controls = controlsRef.current;
@@ -270,19 +273,40 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       controls.update();
 
       orientationCubeRef.current?.updateFromMainCamera(camera);
+
+      console.log("✅ Camera repositioned to face");
     },
     [boundingBox],
   );
 
-  // ✅ PURE VIEW-RELATIVE: Rotation handler matching SolidWorks behavior
+  // ✅ DEBUGGED: Rotation handler with comprehensive logging
   const handleRotateCamera = useCallback(
     (rotationType: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
-      if (!cameraRef.current || !controlsRef.current) return;
+      console.log(`🎯 handleRotateCamera called with: ${rotationType}`);
+
+      if (!cameraRef.current || !controlsRef.current) {
+        console.error("❌ Camera or controls ref not available!");
+        return;
+      }
 
       const camera = cameraRef.current;
       const controls = controlsRef.current;
       const target = new THREE.Vector3(...boundingBox.center);
       const currentDistance = camera.position.distanceTo(target);
+
+      console.log("📊 Camera state before rotation:", {
+        position: {
+          x: camera.position.x.toFixed(2),
+          y: camera.position.y.toFixed(2),
+          z: camera.position.z.toFixed(2),
+        },
+        distance: currentDistance.toFixed(2),
+        target: {
+          x: target.x.toFixed(2),
+          y: target.y.toFixed(2),
+          z: target.z.toFixed(2),
+        },
+      });
 
       const ROTATION_ANGLE = Math.PI / 2; // 90 degrees
 
@@ -293,10 +317,10 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       // Calculate screen-right (horizontal on screen)
       let screenRight = new THREE.Vector3().crossVectors(worldUp, viewDirection).normalize();
 
-      // Handle special case: looking straight up or down (viewDirection parallel to worldUp)
+      // Handle special case: looking straight up or down
       if (screenRight.length() < 0.001) {
-        // Use world X as fallback when looking straight up/down
         screenRight = new THREE.Vector3(1, 0, 0);
+        console.log("⚠️ Using fallback screen-right (looking straight up/down)");
       }
 
       // Calculate screen-up (vertical on screen)
@@ -307,16 +331,14 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
       switch (rotationType) {
         case "up": {
-          // ✅ VIEW-RELATIVE: Rotate around screen-horizontal axis (screen right)
+          console.log("⬆️ Rotating UP around screen-right axis");
           newPosition = viewDirection.clone();
-          newPosition.applyAxisAngle(screenRight, -ROTATION_ANGLE); // Negative for intuitive up
+          newPosition.applyAxisAngle(screenRight, -ROTATION_ANGLE);
           newPosition.normalize();
 
-          // Recalculate screen-up for new position
           const newViewDir = newPosition.clone();
           const newScreenRight = new THREE.Vector3().crossVectors(worldUp, newViewDir).normalize();
           if (newScreenRight.length() < 0.001) {
-            // At poles, maintain current screen orientation
             newUp = screenRight.clone();
           } else {
             newUp = new THREE.Vector3().crossVectors(newViewDir, newScreenRight).normalize();
@@ -325,16 +347,14 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         }
 
         case "down": {
-          // ✅ VIEW-RELATIVE: Rotate around screen-horizontal axis (screen right)
+          console.log("⬇️ Rotating DOWN around screen-right axis");
           newPosition = viewDirection.clone();
-          newPosition.applyAxisAngle(screenRight, ROTATION_ANGLE); // Positive for intuitive down
+          newPosition.applyAxisAngle(screenRight, ROTATION_ANGLE);
           newPosition.normalize();
 
-          // Recalculate screen-up for new position
           const newViewDir = newPosition.clone();
           const newScreenRight = new THREE.Vector3().crossVectors(worldUp, newViewDir).normalize();
           if (newScreenRight.length() < 0.001) {
-            // At poles, maintain current screen orientation
             newUp = screenRight.clone();
           } else {
             newUp = new THREE.Vector3().crossVectors(newViewDir, newScreenRight).normalize();
@@ -343,62 +363,84 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         }
 
         case "left": {
-          // ✅ VIEW-RELATIVE: Rotate around screen-vertical axis (screen up)
+          console.log("⬅️ Rotating LEFT around screen-up axis");
           newPosition = viewDirection.clone();
-          newPosition.applyAxisAngle(screenUp, ROTATION_ANGLE); // Positive for counterclockwise
+          newPosition.applyAxisAngle(screenUp, ROTATION_ANGLE);
           newPosition.normalize();
 
-          // Screen-up remains the same after left/right rotation
           newUp = screenUp.clone();
           break;
         }
 
         case "right": {
-          // ✅ VIEW-RELATIVE: Rotate around screen-vertical axis (screen up)
+          console.log("➡️ Rotating RIGHT around screen-up axis");
           newPosition = viewDirection.clone();
-          newPosition.applyAxisAngle(screenUp, -ROTATION_ANGLE); // Negative for clockwise
+          newPosition.applyAxisAngle(screenUp, -ROTATION_ANGLE);
           newPosition.normalize();
 
-          // Screen-up remains the same after left/right rotation
           newUp = screenUp.clone();
           break;
         }
 
         case "cw": {
-          // ✅ VIEW-RELATIVE: Roll clockwise around view axis
+          console.log("🔄 Rolling CLOCKWISE around view axis");
           newPosition = viewDirection.clone();
           newUp = screenUp.clone();
-          newUp.applyAxisAngle(viewDirection, -ROTATION_ANGLE); // Negative for clockwise roll
+          newUp.applyAxisAngle(viewDirection, -ROTATION_ANGLE);
           newUp.normalize();
           break;
         }
 
         case "ccw": {
-          // ✅ VIEW-RELATIVE: Roll counter-clockwise around view axis
+          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis");
           newPosition = viewDirection.clone();
           newUp = screenUp.clone();
-          newUp.applyAxisAngle(viewDirection, ROTATION_ANGLE); // Positive for counter-clockwise roll
+          newUp.applyAxisAngle(viewDirection, ROTATION_ANGLE);
           newUp.normalize();
           break;
         }
 
         default:
+          console.error(`❌ Unknown rotation type: ${rotationType}`);
           return;
       }
 
       // Apply new camera position and orientation
-      camera.position.copy(target.clone().add(newPosition.multiplyScalar(currentDistance)));
+      const finalPosition = target.clone().add(newPosition.multiplyScalar(currentDistance));
+
+      console.log("📊 Camera state after rotation:", {
+        newPosition: {
+          x: finalPosition.x.toFixed(2),
+          y: finalPosition.y.toFixed(2),
+          z: finalPosition.z.toFixed(2),
+        },
+        newUp: {
+          x: newUp.x.toFixed(2),
+          y: newUp.y.toFixed(2),
+          z: newUp.z.toFixed(2),
+        },
+      });
+
+      camera.position.copy(finalPosition);
       camera.up.copy(newUp);
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
 
+      console.log("✅ Controls updated");
+
       // Update orientation cube
-      orientationCubeRef.current?.updateFromMainCamera(camera);
+      if (orientationCubeRef.current) {
+        orientationCubeRef.current.updateFromMainCamera(camera);
+        console.log("✅ Orientation cube notified");
+      } else {
+        console.warn("⚠️ Orientation cube ref not available");
+      }
     },
     [boundingBox],
   );
 
+  // Download handler
   const handleDownload = useCallback(async () => {
     if (!fileUrl) return;
 
@@ -425,6 +467,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     const controls = controlsRef.current;
     const handleControlsChange = () => {
       if (cameraRef.current) {
+        console.log("🎮 Controls change event fired");
         orientationCubeRef.current?.updateFromMainCamera(cameraRef.current);
       }
     };
@@ -559,7 +602,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* ✅ FIX #4: TrackballControls allows free rotation - not "glued" */}
+                {/* ✅ TrackballControls allows free rotation */}
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
