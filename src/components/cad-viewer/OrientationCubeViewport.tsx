@@ -143,7 +143,7 @@ export function OrientationCubeViewport({
             </div>
 
             {/* Center - Large Cube Viewport */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[120px] w-[120px]">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]">
               <Canvas
                 gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}

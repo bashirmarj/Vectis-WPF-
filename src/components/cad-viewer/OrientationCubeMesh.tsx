@@ -141,7 +141,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   }, [cubeGeometry]);
 
   return (
-    <group ref={groupRef} rotation={[Math.PI / 6, Math.PI / 4, 0]}>
+    <group ref={groupRef} rotation={[0, 0, 0]}>
       {/* Simple cube with single material */}
       <mesh
         ref={meshRef}
