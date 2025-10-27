@@ -101,47 +101,49 @@ export function OrientationCubeViewport({
   return (
     <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 select-none">
       {/* Rotation Arrow Controls */}
-      <div className="bg-background/98 backdrop-blur-md rounded-xl p-3 shadow-2xl border-2 border-border/50 hover:border-border/70 transition-all">
+      <div className="bg-transparent rounded-xl p-3">
         <TooltipProvider delayDuration={300}>
-          <div className="grid grid-cols-3 gap-1.5">
-            {/* Top Row */}
-            <div />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activeButton === "up" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
-                  onClick={() => handleButtonClick("up", onRotateUp)}
-                >
-                  <ChevronUp className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p className="text-xs">Rotate Up 90°</p>
-              </TooltipContent>
-            </Tooltip>
-            <div />
+          <div className="relative h-[160px] w-[160px]">
+            {/* Top Arrow - Edge positioned */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "up" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("up", onRotateUp)}
+                  >
+                    <ChevronUp className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs">Rotate Up 90°</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
-            {/* Middle Row */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activeButton === "left" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
-                  onClick={() => handleButtonClick("left", onRotateLeft)}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p className="text-xs">Rotate Left 90°</p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Left Arrow - Edge positioned */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "left" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("left", onRotateLeft)}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p className="text-xs">Rotate Left 90°</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
-            {/* Center - Cube viewport in the grid */}
-            <div className="h-14 w-14 relative -m-1">
+            {/* Center - Large Cube Viewport */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[120px] w-[120px]">
               <Canvas
                 gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
@@ -151,11 +153,10 @@ export function OrientationCubeViewport({
                   ref={cubeCameraRef}
                   makeDefault
                   position={[0, 0, 10]}
-                  zoom={35}
+                  zoom={30}
                   near={0.1}
                   far={100}
                 />
-                <color attach="background" args={["#f8fafc"]} />
                 <ambientLight intensity={0.3} />
                 <directionalLight position={[2, 3, 2]} intensity={0.7} />
                 <directionalLight position={[-2, -1, -2]} intensity={0.4} />
@@ -164,70 +165,75 @@ export function OrientationCubeViewport({
               </Canvas>
             </div>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activeButton === "right" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
-                  onClick={() => handleButtonClick("right", onRotateRight)}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p className="text-xs">Rotate Right 90°</p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Right Arrow - Edge positioned */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "right" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("right", onRotateRight)}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p className="text-xs">Rotate Right 90°</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
-            {/* Bottom Row */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activeButton === "ccw" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 transition-all hover:scale-110"
-                  onClick={() => handleButtonClick("ccw", onRotateCounterClockwise)}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="text-xs">Roll CCW 90°</p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Bottom Row - Edge positioned flex group */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "ccw" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("ccw", onRotateCounterClockwise)}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Roll CCW 90°</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activeButton === "down" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-9 w-9 transition-all hover:scale-110"
-                  onClick={() => handleButtonClick("down", onRotateDown)}
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="text-xs">Rotate Down 90°</p>
-              </TooltipContent>
-            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "down" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("down", onRotateDown)}
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Rotate Down 90°</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={activeButton === "cw" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 transition-all hover:scale-110"
-                  onClick={() => handleButtonClick("cw", onRotateClockwise)}
-                >
-                  <RotateCw className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="text-xs">Roll CW 90°</p>
-              </TooltipContent>
-            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "cw" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("cw", onRotateClockwise)}
+                  >
+                    <RotateCw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Roll CW 90°</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </TooltipProvider>
       </div>
