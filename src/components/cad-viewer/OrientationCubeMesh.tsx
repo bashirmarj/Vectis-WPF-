@@ -28,9 +28,11 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   // Simple single material with hover effect
   const material = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: hoveredIndex !== null ? '#60a5fa' : '#64748b', // Blue on hover, darker slate for contrast
+      color: hoveredIndex !== null ? '#60a5fa' : '#ffffff', // Blue on hover, white for default
       metalness: 0.2,
       roughness: 0.7,
+      transparent: true,
+      opacity: hoveredIndex !== null ? 1.0 : 0.6, // 60% opacity when not hovered
       envMapIntensity: 1.2,
       emissive: hoveredIndex !== null ? new THREE.Color('#3b82f6') : new THREE.Color(0x000000),
       emissiveIntensity: hoveredIndex !== null ? 0.3 : 0,
@@ -67,7 +69,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     const size = new THREE.Vector3();
     boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 3.0 / maxDim;
+    const scale = 1.8 / maxDim;
     geometry.scale(scale, scale, scale);
     
     console.log("✅ STL geometry processed, scale:", scale);

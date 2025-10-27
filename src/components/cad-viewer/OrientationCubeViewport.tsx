@@ -151,7 +151,7 @@ export function OrientationCubeViewport({
                   ref={cubeCameraRef} 
                   makeDefault 
                   position={[0, 0, 10]} 
-                  zoom={45} 
+                  zoom={35} 
                   near={0.1} 
                   far={100} 
                 />
