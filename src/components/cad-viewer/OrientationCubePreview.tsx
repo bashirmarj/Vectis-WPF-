@@ -22,7 +22,7 @@ export interface OrientationCubeHandle {
   updateFromMainCamera: (camera: THREE.Camera) => void;
 }
 
-// ✅ OPTIMIZED: Cache STL geometry globally
+// Cache STL geometry globally
 let cachedSTLGeometry: THREE.BufferGeometry | null = null;
 let isLoadingSTL = false;
 const stlLoadCallbacks: ((geometry: THREE.BufferGeometry) => void)[] = [];
@@ -52,6 +52,7 @@ const loadSTLGeometry = (callback: (geometry: THREE.BufferGeometry) => void) => 
       cachedSTLGeometry = geometry;
       isLoadingSTL = false;
 
+      console.log("✅ Orientation cube STL loaded successfully");
       stlLoadCallbacks.forEach((cb) => cb(geometry));
       stlLoadCallbacks.length = 0;
     },
@@ -64,7 +65,7 @@ const loadSTLGeometry = (callback: (geometry: THREE.BufferGeometry) => void) => 
   );
 };
 
-// ✅ PROFESSIONAL: Create face label textures with modern design
+// Professional face textures
 const createFaceTextures = () => {
   const faces = [
     { text: "FRONT", color: "#e8eaed", textColor: "#3c4043" },
@@ -93,7 +94,7 @@ const createFaceTextures = () => {
     context.lineWidth = 2;
     context.strokeRect(1, 1, 254, 254);
 
-    // Professional text with subtle shadow
+    // Professional text
     context.shadowColor = "rgba(0, 0, 0, 0.15)";
     context.shadowBlur = 3;
     context.shadowOffsetX = 1;
@@ -142,6 +143,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
     const cubeRef = useRef<THREE.Mesh | null>(null);
     const labelGroupRef = useRef<THREE.Group | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    const needsRenderRef = useRef<boolean>(true);
 
     const [hoveredRegion, setHoveredRegion] = useState<{
       type: string;
@@ -158,11 +160,12 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       }
     }, [externalDisplayMode]);
 
-    // ✅ Initialize Three.js scene
+    // Initialize Three.js scene
     useEffect(() => {
       if (!canvasRef.current) return;
 
-      // Create renderer with better quality settings
+      console.log("🎬 Initializing orientation cube scene");
+
       const renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
         antialias: true,
@@ -172,11 +175,9 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       rendererRef.current = renderer;
 
-      // Create scene
       const scene = new THREE.Scene();
       sceneRef.current = scene;
 
-      // Create camera
       const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
       camera.position.set(3, 3, 3);
       camera.lookAt(0, 0, 0);
@@ -186,7 +187,6 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       loadSTLGeometry((geometry) => {
         if (!sceneRef.current) return;
 
-        // Scale the geometry
         const boundingBox = geometry.boundingBox;
         if (boundingBox) {
           const size = boundingBox.getSize(new THREE.Vector3());
@@ -197,9 +197,9 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
         const textures = getFaceTextures();
 
-        // ✅ PROFESSIONAL: Create semi-transparent material with better appearance
+        // ✅ FIX #3: Professional semi-transparent material
         const material = new THREE.MeshStandardMaterial({
-          color: 0xf5f5f5, // Light grey base
+          color: 0xf5f5f5,
           metalness: 0.2,
           roughness: 0.4,
           transparent: true,
@@ -211,12 +211,14 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
         sceneRef.current.add(cube);
         cubeRef.current = cube;
 
-        // ✅ PROFESSIONAL: Add colored edge lines for axis visualization
+        console.log("✅ Orientation cube mesh created");
+
+        // ✅ FIX #3: Professional colored edges
         const edges = new THREE.EdgesGeometry(geometry, 15);
         const line = new THREE.LineSegments(
           edges,
           new THREE.LineBasicMaterial({
-            color: 0x5f6368, // Professional grey
+            color: 0x5f6368,
             linewidth: 1.5,
             transparent: true,
             opacity: 0.7,
@@ -227,7 +229,6 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
         // Create label group
         const labelGroup = new THREE.Group();
 
-        // Add face labels with professional styling
         const facePositions = [
           { position: [0, 0, 1], rotation: [0, 0, 0], texture: textures[0] }, // Front
           { position: [0, 0, -1], rotation: [0, Math.PI, 0], texture: textures[1] }, // Back
@@ -254,9 +255,11 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
         cube.add(labelGroup);
         labelGroupRef.current = labelGroup;
+
+        needsRenderRef.current = true;
       });
 
-      // ✅ PROFESSIONAL: Enhanced lighting for better depth perception
+      // ✅ FIX #3: Enhanced professional lighting
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
 
@@ -268,12 +271,19 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       fillLight.position.set(-3, 2, -2);
       scene.add(fillLight);
 
-      // Animation loop
+      // ✅ FIX #1: Animation loop that continuously renders
       const animate = () => {
         animationFrameRef.current = requestAnimationFrame(animate);
-        renderer.render(scene, camera);
+
+        // Always render to ensure updates are visible
+        if (needsRenderRef.current || cubeRef.current) {
+          renderer.render(scene, camera);
+          needsRenderRef.current = false;
+        }
       };
       animate();
+
+      console.log("✅ Orientation cube animation loop started");
 
       // Cleanup
       return () => {
@@ -303,20 +313,47 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
       material.transparent = true;
       material.needsUpdate = true;
+      needsRenderRef.current = true;
+
+      console.log(`🎨 Display style changed to: ${displayStyle}`);
     }, [displayStyle]);
 
-    // ✅ CRITICAL: Sync with main camera - cube mirrors camera rotation
+    // ✅ FIX #1: CRITICAL - Update cube orientation from main camera
     useImperativeHandle(ref, () => ({
       updateFromMainCamera: (mainCamera: THREE.Camera) => {
-        if (!cubeRef.current) return;
+        if (!cubeRef.current) {
+          console.warn("⚠️ Cube ref not ready for update");
+          return;
+        }
 
-        // Get main camera's rotation and invert it so cube shows orientation
-        const quaternion = mainCamera.quaternion.clone();
-        cubeRef.current.quaternion.copy(quaternion.invert());
+        // Clone and invert camera quaternion
+        const cameraQuat = mainCamera.quaternion.clone();
+        const invertedQuat = cameraQuat.invert();
+
+        // Apply to cube
+        cubeRef.current.quaternion.copy(invertedQuat);
+
+        // Force render on next frame
+        needsRenderRef.current = true;
+
+        console.log("🔄 Orientation cube updated from camera", {
+          cameraQuat: {
+            x: mainCamera.quaternion.x.toFixed(3),
+            y: mainCamera.quaternion.y.toFixed(3),
+            z: mainCamera.quaternion.z.toFixed(3),
+            w: mainCamera.quaternion.w.toFixed(3),
+          },
+          cubeQuat: {
+            x: cubeRef.current.quaternion.x.toFixed(3),
+            y: cubeRef.current.quaternion.y.toFixed(3),
+            z: cubeRef.current.quaternion.z.toFixed(3),
+            w: cubeRef.current.quaternion.w.toFixed(3),
+          },
+        });
       },
     }));
 
-    // Mouse interaction with raycasting
+    // Mouse interaction
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
       if (!canvasRef.current || !cameraRef.current || !cubeRef.current || !onCubeClick) return;
 
@@ -345,6 +382,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
           direction = new THREE.Vector3(0, 0, Math.sign(localPoint.z));
         }
 
+        console.log("🎯 Cube face clicked:", direction);
         onCubeClick(direction);
       }
     };
@@ -399,6 +437,17 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       }
     };
 
+    // ✅ FIX #2: Arrow click handlers with debugging
+    const handleArrowClick = (direction: string, handler?: () => void) => {
+      console.log(`⬆️ Arrow clicked: ${direction}`);
+      if (handler) {
+        handler();
+        console.log(`✅ Handler executed for: ${direction}`);
+      } else {
+        console.warn(`⚠️ No handler provided for: ${direction}`);
+      }
+    };
+
     return (
       <div className="absolute top-4 right-4 z-10">
         <div className="bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-xl border-2 border-border/50">
@@ -409,7 +458,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
               <span className="text-sm font-semibold">View Orientation</span>
             </div>
 
-            {/* ✅ PROFESSIONAL: Larger canvas with integrated arrow controls */}
+            {/* ✅ FIX #4: Larger canvas with integrated arrow controls */}
             <div className="relative w-[150px] h-[150px] border-2 border-border/30 rounded-lg overflow-hidden bg-gradient-to-br from-muted/20 to-background shadow-inner">
               <canvas
                 ref={canvasRef}
@@ -420,13 +469,13 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
                 style={{ display: "block" }}
               />
 
-              {/* ✅ FIX #4: Arrow controls integrated over the canvas */}
+              {/* ✅ FIX #4: Arrow controls overlaid on canvas */}
               <div className="absolute inset-0 pointer-events-none">
                 {/* Top Arrow */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onRotateUp}
+                  onClick={() => handleArrowClick("UP", onRotateUp)}
                   className="absolute top-1 left-1/2 -translate-x-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
                   title="Rotate view up (90°)"
                 >
@@ -437,7 +486,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onRotateDown}
+                  onClick={() => handleArrowClick("DOWN", onRotateDown)}
                   className="absolute bottom-1 left-1/2 -translate-x-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
                   title="Rotate view down (90°)"
                 >
@@ -448,7 +497,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onRotateLeft}
+                  onClick={() => handleArrowClick("LEFT", onRotateLeft)}
                   className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
                   title="Rotate view left (90°)"
                 >
@@ -459,18 +508,18 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onRotateRight}
+                  onClick={() => handleArrowClick("RIGHT", onRotateRight)}
                   className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
                   title="Rotate view right (90°)"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
 
-                {/* Roll Controls - Bottom Corners */}
+                {/* Roll Controls */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onRotateCounterClockwise}
+                  onClick={() => handleArrowClick("CCW", onRotateCounterClockwise)}
                   className="absolute bottom-1 left-1 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
                   title="Roll view counter-clockwise (90°)"
                 >
@@ -480,7 +529,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onRotateClockwise}
+                  onClick={() => handleArrowClick("CW", onRotateClockwise)}
                   className="absolute bottom-1 right-1 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
                   title="Roll view clockwise (90°)"
                 >
