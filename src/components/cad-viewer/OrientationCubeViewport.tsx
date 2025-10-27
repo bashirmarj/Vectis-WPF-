@@ -7,14 +7,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
 import { OrientationCubeMesh } from "./OrientationCubeMesh";
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  ChevronLeft, 
-  ChevronRight, 
-  RotateCw, 
-  RotateCcw 
-} from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface OrientationCubeViewportProps {
@@ -30,13 +23,13 @@ interface OrientationCubeViewportProps {
 
 /**
  * OrientationCubeViewport - Professional CAD-style orientation indicator
- * 
+ *
  * Architecture:
  * - Separate Canvas with own orthographic camera (no perspective distortion)
  * - CSS-positioned overlay in top-right corner
  * - Simple rotation sync via quaternion copy
  * - No complex 3D math or coordinate transforms needed
- * 
+ *
  * This matches industry standard implementations in:
  * - Autodesk Fusion 360
  * - Onshape
@@ -86,38 +79,18 @@ export function OrientationCubeViewport({
         <div className="grid grid-cols-3 gap-1">
           {/* Top Row */}
           <div />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onRotateUp}
-            title="Rotate Up (90°)"
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRotateUp} title="Rotate Up (90°)">
             <ChevronUp className="h-4 w-4" />
           </Button>
           <div />
-
           {/* Middle Row */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onRotateLeft}
-            title="Rotate Left (90°)"
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRotateLeft} title="Rotate Left (90°)">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="h-8 w-8" /> {/* Center spacer */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onRotateRight}
-            title="Rotate Right (90°)"
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRotateRight} title="Rotate Right (90°)">
             <ChevronRight className="h-4 w-4" />
           </Button>
-
           {/* Bottom Row */}
           <Button
             variant="ghost"
@@ -128,13 +101,7 @@ export function OrientationCubeViewport({
           >
             <RotateCcw className="h-3 w-3" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onRotateDown}
-            title="Rotate Down (90°)"
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRotateDown} title="Rotate Down (90°)">
             <ChevronDown className="h-4 w-4" />
           </Button>
           <Button
@@ -170,14 +137,7 @@ export function OrientationCubeViewport({
           }}
         >
           {/* Orthographic camera - no perspective distortion */}
-          <OrthographicCamera
-            ref={cubeCameraRef}
-            makeDefault
-            position={[0, 0, 5]}
-            zoom={50}
-            near={0.1}
-            far={100}
-          />
+          <OrthographicCamera ref={cubeCameraRef} makeDefault position={[0, 0, 5]} zoom={50} near={0.1} far={100} />
 
           {/* Light background */}
           <color attach="background" args={["#f8f9fa"]} />
@@ -194,9 +154,7 @@ export function OrientationCubeViewport({
 
       {/* Help Text */}
       <div className="bg-background/95 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-lg border border-border/50">
-        <p className="text-[10px] text-muted-foreground text-center">
-          Click cube face to orient view
-        </p>
+        <p className="text-[10px] text-muted-foreground text-center">Click cube face to orient view</p>
       </div>
     </div>
   );
