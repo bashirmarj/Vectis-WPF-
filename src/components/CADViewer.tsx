@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { TrackballControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from "@react-three/drei";
+import { TrackballControls, PerspectiveCamera } from "@react-three/drei";
 import { Suspense, useMemo, useEffect, useState, useRef, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Loader2, Box } from "lucide-react";
@@ -475,7 +475,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ NEW: Orientation Cube Viewport - Separate Canvas overlay */}
+            {/* ✅ PROFESSIONAL: Orientation Cube Viewport - Separate Canvas overlay */}
             <OrientationCubeViewport
               mainCameraRef={cameraRef}
               onCubeClick={handleCubeClick}
@@ -547,13 +547,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 />
               </Suspense>
 
-              <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
-                <GizmoViewport
-                  axisColors={["#ff0000", "#00ff00", "#0000ff"]}
-                  labelColor="white"
-                  labels={["X", "Y", "Z"]}
-                />
-              </GizmoHelper>
+              {/* ❌ REMOVED: Legacy GizmoHelper/GizmoViewport - replaced with professional OrientationCubeViewport */}
             </Canvas>
           </div>
         ) : isRenderableFormat ? (
