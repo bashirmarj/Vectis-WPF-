@@ -1,11 +1,10 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// Professional Orientation Cube Viewport - Industry Standard Pattern
-// ✅ CORRECTED: Better ref handling and error recovery
+// DIAGNOSTIC VERSION - Extra logging to debug sync issue
 // Separate Canvas with orthographic camera for clean rotation representation
 
 import { useRef, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrthographicCamera, Environment } from "@react-three/drei";
+import { OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
 import { OrientationCubeMesh } from "./OrientationCubeMesh";
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw } from "lucide-react";
@@ -14,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface OrientationCubeViewportProps {
   mainCameraRef: React.RefObject<THREE.PerspectiveCamera>;
-  controlsRef?: React.RefObject<any>; // TrackballControls ref
+  controlsRef?: React.RefObject<any>;
   onCubeClick?: (direction: THREE.Vector3) => void;
   onRotateUp?: () => void;
   onRotateDown?: () => void;
@@ -24,21 +23,6 @@ interface OrientationCubeViewportProps {
   onRotateCounterClockwise?: () => void;
 }
 
-/**
- * Professional Orientation Cube Viewport
- *
- * Architecture Pattern:
- * ✅ Separate Canvas with own orthographic camera
- * ✅ CSS-positioned fixed overlay (top-right corner)
- * ✅ Simple quaternion-based rotation sync (60 FPS)
- * ✅ No complex coordinate transforms
- *
- * This matches industry implementations:
- * - Autodesk Fusion 360
- * - PTC Onshape
- * - Dassault SolidWorks
- * - Siemens NX
- */
 export function OrientationCubeViewport({
   mainCameraRef,
   controlsRef,
@@ -50,18 +34,53 @@ export function OrientationCubeViewport({
   onRotateClockwise,
   onRotateCounterClockwise,
 }: OrientationCubeViewportProps) {
-  const cubeViewportRef = useRef<HTMLDivElement>(null);
   const cubeCameraRef = useRef<THREE.OrthographicCamera>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
 
-  // ✅ CORRECTED: Simple quaternion copy (original working approach)
-  // Real-time rotation sync with main camera (60 FPS)
+  // 🔍 DIAGNOSTIC: Log component mount
   useEffect(() => {
-    if (!mainCameraRef.current || !cubeCameraRef.current) {
-      console.warn("⚠️ OrientationCube: Camera refs not ready yet");
+    console.log("🔍 DIAGNOSTIC: OrientationCubeViewport MOUNTED");
+    console.log("🔍 Props received:", {
+      mainCameraRef: !!mainCameraRef,
+      hasMainCamera: !!mainCameraRef?.current,
+      controlsRef: !!controlsRef,
+      hasControls: !!controlsRef?.current,
+    });
+
+    return () => {
+      console.log("🔍 DIAGNOSTIC: OrientationCubeViewport UNMOUNTED");
+    };
+  }, []);
+
+  // 🔍 DIAGNOSTIC: Log when refs change
+  useEffect(() => {
+    console.log("🔍 DIAGNOSTIC: Ref dependency changed");
+    console.log("🔍 mainCameraRef.current:", !!mainCameraRef?.current);
+    console.log("🔍 cubeCameraRef.current:", !!cubeCameraRef?.current);
+    console.log("🔍 controlsRef?.current:", !!controlsRef?.current);
+  }, [mainCameraRef, controlsRef]);
+
+  // ✅ Rotation sync effect
+  useEffect(() => {
+    console.log("🔍 DIAGNOSTIC: Rotation sync effect TRIGGERED");
+    console.log("🔍 Checking refs...");
+
+    if (!mainCameraRef) {
+      console.error("❌ DIAGNOSTIC: mainCameraRef is null/undefined!");
       return;
     }
 
+    if (!mainCameraRef.current) {
+      console.warn("⚠️ DIAGNOSTIC: mainCameraRef.current is null (camera not ready yet)");
+      return;
+    }
+
+    if (!cubeCameraRef.current) {
+      console.warn("⚠️ DIAGNOSTIC: cubeCameraRef.current is null (cube camera not ready yet)");
+      return;
+    }
+
+    console.log("✅ DIAGNOSTIC: Both cameras ready, starting sync!");
     console.log("✅ OrientationCube: Starting rotation sync with refs:", {
       mainCamera: !!mainCameraRef.current,
       cubeCamera: !!cubeCameraRef.current,
@@ -73,11 +92,8 @@ export function OrientationCubeViewport({
 
     const syncRotation = () => {
       if (mainCameraRef.current && cubeCameraRef.current) {
-        // ✅ CORRECTED: Back to simple quaternion copy (this was working before)
-        // The viewing direction approach was overcomplicating things
+        // Simple quaternion copy
         cubeCameraRef.current.quaternion.copy(mainCameraRef.current.quaternion);
-
-        // Also copy up vector to maintain correct orientation
         cubeCameraRef.current.up.copy(mainCameraRef.current.up);
 
         // Debug every 60 frames (once per second at 60 FPS)
@@ -85,6 +101,7 @@ export function OrientationCubeViewport({
           const euler = new THREE.Euler().setFromQuaternion(cubeCameraRef.current.quaternion);
           console.log("🔄 Cube rotation synced:", {
             rotation: [euler.x, euler.y, euler.z].map((n) => ((n * 180) / Math.PI).toFixed(1) + "°"),
+            frame: frameCount,
           });
         }
         frameCount++;
@@ -102,21 +119,19 @@ export function OrientationCubeViewport({
     };
   }, [mainCameraRef, controlsRef]);
 
-  // Handle button clicks with visual feedback
   const handleButtonClick = (direction: string, callback?: () => void) => {
     setActiveButton(direction);
-    setTimeout(() => setActiveButton(null), 200); // Visual feedback duration
+    setTimeout(() => setActiveButton(null), 200);
     callback?.();
     console.log(`🎯 Rotation arrow clicked: ${direction}`);
   };
 
   return (
     <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 select-none">
-      {/* Rotation Arrow Controls */}
       <div className="bg-transparent rounded-xl p-3">
         <TooltipProvider delayDuration={300}>
           <div className="relative h-[160px] w-[160px]">
-            {/* Top Arrow - Edge positioned */}
+            {/* Top Arrow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -135,7 +150,7 @@ export function OrientationCubeViewport({
               </Tooltip>
             </div>
 
-            {/* Left Arrow - Edge positioned */}
+            {/* Left Arrow */}
             <div className="absolute left-0 top-1/2 -translate-y-1/2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -154,12 +169,15 @@ export function OrientationCubeViewport({
               </Tooltip>
             </div>
 
-            {/* Center - Large Cube Viewport */}
+            {/* Center - Cube Canvas */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]">
               <Canvas
                 gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
                 dpr={[1, 2]}
+                onCreated={() => {
+                  console.log("🔍 DIAGNOSTIC: Cube Canvas created, cubeCameraRef:", !!cubeCameraRef.current);
+                }}
               >
                 <OrthographicCamera
                   ref={cubeCameraRef}
@@ -177,7 +195,7 @@ export function OrientationCubeViewport({
               </Canvas>
             </div>
 
-            {/* Right Arrow - Edge positioned */}
+            {/* Right Arrow */}
             <div className="absolute right-0 top-1/2 -translate-y-1/2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -196,7 +214,7 @@ export function OrientationCubeViewport({
               </Tooltip>
             </div>
 
-            {/* Bottom Row - Edge positioned flex group */}
+            {/* Bottom Row */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -250,7 +268,7 @@ export function OrientationCubeViewport({
         </TooltipProvider>
       </div>
 
-      {/* Help Text with Animation */}
+      {/* Help Text */}
       <div className="bg-background/98 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
         <p className="text-[11px] font-medium text-muted-foreground text-center leading-tight">
           Click cube to orient view
