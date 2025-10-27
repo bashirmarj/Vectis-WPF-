@@ -30,7 +30,7 @@ export function OrientationCubeMesh({ onFaceClick, useSTL = false }: Orientation
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   // Load STL if requested (from src/assets/orientation-cube.stl)
-  const stlGeometry = useSTL ? useLoader(STLLoader, "/src/assets/orientation-cube.stl") : null;
+  const stlGeometry = useSTL ? useLoader(STLLoader, "/orientation-cube.stl") : null;
 
   // Create face textures with proper labels and gradients
   const faceTextures = useMemo(() => {

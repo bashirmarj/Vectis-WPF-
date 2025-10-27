@@ -474,8 +474,19 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 <OrientationCubeInCanvas
                   mainCameraRef={cameraRef}
                   onCubeClick={(direction) => {
-                    console.log("Cube face clicked:", direction);
-                    // Could trigger camera animation here
+                    // Map direction vector to view preset based on dominant axis
+                    const absX = Math.abs(direction.x);
+                    const absY = Math.abs(direction.y);
+                    const absZ = Math.abs(direction.z);
+                    
+                    // Find which axis has the strongest component
+                    if (absX > absY && absX > absZ) {
+                      handleSetView(direction.x > 0 ? "right" : "left");
+                    } else if (absY > absX && absY > absZ) {
+                      handleSetView(direction.y > 0 ? "top" : "bottom");
+                    } else {
+                      handleSetView(direction.z > 0 ? "front" : "back");
+                    }
                   }}
                 />
 
