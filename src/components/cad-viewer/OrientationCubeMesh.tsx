@@ -28,21 +28,30 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   // Simple single material with hover effect
   const material = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: hoveredIndex !== null ? '#60a5fa' : '#94a3b8', // Blue on hover, slate gray default
-      metalness: 0.3,
-      roughness: 0.4,
-      envMapIntensity: 1.0,
+      color: hoveredIndex !== null ? '#60a5fa' : '#64748b', // Blue on hover, darker slate for contrast
+      metalness: 0.4,
+      roughness: 0.5,
+      envMapIntensity: 1.2,
       emissive: hoveredIndex !== null ? new THREE.Color('#3b82f6') : new THREE.Color(0x000000),
-      emissiveIntensity: hoveredIndex !== null ? 0.2 : 0,
+      emissiveIntensity: hoveredIndex !== null ? 0.3 : 0,
     });
   }, [hoveredIndex]);
 
-  // Load the STL geometry
-  const stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
+  // Load the STL geometry with error handling
+  let stlGeometry: THREE.BufferGeometry | null = null;
+  try {
+    stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
+    console.log("✅ STL loaded successfully:", stlGeometry);
+  } catch (error) {
+    console.warn("⚠️ Failed to load STL, using fallback BoxGeometry:", error);
+  }
   
-  // Scale and center the STL geometry
+  // Scale and center the STL geometry or use fallback
   const cubeGeometry = useMemo(() => {
-    if (!stlGeometry) return new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    if (!stlGeometry) {
+      console.log("📦 Using fallback BoxGeometry (1.8x1.8x1.8)");
+      return new THREE.BoxGeometry(1.8, 1.8, 1.8);
+    }
     
     const geometry = stlGeometry.clone();
     geometry.computeBoundingBox();
@@ -53,13 +62,14 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     // Center the geometry
     geometry.translate(-center.x, -center.y, -center.z);
     
-    // Scale to fit in viewport (smaller for the compact grid cell)
+    // Scale to fit in viewport - larger for better visibility
     const size = new THREE.Vector3();
     boundingBox.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 1.8 / maxDim;
+    const scale = 2.5 / maxDim;
     geometry.scale(scale, scale, scale);
     
+    console.log("✅ STL geometry processed, scale:", scale);
     return geometry;
   }, [stlGeometry]);
 
@@ -144,7 +154,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       {/* Edge lines for visual definition */}
       <lineSegments>
         <edgesGeometry args={[cubeGeometry, 25]} />
-        <lineBasicMaterial color="#1a1a1a" linewidth={2} transparent opacity={0.5} />
+        <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
       </lineSegments>
 
       {/* Subtle outer glow for 3D effect */}

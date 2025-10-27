@@ -150,15 +150,15 @@ export function OrientationCubeViewport({
                 <OrthographicCamera 
                   ref={cubeCameraRef} 
                   makeDefault 
-                  position={[5, 5, 5]} 
-                  zoom={35} 
+                  position={[0, 0, 10]} 
+                  zoom={50} 
                   near={0.1} 
                   far={100} 
                 />
-                <color attach="background" args={["transparent"]} />
-                <ambientLight intensity={0.6} />
-                <directionalLight position={[5, 5, 5]} intensity={0.8} />
-                <directionalLight position={[-3, 3, -3]} intensity={0.3} />
+                <color attach="background" args={["#f8fafc"]} />
+                <ambientLight intensity={0.4} />
+                <directionalLight position={[3, 5, 3]} intensity={0.6} />
+                <directionalLight position={[-3, -2, -3]} intensity={0.3} />
                 <OrientationCubeMesh onFaceClick={onCubeClick} />
               </Canvas>
             </div>
