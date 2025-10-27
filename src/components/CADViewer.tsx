@@ -8,9 +8,7 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-// ✅ FIXED: Import both cube components
-import { OrientationCubeControls } from "./cad-viewer/OrientationCubeControls";
-import { OrientationCubeInScene } from "./cad-viewer/OrientationCubeInScene";
+import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
@@ -161,35 +159,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     };
   }, [meshData]);
 
-  // Determine coordinate system based on bounding box dimensions
-  const coordinateSystem = useMemo(() => {
-    const aspectRatio = boundingBox.width / boundingBox.height;
-    if (aspectRatio > 1.2 || aspectRatio < 0.8) {
-      return "y-up";
-    }
-    return "z-up";
-  }, [boundingBox]);
-
-  // Transform direction from cube space to model space
-  const transformDirection = useCallback(
-    (cubeDir: THREE.Vector3): THREE.Vector3 => {
-      if (coordinateSystem === "z-up") {
-        return new THREE.Vector3(cubeDir.x, -cubeDir.z, cubeDir.y);
-      }
-      return cubeDir.clone();
-    },
-    [coordinateSystem],
-  );
-
-  const modelBounds = useMemo(
-    () => ({
-      min: { x: boundingBox.min.x, y: boundingBox.min.y, z: boundingBox.min.z },
-      max: { x: boundingBox.max.x, y: boundingBox.max.y, z: boundingBox.max.z },
-      center: { x: boundingBox.center[0], y: boundingBox.center[1], z: boundingBox.center[2] },
-    }),
-    [boundingBox],
-  );
-
   // Calculate initial camera position
   const initialCameraPosition = useMemo(() => {
     const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
@@ -266,7 +235,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     controls.update();
   }, [boundingBox]);
 
-  // ✅ FIXED: Orientation cube face click handler with coordinate transform
+  // ✅ Orientation cube face click handler
   const handleCubeClick = useCallback(
     (direction: THREE.Vector3) => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -277,25 +246,18 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
       const distance = maxDim * 1.5;
 
-      // ✅ FIXED: Transform cube direction to match model coordinate system
-      const transformedDirection = transformDirection(direction);
-      const newPosition = target.clone().add(transformedDirection.multiplyScalar(distance));
+      const newPosition = target.clone().add(direction.multiplyScalar(distance));
 
       // Determine appropriate up vector
       let newUp = new THREE.Vector3(0, 1, 0);
-      if (Math.abs(transformedDirection.y) > 0.9) {
+      if (Math.abs(direction.y) > 0.9) {
         // Looking up or down - use Z as up
         newUp = new THREE.Vector3(0, 0, 1);
       }
 
-      console.log("🎯 Cube face clicked:", {
-        cubeDirection: { x: direction.x, y: direction.y, z: direction.z },
-        modelDirection: {
-          x: transformedDirection.x.toFixed(2),
-          y: transformedDirection.y.toFixed(2),
-          z: transformedDirection.z.toFixed(2),
-        },
-        coordinateSystem,
+      console.log("🎯 Setting camera to face:", {
+        direction: { x: direction.x, y: direction.y, z: direction.z },
+        newPosition: { x: newPosition.x.toFixed(2), y: newPosition.y.toFixed(2), z: newPosition.z.toFixed(2) },
       });
 
       camera.position.copy(newPosition);
@@ -303,175 +265,144 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      console.log("✅ Camera repositioned to face");
     },
-    [boundingBox, transformDirection, coordinateSystem],
+    [boundingBox],
   );
 
-  // ✅ FIXED: Arrow rotation handler with 90-degree increments and gimbal lock fix
-  const handleRotateCamera = useCallback((direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
-    if (!cameraRef.current || !controlsRef.current) return;
+  // ✅ Arrow rotation handler with 90-degree increments
+  const handleRotateCamera = useCallback(
+    (direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
+      if (!cameraRef.current || !controlsRef.current) return;
 
-    console.log("🎯 handleRotateCamera called with:", direction);
+      console.log("🎯 Rotating camera:", direction);
 
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    const target = controls.target.clone();
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      const target = controls.target.clone();
 
-    const currentPosition = camera.position.clone();
-    const distance = currentPosition.distanceTo(target);
-    const viewDir = currentPosition.clone().sub(target).normalize();
+      const currentPosition = camera.position.clone();
+      const viewDir = currentPosition.clone().sub(target).normalize();
 
-    console.log("📊 Camera state before rotation:", {
-      position: {
-        x: currentPosition.x.toFixed(2),
-        y: currentPosition.y.toFixed(2),
-        z: currentPosition.z.toFixed(2),
-      },
-      distance: distance.toFixed(2),
-      target: { x: target.x.toFixed(2), y: target.y.toFixed(2), z: target.z.toFixed(2) },
-    });
+      const rotationAngle = Math.PI / 2; // 90° rotation
 
-    // ✅ FIXED: Use 90-degree rotations (Math.PI / 2) instead of 15 degrees
-    const rotationAngle = Math.PI / 2; // 90° rotation
+      // Detect gimbal lock condition
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      const dotProduct = Math.abs(viewDir.dot(worldUp));
+      const isGimbalLock = dotProduct > 0.98;
 
-    // ✅ FIXED: Detect gimbal lock condition
-    const worldUp = new THREE.Vector3(0, 1, 0);
-    const dotProduct = Math.abs(viewDir.dot(worldUp));
-    const isGimbalLock = dotProduct > 0.98;
+      let newPosition: THREE.Vector3;
+      let newUp: THREE.Vector3;
 
-    let newPosition: THREE.Vector3;
-    let newUp: THREE.Vector3;
+      if (isGimbalLock) {
+        const worldZ = new THREE.Vector3(0, 0, 1);
+        const isLookingDown = viewDir.y > 0;
 
-    if (isGimbalLock) {
-      console.log("⚠️ Gimbal lock detected - using world-space rotation");
+        switch (direction) {
+          case "left":
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(worldUp, rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(worldUp, rotationAngle);
+            break;
 
-      const worldZ = new THREE.Vector3(0, 0, 1);
-      const isLookingDown = viewDir.y > 0;
+          case "right":
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(worldUp, -rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(worldUp, -rotationAngle);
+            break;
 
-      switch (direction) {
-        case "left":
-          console.log("⬅️ Rotating LEFT around world Y-axis (90°)");
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(worldUp, rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(worldUp, rotationAngle);
-          break;
+          case "up":
+            const upAxis = isLookingDown ? worldZ : worldZ.clone().negate();
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(upAxis, rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(upAxis, rotationAngle);
+            break;
 
-        case "right":
-          console.log("➡️ Rotating RIGHT around world Y-axis (90°)");
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(worldUp, -rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(worldUp, -rotationAngle);
-          break;
+          case "down":
+            const downAxis = isLookingDown ? worldZ.clone().negate() : worldZ;
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(downAxis, rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(downAxis, rotationAngle);
+            break;
 
-        case "up":
-          console.log("⬆️ Rotating UP - moving away from gimbal lock (90°)");
-          const upAxis = isLookingDown ? worldZ : worldZ.clone().negate();
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(upAxis, rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(upAxis, rotationAngle);
-          break;
+          case "cw":
+            newPosition = currentPosition.clone();
+            newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
+            break;
 
-        case "down":
-          console.log("⬇️ Rotating DOWN - moving away from gimbal lock (90°)");
-          const downAxis = isLookingDown ? worldZ.clone().negate() : worldZ;
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(downAxis, rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(downAxis, rotationAngle);
-          break;
+          case "ccw":
+            newPosition = currentPosition.clone();
+            newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
+            break;
 
-        case "cw":
-          console.log("🔄 Rolling CLOCKWISE around view axis (90°)");
-          newPosition = currentPosition.clone();
-          newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
-          break;
+          default:
+            return;
+        }
+      } else {
+        // Normal rotation using screen-relative axes
+        const screenRight = new THREE.Vector3();
+        const screenUp = new THREE.Vector3();
 
-        case "ccw":
-          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis (90°)");
-          newPosition = currentPosition.clone();
-          newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
-          break;
+        screenRight.crossVectors(worldUp, viewDir).normalize();
+        screenUp.crossVectors(viewDir, screenRight).normalize();
 
-        default:
-          return;
+        switch (direction) {
+          case "left":
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(screenUp, rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(screenUp, rotationAngle);
+            break;
+
+          case "right":
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(screenUp, -rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(screenUp, -rotationAngle);
+            break;
+
+          case "up":
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(screenRight, rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(screenRight, rotationAngle);
+            break;
+
+          case "down":
+            newPosition = currentPosition.clone().sub(target);
+            newPosition.applyAxisAngle(screenRight, -rotationAngle);
+            newPosition.add(target);
+            newUp = camera.up.clone().applyAxisAngle(screenRight, -rotationAngle);
+            break;
+
+          case "cw":
+            newPosition = currentPosition.clone();
+            newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
+            break;
+
+          case "ccw":
+            newPosition = currentPosition.clone();
+            newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
+            break;
+
+          default:
+            return;
+        }
       }
-    } else {
-      // Normal rotation using screen-relative axes
-      const screenRight = new THREE.Vector3();
-      const screenUp = new THREE.Vector3();
 
-      screenRight.crossVectors(worldUp, viewDir).normalize();
-      screenUp.crossVectors(viewDir, screenRight).normalize();
+      camera.position.copy(newPosition);
+      camera.up.copy(newUp);
+      camera.lookAt(target);
+      controls.target.copy(target);
+      controls.update();
 
-      switch (direction) {
-        case "left":
-          console.log("⬅️ Rotating LEFT around screen UP-axis (90°)");
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(screenUp, rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(screenUp, rotationAngle);
-          break;
-
-        case "right":
-          console.log("➡️ Rotating RIGHT around screen UP-axis (90°)");
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(screenUp, -rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(screenUp, -rotationAngle);
-          break;
-
-        case "up":
-          console.log("⬆️ Rotating UP around screen RIGHT-axis (90°)");
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(screenRight, rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(screenRight, rotationAngle);
-          break;
-
-        case "down":
-          console.log("⬇️ Rotating DOWN around screen RIGHT-axis (90°)");
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(screenRight, -rotationAngle);
-          newPosition.add(target);
-          newUp = camera.up.clone().applyAxisAngle(screenRight, -rotationAngle);
-          break;
-
-        case "cw":
-          console.log("🔄 Rolling CLOCKWISE around view axis (90°)");
-          newPosition = currentPosition.clone();
-          newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
-          break;
-
-        case "ccw":
-          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis (90°)");
-          newPosition = currentPosition.clone();
-          newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
-          break;
-
-        default:
-          return;
-      }
-    }
-
-    camera.position.copy(newPosition);
-    camera.up.copy(newUp);
-    camera.lookAt(target);
-    controls.target.copy(target);
-    controls.update();
-
-    console.log("✅ Camera rotated", {
-      newPosition: {
-        x: newPosition.x.toFixed(2),
-        y: newPosition.y.toFixed(2),
-        z: newPosition.z.toFixed(2),
-      },
-    });
-  }, []);
+      console.log("✅ Camera rotated");
+    },
+    [boundingBox],
+  );
 
   const handleDownload = useCallback(async () => {
     if (!fileUrl) return;
@@ -517,7 +448,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
         {!isLoading && !error && meshData && isRenderableFormat ? (
           <div className="relative w-full h-full">
-            {/* ✅ Unified Toolbar - OUTSIDE Canvas */}
+            {/* Unified Toolbar */}
             <UnifiedCADToolbar
               onSetView={handleSetView}
               onFitView={handleFitView}
@@ -529,8 +460,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               onDisplayModeChange={setDisplayMode}
               showEdges={showEdges}
               onToggleEdges={() => setShowEdges(!showEdges)}
-              sectionPlane={sectionPlane || "none"}
-              onSectionPlaneChange={(plane) => setSectionPlane(plane === "none" ? null : plane)}
+              sectionPlane={sectionPlane}
+              onSectionPlaneChange={setSectionPlane}
               sectionPosition={sectionPosition}
               onSectionPositionChange={setSectionPosition}
               shadowsEnabled={shadowsEnabled}
@@ -544,16 +475,16 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ FIXED: Orientation Cube Controls - UI buttons OUTSIDE Canvas */}
-            <OrientationCubeControls
+            {/* ✅ NEW: Orientation Cube Viewport - Separate Canvas overlay */}
+            <OrientationCubeViewport
+              mainCameraRef={cameraRef}
+              onCubeClick={handleCubeClick}
               onRotateUp={() => handleRotateCamera("up")}
               onRotateDown={() => handleRotateCamera("down")}
               onRotateLeft={() => handleRotateCamera("left")}
               onRotateRight={() => handleRotateCamera("right")}
               onRotateClockwise={() => handleRotateCamera("cw")}
               onRotateCounterClockwise={() => handleRotateCamera("ccw")}
-              displayMode={displayMode}
-              onDisplayModeChange={setDisplayMode}
             />
 
             <Canvas
@@ -600,10 +531,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* ✅ FIXED: Orientation Cube INSIDE Canvas - syncs with camera */}
-                <OrientationCubeInScene mainCameraRef={cameraRef} onCubeClick={handleCubeClick} />
-
-                {/* ✅ TrackballControls allows free rotation */}
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
