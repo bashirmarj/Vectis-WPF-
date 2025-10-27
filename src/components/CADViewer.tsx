@@ -12,8 +12,7 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-import { OrientationCubeInCanvas } from "./cad-viewer/OrientationCubeInCanvas";
-import { OrientationArrows } from "./cad-viewer/OrientationArrows";
+import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
@@ -425,8 +424,22 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ Arrow controls as HTML overlay */}
-            <OrientationArrows
+            {/* ✅ Orientation cube with integrated arrow controls as separate Canvas */}
+            <OrientationCubeViewport
+              mainCameraRef={cameraRef}
+              onCubeClick={(direction) => {
+                const absX = Math.abs(direction.x);
+                const absY = Math.abs(direction.y);
+                const absZ = Math.abs(direction.z);
+                
+                if (absX > absY && absX > absZ) {
+                  handleSetView(direction.x > 0 ? "right" : "left");
+                } else if (absY > absX && absY > absZ) {
+                  handleSetView(direction.y > 0 ? "top" : "bottom");
+                } else {
+                  handleSetView(direction.z > 0 ? "front" : "back");
+                }
+              }}
               onRotateUp={() => handleRotateCamera("up")}
               onRotateDown={() => handleRotateCamera("down")}
               onRotateLeft={() => handleRotateCamera("left")}
@@ -478,26 +491,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
-
-                {/* ✅ Orientation cube rendered INSIDE main Canvas */}
-                <OrientationCubeInCanvas
-                  mainCameraRef={cameraRef}
-                  onCubeClick={(direction) => {
-                    // Map direction vector to view preset based on dominant axis
-                    const absX = Math.abs(direction.x);
-                    const absY = Math.abs(direction.y);
-                    const absZ = Math.abs(direction.z);
-                    
-                    // Find which axis has the strongest component
-                    if (absX > absY && absX > absZ) {
-                      handleSetView(direction.x > 0 ? "right" : "left");
-                    } else if (absY > absX && absY > absZ) {
-                      handleSetView(direction.y > 0 ? "top" : "bottom");
-                    } else {
-                      handleSetView(direction.z > 0 ? "front" : "back");
-                    }
-                  }}
-                />
 
                 <TrackballControls
                   ref={controlsRef}
