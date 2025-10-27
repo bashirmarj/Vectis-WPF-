@@ -58,7 +58,7 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
               <meshStandardMaterial color="#64748b" opacity={0.8} transparent />
             </mesh>
           }>
-            <OrientationCubeMesh onFaceClick={onCubeClick} useSTL={true} />
+            <OrientationCubeMesh onFaceClick={onCubeClick} useSTL={false} />
           </Suspense>
         </group>
 
