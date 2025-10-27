@@ -1,12 +1,11 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
 // Professional 3D Orientation Cube with Chamfered Edges
-// ✅ CORRECTED: Fixed highlight to show only ONE face at a time
+// ✅ FIXED: Removed problematic STL loading, using RoundedBoxGeometry directly
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { ThreeEvent } from "@react-three/fiber";
-import { useLoader } from "@react-three/fiber";
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -15,9 +14,10 @@ interface OrientationCubeMeshProps {
 /**
  * Professional Orientation Cube with:
  * - Clean single-material design
+ * - Chamfered edges using RoundedBoxGeometry
  * - Hover effects (blue glow)
  * - Click detection for camera rotation
- * - ✅ CORRECTED: Only ONE face highlights at a time
+ * - ✅ FIXED: Proper geometry creation without STL loading issues
  */
 export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -37,40 +37,14 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     });
   }, []);
 
-  // Load the STL geometry with error handling
-  let stlGeometry: THREE.BufferGeometry | null = null;
-  try {
-    stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
-  } catch (error) {
-    console.warn("⚠️ Failed to load STL, using fallback BoxGeometry:", error);
-  }
-
-  // Scale and center the STL geometry or use fallback
-  // ✅ CORRECTED: Proper memoization to prevent reloading
+  // ✅ FIXED: Use RoundedBoxGeometry directly (no async loading needed)
   const cubeGeometry = useMemo(() => {
-    if (!stlGeometry) {
-      console.log("📦 Using fallback BoxGeometry (1.8x1.8x1.8)");
-      return new THREE.BoxGeometry(1.8, 1.8, 1.8);
-    }
-
-    const geometry = stlGeometry.clone();
-    geometry.computeBoundingBox();
-    const boundingBox = geometry.boundingBox!;
-    const center = new THREE.Vector3();
-    boundingBox.getCenter(center);
-
-    // Center the geometry
-    geometry.translate(-center.x, -center.y, -center.z);
-
-    // Scale to fit in viewport - larger for better visibility
-    const size = new THREE.Vector3();
-    boundingBox.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 1.8 / maxDim;
-    geometry.scale(scale, scale, scale);
-
-    return geometry;
-  }, [stlGeometry]);
+    console.log("📦 Creating RoundedBoxGeometry (1.8x1.8x1.8 with chamfer)");
+    // RoundedBoxGeometry(width, height, depth, segments, radius)
+    // segments: 4 = smooth rounded edges
+    // radius: 0.15 = amount of chamfer/rounding
+    return new RoundedBoxGeometry(1.8, 1.8, 1.8, 4, 0.15);
+  }, []);
 
   // ✅ CORRECTED: Simplified face detection using world-space normal
   const getFaceFromNormal = (normal: THREE.Vector3): string => {
