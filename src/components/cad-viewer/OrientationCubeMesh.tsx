@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { ThreeEvent, useLoader } from "@react-three/fiber";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import cubeSTL from '@/assets/orientation-cube.stl?url';
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -30,7 +31,7 @@ export function OrientationCubeMesh({ onFaceClick, useSTL = false }: Orientation
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   // Load STL if requested (from src/assets/orientation-cube.stl)
-  const stlGeometry = useSTL ? useLoader(STLLoader, "/orientation-cube.stl") : null;
+  const stlGeometry = useSTL ? useLoader(STLLoader, cubeSTL) : null;
 
   // Create face textures with proper labels and gradients
   const faceTextures = useMemo(() => {

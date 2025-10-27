@@ -273,14 +273,23 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       switch (direction) {
         case "left":
         case "right": {
-          // ✅ FIXED: Use camera's actual up vector, not world up
-          const upAxis = currentUp.clone().normalize();
+          // ✅ FIX: Screen-space horizontal rotation
+          // Calculate rotation axis perpendicular to screen's horizontal plane
+          const viewDir = target.clone().sub(currentPosition).normalize();
+          
+          // Get camera's screen-space right vector (horizontal on screen)
+          const screenRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+          
+          // Rotation axis = cross product of screen-right and view direction
+          // This gives us a vertical axis aligned with the screen's horizontal plane
+          const rotationAxis = new THREE.Vector3().crossVectors(screenRight, viewDir).normalize();
+          
           const rotDir = direction === "left" ? 1 : -1;
-
+          
           newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(upAxis, rotationAngle * rotDir);
+          newPosition.applyAxisAngle(rotationAxis, rotationAngle * rotDir);
           newPosition.add(target);
-          newUp = currentUp.clone(); // Up vector doesn't change for left/right
+          newUp = currentUp.clone(); // Preserve camera tilt
           break;
         }
 

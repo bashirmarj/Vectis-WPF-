@@ -52,7 +52,12 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
 
         {/* Cube group that syncs with main camera rotation */}
         <group ref={cubeGroupRef} scale={0.8}>
-          <Suspense fallback={null}>
+          <Suspense fallback={
+            <mesh>
+              <boxGeometry args={[1.2, 1.2, 1.2]} />
+              <meshStandardMaterial color="#64748b" opacity={0.8} transparent />
+            </mesh>
+          }>
             <OrientationCubeMesh onFaceClick={onCubeClick} useSTL={true} />
           </Suspense>
         </group>
