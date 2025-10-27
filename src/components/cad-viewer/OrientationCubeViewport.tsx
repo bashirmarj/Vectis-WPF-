@@ -141,7 +141,7 @@ export function OrientationCubeViewport({
             </Tooltip>
 
             {/* Center - Cube viewport in the grid */}
-            <div className="h-24 w-24 relative -m-1">
+            <div className="h-14 w-14 relative -m-1">
               <Canvas
                 gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
