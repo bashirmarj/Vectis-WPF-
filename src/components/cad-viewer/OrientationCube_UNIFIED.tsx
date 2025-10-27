@@ -4,7 +4,7 @@
 // ✅ Issue #2 Fixed: STL path - Uses /public/orientation-cube.stl
 // ✅ Real rotation sync that actually works
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, Suspense } from "react";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
@@ -28,6 +28,15 @@ function RotatingCube({ mainCameraRef }: { mainCameraRef: React.RefObject<THREE.
 
   // ✅ FIXED: Load STL file from /public folder
   const stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
+
+  // ✅ Debug logging for STL loading
+  useEffect(() => {
+    if (stlGeometry) {
+      console.log("✅ STL loaded successfully:", stlGeometry);
+    } else {
+      console.error("❌ STL failed to load");
+    }
+  }, [stlGeometry]);
 
   // ✅ CRITICAL: Real-time rotation sync using quaternion copy
   useFrame(() => {
@@ -166,8 +175,15 @@ export function OrientationCube_UNIFIED({
             <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
             <directionalLight position={[-3, -3, -3]} intensity={0.3} />
 
-            {/* ✅ Rotating cube with STL */}
-            <RotatingCube mainCameraRef={mainCameraRef} />
+            {/* ✅ Suspense boundary for STL loading */}
+            <Suspense fallback={
+              <mesh>
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial color="#888" />
+              </mesh>
+            }>
+              <RotatingCube mainCameraRef={mainCameraRef} />
+            </Suspense>
 
             {/* Subtle ground plane */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.2, 0]} receiveShadow>
