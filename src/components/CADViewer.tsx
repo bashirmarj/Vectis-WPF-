@@ -9,9 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
 import { OrientationCubePreview, OrientationCubeHandle } from "./cad-viewer/OrientationCubePreview";
-import LightingRig from "./cad-viewer/LightingRig";
-import VisualEffects from "./cad-viewer/VisualEffects";
-import PerformanceSettingsPanel from "./cad-viewer/PerformanceSettingsPanel";
+import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
+import { PostProcessingEffects } from "./cad-viewer/enhancements/PostProcessingEffects";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
@@ -571,7 +570,11 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
               <Suspense fallback={null}>
-                <LightingRig shadowsEnabled={shadowsEnabled} modelBounds={modelBounds} />
+                <ProfessionalLighting 
+                  intensity={1.0}
+                  enableShadows={shadowsEnabled}
+                  shadowQuality="medium"
+                />
 
                 <MeshModel
                   ref={meshRef}
@@ -584,7 +587,11 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                <VisualEffects enabled={ssaoEnabled} quality={quality} />
+                <PostProcessingEffects 
+                  enableBloom={false}
+                  enableFXAA={true}
+                  quality={quality}
+                />
 
                 {/* ✅ NEW: Camera synchronization component */}
                 <CameraSyncComponent cameraRef={cameraRef} orientationCubeRef={orientationCubeRef} />
@@ -613,16 +620,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 />
               </GizmoHelper>
             </Canvas>
-
-            <PerformanceSettingsPanel
-              shadowsEnabled={shadowsEnabled}
-              setShadowsEnabled={setShadowsEnabled}
-              ssaoEnabled={ssaoEnabled}
-              setSSAOEnabled={setSSAOEnabled}
-              quality={quality}
-              setQuality={setQuality}
-              triangleCount={meshData.triangle_count}
-            />
           </div>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
