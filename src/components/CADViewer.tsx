@@ -364,6 +364,29 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   return (
     <div className="w-full h-full relative">
       <CardContent className="p-0 h-full">
+        {/* ✅ FIXED: OrientationCube outside conditional - stays mounted */}
+        {meshData && isRenderableFormat && !isLoading && !error && (
+          <OrientationCubeViewport
+            mainCameraRef={cameraRef}
+            controlsRef={controlsRef}
+            onCubeClick={(direction) => {
+              if (Math.abs(direction.x) > 0.5) {
+                handleSetView(direction.x > 0 ? "right" : "left");
+              } else if (Math.abs(direction.y) > 0.5) {
+                handleSetView(direction.y > 0 ? "top" : "bottom");
+              } else if (Math.abs(direction.z) > 0.5) {
+                handleSetView(direction.z > 0 ? "front" : "back");
+              }
+            }}
+            onRotateUp={() => handleRotateCamera("up")}
+            onRotateDown={() => handleRotateCamera("down")}
+            onRotateLeft={() => handleRotateCamera("left")}
+            onRotateRight={() => handleRotateCamera("right")}
+            onRotateClockwise={() => handleRotateCamera("cw")}
+            onRotateCounterClockwise={() => handleRotateCamera("ccw")}
+          />
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -401,26 +424,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               setShadowsEnabled={setShadowsEnabled}
               ssaoEnabled={ssaoEnabled}
               setSSAOEnabled={setSSAOEnabled}
-            />
-
-            <OrientationCubeViewport
-              mainCameraRef={cameraRef}
-              controlsRef={controlsRef}
-              onCubeClick={(direction) => {
-                if (Math.abs(direction.x) > 0.5) {
-                  handleSetView(direction.x > 0 ? "right" : "left");
-                } else if (Math.abs(direction.y) > 0.5) {
-                  handleSetView(direction.y > 0 ? "top" : "bottom");
-                } else if (Math.abs(direction.z) > 0.5) {
-                  handleSetView(direction.z > 0 ? "front" : "back");
-                }
-              }}
-              onRotateUp={() => handleRotateCamera("up")}
-              onRotateDown={() => handleRotateCamera("down")}
-              onRotateLeft={() => handleRotateCamera("left")}
-              onRotateRight={() => handleRotateCamera("right")}
-              onRotateClockwise={() => handleRotateCamera("cw")}
-              onRotateCounterClockwise={() => handleRotateCamera("ccw")}
             />
 
             <Canvas
