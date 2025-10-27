@@ -143,7 +143,6 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
     const cubeRef = useRef<THREE.Mesh | null>(null);
     const labelGroupRef = useRef<THREE.Group | null>(null);
     const animationFrameRef = useRef<number | null>(null);
-    const needsRenderRef = useRef<boolean>(true);
 
     const [hoveredRegion, setHoveredRegion] = useState<{
       type: string;
@@ -197,7 +196,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
         const textures = getFaceTextures();
 
-        // ✅ FIX #3: Professional semi-transparent material
+        // ✅ FIX: Professional semi-transparent material
         const material = new THREE.MeshStandardMaterial({
           color: 0xf5f5f5,
           metalness: 0.2,
@@ -213,7 +212,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
         console.log("✅ Orientation cube mesh created");
 
-        // ✅ FIX #3: Professional colored edges
+        // ✅ FIX: Professional colored edges
         const edges = new THREE.EdgesGeometry(geometry, 15);
         const line = new THREE.LineSegments(
           edges,
@@ -255,11 +254,9 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
         cube.add(labelGroup);
         labelGroupRef.current = labelGroup;
-
-        needsRenderRef.current = true;
       });
 
-      // ✅ FIX #3: Enhanced professional lighting
+      // ✅ FIX: Enhanced professional lighting
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
 
@@ -271,14 +268,13 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       fillLight.position.set(-3, 2, -2);
       scene.add(fillLight);
 
-      // ✅ FIX #1: Animation loop that continuously renders
+      // ✅ CRITICAL FIX: Continuous animation loop that always renders
       const animate = () => {
         animationFrameRef.current = requestAnimationFrame(animate);
 
-        // Always render to ensure updates are visible
-        if (needsRenderRef.current || cubeRef.current) {
-          renderer.render(scene, camera);
-          needsRenderRef.current = false;
+        // ALWAYS render - this ensures the cube updates are visible
+        if (rendererRef.current && sceneRef.current && cameraRef.current) {
+          rendererRef.current.render(sceneRef.current, cameraRef.current);
         }
       };
       animate();
@@ -313,12 +309,11 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
       material.transparent = true;
       material.needsUpdate = true;
-      needsRenderRef.current = true;
 
       console.log(`🎨 Display style changed to: ${displayStyle}`);
     }, [displayStyle]);
 
-    // ✅ FIX #1: CRITICAL - Update cube orientation from main camera
+    // ✅ CRITICAL FIX: Update cube orientation from main camera
     useImperativeHandle(ref, () => ({
       updateFromMainCamera: (mainCamera: THREE.Camera) => {
         if (!cubeRef.current) {
@@ -326,15 +321,12 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
           return;
         }
 
-        // Clone and invert camera quaternion
+        // Clone and invert camera quaternion to rotate cube opposite to camera
         const cameraQuat = mainCamera.quaternion.clone();
         const invertedQuat = cameraQuat.invert();
 
-        // Apply to cube
+        // Apply to cube - this will be visible in next animation frame
         cubeRef.current.quaternion.copy(invertedQuat);
-
-        // Force render on next frame
-        needsRenderRef.current = true;
 
         console.log("🔄 Orientation cube updated from camera", {
           cameraQuat: {
@@ -437,7 +429,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       }
     };
 
-    // ✅ FIX #2: Arrow click handlers with debugging
+    // ✅ FIX: Arrow click handlers with debugging
     const handleArrowClick = (direction: string, handler?: () => void) => {
       console.log(`⬆️ Arrow clicked: ${direction}`);
       if (handler) {
@@ -458,7 +450,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
               <span className="text-sm font-semibold">View Orientation</span>
             </div>
 
-            {/* ✅ FIX #4: Larger canvas with integrated arrow controls */}
+            {/* ✅ FIX: Larger canvas with integrated arrow controls */}
             <div className="relative w-[150px] h-[150px] border-2 border-border/30 rounded-lg overflow-hidden bg-gradient-to-br from-muted/20 to-background shadow-inner">
               <canvas
                 ref={canvasRef}
@@ -469,7 +461,7 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
                 style={{ display: "block" }}
               />
 
-              {/* ✅ FIX #4: Arrow controls overlaid on canvas */}
+              {/* ✅ FIX: Arrow controls overlaid on canvas */}
               <div className="absolute inset-0 pointer-events-none">
                 {/* Top Arrow */}
                 <Button
