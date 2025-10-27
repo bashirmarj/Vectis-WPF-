@@ -63,19 +63,14 @@ export function OrientationCubeViewport({
 
     const syncRotation = () => {
       if (mainCameraRef.current && cubeCameraRef.current) {
-        // Get the direction the main camera is looking
-        const lookDirection = new THREE.Vector3();
-        mainCameraRef.current.getWorldDirection(lookDirection);
+        // Copy only the rotation component, not position
+        cubeCameraRef.current.quaternion.copy(mainCameraRef.current.quaternion);
         
-        // Make cube camera look in the same direction from its fixed position
-        // The cube stays centered at origin, camera at [0,0,10] looks toward a point
-        const cubeLookTarget = new THREE.Vector3(0, 0, 0).add(lookDirection.multiplyScalar(-1));
-        cubeCameraRef.current.lookAt(cubeLookTarget);
-
-        // Debug every 60 frames (1 second at 60 FPS)
+        // Debug every 60 frames
         if (frameCount % 60 === 0) {
+          const euler = new THREE.Euler().setFromQuaternion(cubeCameraRef.current.quaternion);
           console.log("🔄 Cube rotation synced:", {
-            lookDirection: lookDirection.toArray().map((n) => n.toFixed(3)),
+            rotation: [euler.x, euler.y, euler.z].map(n => (n * 180 / Math.PI).toFixed(1) + "°")
           });
         }
         frameCount++;

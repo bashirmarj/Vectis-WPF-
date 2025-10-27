@@ -166,14 +166,14 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     console.log("   - Geometry:", cubeGeometry.type);
   }, [cubeGeometry]);
 
-  // Face overlay positions (thin boxes on each face)
-  const faceOverlays = useMemo(() => [
-    { face: 'right', position: [0.95, 0, 0] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] },
-    { face: 'left', position: [-0.95, 0, 0] as [number, number, number], rotation: [0, -Math.PI / 2, 0] as [number, number, number] },
-    { face: 'top', position: [0, 0.95, 0] as [number, number, number], rotation: [-Math.PI / 2, 0, 0] as [number, number, number] },
-    { face: 'bottom', position: [0, -0.95, 0] as [number, number, number], rotation: [Math.PI / 2, 0, 0] as [number, number, number] },
-    { face: 'front', position: [0, 0, 0.95] as [number, number, number], rotation: [0, 0, 0] as [number, number, number] },
-    { face: 'back', position: [0, 0, -0.95] as [number, number, number], rotation: [0, Math.PI, 0] as [number, number, number] },
+  // Invisible hotspot meshes for hover detection (positioned on each face)
+  const faceHotspots = useMemo(() => [
+    { face: 'right', position: [0.91, 0, 0] as [number, number, number], rotation: [0, Math.PI / 2, 0] as [number, number, number] },
+    { face: 'left', position: [-0.91, 0, 0] as [number, number, number], rotation: [0, -Math.PI / 2, 0] as [number, number, number] },
+    { face: 'top', position: [0, 0.91, 0] as [number, number, number], rotation: [-Math.PI / 2, 0, 0] as [number, number, number] },
+    { face: 'bottom', position: [0, -0.91, 0] as [number, number, number], rotation: [Math.PI / 2, 0, 0] as [number, number, number] },
+    { face: 'front', position: [0, 0, 0.91] as [number, number, number], rotation: [0, 0, 0] as [number, number, number] },
+    { face: 'back', position: [0, 0, -0.91] as [number, number, number], rotation: [0, Math.PI, 0] as [number, number, number] },
   ], []);
 
   return (
@@ -183,24 +183,51 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         ref={meshRef}
         geometry={cubeGeometry}
         material={baseMaterial}
-        onClick={handleClick}
-        onPointerEnter={handlePointerEnter}
-        onPointerLeave={handlePointerLeave}
         castShadow
         receiveShadow
         scale={0.95}
       />
 
-      {/* Per-face highlight overlays */}
-      {faceOverlays.map(({ face, position, rotation }) => (
+      {/* Invisible hotspot meshes for hover detection */}
+      {faceHotspots.map(({ face, position, rotation }) => (
         <mesh
           key={face}
           position={position}
           rotation={rotation}
+          onPointerEnter={(e) => {
+            e.stopPropagation();
+            document.body.style.cursor = "pointer";
+            setHoveredFace(face);
+          }}
+          onPointerLeave={(e) => {
+            e.stopPropagation();
+            document.body.style.cursor = "default";
+            setHoveredFace(null);
+          }}
+          onClick={handleClick}
+          visible={false}
+        >
+          <planeGeometry args={[1.7, 1.7]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      ))}
+
+      {/* Visible highlight overlay on hovered face */}
+      {faceHotspots.map(({ face, position, rotation }) => (
+        <mesh
+          key={`highlight-${face}`}
+          position={position}
+          rotation={rotation}
           visible={hoveredFace === face}
         >
-          <planeGeometry args={[1.8, 1.8]} />
-          <primitive object={highlightMaterial} />
+          <planeGeometry args={[1.7, 1.7]} />
+          <meshBasicMaterial
+            color="#60a5fa"
+            transparent
+            opacity={0.4}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
         </mesh>
       ))}
 
