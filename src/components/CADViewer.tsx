@@ -291,6 +291,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         newUp = new THREE.Vector3(0, 0, 1);
       }
 
+      console.log("🎯 Cube face clicked:", direction);
       console.log("🎯 Cube face clicked:", {
         cubeDirection: { x: direction.x, y: direction.y, z: direction.z },
         modelDirection: {
@@ -307,7 +308,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       controls.target.copy(target);
       controls.update();
 
-      // Update orientation cube
+      // Update orientation cube to match new camera position
       orientationCubeRef.current?.updateFromMainCamera(camera);
 
       console.log("✅ Camera repositioned to face");
@@ -315,7 +316,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox, transformDirection, coordinateSystem],
   );
 
-  // ✅ Arrow rotation handler with gimbal lock fix
+  // ✅ FIXED: Arrow rotation handler with 90-degree increments and gimbal lock fix
   const handleRotateCamera = useCallback((direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
     if (!cameraRef.current || !controlsRef.current) return;
 
@@ -339,6 +340,9 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       target: { x: target.x.toFixed(2), y: target.y.toFixed(2), z: target.z.toFixed(2) },
     });
 
+    // ✅ FIXED: Use 90-degree rotations (Math.PI / 2) instead of 15 degrees
+    const rotationAngle = Math.PI / 2; // 90° rotation
+
     // ✅ FIXED: Detect gimbal lock condition
     const worldUp = new THREE.Vector3(0, 1, 0);
     const dotProduct = Math.abs(viewDir.dot(worldUp));
@@ -346,7 +350,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
     let newPosition: THREE.Vector3;
     let newUp: THREE.Vector3;
-    const rotationAngle = Math.PI / 12; // 15° rotation
 
     if (isGimbalLock) {
       console.log("⚠️ Gimbal lock detected - using world-space rotation");
@@ -356,7 +359,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
       switch (direction) {
         case "left":
-          console.log("⬅️ Rotating LEFT around world Y-axis");
+          console.log("⬅️ Rotating LEFT around world Y-axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(worldUp, rotationAngle);
           newPosition.add(target);
@@ -364,7 +367,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "right":
-          console.log("➡️ Rotating RIGHT around world Y-axis");
+          console.log("➡️ Rotating RIGHT around world Y-axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(worldUp, -rotationAngle);
           newPosition.add(target);
@@ -372,7 +375,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "up":
-          console.log("⬆️ Rotating UP - moving away from gimbal lock");
+          console.log("⬆️ Rotating UP - moving away from gimbal lock (90°)");
           const upAxis = isLookingDown ? worldZ : worldZ.clone().negate();
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(upAxis, rotationAngle);
@@ -381,7 +384,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "down":
-          console.log("⬇️ Rotating DOWN - moving away from gimbal lock");
+          console.log("⬇️ Rotating DOWN - moving away from gimbal lock (90°)");
           const downAxis = isLookingDown ? worldZ.clone().negate() : worldZ;
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(downAxis, rotationAngle);
@@ -390,13 +393,13 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "cw":
-          console.log("🔄 Rolling CLOCKWISE around view axis");
+          console.log("🔄 Rolling CLOCKWISE around view axis (90°)");
           newPosition = currentPosition.clone();
           newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
           break;
 
         case "ccw":
-          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis");
+          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis (90°)");
           newPosition = currentPosition.clone();
           newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
           break;
@@ -415,7 +418,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
       switch (direction) {
         case "left":
-          console.log("⬅️ Rotating LEFT around screen-up axis");
+          console.log("⬅️ Rotating LEFT around screen-up axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenUp, rotationAngle);
           newPosition.add(target);
@@ -423,7 +426,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "right":
-          console.log("➡️ Rotating RIGHT around screen-up axis");
+          console.log("➡️ Rotating RIGHT around screen-up axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenUp, -rotationAngle);
           newPosition.add(target);
@@ -431,7 +434,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "up":
-          console.log("⬆️ Rotating UP around screen-right axis");
+          console.log("⬆️ Rotating UP around screen-right axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenRight, rotationAngle);
           newPosition.add(target);
@@ -439,7 +442,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "down":
-          console.log("⬇️ Rotating DOWN around screen-right axis");
+          console.log("⬇️ Rotating DOWN around screen-right axis (90°)");
           newPosition = currentPosition.clone().sub(target);
           newPosition.applyAxisAngle(screenRight, -rotationAngle);
           newPosition.add(target);
@@ -447,13 +450,13 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           break;
 
         case "cw":
-          console.log("🔄 Rolling CLOCKWISE around view axis");
+          console.log("🔄 Rolling CLOCKWISE around view axis (90°)");
           newPosition = currentPosition.clone();
           newUp = camera.up.clone().applyAxisAngle(viewDir, -rotationAngle);
           break;
 
         case "ccw":
-          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis");
+          console.log("🔄 Rolling COUNTER-CLOCKWISE around view axis (90°)");
           newPosition = currentPosition.clone();
           newUp = camera.up.clone().applyAxisAngle(viewDir, rotationAngle);
           break;
@@ -477,7 +480,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     camera.lookAt(target);
     controls.update();
 
-    // Update orientation cube
+    // Update orientation cube to match new camera position
     orientationCubeRef.current?.updateFromMainCamera(camera);
 
     console.log("✅ Controls updated");
