@@ -1,5 +1,5 @@
-import { Canvas, useFrame } from "@react-three/fiber";
-import { TrackballControls, PerspectiveCamera, ContactShadows, GizmoHelper, GizmoViewport } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import { TrackballControls, PerspectiveCamera, GizmoHelper, GizmoViewport } from "@react-three/drei";
 import { Suspense, useMemo, useEffect, useState, useRef, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Loader2, Box } from "lucide-react";
@@ -10,11 +10,9 @@ import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
 import { OrientationCubePreview, OrientationCubeHandle } from "./cad-viewer/OrientationCubePreview";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
-import { PostProcessingEffects } from "./cad-viewer/enhancements/PostProcessingEffects";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
-// ✅ FIXED: Simplified interface with ONLY essential props
 interface CADViewerProps {
   meshId?: string;
   fileUrl?: string;
@@ -22,32 +20,14 @@ interface CADViewerProps {
   onMeshLoaded?: (data: MeshData) => void;
 }
 
-// ✅ FIXED: Proper MeshData interface matching database schema
 interface MeshData {
   vertices: number[];
   indices: number[];
   normals: number[];
-  vertex_colors?: string[]; // ✅ Face type labels from database
+  vertex_colors?: string[];
   triangle_count: number;
   face_types?: string[];
   feature_edges?: number[][][];
-}
-
-// ✅ NEW: Camera synchronization component to update orientation cube
-function CameraSyncComponent({
-  cameraRef,
-  orientationCubeRef,
-}: {
-  cameraRef: React.RefObject<THREE.PerspectiveCamera>;
-  orientationCubeRef: React.RefObject<OrientationCubeHandle>;
-}) {
-  useFrame(() => {
-    if (cameraRef.current && orientationCubeRef.current) {
-      orientationCubeRef.current.updateFromMainCamera(cameraRef.current);
-    }
-  });
-
-  return null;
 }
 
 export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewerProps) {
@@ -57,37 +37,30 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
   const [showEdges, setShowEdges] = useState(true);
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
-  const [ssaoEnabled, setSSAOEnabled] = useState(true);
-  const [quality, setQuality] = useState<"low" | "medium" | "high">("medium");
+  const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
 
-  // Measurement store
-  const {
-    activeTool: measurementMode,
-    measurements,
-    setActiveTool: setMeasurementMode,
-    clearAllMeasurements,
-  } = useMeasurementStore();
-
-  const meshRef = useRef<THREE.Mesh>(null);
-  const controlsRef = useRef<any>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const orientationCubeRef = useRef<OrientationCubeHandle>(null);
+  const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+  const controlsRef = useRef<any>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+  const orientationCubeRef = useRef<OrientationCubeHandle>(null);
 
+  // File extension detection
   const fileExtension = useMemo(() => {
-    if (!fileName) return "";
-    return fileName.split(".").pop()?.toLowerCase() || "";
-  }, [fileName]);
+    if (fileName) return fileName.split(".").pop()?.toLowerCase() || "";
+    if (fileUrl) return fileUrl.split(".").pop()?.toLowerCase().split("?")[0] || "";
+    return "";
+  }, [fileName, fileUrl]);
 
   const isRenderableFormat = useMemo(() => {
     return ["step", "stp", "iges", "igs", "stl"].includes(fileExtension);
   }, [fileExtension]);
 
-  // Load mesh data from database
+  // Load mesh data from Supabase
   useEffect(() => {
-    if (!meshId && !fileUrl) {
+    if (!meshId || !isRenderableFormat) {
       setIsLoading(false);
       return;
     }
@@ -97,108 +70,152 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         setIsLoading(true);
         setError(null);
 
-        if (meshId) {
-          console.log(`🔥 Fetching mesh from database: ${meshId}`);
-          const { data, error: fetchError } = await supabase.from("cad_meshes").select("*").eq("id", meshId).single();
+        const { data: mesh, error: meshError } = await supabase
+          .from("cad_meshes")
+          .select("*")
+          .eq("id", meshId)
+          .single();
 
-          if (fetchError) throw fetchError;
+        if (meshError) throw meshError;
+        if (!mesh) throw new Error("Mesh not found");
 
-          if (data) {
-            console.log("✅ Mesh loaded:", data.triangle_count, "triangles");
-            const meshDataTyped: MeshData = {
-              vertices: data.vertices,
-              indices: data.indices,
-              normals: data.normals,
-              vertex_colors: data.vertex_colors as string[],
-              triangle_count: data.triangle_count,
-              face_types: data.face_types as string[],
-              feature_edges: data.feature_edges as number[][][],
-            };
-            setMeshData(meshDataTyped);
-            onMeshLoaded?.(meshDataTyped);
-          }
-        }
-      } catch (err: any) {
-        console.error("❌ Error loading mesh:", err);
-        setError(err.message || "Failed to load 3D model");
+        const vertices = Array.isArray(mesh.vertices) ? mesh.vertices : JSON.parse(mesh.vertices as string);
+        const indices = Array.isArray(mesh.indices) ? mesh.indices : JSON.parse(mesh.indices as string);
+        const normals = Array.isArray(mesh.normals) ? mesh.normals : JSON.parse(mesh.normals as string);
+        const vertex_colors = mesh.vertex_colors
+          ? Array.isArray(mesh.vertex_colors)
+            ? mesh.vertex_colors
+            : JSON.parse(mesh.vertex_colors as string)
+          : undefined;
+        const feature_edges = mesh.feature_edges
+          ? Array.isArray(mesh.feature_edges)
+            ? mesh.feature_edges
+            : JSON.parse(mesh.feature_edges as string)
+          : undefined;
+
+        const loadedMeshData: MeshData = {
+          vertices,
+          indices,
+          normals,
+          vertex_colors: vertex_colors as string[] | undefined,
+          triangle_count: mesh.triangle_count || indices.length / 3,
+          feature_edges: feature_edges as number[][][] | undefined,
+        };
+
+        setMeshData(loadedMeshData);
+        onMeshLoaded?.(loadedMeshData);
+      } catch (error) {
+        console.error("Failed to load mesh:", error);
+        setError(error instanceof Error ? error.message : "Failed to load 3D model");
       } finally {
         setIsLoading(false);
       }
     };
 
     loadMeshData();
-  }, [meshId, fileUrl, onMeshLoaded]);
+  }, [meshId, isRenderableFormat, onMeshLoaded]);
 
   // Calculate bounding box
   const boundingBox = useMemo(() => {
-    if (!meshData || !meshData.vertices || meshData.vertices.length === 0) {
+    if (!meshData) {
       return {
-        min: new THREE.Vector3(-50, -50, -50),
-        max: new THREE.Vector3(50, 50, 50),
+        min: { x: -1, y: -1, z: -1 },
+        max: { x: 1, y: 1, z: 1 },
         center: [0, 0, 0] as [number, number, number],
-        size: new THREE.Vector3(100, 100, 100),
-        width: 100,
-        height: 100,
-        depth: 100,
+        width: 2,
+        height: 2,
+        depth: 2,
       };
     }
 
     const vertices = meshData.vertices;
-    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
-    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+    let minX = Infinity,
+      minY = Infinity,
+      minZ = Infinity;
+    let maxX = -Infinity,
+      maxY = -Infinity,
+      maxZ = -Infinity;
 
     for (let i = 0; i < vertices.length; i += 3) {
-      min.x = Math.min(min.x, vertices[i]);
-      min.y = Math.min(min.y, vertices[i + 1]);
-      min.z = Math.min(min.z, vertices[i + 2]);
-      max.x = Math.max(max.x, vertices[i]);
-      max.y = Math.max(max.y, vertices[i + 1]);
-      max.z = Math.max(max.z, vertices[i + 2]);
+      minX = Math.min(minX, vertices[i]);
+      minY = Math.min(minY, vertices[i + 1]);
+      minZ = Math.min(minZ, vertices[i + 2]);
+      maxX = Math.max(maxX, vertices[i]);
+      maxY = Math.max(maxY, vertices[i + 1]);
+      maxZ = Math.max(maxZ, vertices[i + 2]);
     }
 
-    const center: [number, number, number] = [(min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2];
-
-    const size = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z);
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const depth = maxZ - minZ;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const centerZ = (minZ + maxZ) / 2;
 
     return {
-      min,
-      max,
-      center,
-      size,
-      width: size.x,
-      height: size.y,
-      depth: size.z,
+      min: { x: minX, y: minY, z: minZ },
+      max: { x: maxX, y: maxY, z: maxZ },
+      center: [centerX, centerY, centerZ] as [number, number, number],
+      width,
+      height,
+      depth,
     };
   }, [meshData]);
 
-  const modelBounds = useMemo(
-    () => ({
-      min: boundingBox.min,
-      max: boundingBox.max,
-      center: new THREE.Vector3(...boundingBox.center),
-      size: boundingBox.size,
-    }),
-    [boundingBox],
+  // ✅ NEW: Auto-detect coordinate system based on part geometry
+  const coordinateSystem = useMemo(() => {
+    const { width, height, depth } = boundingBox;
+
+    // Most CAD files (STEP/IGES) use Z-up coordinate system
+    // If the part's Z dimension is significantly larger than Y, assume Z-up
+    // If the part's Y dimension is significantly larger than Z, assume Y-up
+    const isZUp = depth > height * 1.2;
+
+    console.log("📊 Coordinate system detection:", {
+      width: width.toFixed(2),
+      height: height.toFixed(2),
+      depth: depth.toFixed(2),
+      ratio: (depth / height).toFixed(2),
+      detected: isZUp ? "Z-up (STEP/IGES standard)" : "Y-up (Three.js standard)",
+    });
+
+    return isZUp ? "Z-up" : "Y-up";
+  }, [boundingBox]);
+
+  // ✅ NEW: Transform direction vector based on coordinate system
+  const transformDirection = useCallback(
+    (direction: THREE.Vector3): THREE.Vector3 => {
+      if (coordinateSystem === "Z-up") {
+        // Convert from Y-up (orientation cube) to Z-up (CAD model)
+        // Y-up system: X=right, Y=up,      Z=forward
+        // Z-up system: X=right, Y=backward, Z=up
+        return new THREE.Vector3(
+          direction.x, // X stays the same (right is right)
+          -direction.z, // Y becomes -Z (forward becomes backward)
+          direction.y, // Z becomes Y (up becomes up)
+        );
+      }
+      // Y-up system: no transformation needed
+      return direction.clone();
+    },
+    [coordinateSystem],
   );
 
-  // Calculate initial camera position
+  // Initial camera position (isometric view)
   const initialCameraPosition = useMemo(() => {
     const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
     const distance = maxDim * 1.5;
-    return new THREE.Vector3(
+    return [
       boundingBox.center[0] + distance * 0.707,
       boundingBox.center[1] + distance * 0.707,
       boundingBox.center[2] + distance * 0.707,
-    );
+    ] as [number, number, number];
   }, [boundingBox]);
 
-  // Camera view controls
-  const handleSetView = useCallback(
-    (view: string) => {
-      if (!cameraRef.current || !controlsRef.current) {
-        console.error("❌ Camera or controls ref not available");
-        return;
-      }
+  // Camera view change handler
+  const handleViewChange = useCallback(
+    (viewType: "front" | "top" | "side" | "isometric" | "home") => {
+      if (!cameraRef.current || !controlsRef.current) return;
 
       const camera = cameraRef.current;
       const controls = controlsRef.current;
@@ -206,57 +223,53 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
       const distance = maxDim * 1.5;
 
-      let newPosition: THREE.Vector3;
+      let direction: THREE.Vector3;
+      let newUp = new THREE.Vector3(0, 1, 0);
 
-      switch (view) {
+      switch (viewType) {
         case "front":
-          newPosition = new THREE.Vector3(target.x, target.y, target.z + distance);
+          direction = new THREE.Vector3(0, 0, 1);
+          break;
+        case "side":
+          direction = new THREE.Vector3(1, 0, 0);
           break;
         case "top":
-          newPosition = new THREE.Vector3(target.x, target.y + distance, target.z);
+          direction = new THREE.Vector3(0, 1, 0);
+          newUp = new THREE.Vector3(0, 0, 1);
           break;
         case "isometric":
-          newPosition = new THREE.Vector3(
-            target.x + distance * 0.707,
-            target.y + distance * 0.707,
-            target.z + distance * 0.707,
-          );
-          break;
         case "home":
-          newPosition = new THREE.Vector3(
-            target.x + distance * 0.707,
-            target.y + distance * 0.707,
-            target.z + distance * 0.707,
-          );
-          break;
         default:
-          return;
+          direction = new THREE.Vector3(0.707, 0.707, 0.707);
+          break;
       }
 
+      // ✅ FIXED: Transform direction to match model coordinate system
+      const transformedDirection = transformDirection(direction);
+      const newPosition = target.clone().add(transformedDirection.multiplyScalar(distance));
+
+      console.log(`📐 View change: ${viewType}`, {
+        cubeDirection: { x: direction.x.toFixed(2), y: direction.y.toFixed(2), z: direction.z.toFixed(2) },
+        modelDirection: {
+          x: transformedDirection.x.toFixed(2),
+          y: transformedDirection.y.toFixed(2),
+          z: transformedDirection.z.toFixed(2),
+        },
+      });
+
       camera.position.copy(newPosition);
+      camera.up.copy(newUp);
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
+
+      // Update orientation cube
+      orientationCubeRef.current?.updateFromMainCamera(camera);
     },
-    [boundingBox],
+    [boundingBox, transformDirection],
   );
 
-  const handleFitView = useCallback(() => {
-    if (!cameraRef.current || !controlsRef.current) return;
-
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    const target = new THREE.Vector3(...boundingBox.center);
-    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-    const distance = maxDim * 1.5;
-    const currentPosition = camera.position.clone().sub(target).normalize();
-    const newPosition = target.clone().add(currentPosition.multiplyScalar(distance));
-
-    camera.position.copy(newPosition);
-    controls.target.copy(target);
-    controls.update();
-  }, [boundingBox]);
-
+  // ✅ FIXED: Orientation cube face click handler with coordinate transform
   const handleCubeClick = useCallback(
     (direction: THREE.Vector3) => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -267,23 +280,44 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
       const distance = maxDim * 1.5;
 
-      const newPosition = target.clone().add(direction.multiplyScalar(distance));
+      // ✅ FIXED: Transform cube direction to match model coordinate system
+      const transformedDirection = transformDirection(direction);
+      const newPosition = target.clone().add(transformedDirection.multiplyScalar(distance));
 
-      console.log("🎯 Cube face clicked:", direction);
+      // Determine appropriate up vector
+      let newUp = new THREE.Vector3(0, 1, 0);
+      if (Math.abs(transformedDirection.y) > 0.9) {
+        // Looking up or down - use Z as up
+        newUp = new THREE.Vector3(0, 0, 1);
+      }
+
+      console.log("🎯 Cube face clicked:", {
+        cubeDirection: { x: direction.x, y: direction.y, z: direction.z },
+        modelDirection: {
+          x: transformedDirection.x.toFixed(2),
+          y: transformedDirection.y.toFixed(2),
+          z: transformedDirection.z.toFixed(2),
+        },
+        coordinateSystem,
+      });
+
       camera.position.copy(newPosition);
+      camera.up.copy(newUp);
+      camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
+
+      // Update orientation cube
+      orientationCubeRef.current?.updateFromMainCamera(camera);
+
       console.log("✅ Camera repositioned to face");
     },
-    [boundingBox],
+    [boundingBox, transformDirection, coordinateSystem],
   );
 
-  // ✅ NEW: Arrow rotation handlers with gimbal lock fix
+  // ✅ Arrow rotation handler with gimbal lock fix
   const handleRotateCamera = useCallback((direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
-    if (!cameraRef.current || !controlsRef.current) {
-      console.error("❌ Camera or controls ref not available");
-      return;
-    }
+    if (!cameraRef.current || !controlsRef.current) return;
 
     console.log("🎯 handleRotateCamera called with:", direction);
 
@@ -296,7 +330,11 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     const viewDir = currentPosition.clone().sub(target).normalize();
 
     console.log("📊 Camera state before rotation:", {
-      position: { x: currentPosition.x.toFixed(2), y: currentPosition.y.toFixed(2), z: currentPosition.z.toFixed(2) },
+      position: {
+        x: currentPosition.x.toFixed(2),
+        y: currentPosition.y.toFixed(2),
+        z: currentPosition.z.toFixed(2),
+      },
       distance: distance.toFixed(2),
       target: { x: target.x.toFixed(2), y: target.y.toFixed(2), z: target.z.toFixed(2) },
     });
@@ -304,7 +342,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     // ✅ FIXED: Detect gimbal lock condition
     const worldUp = new THREE.Vector3(0, 1, 0);
     const dotProduct = Math.abs(viewDir.dot(worldUp));
-    const isGimbalLock = dotProduct > 0.98; // Within ~11° of straight up/down
+    const isGimbalLock = dotProduct > 0.98;
 
     let newPosition: THREE.Vector3;
     let newUp: THREE.Vector3;
@@ -314,7 +352,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       console.log("⚠️ Gimbal lock detected - using world-space rotation");
 
       const worldZ = new THREE.Vector3(0, 0, 1);
-      const worldX = new THREE.Vector3(1, 0, 0);
       const isLookingDown = viewDir.y > 0;
 
       switch (direction) {
@@ -368,7 +405,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           return;
       }
     } else {
-      // Normal rotation using screen-space axes
       const screenUp = camera.up.clone().normalize();
       const screenRight = new THREE.Vector3().crossVectors(viewDir, screenUp).normalize();
 
@@ -428,7 +464,11 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     }
 
     console.log("📊 Camera state after rotation:", {
-      newPosition: { x: newPosition.x.toFixed(2), y: newPosition.y.toFixed(2), z: newPosition.z.toFixed(2) },
+      newPosition: {
+        x: newPosition.x.toFixed(2),
+        y: newPosition.y.toFixed(2),
+        z: newPosition.z.toFixed(2),
+      },
       newUp: { x: newUp.x.toFixed(2), y: newUp.y.toFixed(2), z: newUp.z.toFixed(2) },
     });
 
@@ -436,9 +476,34 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     camera.up.copy(newUp);
     camera.lookAt(target);
     controls.update();
+
+    // Update orientation cube
+    orientationCubeRef.current?.updateFromMainCamera(camera);
+
     console.log("✅ Controls updated");
     console.log("✅ Handler executed for:", direction.toUpperCase());
   }, []);
+
+  const handleFitView = useCallback(() => {
+    if (!cameraRef.current || !controlsRef.current) return;
+
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const target = new THREE.Vector3(...boundingBox.center);
+    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
+    const distance = maxDim * 1.5;
+
+    // Maintain current viewing direction
+    const currentDir = camera.position.clone().sub(target).normalize();
+    const newPosition = target.clone().add(currentDir.multiplyScalar(distance));
+
+    camera.position.copy(newPosition);
+    controls.target.copy(target);
+    controls.update();
+
+    // Update orientation cube
+    orientationCubeRef.current?.updateFromMainCamera(camera);
+  }, [boundingBox]);
 
   const handleDownload = useCallback(async () => {
     if (!fileUrl) return;
@@ -459,6 +524,23 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     }
   }, [fileUrl, fileName]);
 
+  // ✅ Update orientation cube when camera moves via TrackballControls
+  useEffect(() => {
+    if (!cameraRef.current || !controlsRef.current) return;
+
+    const controls = controlsRef.current;
+    const handleControlsChange = () => {
+      if (cameraRef.current) {
+        orientationCubeRef.current?.updateFromMainCamera(cameraRef.current);
+      }
+    };
+
+    controls.addEventListener("change", handleControlsChange);
+    return () => {
+      controls.removeEventListener("change", handleControlsChange);
+    };
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -472,59 +554,42 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         setShowEdges(!showEdges);
       } else if (e.code === "Escape") {
         e.preventDefault();
-        if (measurementMode) {
-          setMeasurementMode(null);
+        if (activeTool) {
+          setActiveTool(null);
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [handleFitView, showEdges, measurementMode, setMeasurementMode]);
-
-  if (isLoading) {
-    return (
-      <CardContent className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading 3D model...</p>
-        </div>
-      </CardContent>
-    );
-  }
-
-  if (error) {
-    return (
-      <CardContent className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4 text-center max-w-md">
-          <Box className="h-16 w-16 text-destructive" />
-          <div>
-            <p className="text-sm font-medium text-destructive mb-2">Failed to load 3D model</p>
-            <p className="text-xs text-muted-foreground">{error}</p>
-          </div>
-        </div>
-      </CardContent>
-    );
-  }
+  }, [handleFitView, showEdges, activeTool, setActiveTool]);
 
   return (
-    <div className="relative h-full overflow-hidden">
+    <div className="relative w-full h-full">
       <CardContent className="p-0 h-full">
-        {meshData && isRenderableFormat ? (
-          <div ref={canvasRef} className="relative h-full" style={{ background: "#f8f9fa" }}>
-            {/* Unified CAD Toolbar */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <p className="text-sm text-destructive text-center">{error}</p>
+          </div>
+        ) : meshData && isRenderableFormat ? (
+          <div className="relative w-full h-full">
+            {/* Unified Toolbar */}
             <UnifiedCADToolbar
-              onHomeView={() => handleSetView("home")}
-              onFrontView={() => handleSetView("front")}
-              onTopView={() => handleSetView("top")}
-              onIsometricView={() => handleSetView("isometric")}
+              onHomeView={() => handleViewChange("home")}
+              onFrontView={() => handleViewChange("front")}
+              onTopView={() => handleViewChange("top")}
+              onIsometricView={() => handleViewChange("isometric")}
               onFitView={handleFitView}
               displayMode={displayMode}
               onDisplayModeChange={setDisplayMode}
               showEdges={showEdges}
               onToggleEdges={() => setShowEdges(!showEdges)}
-              measurementMode={measurementMode}
-              onMeasurementModeChange={setMeasurementMode}
+              measurementMode={activeTool}
+              onMeasurementModeChange={setActiveTool}
               measurementCount={measurements.length}
               onClearMeasurements={clearAllMeasurements}
               sectionPlane={sectionPlane}
@@ -542,7 +607,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ FIXED: Orientation Cube with arrow rotation handlers */}
+            {/* ✅ Orientation Cube with all rotation handlers */}
             <OrientationCubePreview
               ref={orientationCubeRef}
               onCubeClick={handleCubeClick}
@@ -562,19 +627,32 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 antialias: true,
                 alpha: true,
                 preserveDrawingBuffer: true,
+                powerPreference: "high-performance",
+              }}
+              onCreated={({ gl }) => {
+                gl.domElement.addEventListener(
+                  "webglcontextlost",
+                  (e) => {
+                    e.preventDefault();
+                    console.warn("WebGL context lost");
+                  },
+                  false,
+                );
+                gl.domElement.addEventListener(
+                  "webglcontextrestored",
+                  () => {
+                    console.log("WebGL context restored");
+                  },
+                  false,
+                );
               }}
             >
               <color attach="background" args={["#f8f9fa"]} />
-              <fog attach="fog" args={["#f8f9fa", 100, 500]} />
 
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
               <Suspense fallback={null}>
-                <ProfessionalLighting 
-                  intensity={1.0}
-                  enableShadows={shadowsEnabled}
-                  shadowQuality="medium"
-                />
+                <ProfessionalLighting intensity={1.0} enableShadows={shadowsEnabled} shadowQuality="high" />
 
                 <MeshModel
                   ref={meshRef}
@@ -587,15 +665,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                <PostProcessingEffects 
-                  enableBloom={false}
-                  enableFXAA={true}
-                  quality={quality}
-                />
-
-                {/* ✅ NEW: Camera synchronization component */}
-                <CameraSyncComponent cameraRef={cameraRef} orientationCubeRef={orientationCubeRef} />
-
+                {/* ✅ TrackballControls allows free rotation */}
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
