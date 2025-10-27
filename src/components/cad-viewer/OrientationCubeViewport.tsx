@@ -60,7 +60,7 @@ export function OrientationCubeViewport({
     console.log("🔍 controlsRef?.current:", !!controlsRef?.current);
   }, [mainCameraRef, controlsRef]);
 
-  // ✅ Rotation sync effect
+  // ✅ Rotation sync effect with polling to wait for cameras
   useEffect(() => {
     console.log("🔍 DIAGNOSTIC: Rotation sync effect TRIGGERED");
     console.log("🔍 Checking refs...");
@@ -70,26 +70,33 @@ export function OrientationCubeViewport({
       return;
     }
 
-    if (!mainCameraRef.current) {
-      console.warn("⚠️ DIAGNOSTIC: mainCameraRef.current is null (camera not ready yet)");
-      return;
-    }
-
-    if (!cubeCameraRef.current) {
-      console.warn("⚠️ DIAGNOSTIC: cubeCameraRef.current is null (cube camera not ready yet)");
-      return;
-    }
-
-    console.log("✅ DIAGNOSTIC: Both cameras ready, starting sync!");
-    console.log("✅ OrientationCube: Starting rotation sync with refs:", {
-      mainCamera: !!mainCameraRef.current,
-      cubeCamera: !!cubeCameraRef.current,
-      controls: !!controlsRef?.current,
-    });
-
     let animationFrameId: number;
+    let pollIntervalId: number;
     let frameCount = 0;
+    let isReady = false;
 
+    // Polling function to wait for both cameras to be ready
+    const checkCamerasReady = () => {
+      if (!mainCameraRef.current) {
+        console.warn("⚠️ DIAGNOSTIC: mainCameraRef.current still null, polling...");
+        return false;
+      }
+
+      if (!cubeCameraRef.current) {
+        console.warn("⚠️ DIAGNOSTIC: cubeCameraRef.current still null, polling...");
+        return false;
+      }
+
+      console.log("✅ DIAGNOSTIC: Both cameras ready, starting sync!");
+      console.log("✅ OrientationCube: Starting rotation sync with refs:", {
+        mainCamera: !!mainCameraRef.current,
+        cubeCamera: !!cubeCameraRef.current,
+        controls: !!controlsRef?.current,
+      });
+      return true;
+    };
+
+    // Rotation sync loop
     const syncRotation = () => {
       if (mainCameraRef.current && cubeCameraRef.current) {
         // Simple quaternion copy
@@ -109,9 +116,27 @@ export function OrientationCubeViewport({
       animationFrameId = requestAnimationFrame(syncRotation);
     };
 
-    syncRotation();
+    // Start polling to check if cameras are ready
+    pollIntervalId = window.setInterval(() => {
+      if (!isReady && checkCamerasReady()) {
+        isReady = true;
+        clearInterval(pollIntervalId);
+        // Both cameras ready, start the sync loop
+        syncRotation();
+      }
+    }, 100); // Check every 100ms
+
+    // Also check immediately in case cameras are already ready
+    if (checkCamerasReady()) {
+      isReady = true;
+      clearInterval(pollIntervalId);
+      syncRotation();
+    }
 
     return () => {
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+      }
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         console.log("🛑 OrientationCube: Stopped rotation sync");
