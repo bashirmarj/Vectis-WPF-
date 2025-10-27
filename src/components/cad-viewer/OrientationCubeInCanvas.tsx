@@ -35,7 +35,6 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
     <Hud renderPriority={1}>
       {/* Orthographic camera for HUD rendering */}
       <OrthographicCamera
-        makeDefault
         position={[0, 0, 10]}
         zoom={85}
         near={0.1}
