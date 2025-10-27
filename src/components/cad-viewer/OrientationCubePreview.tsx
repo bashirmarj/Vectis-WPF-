@@ -1,4 +1,4 @@
-import { useRef, useState, forwardRef, useImperativeHandle, useEffect, useMemo } from "react";
+import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { Button } from "@/components/ui/button";
@@ -22,27 +22,23 @@ export interface OrientationCubeHandle {
   updateFromMainCamera: (camera: THREE.Camera) => void;
 }
 
-// ✅ FIX #1: STL FILE LOADING - Cache STL geometry globally
+// ✅ OPTIMIZED: Cache STL geometry globally
 let cachedSTLGeometry: THREE.BufferGeometry | null = null;
 let isLoadingSTL = false;
 const stlLoadCallbacks: ((geometry: THREE.BufferGeometry) => void)[] = [];
 
 const loadSTLGeometry = (callback: (geometry: THREE.BufferGeometry) => void) => {
-  // If already cached, return immediately
   if (cachedSTLGeometry) {
     callback(cachedSTLGeometry);
     return;
   }
 
-  // Add callback to queue
   stlLoadCallbacks.push(callback);
 
-  // If already loading, wait for it
   if (isLoadingSTL) {
     return;
   }
 
-  // Start loading
   isLoadingSTL = true;
   const loader = new STLLoader();
 
@@ -56,7 +52,6 @@ const loadSTLGeometry = (callback: (geometry: THREE.BufferGeometry) => void) => 
       cachedSTLGeometry = geometry;
       isLoadingSTL = false;
 
-      // Execute all queued callbacks
       stlLoadCallbacks.forEach((cb) => cb(geometry));
       stlLoadCallbacks.length = 0;
     },
@@ -69,35 +64,43 @@ const loadSTLGeometry = (callback: (geometry: THREE.BufferGeometry) => void) => 
   );
 };
 
-// ✅ OPTIMIZED: Create face label textures once and cache them
+// ✅ PROFESSIONAL: Create face label textures with modern design
 const createFaceTextures = () => {
   const faces = [
-    { text: "FRONT", color: "#4A5568" },
-    { text: "BACK", color: "#4A5568" },
-    { text: "RIGHT", color: "#4A5568" },
-    { text: "LEFT", color: "#4A5568" },
-    { text: "TOP", color: "#4A5568" },
-    { text: "BOTTOM", color: "#4A5568" },
+    { text: "FRONT", color: "#e8eaed", textColor: "#3c4043" },
+    { text: "BACK", color: "#e8eaed", textColor: "#3c4043" },
+    { text: "RIGHT", color: "#e8eaed", textColor: "#3c4043" },
+    { text: "LEFT", color: "#e8eaed", textColor: "#3c4043" },
+    { text: "TOP", color: "#e8eaed", textColor: "#3c4043" },
+    { text: "BOTTOM", color: "#e8eaed", textColor: "#3c4043" },
   ];
 
-  return faces.map(({ text, color }) => {
+  return faces.map(({ text, color, textColor }) => {
     const canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 256;
     const context = canvas.getContext("2d")!;
 
-    // Draw background
-    context.fillStyle = color;
+    // Professional gradient background
+    const gradient = context.createLinearGradient(0, 0, 256, 256);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, "#d0d3d7");
+    context.fillStyle = gradient;
     context.fillRect(0, 0, 256, 256);
 
-    // Draw text with shadow
-    context.shadowColor = "rgba(0, 0, 0, 0.5)";
-    context.shadowBlur = 4;
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
+    // Subtle border
+    context.strokeStyle = "#9aa0a6";
+    context.lineWidth = 2;
+    context.strokeRect(1, 1, 254, 254);
 
-    context.fillStyle = "#FFFFFF";
-    context.font = "bold 32px Arial";
+    // Professional text with subtle shadow
+    context.shadowColor = "rgba(0, 0, 0, 0.15)";
+    context.shadowBlur = 3;
+    context.shadowOffsetX = 1;
+    context.shadowOffsetY = 1;
+
+    context.fillStyle = textColor;
+    context.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(text, 128, 128);
@@ -155,17 +158,17 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       }
     }, [externalDisplayMode]);
 
-    // ✅ OPTIMIZED: Initialize Three.js scene once
+    // ✅ Initialize Three.js scene
     useEffect(() => {
       if (!canvasRef.current) return;
 
-      // Create renderer
+      // Create renderer with better quality settings
       const renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.current,
         antialias: true,
         alpha: true,
       });
-      renderer.setSize(110, 110);
+      renderer.setSize(150, 150);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       rendererRef.current = renderer;
 
@@ -179,45 +182,52 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
 
-      // ✅ FIX #1: Load STL geometry
+      // Load STL geometry
       loadSTLGeometry((geometry) => {
         if (!sceneRef.current) return;
 
-        // Scale the geometry appropriately
+        // Scale the geometry
         const boundingBox = geometry.boundingBox;
         if (boundingBox) {
           const size = boundingBox.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 2 / maxDim; // Scale to fit in 2-unit cube
+          const scale = 2 / maxDim;
           geometry.scale(scale, scale, scale);
         }
 
         const textures = getFaceTextures();
 
-        // Create materials for the STL cube
-        const materials = [
-          new THREE.MeshStandardMaterial({
-            color: 0x4a5568,
-            metalness: 0.1,
-            roughness: 0.7,
-            transparent: true,
-            opacity: 1,
-          }),
-        ];
+        // ✅ PROFESSIONAL: Create semi-transparent material with better appearance
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xf5f5f5, // Light grey base
+          metalness: 0.2,
+          roughness: 0.4,
+          transparent: true,
+          opacity: 0.85,
+          side: THREE.DoubleSide,
+        });
 
-        const cube = new THREE.Mesh(geometry, materials[0]);
+        const cube = new THREE.Mesh(geometry, material);
         sceneRef.current.add(cube);
         cubeRef.current = cube;
 
-        // Add edge lines
-        const edges = new THREE.EdgesGeometry(geometry, 30);
-        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 }));
+        // ✅ PROFESSIONAL: Add colored edge lines for axis visualization
+        const edges = new THREE.EdgesGeometry(geometry, 15);
+        const line = new THREE.LineSegments(
+          edges,
+          new THREE.LineBasicMaterial({
+            color: 0x5f6368, // Professional grey
+            linewidth: 1.5,
+            transparent: true,
+            opacity: 0.7,
+          }),
+        );
         cube.add(line);
 
         // Create label group
         const labelGroup = new THREE.Group();
 
-        // Add face labels
+        // Add face labels with professional styling
         const facePositions = [
           { position: [0, 0, 1], rotation: [0, 0, 0], texture: textures[0] }, // Front
           { position: [0, 0, -1], rotation: [0, Math.PI, 0], texture: textures[1] }, // Back
@@ -229,15 +239,15 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
         facePositions.forEach(({ position, rotation, texture }) => {
           const labelMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.8, 0.8),
+            new THREE.PlaneGeometry(0.9, 0.9),
             new THREE.MeshBasicMaterial({
               map: texture,
               transparent: true,
-              depthWrite: false,
+              opacity: 0.9,
               side: THREE.DoubleSide,
             }),
           );
-          labelMesh.position.set(position[0] * 1.05, position[1] * 1.05, position[2] * 1.05);
+          labelMesh.position.set(position[0] * 1.02, position[1] * 1.02, position[2] * 1.02);
           labelMesh.rotation.set(rotation[0], rotation[1], rotation[2]);
           labelGroup.add(labelMesh);
         });
@@ -246,13 +256,17 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
         labelGroupRef.current = labelGroup;
       });
 
-      // Add lights
+      // ✅ PROFESSIONAL: Enhanced lighting for better depth perception
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
       scene.add(ambientLight);
 
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      directionalLight.position.set(5, 5, 5);
-      scene.add(directionalLight);
+      const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      keyLight.position.set(5, 5, 5);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      fillLight.position.set(-3, 2, -2);
+      scene.add(fillLight);
 
       // Animation loop
       const animate = () => {
@@ -267,35 +281,42 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
           cancelAnimationFrame(animationFrameRef.current);
         }
         renderer.dispose();
-        // Note: Don't dispose cached geometry or textures
       };
     }, []);
 
-    // ✅ Update cube material based on display style
+    // Update cube material based on display style
     useEffect(() => {
       if (!cubeRef.current) return;
 
       const material = cubeRef.current.material as THREE.MeshStandardMaterial;
-      material.wireframe = displayStyle === "wireframe";
-      material.opacity = displayStyle === "translucent" ? 0.5 : 1;
-      material.transparent = displayStyle === "translucent" || displayStyle === "wireframe";
+
+      if (displayStyle === "wireframe") {
+        material.wireframe = true;
+        material.opacity = 1;
+      } else if (displayStyle === "translucent") {
+        material.wireframe = false;
+        material.opacity = 0.4;
+      } else {
+        material.wireframe = false;
+        material.opacity = 0.85;
+      }
+
+      material.transparent = true;
       material.needsUpdate = true;
     }, [displayStyle]);
 
-    // ✅ CRITICAL: Imperative method to sync with main camera
+    // ✅ CRITICAL: Sync with main camera - cube mirrors camera rotation
     useImperativeHandle(ref, () => ({
       updateFromMainCamera: (mainCamera: THREE.Camera) => {
         if (!cubeRef.current) return;
 
-        // Get main camera's rotation
+        // Get main camera's rotation and invert it so cube shows orientation
         const quaternion = mainCamera.quaternion.clone();
-
-        // Apply inverse rotation to cube (so it appears to track camera)
         cubeRef.current.quaternion.copy(quaternion.invert());
       },
     }));
 
-    // ✅ OPTIMIZED: Mouse interaction with raycasting
+    // Mouse interaction with raycasting
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
       if (!canvasRef.current || !cameraRef.current || !cubeRef.current || !onCubeClick) return;
 
@@ -311,7 +332,6 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
         const point = intersects[0].point;
         const localPoint = cubeRef.current.worldToLocal(point.clone());
 
-        // Classify click region
         const absX = Math.abs(localPoint.x);
         const absY = Math.abs(localPoint.y);
         const absZ = Math.abs(localPoint.z);
@@ -381,93 +401,104 @@ export const OrientationCubePreview = forwardRef<OrientationCubeHandle, Orientat
 
     return (
       <div className="absolute top-4 right-4 z-10">
-        <div className="bg-background/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border">
+        <div className="bg-background/95 backdrop-blur-sm rounded-lg p-3 shadow-xl border-2 border-border/50">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Box className="w-4 h-4" />
-              <span className="text-sm font-medium">Orientation</span>
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-1">
+              <Box className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">View Orientation</span>
             </div>
 
-            {/* ✅ OPTIMIZED: Single canvas element */}
-            <div className="w-[110px] h-[110px] border rounded overflow-hidden">
+            {/* ✅ PROFESSIONAL: Larger canvas with integrated arrow controls */}
+            <div className="relative w-[150px] h-[150px] border-2 border-border/30 rounded-lg overflow-hidden bg-gradient-to-br from-muted/20 to-background shadow-inner">
               <canvas
                 ref={canvasRef}
                 onClick={handleCanvasClick}
                 onMouseMove={handleCanvasMouseMove}
                 onMouseLeave={handleCanvasMouseLeave}
-                style={{ display: "block", width: "100%", height: "100%" }}
+                className="w-full h-full"
+                style={{ display: "block" }}
               />
+
+              {/* ✅ FIX #4: Arrow controls integrated over the canvas */}
+              <div className="absolute inset-0 pointer-events-none">
+                {/* Top Arrow */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRotateUp}
+                  className="absolute top-1 left-1/2 -translate-x-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
+                  title="Rotate view up (90°)"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </Button>
+
+                {/* Bottom Arrow */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRotateDown}
+                  className="absolute bottom-1 left-1/2 -translate-x-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
+                  title="Rotate view down (90°)"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+
+                {/* Left Arrow */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRotateLeft}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
+                  title="Rotate view left (90°)"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                {/* Right Arrow */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRotateRight}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
+                  title="Rotate view right (90°)"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+
+                {/* Roll Controls - Bottom Corners */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRotateCounterClockwise}
+                  className="absolute bottom-1 left-1 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
+                  title="Roll view counter-clockwise (90°)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRotateClockwise}
+                  className="absolute bottom-1 right-1 h-7 w-7 p-0 pointer-events-auto bg-background/80 hover:bg-background/95 backdrop-blur-sm border border-border/50 shadow-md transition-all hover:scale-110"
+                  title="Roll view clockwise (90°)"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             </div>
 
             {/* Hover tooltip */}
             {hoveredRegion && (
-              <div className="text-xs text-center py-1 px-2 bg-primary/10 rounded">{hoveredRegion.description}</div>
+              <div className="text-xs text-center py-1.5 px-3 bg-primary/15 text-primary font-medium rounded-md shadow-sm">
+                {hoveredRegion.description}
+              </div>
             )}
-
-            {/* ✅ Direction controls - now control MAIN camera */}
-            <div className="grid grid-cols-3 gap-1">
-              <div />
-              <Button variant="outline" size="sm" onClick={onRotateUp} className="h-8 w-8 p-0" title="Rotate camera up">
-                <ChevronUp className="w-4 h-4" />
-              </Button>
-              <div />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRotateLeft}
-                className="h-8 w-8 p-0"
-                title="Rotate camera left"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <div />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRotateRight}
-                className="h-8 w-8 p-0"
-                title="Rotate camera right"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <div />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRotateDown}
-                className="h-8 w-8 p-0"
-                title="Rotate camera down"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-              <div />
-            </div>
-
-            {/* ✅ Rotation controls - now control MAIN camera */}
-            <div className="flex gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRotateCounterClockwise}
-                className="flex-1 h-8"
-                title="Roll camera counter-clockwise"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onRotateClockwise}
-                className="flex-1 h-8"
-                title="Roll camera clockwise"
-              >
-                <RotateCw className="w-4 h-4" />
-              </Button>
-            </div>
 
             {/* Display style selector */}
             <Select value={displayStyle} onValueChange={handleDisplayStyleChange}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className="h-8 text-xs font-medium">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
