@@ -11,7 +11,7 @@ interface OrientationCubeMeshProps {
 
 /**
  * OrientationCubeMesh - The 3D cube with labeled faces
- * 
+ *
  * Face Layout (standard CAD convention):
  * - +Z: FRONT (blue face)
  * - -Z: BACK
@@ -80,12 +80,12 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
     // Create textures for each face with distinct colors
     return [
-      createFaceTexture("RIGHT", "#e74c3c"),  // +X: Red
-      createFaceTexture("LEFT", "#e67e22"),   // -X: Orange
-      createFaceTexture("TOP", "#3498db"),    // +Y: Blue
+      createFaceTexture("RIGHT", "#e74c3c"), // +X: Red
+      createFaceTexture("LEFT", "#e67e22"), // -X: Orange
+      createFaceTexture("TOP", "#3498db"), // +Y: Blue
       createFaceTexture("BOTTOM", "#2ecc71"), // -Y: Green
-      createFaceTexture("FRONT", "#9b59b6"),  // +Z: Purple
-      createFaceTexture("BACK", "#95a5a6"),   // -Z: Gray
+      createFaceTexture("FRONT", "#9b59b6"), // +Z: Purple
+      createFaceTexture("BACK", "#95a5a6"), // -Z: Gray
     ];
   }, []);
 
@@ -97,7 +97,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
           map: texture,
           metalness: 0.1,
           roughness: 0.6,
-        })
+        }),
     );
   }, [faceTextures]);
 
@@ -112,7 +112,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
     // Get face normal (direction the face is pointing)
     const normal = face.normal.clone();
-    
+
     // Round to nearest axis-aligned direction
     const absX = Math.abs(normal.x);
     const absY = Math.abs(normal.y);
