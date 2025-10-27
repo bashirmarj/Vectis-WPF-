@@ -4,7 +4,9 @@
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
-import { ThreeEvent, useLoader } from "@react-three/fiber";
+import { ThreeEvent } from "@react-three/fiber";
+import { useLoader } from "@react-three/fiber";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -35,10 +37,31 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     });
   }, [hoveredIndex]);
 
-  // Simple box geometry
+  // Load the STL geometry
+  const stlGeometry = useLoader(STLLoader, "/orientation-cube.stl");
+  
+  // Scale and center the STL geometry
   const cubeGeometry = useMemo(() => {
-    return new THREE.BoxGeometry(1.8, 1.8, 1.8);
-  }, []);
+    if (!stlGeometry) return new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    
+    const geometry = stlGeometry.clone();
+    geometry.computeBoundingBox();
+    const boundingBox = geometry.boundingBox!;
+    const center = new THREE.Vector3();
+    boundingBox.getCenter(center);
+    
+    // Center the geometry
+    geometry.translate(-center.x, -center.y, -center.z);
+    
+    // Scale to fit in viewport (smaller for the compact grid cell)
+    const size = new THREE.Vector3();
+    boundingBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 1.8 / maxDim;
+    geometry.scale(scale, scale, scale);
+    
+    return geometry;
+  }, [stlGeometry]);
 
   // Handle pointer events
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {

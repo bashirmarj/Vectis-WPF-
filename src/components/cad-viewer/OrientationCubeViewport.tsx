@@ -140,9 +140,27 @@ export function OrientationCubeViewport({
               </TooltipContent>
             </Tooltip>
 
-            {/* Center - Cube viewport placeholder */}
-            <div className="h-9 w-9 flex items-center justify-center">
-              <div className="h-2 w-2 rounded-full bg-primary/20" />
+            {/* Center - Cube viewport in the grid */}
+            <div className="h-14 w-14 relative -m-1">
+              <Canvas
+                gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+                style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
+                dpr={[1, 2]}
+              >
+                <OrthographicCamera 
+                  ref={cubeCameraRef} 
+                  makeDefault 
+                  position={[5, 5, 5]} 
+                  zoom={35} 
+                  near={0.1} 
+                  far={100} 
+                />
+                <color attach="background" args={["transparent"]} />
+                <ambientLight intensity={0.6} />
+                <directionalLight position={[5, 5, 5]} intensity={0.8} />
+                <directionalLight position={[-3, 3, -3]} intensity={0.3} />
+                <OrientationCubeMesh onFaceClick={onCubeClick} />
+              </Canvas>
             </div>
 
             <Tooltip>
@@ -213,72 +231,6 @@ export function OrientationCubeViewport({
         </TooltipProvider>
       </div>
 
-      {/* Orientation Cube Viewport - Separate Canvas */}
-      <div
-        ref={cubeViewportRef}
-        className="bg-gradient-to-br from-background/98 to-background/95 backdrop-blur-md rounded-xl shadow-2xl border-2 border-border/50 overflow-hidden hover:border-primary/50 transition-all hover:shadow-xl"
-        style={{
-          width: "140px",
-          height: "140px",
-          pointerEvents: "auto",
-        }}
-      >
-        <Canvas
-          gl={{
-            antialias: true,
-            alpha: true,
-            powerPreference: "high-performance",
-          }}
-          style={{
-            width: "100%",
-            height: "100%",
-          }}
-          dpr={[1, 2]} // Optimize for retina displays
-        >
-          {/* Orthographic camera - no perspective distortion */}
-          <OrthographicCamera 
-            ref={cubeCameraRef} 
-            makeDefault 
-            position={[0, 0, 6]} 
-            zoom={45} 
-            near={0.1} 
-            far={100} 
-          />
-
-          {/* Professional lighting setup */}
-          <color attach="background" args={["#fafafa"]} />
-          
-          {/* Ambient base lighting */}
-          <ambientLight intensity={0.4} />
-          
-          {/* Key light (main) */}
-          <directionalLight 
-            position={[5, 8, 5]} 
-            intensity={0.8} 
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-          />
-          
-          {/* Fill light (soften shadows) */}
-          <directionalLight position={[-3, 3, -3]} intensity={0.3} />
-          
-          {/* Rim light (edge highlight) */}
-          <directionalLight position={[0, -5, -5]} intensity={0.2} />
-
-          {/* Subtle environment map for reflections */}
-          <Environment preset="city" />
-
-          {/* The professional orientation cube */}
-          <OrientationCubeMesh onFaceClick={onCubeClick} />
-
-          {/* Subtle ground plane for depth perception */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.5, 0]} receiveShadow>
-            <planeGeometry args={[5, 5]} />
-            <shadowMaterial opacity={0.1} />
-          </mesh>
-        </Canvas>
-      </div>
 
       {/* Help Text with Animation */}
       <div className="bg-background/98 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
