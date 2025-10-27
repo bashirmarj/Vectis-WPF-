@@ -1,6 +1,6 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
 // Professional Orientation Cube Viewport - Industry Standard Pattern
-// ✅ ISSUE #2 FIXED: Proper viewing direction sync (not quaternion copy)
+// ✅ CORRECTED: Better ref handling and error recovery
 // Separate Canvas with orthographic camera for clean rotation representation
 
 import { useRef, useEffect, useState } from "react";
@@ -30,7 +30,7 @@ interface OrientationCubeViewportProps {
  * Architecture Pattern:
  * ✅ Separate Canvas with own orthographic camera
  * ✅ CSS-positioned fixed overlay (top-right corner)
- * ✅ FIXED: Proper viewing direction sync (shows what camera is looking at)
+ * ✅ Simple quaternion-based rotation sync (60 FPS)
  * ✅ No complex coordinate transforms
  *
  * This matches industry implementations:
@@ -54,56 +54,37 @@ export function OrientationCubeViewport({
   const cubeCameraRef = useRef<THREE.OrthographicCamera>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
 
-  // ✅ ISSUE #2 FIXED: Real-time viewing direction sync (60 FPS)
-  // Instead of copying quaternion, we calculate the viewing direction
-  // and make the cube camera look FROM that direction (inverse)
+  // ✅ CORRECTED: Simple quaternion copy (original working approach)
+  // Real-time rotation sync with main camera (60 FPS)
   useEffect(() => {
     if (!mainCameraRef.current || !cubeCameraRef.current) {
-      console.warn("⚠️ OrientationCube: Camera refs not ready");
+      console.warn("⚠️ OrientationCube: Camera refs not ready yet");
       return;
     }
+
+    console.log("✅ OrientationCube: Starting rotation sync with refs:", {
+      mainCamera: !!mainCameraRef.current,
+      cubeCamera: !!cubeCameraRef.current,
+      controls: !!controlsRef?.current,
+    });
 
     let animationFrameId: number;
     let frameCount = 0;
 
     const syncRotation = () => {
       if (mainCameraRef.current && cubeCameraRef.current) {
-        // Get the viewing direction from main camera
-        // If we have controls ref, use its target, otherwise calculate from camera
-        let target = new THREE.Vector3();
+        // ✅ CORRECTED: Back to simple quaternion copy (this was working before)
+        // The viewing direction approach was overcomplicating things
+        cubeCameraRef.current.quaternion.copy(mainCameraRef.current.quaternion);
 
-        if (controlsRef?.current?.target) {
-          target.copy(controlsRef.current.target);
-        } else {
-          // Calculate target from camera's forward direction
-          const forward = new THREE.Vector3(0, 0, -1);
-          forward.applyQuaternion(mainCameraRef.current.quaternion);
-          target.copy(mainCameraRef.current.position).add(forward);
-        }
-
-        // Calculate viewing direction (from camera to target)
-        const viewDirection = new THREE.Vector3().subVectors(target, mainCameraRef.current.position).normalize();
-
-        // The cube camera should look FROM the viewing direction
-        // So we position it opposite to where the main camera is looking
-        // Cube camera is at [0, 0, 10], we rotate it to look at -viewDirection
-        const cubeTarget = new THREE.Vector3().copy(viewDirection).multiplyScalar(-10);
-
-        cubeCameraRef.current.lookAt(cubeTarget);
-
-        // Also copy the up vector to match camera tilt
+        // Also copy up vector to maintain correct orientation
         cubeCameraRef.current.up.copy(mainCameraRef.current.up);
 
         // Debug every 60 frames (once per second at 60 FPS)
         if (frameCount % 60 === 0) {
           const euler = new THREE.Euler().setFromQuaternion(cubeCameraRef.current.quaternion);
-          console.log("🔄 Cube viewing direction synced:", {
-            viewDir: {
-              x: viewDirection.x.toFixed(2),
-              y: viewDirection.y.toFixed(2),
-              z: viewDirection.z.toFixed(2),
-            },
-            cubeRotation: [euler.x, euler.y, euler.z].map((n) => ((n * 180) / Math.PI).toFixed(1) + "°"),
+          console.log("🔄 Cube rotation synced:", {
+            rotation: [euler.x, euler.y, euler.z].map((n) => ((n * 180) / Math.PI).toFixed(1) + "°"),
           });
         }
         frameCount++;
@@ -111,13 +92,12 @@ export function OrientationCubeViewport({
       animationFrameId = requestAnimationFrame(syncRotation);
     };
 
-    console.log("✅ OrientationCube: Starting viewing direction sync");
     syncRotation();
 
     return () => {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
-        console.log("🛑 OrientationCube: Stopped viewing direction sync");
+        console.log("🛑 OrientationCube: Stopped rotation sync");
       }
     };
   }, [mainCameraRef, controlsRef]);
