@@ -12,7 +12,8 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-import { OrientationCube_UNIFIED } from "./cad-viewer/OrientationCube_UNIFIED";
+import { OrientationCubeInCanvas } from "./cad-viewer/OrientationCubeInCanvas";
+import { OrientationArrows } from "./cad-viewer/OrientationArrows";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
@@ -415,9 +416,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               }}
             />
 
-            {/* ✅ Unified Orientation Cube - All issues fixed */}
-            <OrientationCube_UNIFIED
-              mainCameraRef={cameraRef}
+            {/* ✅ Arrow controls as HTML overlay */}
+            <OrientationArrows
               onRotateUp={() => handleRotateCamera("up")}
               onRotateDown={() => handleRotateCamera("down")}
               onRotateLeft={() => handleRotateCamera("left")}
@@ -469,6 +469,15 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
+
+                {/* ✅ Orientation cube rendered INSIDE main Canvas */}
+                <OrientationCubeInCanvas
+                  mainCameraRef={cameraRef}
+                  onCubeClick={(direction) => {
+                    console.log("Cube face clicked:", direction);
+                    // Could trigger camera animation here
+                  }}
+                />
 
                 <TrackballControls
                   ref={controlsRef}
