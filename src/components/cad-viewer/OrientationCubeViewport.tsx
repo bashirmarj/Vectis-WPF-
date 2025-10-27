@@ -114,7 +114,7 @@ export function OrientationCubeViewport({
                   className="h-9 w-9 transition-all hover:scale-110"
                   onClick={() => handleButtonClick("up", onRotateUp)}
                 >
-                  <ChevronUp className="h-5 w-5" />
+                  <ChevronUp className="h-15 w-15" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">
