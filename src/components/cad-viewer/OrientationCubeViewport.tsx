@@ -24,13 +24,13 @@ interface OrientationCubeViewportProps {
 
 /**
  * Professional Orientation Cube Viewport
- * 
+ *
  * Architecture Pattern:
  * ✅ Separate Canvas with own orthographic camera
  * ✅ CSS-positioned fixed overlay (top-right corner)
  * ✅ Simple rotation sync via quaternion copy (60 FPS)
  * ✅ No complex coordinate transforms
- * 
+ *
  * This matches industry implementations:
  * - Autodesk Fusion 360
  * - PTC Onshape
@@ -66,12 +66,12 @@ export function OrientationCubeViewport({
         // ✅ CRITICAL: Single line for rotation sync
         // Copy quaternion from main camera to cube camera
         cubeCameraRef.current.quaternion.copy(mainCameraRef.current.quaternion);
-        
+
         // Debug every 60 frames (1 second at 60 FPS)
         if (frameCount % 60 === 0) {
           console.log("🔄 Cube rotation synced:", {
-            mainQuat: mainCameraRef.current.quaternion.toArray().map(n => n.toFixed(3)),
-            cubeQuat: cubeCameraRef.current.quaternion.toArray().map(n => n.toFixed(3)),
+            mainQuat: mainCameraRef.current.quaternion.toArray().map((n) => n.toFixed(3)),
+            cubeQuat: cubeCameraRef.current.quaternion.toArray().map((n) => n.toFixed(3)),
           });
         }
         frameCount++;
@@ -141,19 +141,19 @@ export function OrientationCubeViewport({
             </Tooltip>
 
             {/* Center - Cube viewport in the grid */}
-            <div className="h-14 w-14 relative -m-1">
+            <div className="h-24 w-24 relative -m-1">
               <Canvas
                 gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
                 dpr={[1, 2]}
               >
-                <OrthographicCamera 
-                  ref={cubeCameraRef} 
-                  makeDefault 
-                  position={[0, 0, 10]} 
-                  zoom={35} 
-                  near={0.1} 
-                  far={100} 
+                <OrthographicCamera
+                  ref={cubeCameraRef}
+                  makeDefault
+                  position={[0, 0, 10]}
+                  zoom={35}
+                  near={0.1}
+                  far={100}
                 />
                 <color attach="background" args={["#f8fafc"]} />
                 <ambientLight intensity={0.3} />
@@ -231,7 +231,6 @@ export function OrientationCubeViewport({
           </div>
         </TooltipProvider>
       </div>
-
 
       {/* Help Text with Animation */}
       <div className="bg-background/98 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
