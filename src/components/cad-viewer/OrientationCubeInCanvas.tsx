@@ -15,7 +15,7 @@ interface OrientationCubeInCanvasProps {
 /**
  * Renders the orientation cube in the top-right corner using Hud.
  * Syncs rotation with main camera.
- * 
+ *
  * Benefits:
  * - No separate Canvas = no WebGL context issues
  * - Proper screen-space positioning via Hud
@@ -34,12 +34,7 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
   return (
     <Hud renderPriority={1}>
       {/* Orthographic camera for HUD rendering */}
-      <OrthographicCamera
-        position={[0, 0, 10]}
-        zoom={85}
-        near={0.1}
-        far={1000}
-      />
+      <OrthographicCamera position={[0, 0, 10]} zoom={85} near={0.1} far={1000} />
 
       {/* Position cube in screen space (top-right corner) */}
       {/* Screen coordinates: (0,0) is center, positive X is right, positive Y is up */}
@@ -51,13 +46,15 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
 
         {/* Cube group that syncs with main camera rotation */}
         <group ref={cubeGroupRef} scale={0.8}>
-          <Suspense fallback={
-            <mesh>
-              <boxGeometry args={[1.2, 1.2, 1.2]} />
-              <meshStandardMaterial color="#64748b" opacity={0.8} transparent />
-            </mesh>
-          }>
-            <OrientationCubeMesh onFaceClick={onCubeClick} />
+          <Suspense
+            fallback={
+              <mesh>
+                <boxGeometry args={[1.2, 1.2, 1.2]} />
+                <meshStandardMaterial color="#64748b" opacity={0.8} transparent />
+              </mesh>
+            }
+          >
+            <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} />
           </Suspense>
         </group>
 
