@@ -4,7 +4,7 @@
 // ✅ Material: Enhanced properties for better light reflection
 // ✅ 6 invisible planes for reliable face detection
 
-import { useRef, useMemo, useState } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
 import { ThreeEvent, useThree } from "@react-three/fiber";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -21,6 +21,21 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
+
+  // ✅ CRITICAL: Add global pointer up listener to catch releases outside the cube
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      if (isDragging) {
+        console.log("🛑 Global pointer up detected - stopping drag");
+        setIsDragging(false);
+        dragStartPos.current = null;
+        gl.domElement.style.cursor = "default";
+      }
+    };
+
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+    return () => window.removeEventListener("pointerup", handleGlobalPointerUp);
+  }, [isDragging, gl]);
 
   // ✅ Use RoundedBoxGeometry for chamfered edges
   const geometry = useMemo(() => {
@@ -95,6 +110,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     setIsDragging(true);
     dragStartPos.current = { x: event.clientX, y: event.clientY };
     gl.domElement.style.cursor = "grabbing";
+    console.log("🖱️ Pointer DOWN - dragging started");
 
     (event.target as any).setPointerCapture?.(event.pointerId);
   };
@@ -123,10 +139,11 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       Math.abs(event.clientY - dragStartPos.current.y) < 5;
 
     if (wasClick) {
-      // Click was on main cube, not a specific face
       console.log("🖱️ Cube body clicked (no face selected)");
     }
 
+    // ✅ CRITICAL: Reset dragging state immediately
+    console.log("🖱️ Pointer UP - dragging stopped");
     setIsDragging(false);
     dragStartPos.current = null;
     gl.domElement.style.cursor = "grab";
@@ -134,16 +151,23 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     (event.target as any).releasePointerCapture?.(event.pointerId);
   };
 
-  const handleCubeEnter = () => {
+  const handlePointerLeaveWhileDragging = (event: ThreeEvent<PointerEvent>) => {
+    // ✅ Stop dragging if pointer leaves while dragging
+    if (isDragging) {
+      event.stopPropagation();
+      setIsDragging(false);
+      dragStartPos.current = null;
+      gl.domElement.style.cursor = "default";
+    }
+    // Also clear hover state
     if (!isDragging) {
-      gl.domElement.style.cursor = "grab";
+      setHoveredFace(null);
     }
   };
 
-  const handleCubeLeave = () => {
+  const handleCubeEnter = () => {
     if (!isDragging) {
-      gl.domElement.style.cursor = "default";
-      setHoveredFace(null);
+      gl.domElement.style.cursor = "grab";
     }
   };
 
@@ -188,8 +212,8 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeaveWhileDragging}
         onPointerEnter={handleCubeEnter}
-        onPointerLeave={handleCubeLeave}
       />
 
       {/* ✅ 6 invisible clickable face planes */}
