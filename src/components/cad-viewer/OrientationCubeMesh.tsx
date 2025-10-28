@@ -167,16 +167,11 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         </mesh>
       )}
 
-      {/* Edge lines for visual definition */}
+      {/* Edge lines for visual definition - this creates the wireframe appearance */}
       <lineSegments>
         <edgesGeometry args={[geometry, 25]} />
         <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
       </lineSegments>
-
-      {/* Subtle outer glow for 3D effect */}
-      <mesh geometry={geometry} scale={1.02}>
-        <meshBasicMaterial color="#000000" transparent opacity={0.1} side={THREE.BackSide} />
-      </mesh>
     </group>
   );
 }
