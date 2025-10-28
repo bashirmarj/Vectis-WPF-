@@ -51,15 +51,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
-  // ✅ FIXED: Ensure controls target is always set to model center
-  useEffect(() => {
-    if (controlsRef.current && boundingBox) {
-      controlsRef.current.target.copy(boundingBox.center);
-      controlsRef.current.update();
-      console.log("🎯 Controls target set to:", boundingBox.center.toArray());
-    }
-  }, [boundingBox, controlsRef.current]);
-
   // File extension detection
   const fileExtension = useMemo(() => {
     if (fileName) return fileName.split(".").pop()?.toLowerCase() || "";
@@ -185,6 +176,14 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       boundingBox.center.y + direction.y * distance,
       boundingBox.center.z + direction.z * distance,
     ] as [number, number, number];
+  }, [boundingBox]);
+
+  // ✅ Ensure controls target is always set to model center
+  useEffect(() => {
+    if (controlsRef.current && boundingBox) {
+      controlsRef.current.target.copy(boundingBox.center);
+      controlsRef.current.update();
+    }
   }, [boundingBox]);
 
   // Download handler
@@ -360,7 +359,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           setShowEdges((prev) => !prev);
           break;
         case "m":
-          setActiveTool(activeTool === "measurement" ? null : "measurement");
+          setActiveTool(activeTool ? null : "distance");
           break;
         case "escape":
           setActiveTool(null);
@@ -418,23 +417,28 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         ) : meshData && isRenderableFormat ? (
           <div className="relative w-full h-full">
             <UnifiedCADToolbar
+              onHomeView={() => handleSetView("isometric")}
+              onFrontView={() => handleSetView("front")}
+              onTopView={() => handleSetView("top")}
+              onIsometricView={() => handleSetView("isometric")}
+              onFitView={() => handleSetView("isometric")}
               displayMode={displayMode}
-              setDisplayMode={setDisplayMode}
+              onDisplayModeChange={setDisplayMode}
               showEdges={showEdges}
-              setShowEdges={setShowEdges}
-              sectionPlane={sectionPlane}
-              setSectionPlane={setSectionPlane}
-              sectionPosition={sectionPosition}
-              setSectionPosition={setSectionPosition}
-              onSetView={handleSetView}
-              activeTool={activeTool}
-              setActiveTool={setActiveTool}
-              onClearMeasurements={clearAllMeasurements}
+              onToggleEdges={() => setShowEdges((prev) => !prev)}
+              measurementMode={activeTool}
+              onMeasurementModeChange={setActiveTool}
               measurementCount={measurements.length}
+              onClearMeasurements={clearAllMeasurements}
+              sectionPlane={sectionPlane}
+              onSectionPlaneChange={setSectionPlane}
+              sectionPosition={sectionPosition}
+              onSectionPositionChange={setSectionPosition}
               shadowsEnabled={shadowsEnabled}
-              setShadowsEnabled={setShadowsEnabled}
+              onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
               ssaoEnabled={ssaoEnabled}
-              setSSAOEnabled={setSSAOEnabled}
+              onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
+              boundingBox={boundingBox}
             />
 
             <Canvas
