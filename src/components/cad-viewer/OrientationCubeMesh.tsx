@@ -22,8 +22,37 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
 
-  // ✅ Pointer capture will handle tracking outside viewport
-  // No need for aggressive global listener that stops drag prematurely
+  // ✅ CRITICAL: Track mouse movement at window level during drag
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      if (dragStartPos.current && onDragRotate) {
+        const deltaX = e.clientX - dragStartPos.current.x;
+        const deltaY = e.clientY - dragStartPos.current.y;
+
+        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+          onDragRotate(deltaX, deltaY);
+          dragStartPos.current = { x: e.clientX, y: e.clientY };
+        }
+      }
+    };
+
+    const handleWindowMouseUp = (e: MouseEvent) => {
+      console.log("🖱️ Window mouse UP - dragging stopped");
+      setIsDragging(false);
+      dragStartPos.current = null;
+      gl.domElement.style.cursor = "default";
+    };
+
+    window.addEventListener("mousemove", handleWindowMouseMove);
+    window.addEventListener("mouseup", handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove);
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+    };
+  }, [isDragging, onDragRotate, gl]);
 
   // ✅ Use RoundedBoxGeometry for chamfered edges
   const geometry = useMemo(() => {
@@ -96,7 +125,6 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
 
-    // ✅ Guard: prevent starting new drag if already dragging
     if (isDragging) {
       console.warn("⚠️ Pointer DOWN while already dragging - ignoring");
       return;
@@ -105,36 +133,19 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     setIsDragging(true);
     dragStartPos.current = { x: event.clientX, y: event.clientY };
     gl.domElement.style.cursor = "grabbing";
-    console.log("🖱️ Pointer DOWN - dragging started");
-
-    // ✅ CRITICAL: Capture pointer to track it even when leaving viewport
-    try {
-      (event.target as any).setPointerCapture?.(event.pointerId);
-    } catch (e) {
-      console.warn("Failed to capture pointer:", e);
-    }
+    console.log("🖱️ Pointer DOWN - dragging started (window tracking enabled)");
   };
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
-    event.stopPropagation(); // ✅ CRITICAL: Stop hover events from propagating
-
-    // Only rotate if actually dragging (mouse button held down)
-    if (isDragging && dragStartPos.current && onDragRotate) {
-      const deltaX = event.clientX - dragStartPos.current.x;
-      const deltaY = event.clientY - dragStartPos.current.y;
-
-      if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-        onDragRotate(deltaX, deltaY);
-        dragStartPos.current = { x: event.clientX, y: event.clientY };
-      }
-    }
+    event.stopPropagation();
+    // Window-level listener handles drag tracking, this just prevents event propagation
   };
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
 
+    // Window listener handles drag end, this is just for clicking the cube body
     if (!isDragging) {
-      // Can happen if drag was cancelled
       return;
     }
 
@@ -145,37 +156,9 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
     if (wasClick) {
       console.log("🖱️ Cube body clicked (no specific face)");
-    } else {
-      console.log("🖱️ Drag completed");
     }
 
-    // ✅ CRITICAL: Reset dragging state immediately
-    console.log("🖱️ Pointer UP - dragging stopped");
-    setIsDragging(false);
-    dragStartPos.current = null;
-    gl.domElement.style.cursor = "grab";
-
-    try {
-      (event.target as any).releasePointerCapture?.(event.pointerId);
-    } catch (e) {
-      console.warn("Failed to release pointer:", e);
-    }
-  };
-
-  const handlePointerCancel = (event: ThreeEvent<PointerEvent>) => {
-    // ✅ Handle pointer cancel (e.g., browser loses focus during drag)
-    if (isDragging) {
-      console.log("⚠️ Pointer CANCEL - stopping drag");
-      setIsDragging(false);
-      dragStartPos.current = null;
-      gl.domElement.style.cursor = "default";
-
-      try {
-        (event.target as any).releasePointerCapture?.(event.pointerId);
-      } catch (e) {
-        // Ignore
-      }
-    }
+    // Window listener will handle state reset
   };
 
   const handleCubeEnter = () => {
@@ -229,7 +212,6 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
         onPointerEnter={handleCubeEnter}
       />
 
