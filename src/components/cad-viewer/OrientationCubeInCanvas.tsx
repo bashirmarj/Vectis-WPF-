@@ -1,7 +1,7 @@
 // OrientationCubeInCanvas.tsx
 // Orientation cube rendered INSIDE the main Canvas using Hud for screen-space positioning
 
-import { useRef, Suspense } from "react";
+import { useRef, Suspense, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
@@ -9,6 +9,7 @@ import { OrientationCubeMesh } from "./OrientationCubeMesh";
 
 interface OrientationCubeInCanvasProps {
   mainCameraRef: React.RefObject<THREE.PerspectiveCamera>;
+  controlsRef?: React.RefObject<any>;
   onCubeClick?: (direction: THREE.Vector3) => void;
 }
 
@@ -22,7 +23,7 @@ interface OrientationCubeInCanvasProps {
  * - Renders in same WebGL context as main scene
  * - Efficient and stable
  */
-export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: OrientationCubeInCanvasProps) {
+export function OrientationCubeInCanvas({ mainCameraRef, controlsRef, onCubeClick }: OrientationCubeInCanvasProps) {
   const cubeGroupRef = useRef<THREE.Group>(null);
 
   // Real-time rotation sync with main camera
@@ -30,6 +31,59 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
     if (!mainCameraRef.current || !cubeGroupRef.current) return;
     cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
   });
+
+  // ✅ Drag-to-rotate handler with upside-down detection
+  const handleDragRotate = useCallback(
+    (deltaX: number, deltaY: number) => {
+      if (!mainCameraRef.current || !controlsRef?.current) return;
+
+      const camera = mainCameraRef.current;
+      const controls = controlsRef.current;
+      const target = controls.target.clone();
+
+      // ✅ Detect if camera is upside down
+      const isUpsideDown = camera.up.y < 0;
+
+      const rotationSpeed = 0.005;
+
+      // ✅ Invert BOTH horizontal and vertical when upside down
+      const horizontalMultiplier = isUpsideDown ? 1 : -1;
+      const verticalMultiplier = isUpsideDown ? 1 : -1;
+
+      const deltaAzimuth = deltaX * rotationSpeed * horizontalMultiplier;
+      const deltaPolar = deltaY * rotationSpeed * verticalMultiplier;
+
+      const currentPosition = camera.position.clone();
+      const currentUp = camera.up.clone();
+
+      // Step 1: Horizontal rotation (around world Y-axis)
+      const worldYAxis = new THREE.Vector3(0, 1, 0);
+      let newPosition = currentPosition.clone().sub(target);
+      newPosition.applyAxisAngle(worldYAxis, deltaAzimuth);
+      newPosition.add(target);
+
+      let newUp = currentUp.clone().applyAxisAngle(worldYAxis, deltaAzimuth);
+
+      // Step 2: Vertical rotation (around camera's right vector)
+      camera.position.copy(newPosition);
+      camera.up.copy(newUp);
+      camera.lookAt(target);
+
+      const cameraRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      newPosition = camera.position.clone().sub(target);
+      newPosition.applyAxisAngle(cameraRight, deltaPolar);
+      newPosition.add(target);
+
+      newUp = camera.up.clone().applyAxisAngle(cameraRight, deltaPolar);
+
+      camera.position.copy(newPosition);
+      camera.up.copy(newUp);
+      camera.lookAt(target);
+      controls.target.copy(target);
+      controls.update();
+    },
+    [mainCameraRef, controlsRef],
+  );
 
   return (
     <Hud renderPriority={1}>
@@ -54,7 +108,7 @@ export function OrientationCubeInCanvas({ mainCameraRef, onCubeClick }: Orientat
               </mesh>
             }
           >
-            <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} />
+            <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />
           </Suspense>
         </group>
 
