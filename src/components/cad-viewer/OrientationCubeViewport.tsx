@@ -1,5 +1,5 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ FIXED: Proper group ref handling for rotation sync and face detection
+// ✅ FIXED: Both horizontal AND vertical rotation account for camera orientation
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -42,7 +42,6 @@ function CubeSyncWrapper({
 
     const syncRotation = () => {
       if (mainCameraRef.current && cubeGroupRef.current) {
-        // Copy camera quaternion to cube group
         cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
 
         if (frameCount % 60 === 0) {
@@ -62,7 +61,7 @@ function CubeSyncWrapper({
     };
   }, [mainCameraRef]);
 
-  // ✅ Handle drag-to-rotate with upside-down detection
+  // ✅ FIXED: Handle drag-to-rotate with BOTH horizontal AND vertical inversion
   const handleDragRotate = useCallback(
     (deltaX: number, deltaY: number) => {
       if (!mainCameraRef.current || !controlsRef?.current) return;
@@ -71,18 +70,22 @@ function CubeSyncWrapper({
       const controls = controlsRef.current;
       const target = controls.target.clone();
 
-      // Detect if camera is upside down
+      // ✅ CRITICAL FIX: Detect if camera is upside down
       const isUpsideDown = camera.up.y < 0;
 
       const rotationSpeed = 0.005;
+
+      // ✅ FIXED: Invert BOTH horizontal and vertical when upside down
       const horizontalMultiplier = isUpsideDown ? 1 : -1;
+      const verticalMultiplier = isUpsideDown ? 1 : -1;
+
       const deltaAzimuth = deltaX * rotationSpeed * horizontalMultiplier;
-      const deltaPolar = -deltaY * rotationSpeed;
+      const deltaPolar = deltaY * rotationSpeed * verticalMultiplier;
 
       const currentPosition = camera.position.clone();
       const currentUp = camera.up.clone();
 
-      // Horizontal rotation (around world Y-axis)
+      // Step 1: Horizontal rotation (around world Y-axis)
       const worldYAxis = new THREE.Vector3(0, 1, 0);
       let newPosition = currentPosition.clone().sub(target);
       newPosition.applyAxisAngle(worldYAxis, deltaAzimuth);
@@ -90,7 +93,7 @@ function CubeSyncWrapper({
 
       let newUp = currentUp.clone().applyAxisAngle(worldYAxis, deltaAzimuth);
 
-      // Vertical rotation (around camera's right vector)
+      // Step 2: Vertical rotation (around camera's right vector)
       camera.position.copy(newPosition);
       camera.up.copy(newUp);
       camera.lookAt(target);
@@ -107,6 +110,18 @@ function CubeSyncWrapper({
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
+
+      // Debug logging
+      if ((Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) && Math.random() < 0.1) {
+        console.log("🔄 Drag rotation:", {
+          isUpsideDown,
+          upY: camera.up.y.toFixed(3),
+          deltaX,
+          deltaY,
+          deltaAzimuth: deltaAzimuth.toFixed(4),
+          deltaPolar: deltaPolar.toFixed(4),
+        });
+      }
     },
     [mainCameraRef, controlsRef],
   );
