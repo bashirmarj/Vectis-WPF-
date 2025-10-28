@@ -100,6 +100,9 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   };
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation(); // ✅ CRITICAL: Stop hover events from propagating
+
+    // Only rotate if actually dragging (mouse button held down)
     if (isDragging && dragStartPos.current && onDragRotate) {
       const deltaX = event.clientX - dragStartPos.current.x;
       const deltaY = event.clientY - dragStartPos.current.y;
