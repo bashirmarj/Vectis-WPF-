@@ -35,8 +35,15 @@ function CubeSyncWrapper({
 
   // ✅ Rotation sync effect
   useEffect(() => {
-    if (!mainCameraRef?.current || !cubeGroupRef.current) return;
+    if (!mainCameraRef?.current || !cubeGroupRef.current) {
+      console.warn("⚠️ Rotation sync: Missing refs", {
+        hasMainCamera: !!mainCameraRef?.current,
+        hasCubeGroup: !!cubeGroupRef.current,
+      });
+      return;
+    }
 
+    console.log("✅ Rotation sync initialized");
     let animationFrameId: number;
     let frameCount = 0;
 
@@ -45,7 +52,20 @@ function CubeSyncWrapper({
         cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
 
         if (frameCount % 60 === 0) {
-          console.log("🔄 Cube mesh synced with camera orientation");
+          console.log("🔄 Cube mesh synced with camera orientation", {
+            cubeQuaternion: {
+              x: cubeGroupRef.current.quaternion.x.toFixed(3),
+              y: cubeGroupRef.current.quaternion.y.toFixed(3),
+              z: cubeGroupRef.current.quaternion.z.toFixed(3),
+              w: cubeGroupRef.current.quaternion.w.toFixed(3),
+            },
+            cameraQuaternion: {
+              x: mainCameraRef.current.quaternion.x.toFixed(3),
+              y: mainCameraRef.current.quaternion.y.toFixed(3),
+              z: mainCameraRef.current.quaternion.z.toFixed(3),
+              w: mainCameraRef.current.quaternion.w.toFixed(3),
+            },
+          });
         }
         frameCount++;
       }
