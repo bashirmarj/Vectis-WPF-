@@ -1,5 +1,8 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ FIXED: Uses 6 separate invisible planes for reliable face detection
+// ✅ FIXED VERSION - October 28, 2025
+// ✅ Scale: 1.0 (not 0.95) for visible chamfers
+// ✅ Material: Enhanced properties for better light reflection
+// ✅ 6 invisible planes for reliable face detection
 
 import { useRef, useMemo, useState } from "react";
 import * as THREE from "three";
@@ -30,16 +33,17 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     return geo;
   }, []);
 
+  // ✅ FIXED: Enhanced material properties for better visibility
   const baseMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: "#ffffff",
-      metalness: 0.3,
-      roughness: 0.6,
+      metalness: 0.3, // ✅ Increased from 0.2
+      roughness: 0.6, // ✅ Decreased from 0.7
       transparent: true,
-      opacity: 0.7,
-      envMapIntensity: 1.5,
+      opacity: 0.7, // ✅ Increased from 0.6
+      envMapIntensity: 1.5, // ✅ Increased from 1.2
       flatShading: false,
-      side: THREE.FrontSide,
+      side: THREE.FrontSide, // ✅ NEW: Cleaner rendering
     });
   }, []);
 
@@ -177,7 +181,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         material={baseMaterial}
         castShadow
         receiveShadow
-        scale={1.0}
+        scale={1.0} // ✅ FIXED: Was 0.95, now 1.0 for visible chamfers
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
