@@ -414,23 +414,33 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         ) : meshData && isRenderableFormat ? (
           <div className="relative w-full h-full">
             <UnifiedCADToolbar
+              // ✅ ISSUE #3 FIXED: Corrected prop names to match toolbar interface
+              onHomeView={() => handleSetView("isometric")}
+              onFrontView={() => handleSetView("front")}
+              onTopView={() => handleSetView("top")}
+              onIsometricView={() => handleSetView("isometric")}
+              onFitView={() => handleSetView("isometric")}
               displayMode={displayMode}
-              setDisplayMode={setDisplayMode}
+              onDisplayModeChange={setDisplayMode}
               showEdges={showEdges}
-              setShowEdges={setShowEdges}
+              onToggleEdges={() => setShowEdges(!showEdges)}
               sectionPlane={sectionPlane}
-              setSectionPlane={setSectionPlane}
+              onSectionPlaneChange={setSectionPlane}
               sectionPosition={sectionPosition}
-              setSectionPosition={setSectionPosition}
-              onSetView={handleSetView}
-              activeTool={activeTool}
-              setActiveTool={setActiveTool}
+              onSectionPositionChange={setSectionPosition}
+              measurementMode={activeTool}
+              onMeasurementModeChange={setActiveTool}
               onClearMeasurements={clearAllMeasurements}
               measurementCount={measurements.length}
               shadowsEnabled={shadowsEnabled}
-              setShadowsEnabled={setShadowsEnabled}
+              onToggleShadows={() => setShadowsEnabled(!shadowsEnabled)}
               ssaoEnabled={ssaoEnabled}
-              setSSAOEnabled={setSSAOEnabled}
+              onToggleSSAO={() => setSSAOEnabled(!ssaoEnabled)}
+              boundingBox={{
+                min: { x: boundingBox.min.x, y: boundingBox.min.y, z: boundingBox.min.z },
+                max: { x: boundingBox.max.x, y: boundingBox.max.y, z: boundingBox.max.z },
+                center: { x: boundingBox.center.x, y: boundingBox.center.y, z: boundingBox.center.z },
+              }}
             />
 
             <Canvas
