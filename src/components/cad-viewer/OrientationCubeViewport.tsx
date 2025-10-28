@@ -1,8 +1,6 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ ALL 3 ISSUES FIXED:
-// ✅ Issue 1: Camera explicitly looks at [0,0,0] for perfect centering
-// ✅ Issue 2: Antialiasing enabled for smooth chamfer appearance
-// ✅ Issue 3: Proper rotation sync with improved visual feedback
+// ✅ FIXED: Removed lookAt from sync loop to allow proper 3D rotation
+// ✅ FIXED: Only lookAt on initial setup, not during every frame
 
 import { useRef, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -39,45 +37,19 @@ export function OrientationCubeViewport({
   const cubeCameraRef = useRef<THREE.OrthographicCamera>(null);
   const [activeButton, setActiveButton] = useState<string | null>(null);
 
-  // 🔍 DIAGNOSTIC: Log component mount
-  useEffect(() => {
-    console.log("🔍 DIAGNOSTIC: OrientationCubeViewport MOUNTED");
-    console.log("🔍 Props received:", {
-      mainCameraRef: !!mainCameraRef,
-      hasMainCamera: !!mainCameraRef?.current,
-      controlsRef: !!controlsRef,
-      hasControls: !!controlsRef?.current,
-    });
-
-    return () => {
-      console.log("🔍 DIAGNOSTIC: OrientationCubeViewport UNMOUNTED");
-    };
-  }, []);
-
-  // 🔍 DIAGNOSTIC: Log when refs change
-  useEffect(() => {
-    console.log("🔍 DIAGNOSTIC: Ref dependency changed");
-    console.log("🔍 mainCameraRef.current:", !!mainCameraRef?.current);
-    console.log("🔍 cubeCameraRef.current:", !!cubeCameraRef?.current);
-    console.log("🔍 controlsRef?.current:", !!controlsRef?.current);
-  }, [mainCameraRef, controlsRef]);
-
-  // ✅ ISSUE #1 FIXED: Ensure cube camera always looks at origin
+  // ✅ ISSUE #1 FIXED: Only set initial lookAt once, don't override quaternion sync
   useEffect(() => {
     if (cubeCameraRef.current) {
       cubeCameraRef.current.lookAt(0, 0, 0);
       cubeCameraRef.current.updateProjectionMatrix();
-      console.log("✅ Cube camera centered at origin [0,0,0]");
+      console.log("✅ Cube camera initial setup: looking at origin [0,0,0]");
     }
   }, []);
 
   // ✅ Rotation sync effect with polling to wait for cameras
   useEffect(() => {
-    console.log("🔍 DIAGNOSTIC: Rotation sync effect TRIGGERED");
-    console.log("🔍 Checking refs...");
-
     if (!mainCameraRef) {
-      console.error("❌ DIAGNOSTIC: mainCameraRef is null/undefined!");
+      console.error("❌ mainCameraRef is null/undefined!");
       return;
     }
 
@@ -86,40 +58,25 @@ export function OrientationCubeViewport({
     let frameCount = 0;
     let isReady = false;
 
-    // Polling function to wait for both cameras to be ready
     const checkCamerasReady = () => {
-      if (!mainCameraRef.current) {
-        console.warn("⚠️ DIAGNOSTIC: mainCameraRef.current still null, polling...");
+      if (!mainCameraRef.current || !cubeCameraRef.current) {
         return false;
       }
-
-      if (!cubeCameraRef.current) {
-        console.warn("⚠️ DIAGNOSTIC: cubeCameraRef.current still null, polling...");
-        return false;
-      }
-
-      console.log("✅ DIAGNOSTIC: Both cameras ready, starting sync!");
-      console.log("✅ OrientationCube: Starting rotation sync with refs:", {
-        mainCamera: !!mainCameraRef.current,
-        cubeCamera: !!cubeCameraRef.current,
-        controls: !!controlsRef?.current,
-      });
+      console.log("✅ Both cameras ready, starting sync!");
       return true;
     };
 
-    // Rotation sync loop
+    // ✅ ISSUE #1 FIXED: Rotation sync without lookAt override
     const syncRotation = () => {
       if (mainCameraRef.current && cubeCameraRef.current) {
-        // ✅ ISSUE #3 FIXED: Copy quaternion and up vector, then ensure looking at origin
+        // Copy quaternion and up vector - this allows full 3D rotation
         cubeCameraRef.current.quaternion.copy(mainCameraRef.current.quaternion);
         cubeCameraRef.current.up.copy(mainCameraRef.current.up);
 
-        // ✅ CRITICAL: After copying rotation, ensure we're still looking at origin
-        // This prevents any accumulated drift from making the cube appear off-center
-        const origin = new THREE.Vector3(0, 0, 0);
-        cubeCameraRef.current.lookAt(origin);
+        // ❌ REMOVED: lookAt call that was preventing 3D rotation
+        // The quaternion already contains the full rotation information
 
-        // Debug every 60 frames (once per second at 60 FPS)
+        // Debug every 60 frames
         if (frameCount % 60 === 0) {
           const euler = new THREE.Euler().setFromQuaternion(cubeCameraRef.current.quaternion);
           console.log("🔄 Cube rotation synced:", {
@@ -132,17 +89,14 @@ export function OrientationCubeViewport({
       animationFrameId = requestAnimationFrame(syncRotation);
     };
 
-    // Start polling to check if cameras are ready
     pollIntervalId = window.setInterval(() => {
       if (!isReady && checkCamerasReady()) {
         isReady = true;
         clearInterval(pollIntervalId);
-        // Both cameras ready, start the sync loop
         syncRotation();
       }
-    }, 100); // Check every 100ms
+    }, 100);
 
-    // Also check immediately in case cameras are already ready
     if (checkCamerasReady()) {
       isReady = true;
       clearInterval(pollIntervalId);
@@ -150,9 +104,7 @@ export function OrientationCubeViewport({
     }
 
     return () => {
-      if (pollIntervalId) {
-        clearInterval(pollIntervalId);
-      }
+      if (pollIntervalId) clearInterval(pollIntervalId);
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         console.log("🛑 OrientationCube: Stopped rotation sync");
@@ -214,29 +166,25 @@ export function OrientationCubeViewport({
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]">
               <Canvas
                 gl={{
-                  antialias: true, // ✅ ISSUE #2 FIXED: Enable antialiasing for smooth chamfer edges
+                  antialias: true,
                   alpha: true,
-                  powerPreference: "low-power", // Use integrated GPU to avoid conflicts
-                  preserveDrawingBuffer: true, // Prevent context loss
-                  failIfMajorPerformanceCaveat: false, // Allow fallback rendering
+                  powerPreference: "low-power",
+                  preserveDrawingBuffer: true,
+                  failIfMajorPerformanceCaveat: false,
                 }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
-                dpr={window.devicePixelRatio || 1} // ✅ ISSUE #2 FIXED: Use device pixel ratio for crisper rendering
+                dpr={window.devicePixelRatio || 1}
                 onCreated={({ gl, camera }) => {
-                  console.log("🔍 DIAGNOSTIC: Cube Canvas created, cubeCameraRef:", !!cubeCameraRef.current);
-
-                  // ✅ ISSUE #1 FIXED: Ensure camera looks at origin immediately
                   if (camera) {
                     camera.lookAt(0, 0, 0);
-                    console.log("✅ Initial cube camera lookAt set to [0,0,0]");
+                    console.log("✅ Cube Canvas created with camera looking at origin");
                   }
 
-                  // Add context loss/restore handlers
                   gl.domElement.addEventListener(
                     "webglcontextlost",
                     (e) => {
                       e.preventDefault();
-                      console.warn("⚠️ Orientation Cube: WebGL context lost, attempting restore...");
+                      console.warn("⚠️ Orientation Cube: WebGL context lost");
                     },
                     false,
                   );
