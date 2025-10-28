@@ -169,7 +169,13 @@ export function OrientationCubeViewport({
   };
 
   return (
-    <div className="absolute top-4 right-4 flex flex-col gap-2 select-none" style={{ zIndex: 40 }}>
+    <div
+      className="absolute top-4 right-4 flex flex-col gap-2 select-none"
+      style={{ zIndex: 40, pointerEvents: "auto" }}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+    >
       <div className="bg-transparent rounded-xl p-3">
         <TooltipProvider delayDuration={300}>
           <div className="relative h-[160px] w-[160px]">
@@ -212,7 +218,15 @@ export function OrientationCubeViewport({
             </div>
 
             {/* Center Canvas with Cube */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]">
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]"
+              onPointerMove={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onPointerEnter={(e) => e.stopPropagation()}
+              onPointerLeave={(e) => e.stopPropagation()}
+              style={{ pointerEvents: "auto" }}
+            >
               <Canvas
                 gl={{
                   antialias: true,
