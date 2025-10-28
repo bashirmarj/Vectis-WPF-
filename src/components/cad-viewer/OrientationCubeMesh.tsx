@@ -23,16 +23,23 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hoveredFace, setHoveredFace] = useState<string | null>(null);
 
-  // ✅ ISSUE #2 FIXED: Load actual STL file with chamfers
+  // ✅ ISSUE #2 FIXED: Load and properly center STL geometry
   const geometry = useLoader(STLLoader, "/src/assets/orientation-cube.stl");
 
-  // Center and scale the loaded geometry
-  useEffect(() => {
+  // ✅ ISSUE #2 & #4 FIXED: Center geometry immediately and compute normals for raycasting
+  useMemo(() => {
     if (geometry) {
-      geometry.center();
-      geometry.computeVertexNormals();
-      console.log("✅ STL loaded: orientation-cube.stl with chamfered edges");
+      geometry.center(); // Center the geometry around origin
+      geometry.computeVertexNormals(); // Compute smooth normals
+      geometry.computeBoundingBox(); // Compute bounding box for raycasting
+      geometry.computeBoundingSphere(); // Compute bounding sphere for raycasting
+      console.log("✅ STL geometry centered and prepared:", {
+        vertexCount: geometry.attributes.position.count,
+        hasBoundingBox: !!geometry.boundingBox,
+        hasBoundingSphere: !!geometry.boundingSphere,
+      });
     }
+    return geometry;
   }, [geometry]);
 
   // Simple single material - white/semi-transparent
@@ -63,7 +70,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     }
   };
 
-  // Handle pointer events
+  // Handle pointer events - ✅ ISSUE #4 FIXED: Added debug logging
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     document.body.style.cursor = "pointer";
@@ -73,6 +80,12 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       normal.transformDirection(meshRef.current.matrixWorld);
       const face = getFaceFromNormal(normal);
       setHoveredFace(face);
+      console.log(
+        "🎯 Cube face entered:",
+        face,
+        "normal:",
+        normal.toArray().map((n) => n.toFixed(2)),
+      );
     }
   };
 
@@ -83,6 +96,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       const face = getFaceFromNormal(normal);
       if (face !== hoveredFace) {
         setHoveredFace(face);
+        console.log("🎯 Cube face changed to:", face);
       }
     }
   };
@@ -91,6 +105,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     event.stopPropagation();
     document.body.style.cursor = "default";
     setHoveredFace(null);
+    console.log("👋 Left cube, clearing highlight");
   };
 
   // Handle face clicks
@@ -145,7 +160,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
   return (
     <group ref={groupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-      {/* Main cube with STL geometry */}
+      {/* Main cube with STL geometry - ✅ ISSUE #2 & #4 FIXED */}
       <mesh
         ref={meshRef}
         geometry={geometry}
