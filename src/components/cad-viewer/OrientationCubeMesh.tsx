@@ -33,12 +33,13 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const baseMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: "#ffffff",
-      metalness: 0.2,
-      roughness: 0.7,
+      metalness: 0.3,
+      roughness: 0.6,
       transparent: true,
-      opacity: 0.6,
-      envMapIntensity: 1.2,
+      opacity: 0.7,
+      envMapIntensity: 1.5,
       flatShading: false,
+      side: THREE.FrontSide,
     });
   }, []);
 
@@ -176,7 +177,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         material={baseMaterial}
         castShadow
         receiveShadow
-        scale={0.95}
+        scale={1.0}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
