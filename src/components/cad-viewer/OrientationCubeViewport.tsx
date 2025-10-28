@@ -36,46 +36,41 @@ function CubeSyncWrapper({
 }) {
   const cubeGroupRef = useRef<THREE.Group>(null);
 
-  // ✅ FIXED: Enhanced rotation sync with detailed logging
+  // ✅ FIXED: Enhanced rotation sync with retry mechanism
   useEffect(() => {
-    if (!mainCameraRef?.current || !cubeGroupRef.current) {
-      console.warn("⚠️ Rotation sync: Missing refs", {
-        hasMainCamera: !!mainCameraRef?.current,
-        hasCubeGroup: !!cubeGroupRef.current,
-      });
-      return;
-    }
-
-    console.log("✅ Rotation sync initialized");
     let animationFrameId: number;
-    let frameCount = 0;
+    let retryCount = 0;
+    const maxRetries = 10;
 
-    const syncRotation = () => {
-      if (mainCameraRef.current && cubeGroupRef.current) {
-        cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
-
-        if (frameCount % 60 === 0) {
-          console.log("🔄 Cube mesh synced with camera orientation", {
-            cubeQuaternion: {
-              x: cubeGroupRef.current.quaternion.x.toFixed(3),
-              y: cubeGroupRef.current.quaternion.y.toFixed(3),
-              z: cubeGroupRef.current.quaternion.z.toFixed(3),
-              w: cubeGroupRef.current.quaternion.w.toFixed(3),
-            },
-            cameraQuaternion: {
-              x: mainCameraRef.current.quaternion.x.toFixed(3),
-              y: mainCameraRef.current.quaternion.y.toFixed(3),
-              z: mainCameraRef.current.quaternion.z.toFixed(3),
-              w: mainCameraRef.current.quaternion.w.toFixed(3),
-            },
+    const checkAndSync = () => {
+      if (!mainCameraRef?.current || !cubeGroupRef.current) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(() => {
+            animationFrameId = requestAnimationFrame(checkAndSync);
+          }, 100); // Retry every 100ms
+        } else {
+          console.warn("⚠️ Rotation sync: Missing refs after retries", {
+            hasMainCamera: !!mainCameraRef?.current,
+            hasCubeGroup: !!cubeGroupRef.current,
           });
         }
-        frameCount++;
+        return;
       }
-      animationFrameId = requestAnimationFrame(syncRotation);
+
+      console.log("✅ Rotation sync initialized successfully");
+
+      const syncRotation = () => {
+        if (mainCameraRef.current && cubeGroupRef.current) {
+          cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
+        }
+        animationFrameId = requestAnimationFrame(syncRotation);
+      };
+
+      syncRotation();
     };
 
-    syncRotation();
+    checkAndSync();
 
     return () => {
       if (animationFrameId) {
@@ -149,11 +144,7 @@ function CubeSyncWrapper({
     [mainCameraRef, controlsRef],
   );
 
-  return (
-    <group ref={cubeGroupRef} position={[0, 0, 0]} rotation={[0, 0, 0]}>
-      <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />
-    </group>
-  );
+  return <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />;
 }
 
 export function OrientationCubeViewport({
@@ -226,11 +217,30 @@ export function OrientationCubeViewport({
                 gl={{
                   antialias: true,
                   alpha: true,
-                  powerPreference: "low-power",
+                  powerPreference: "high-performance",
                   preserveDrawingBuffer: true,
+                  failIfMajorPerformanceCaveat: false,
                 }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
-                dpr={window.devicePixelRatio || 1}
+                dpr={Math.min(window.devicePixelRatio || 1, 2)}
+                onCreated={({ gl }) => {
+                  // Handle WebGL context loss/restore
+                  gl.domElement.addEventListener(
+                    "webglcontextlost",
+                    (e) => {
+                      e.preventDefault();
+                      console.warn("⚠️ Orientation cube: WebGL context lost");
+                    },
+                    false,
+                  );
+                  gl.domElement.addEventListener(
+                    "webglcontextrestored",
+                    () => {
+                      console.log("✅ Orientation cube: WebGL context restored");
+                    },
+                    false,
+                  );
+                }}
               >
                 <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={38} near={0.1} far={100} />
 
