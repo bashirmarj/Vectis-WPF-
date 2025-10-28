@@ -232,10 +232,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           return;
       }
 
-      const currentPosition = camera.position.clone().sub(target).normalize();
-      const newPosition = target.clone().add(currentPosition.multiplyScalar(distance));
+      // ✅ ISSUE #3 FIXED: Use calculated direction instead of currentPosition
+      const newPosition = target.clone().add(direction.multiplyScalar(distance));
 
       camera.position.copy(newPosition);
+      camera.up.copy(up);
+      camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
     },
