@@ -1,7 +1,7 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ FIXED: Rotates cube mesh (not camera) for proper 3D orientation sync
+// ✅ FIXED: Added drag-to-rotate functionality
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
@@ -24,24 +24,25 @@ interface OrientationCubeViewportProps {
 
 function CubeSyncWrapper({
   mainCameraRef,
+  controlsRef,
   onCubeClick,
 }: {
   mainCameraRef: React.RefObject<THREE.PerspectiveCamera>;
+  controlsRef?: React.RefObject<any>;
   onCubeClick?: (direction: THREE.Vector3) => void;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
+  const cubeGroupRef = useRef<THREE.Group>(null);
 
   useEffect(() => {
-    if (!mainCameraRef?.current || !groupRef.current) return;
+    if (!mainCameraRef?.current || !cubeGroupRef.current) return;
 
     let animationFrameId: number;
     let frameCount = 0;
 
     const syncRotation = () => {
-      if (mainCameraRef.current && groupRef.current) {
-        // ✅ FIXED: Rotate the cube mesh, not the camera
-        // This keeps the cube centered and allows full 3D rotation
-        groupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
+      if (mainCameraRef.current && cubeGroupRef.current) {
+        // ✅ Rotate the cube mesh group to match main camera orientation
+        cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
 
         if (frameCount % 60 === 0) {
           console.log("🔄 Cube mesh synced with camera orientation");
@@ -60,11 +61,57 @@ function CubeSyncWrapper({
     };
   }, [mainCameraRef]);
 
-  return (
-    <group ref={groupRef}>
-      <OrientationCubeMesh onFaceClick={onCubeClick} />
-    </group>
+  // ✅ Handle drag-to-rotate on cube
+  const handleDragRotate = useCallback(
+    (deltaX: number, deltaY: number) => {
+      if (!mainCameraRef.current || !controlsRef?.current) return;
+
+      const camera = mainCameraRef.current;
+      const controls = controlsRef.current;
+      const target = controls.target.clone();
+
+      // Rotation sensitivity (lower = more sensitive)
+      const rotationSpeed = 0.005;
+
+      // Calculate rotation angles from drag delta
+      const deltaAzimuth = -deltaX * rotationSpeed; // Horizontal rotation (around Y-axis)
+      const deltaPolar = -deltaY * rotationSpeed; // Vertical rotation (around right vector)
+
+      // Get current camera state
+      const currentPosition = camera.position.clone();
+      const currentUp = camera.up.clone();
+
+      // Step 1: Horizontal rotation (around world Y-axis)
+      const worldYAxis = new THREE.Vector3(0, 1, 0);
+      let newPosition = currentPosition.clone().sub(target);
+      newPosition.applyAxisAngle(worldYAxis, deltaAzimuth);
+      newPosition.add(target);
+
+      let newUp = currentUp.clone().applyAxisAngle(worldYAxis, deltaAzimuth);
+
+      // Step 2: Vertical rotation (around camera's right vector)
+      camera.position.copy(newPosition);
+      camera.up.copy(newUp);
+      camera.lookAt(target);
+
+      const cameraRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+      newPosition = camera.position.clone().sub(target);
+      newPosition.applyAxisAngle(cameraRight, deltaPolar);
+      newPosition.add(target);
+
+      newUp = camera.up.clone().applyAxisAngle(cameraRight, deltaPolar);
+
+      // Apply final rotation
+      camera.position.copy(newPosition);
+      camera.up.copy(newUp);
+      camera.lookAt(target);
+      controls.target.copy(target);
+      controls.update();
+    },
+    [mainCameraRef, controlsRef],
   );
+
+  return <OrientationCubeMesh ref={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />;
 }
 
 export function OrientationCubeViewport({
@@ -83,7 +130,9 @@ export function OrientationCubeViewport({
   const handleButtonClick = (direction: string, callback?: () => void) => {
     setActiveButton(direction);
     setTimeout(() => setActiveButton(null), 200);
-    callback?.();
+    if (callback) {
+      callback();
+    }
   };
 
   return (
@@ -141,7 +190,7 @@ export function OrientationCubeViewport({
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
                 dpr={window.devicePixelRatio || 1}
               >
-                {/* ✅ FIXED: Camera stays fixed, looking at origin */}
+                {/* ✅ Camera stays fixed, looking at origin */}
                 <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={38} near={0.1} far={100} />
 
                 <ambientLight intensity={0.3} />
@@ -149,8 +198,8 @@ export function OrientationCubeViewport({
                 <directionalLight position={[-2, -1, -2]} intensity={0.4} />
                 <directionalLight position={[0, -2, 0]} intensity={0.3} />
 
-                {/* ✅ FIXED: Cube mesh rotates, not camera */}
-                <CubeSyncWrapper mainCameraRef={mainCameraRef} onCubeClick={onCubeClick} />
+                {/* ✅ Cube mesh rotates to match main camera + supports drag */}
+                <CubeSyncWrapper mainCameraRef={mainCameraRef} controlsRef={controlsRef} onCubeClick={onCubeClick} />
               </Canvas>
             </div>
 
@@ -232,7 +281,7 @@ export function OrientationCubeViewport({
           Click cube to orient view
         </p>
         <p className="text-[9px] text-muted-foreground/70 text-center leading-tight mt-0.5">
-          Use arrows for 90° rotations
+          Drag to rotate • Use arrows for 90°
         </p>
       </div>
     </div>
