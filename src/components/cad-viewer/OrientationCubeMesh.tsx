@@ -173,7 +173,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   };
 
   return (
-    <>
+    <group ref={groupRef}>
       {/* Main cube mesh */}
       <mesh
         ref={meshRef}
@@ -181,7 +181,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         material={baseMaterial}
         castShadow
         receiveShadow
-        scale={1.0} // ✅ FIXED: Was 0.95, now 1.0 for visible chamfers
+        scale={1.0}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -222,6 +222,6 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         <edgesGeometry args={[geometry, 25]} />
         <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
       </lineSegments>
-    </>
+    </group>
   );
 }
