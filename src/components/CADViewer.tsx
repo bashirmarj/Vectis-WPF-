@@ -278,17 +278,16 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
       switch (direction) {
         case "left":
         case "right": {
-          // ✅ FIXED: Simple rotation around world Y-axis (vertical)
-          // This matches SolidWorks/Fusion 360 behavior
-          const worldYAxis = new THREE.Vector3(0, 1, 0);
+          // ✅ FIXED: Rotate around camera's current up vector (not world Y-axis)
+          // This respects the camera's orientation after any previous rotations
           const rotDir = direction === "left" ? 1 : -1;
 
           newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(worldYAxis, rotationAngle * rotDir);
+          newPosition.applyAxisAngle(currentUp, rotationAngle * rotDir);
           newPosition.add(target);
 
-          // Rotate up vector as well to maintain orientation
-          newUp = currentUp.clone().applyAxisAngle(worldYAxis, rotationAngle * rotDir);
+          // Up vector stays the same for left/right rotation
+          newUp = currentUp.clone();
           break;
         }
 
