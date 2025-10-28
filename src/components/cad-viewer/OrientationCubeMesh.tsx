@@ -22,21 +22,8 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
 
-  // ✅ CRITICAL: Add global pointer up listener to catch releases outside the cube
-  useEffect(() => {
-    const handleGlobalPointerUp = () => {
-      if (isDragging) {
-        console.log("🛑 Global pointer up detected - stopping drag");
-        setIsDragging(false);
-        dragStartPos.current = null;
-        gl.domElement.style.cursor = "default";
-      }
-    };
-
-    // Use capture phase to catch events before they're stopped
-    window.addEventListener("pointerup", handleGlobalPointerUp, true);
-    return () => window.removeEventListener("pointerup", handleGlobalPointerUp, true);
-  }, [isDragging, gl]);
+  // ✅ Pointer capture will handle tracking outside viewport
+  // No need for aggressive global listener that stops drag prematurely
 
   // ✅ Use RoundedBoxGeometry for chamfered edges
   const geometry = useMemo(() => {
@@ -120,7 +107,12 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     gl.domElement.style.cursor = "grabbing";
     console.log("🖱️ Pointer DOWN - dragging started");
 
-    (event.target as any).setPointerCapture?.(event.pointerId);
+    // ✅ CRITICAL: Capture pointer to track it even when leaving viewport
+    try {
+      (event.target as any).setPointerCapture?.(event.pointerId);
+    } catch (e) {
+      console.warn("Failed to capture pointer:", e);
+    }
   };
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
@@ -142,7 +134,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     event.stopPropagation();
 
     if (!isDragging) {
-      console.log("⚠️ Pointer UP but wasn't dragging - ignoring");
+      // Can happen if drag was cancelled
       return;
     }
 
@@ -163,20 +155,27 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     dragStartPos.current = null;
     gl.domElement.style.cursor = "grab";
 
-    (event.target as any).releasePointerCapture?.(event.pointerId);
+    try {
+      (event.target as any).releasePointerCapture?.(event.pointerId);
+    } catch (e) {
+      console.warn("Failed to release pointer:", e);
+    }
   };
 
-  const handlePointerLeaveWhileDragging = (event: ThreeEvent<PointerEvent>) => {
-    // ✅ Stop dragging if pointer leaves while dragging
+  const handlePointerCancel = (event: ThreeEvent<PointerEvent>) => {
+    // ✅ Handle pointer cancel (e.g., browser loses focus during drag)
     if (isDragging) {
-      event.stopPropagation();
-      console.log("🚪 Pointer left cube while dragging - stopping drag");
+      console.log("⚠️ Pointer CANCEL - stopping drag");
       setIsDragging(false);
       dragStartPos.current = null;
       gl.domElement.style.cursor = "default";
+
+      try {
+        (event.target as any).releasePointerCapture?.(event.pointerId);
+      } catch (e) {
+        // Ignore
+      }
     }
-    // Also clear hover state
-    setHoveredFace(null);
   };
 
   const handleCubeEnter = () => {
@@ -230,26 +229,26 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeaveWhileDragging}
+        onPointerCancel={handlePointerCancel}
         onPointerEnter={handleCubeEnter}
       />
 
-      {/* ✅ 6 invisible clickable face planes - DISABLED during drag */}
-      {!isDragging &&
-        faceDefinitions.map((face) => (
-          <mesh
-            key={face.name}
-            position={face.position}
-            rotation={face.rotation}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handleFaceClick(face.name, face.direction)}
-            onPointerEnter={handleFaceEnter(face.name)}
-            onPointerLeave={handleFaceLeave}
-          >
-            <planeGeometry args={[1.7, 1.7]} />
-            <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
-          </mesh>
-        ))}
+      {/* ✅ 6 invisible clickable face planes - always rendered for face selection */}
+      {faceDefinitions.map((face) => (
+        <mesh
+          key={face.name}
+          position={face.position}
+          rotation={face.rotation}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handleFaceClick(face.name, face.direction)}
+          onPointerEnter={handleFaceEnter(face.name)}
+          onPointerLeave={handleFaceLeave}
+          visible={!isDragging} // Hide during drag to prevent interference
+        >
+          <planeGeometry args={[1.7, 1.7]} />
+          <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+      ))}
 
       {/* Highlight overlay when hovering */}
       {hoveredFace && faceDefinitions.find((f) => f.name === hoveredFace) && !isDragging && (
