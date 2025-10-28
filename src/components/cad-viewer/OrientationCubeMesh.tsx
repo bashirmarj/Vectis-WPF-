@@ -1,8 +1,7 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ ISSUE #2 FIXED: Loading actual STL file with chamfer from assets
-// Professional 3D Orientation Cube
+// ✅ FIXED: Loads STL with proper centering and bounding for raycasting
 
-import { useRef, useMemo, useState, useEffect } from "react";
+import { useRef, useMemo, useState } from "react";
 import * as THREE from "three";
 import { ThreeEvent, useLoader } from "@react-three/fiber";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
@@ -11,38 +10,25 @@ interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
 }
 
-/**
- * Professional Orientation Cube with:
- * - Loads actual STL file with chamfered edges
- * - Hover effects (blue glow)
- * - Click detection for camera rotation
- * - ✅ ISSUE #2 FIXED: Using real STL geometry instead of RoundedBoxGeometry
- */
 export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [hoveredFace, setHoveredFace] = useState<string | null>(null);
 
-  // ✅ ISSUE #2 FIXED: Load and properly center STL geometry
-  const geometry = useLoader(STLLoader, "/src/assets/orientation-cube.stl");
+  // ✅ Load STL and center it immediately
+  const rawGeometry = useLoader(STLLoader, "/src/assets/orientation-cube.stl");
 
-  // ✅ ISSUE #2 & #4 FIXED: Center geometry immediately and compute normals for raycasting
-  useMemo(() => {
-    if (geometry) {
-      geometry.center(); // Center the geometry around origin
-      geometry.computeVertexNormals(); // Compute smooth normals
-      geometry.computeBoundingBox(); // Compute bounding box for raycasting
-      geometry.computeBoundingSphere(); // Compute bounding sphere for raycasting
-      console.log("✅ STL geometry centered and prepared:", {
-        vertexCount: geometry.attributes.position.count,
-        hasBoundingBox: !!geometry.boundingBox,
-        hasBoundingSphere: !!geometry.boundingSphere,
-      });
+  const geometry = useMemo(() => {
+    if (rawGeometry) {
+      rawGeometry.center();
+      rawGeometry.computeVertexNormals();
+      rawGeometry.computeBoundingBox();
+      rawGeometry.computeBoundingSphere();
+      console.log("✅ STL centered and ready for raycasting");
     }
-    return geometry;
-  }, [geometry]);
+    return rawGeometry;
+  }, [rawGeometry]);
 
-  // Simple single material - white/semi-transparent
   const baseMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: "#ffffff",
@@ -51,11 +37,10 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       transparent: true,
       opacity: 0.6,
       envMapIntensity: 1.2,
-      flatShading: false, // Smooth shading for chamfer appearance
+      flatShading: false,
     });
   }, []);
 
-  // Simplified face detection using world-space normal
   const getFaceFromNormal = (normal: THREE.Vector3): string => {
     const absX = Math.abs(normal.x);
     const absY = Math.abs(normal.y);
@@ -70,7 +55,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     }
   };
 
-  // Handle pointer events - ✅ ISSUE #4 FIXED: Added debug logging
   const handlePointerEnter = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     document.body.style.cursor = "pointer";
@@ -80,12 +64,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       normal.transformDirection(meshRef.current.matrixWorld);
       const face = getFaceFromNormal(normal);
       setHoveredFace(face);
-      console.log(
-        "🎯 Cube face entered:",
-        face,
-        "normal:",
-        normal.toArray().map((n) => n.toFixed(2)),
-      );
     }
   };
 
@@ -96,7 +74,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       const face = getFaceFromNormal(normal);
       if (face !== hoveredFace) {
         setHoveredFace(face);
-        console.log("🎯 Cube face changed to:", face);
       }
     }
   };
@@ -105,23 +82,18 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     event.stopPropagation();
     document.body.style.cursor = "default";
     setHoveredFace(null);
-    console.log("👋 Left cube, clearing highlight");
   };
 
-  // Handle face clicks
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     if (!onFaceClick || !event.face) return;
 
-    // Get face normal (direction the face is pointing)
     const normal = event.face.normal.clone();
 
-    // Transform normal by object's world matrix
     if (meshRef.current) {
       normal.transformDirection(meshRef.current.matrixWorld);
     }
 
-    // Round to nearest axis-aligned direction
     const absX = Math.abs(normal.x);
     const absY = Math.abs(normal.y);
     const absZ = Math.abs(normal.z);
@@ -136,15 +108,9 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       direction = new THREE.Vector3(0, 0, Math.sign(normal.z));
     }
 
-    console.log("🎯 Orientation Cube - Face clicked:", {
-      normal: { x: normal.x.toFixed(3), y: normal.y.toFixed(3), z: normal.z.toFixed(3) },
-      direction: { x: direction.x, y: direction.y, z: direction.z },
-    });
-
     onFaceClick(direction);
   };
 
-  // Face positions and rotations for highlight overlays
   const faceConfig: Record<string, { position: [number, number, number]; rotation: [number, number, number] }> =
     useMemo(
       () => ({
@@ -160,7 +126,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
   return (
     <group ref={groupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-      {/* Main cube with STL geometry - ✅ ISSUE #2 & #4 FIXED */}
       <mesh
         ref={meshRef}
         geometry={geometry}
@@ -174,7 +139,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         onClick={handleClick}
       />
 
-      {/* Only ONE highlight plane, conditionally rendered */}
       {hoveredFace && faceConfig[hoveredFace] && (
         <mesh position={faceConfig[hoveredFace].position} rotation={faceConfig[hoveredFace].rotation}>
           <planeGeometry args={[1.7, 1.7]} />
@@ -182,7 +146,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         </mesh>
       )}
 
-      {/* Edge lines for visual definition - this creates the wireframe appearance */}
       <lineSegments>
         <edgesGeometry args={[geometry, 25]} />
         <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
