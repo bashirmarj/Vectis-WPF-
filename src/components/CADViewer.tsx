@@ -51,6 +51,15 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
+  // ✅ FIXED: Ensure controls target is always set to model center
+  useEffect(() => {
+    if (controlsRef.current && boundingBox) {
+      controlsRef.current.target.copy(boundingBox.center);
+      controlsRef.current.update();
+      console.log("🎯 Controls target set to:", boundingBox.center.toArray());
+    }
+  }, [boundingBox, controlsRef.current]);
+
   // File extension detection
   const fileExtension = useMemo(() => {
     if (fileName) return fileName.split(".").pop()?.toLowerCase() || "";
@@ -232,19 +241,14 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           return;
       }
 
-      // ✅ ISSUE #3 FIXED: Use calculated direction (cloned to avoid mutation)
-      const newPosition = target.clone().add(direction.clone().multiplyScalar(distance));
+      // ✅ ISSUE #3 FIXED: Use calculated direction instead of currentPosition
+      const newPosition = target.clone().add(direction.multiplyScalar(distance));
 
       camera.position.copy(newPosition);
       camera.up.copy(up);
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      console.log(`📷 Camera view changed to: ${view}`, {
-        position: newPosition.toArray(),
-        up: up.toArray(),
-      });
     },
     [boundingBox],
   );
@@ -414,33 +418,23 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
         ) : meshData && isRenderableFormat ? (
           <div className="relative w-full h-full">
             <UnifiedCADToolbar
-              // ✅ ISSUE #3 FIXED: Corrected prop names to match toolbar interface
-              onHomeView={() => handleSetView("isometric")}
-              onFrontView={() => handleSetView("front")}
-              onTopView={() => handleSetView("top")}
-              onIsometricView={() => handleSetView("isometric")}
-              onFitView={() => handleSetView("isometric")}
               displayMode={displayMode}
-              onDisplayModeChange={setDisplayMode}
+              setDisplayMode={setDisplayMode}
               showEdges={showEdges}
-              onToggleEdges={() => setShowEdges(!showEdges)}
+              setShowEdges={setShowEdges}
               sectionPlane={sectionPlane}
-              onSectionPlaneChange={setSectionPlane}
+              setSectionPlane={setSectionPlane}
               sectionPosition={sectionPosition}
-              onSectionPositionChange={setSectionPosition}
-              measurementMode={activeTool}
-              onMeasurementModeChange={setActiveTool}
+              setSectionPosition={setSectionPosition}
+              onSetView={handleSetView}
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
               onClearMeasurements={clearAllMeasurements}
               measurementCount={measurements.length}
               shadowsEnabled={shadowsEnabled}
-              onToggleShadows={() => setShadowsEnabled(!shadowsEnabled)}
+              setShadowsEnabled={setShadowsEnabled}
               ssaoEnabled={ssaoEnabled}
-              onToggleSSAO={() => setSSAOEnabled(!ssaoEnabled)}
-              boundingBox={{
-                min: { x: boundingBox.min.x, y: boundingBox.min.y, z: boundingBox.min.z },
-                max: { x: boundingBox.max.x, y: boundingBox.max.y, z: boundingBox.max.z },
-                center: { x: boundingBox.center.x, y: boundingBox.center.y, z: boundingBox.center.z },
-              }}
+              setSSAOEnabled={setSSAOEnabled}
             />
 
             <Canvas
