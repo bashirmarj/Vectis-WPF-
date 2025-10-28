@@ -1,11 +1,11 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ ISSUE #2 FIXED: Improved chamfer appearance with higher segment count
-// Professional 3D Orientation Cube with Chamfered Edges
+// ✅ ISSUE #2 FIXED: Loading actual STL file with chamfer from assets
+// Professional 3D Orientation Cube
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
-import { ThreeEvent } from "@react-three/fiber";
-import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { ThreeEvent, useLoader } from "@react-three/fiber";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -13,18 +13,29 @@ interface OrientationCubeMeshProps {
 
 /**
  * Professional Orientation Cube with:
- * - Clean single-material design
- * - Chamfered edges using RoundedBoxGeometry
+ * - Loads actual STL file with chamfered edges
  * - Hover effects (blue glow)
  * - Click detection for camera rotation
- * - ✅ ISSUE #2 FIXED: Higher segment count for smoother chamfer appearance
+ * - ✅ ISSUE #2 FIXED: Using real STL geometry instead of RoundedBoxGeometry
  */
 export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [hoveredFace, setHoveredFace] = useState<string | null>(null);
 
-  // Simple single material - always white/semi-transparent
+  // ✅ ISSUE #2 FIXED: Load actual STL file with chamfers
+  const geometry = useLoader(STLLoader, "/src/assets/orientation-cube.stl");
+
+  // Center and scale the loaded geometry
+  useEffect(() => {
+    if (geometry) {
+      geometry.center();
+      geometry.computeVertexNormals();
+      console.log("✅ STL loaded: orientation-cube.stl with chamfered edges");
+    }
+  }, [geometry]);
+
+  // Simple single material - white/semi-transparent
   const baseMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: "#ffffff",
@@ -33,20 +44,11 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       transparent: true,
       opacity: 0.6,
       envMapIntensity: 1.2,
-      flatShading: false, // ✅ Smooth shading for better chamfer appearance
+      flatShading: false, // Smooth shading for chamfer appearance
     });
   }, []);
 
-  // ✅ ISSUE #2 FIXED: Increased segments from 4 to 8 for smoother chamfer
-  const cubeGeometry = useMemo(() => {
-    console.log("📦 Creating RoundedBoxGeometry (1.8x1.8x1.8 with chamfer)");
-    // RoundedBoxGeometry(width, height, depth, segments, radius)
-    // segments: 8 = very smooth rounded edges (increased from 4)
-    // radius: 0.15 = amount of chamfer/rounding
-    return new RoundedBoxGeometry(1.8, 1.8, 1.8, 8, 0.15);
-  }, []);
-
-  // ✅ Simplified face detection using world-space normal
+  // Simplified face detection using world-space normal
   const getFaceFromNormal = (normal: THREE.Vector3): string => {
     const absX = Math.abs(normal.x);
     const absY = Math.abs(normal.y);
@@ -81,7 +83,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       const face = getFaceFromNormal(normal);
       if (face !== hoveredFace) {
         setHoveredFace(face);
-        console.log("🎯 Moved to face:", face);
       }
     }
   };
@@ -90,7 +91,6 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     event.stopPropagation();
     document.body.style.cursor = "default";
     setHoveredFace(null);
-    console.log("👋 Left cube");
   };
 
   // Handle face clicks
@@ -114,18 +114,14 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     let direction: THREE.Vector3;
 
     if (absX > absY && absX > absZ) {
-      // Click was on X face (RIGHT/LEFT)
       direction = new THREE.Vector3(Math.sign(normal.x), 0, 0);
     } else if (absY > absX && absY > absZ) {
-      // Click was on Y face (TOP/BOTTOM)
       direction = new THREE.Vector3(0, Math.sign(normal.y), 0);
     } else {
-      // Click was on Z face (FRONT/BACK)
       direction = new THREE.Vector3(0, 0, Math.sign(normal.z));
     }
 
     console.log("🎯 Orientation Cube - Face clicked:", {
-      faceIndex: event.faceIndex !== undefined ? Math.floor(event.faceIndex / 2) : "unknown",
       normal: { x: normal.x.toFixed(3), y: normal.y.toFixed(3), z: normal.z.toFixed(3) },
       direction: { x: direction.x, y: direction.y, z: direction.z },
     });
@@ -133,12 +129,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
     onFaceClick(direction);
   };
 
-  // Log when cube is ready (only once)
-  useEffect(() => {
-    console.log("✅ OrientationCubeMesh: Rendered and ready with enhanced chamfer geometry");
-  }, []); // Empty dependency array = run once
-
-  // ✅ Face positions and rotations for highlight overlays
+  // Face positions and rotations for highlight overlays
   const faceConfig: Record<string, { position: [number, number, number]; rotation: [number, number, number] }> =
     useMemo(
       () => ({
@@ -154,10 +145,10 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
   return (
     <group ref={groupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-      {/* Main cube with single material */}
+      {/* Main cube with STL geometry */}
       <mesh
         ref={meshRef}
-        geometry={cubeGeometry}
+        geometry={geometry}
         material={baseMaterial}
         castShadow
         receiveShadow
@@ -168,7 +159,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         onClick={handleClick}
       />
 
-      {/* ✅ Only ONE highlight plane, conditionally rendered */}
+      {/* Only ONE highlight plane, conditionally rendered */}
       {hoveredFace && faceConfig[hoveredFace] && (
         <mesh position={faceConfig[hoveredFace].position} rotation={faceConfig[hoveredFace].rotation}>
           <planeGeometry args={[1.7, 1.7]} />
@@ -176,14 +167,14 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         </mesh>
       )}
 
-      {/* Edge lines for visual definition - slightly thicker for better visibility */}
+      {/* Edge lines for visual definition */}
       <lineSegments>
-        <edgesGeometry args={[cubeGeometry, 25]} />
+        <edgesGeometry args={[geometry, 25]} />
         <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
       </lineSegments>
 
       {/* Subtle outer glow for 3D effect */}
-      <mesh geometry={cubeGeometry} scale={1.02}>
+      <mesh geometry={geometry} scale={1.02}>
         <meshBasicMaterial color="#000000" transparent opacity={0.1} side={THREE.BackSide} />
       </mesh>
     </group>
