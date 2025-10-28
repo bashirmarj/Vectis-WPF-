@@ -256,94 +256,91 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   // ✅ LEFT/RIGHT now rotate around world Y-axis (no diagonal movement)
   // ✅ UP/DOWN rotate around camera's right vector (proper pitch)
   // ✅ CW/CCW rotate around view direction (proper roll)
-  const handleRotateCamera = useCallback(
-    (direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
-      if (!cameraRef.current || !controlsRef.current) return;
+  const handleRotateCamera = useCallback((direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
+    if (!cameraRef.current || !controlsRef.current) return;
 
-      console.log("🎯 Rotating camera:", direction);
+    console.log("🎯 Rotating camera:", direction);
 
-      const camera = cameraRef.current;
-      const controls = controlsRef.current;
-      const target = controls.target.clone();
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const target = controls.target.clone();
 
-      // Get current state
-      const currentPosition = camera.position.clone();
-      const currentUp = camera.up.clone();
+    // Get current state
+    const currentPosition = camera.position.clone();
+    const currentUp = camera.up.clone();
 
-      // Calculate view direction (from camera toward target)
-      const viewDir = target.clone().sub(currentPosition).normalize();
+    // Calculate view direction (from camera toward target)
+    const viewDir = target.clone().sub(currentPosition).normalize();
 
-      // 90-degree rotation
-      const rotationAngle = Math.PI / 2;
+    // 90-degree rotation
+    const rotationAngle = Math.PI / 2;
 
-      let newPosition: THREE.Vector3;
-      let newUp: THREE.Vector3;
+    let newPosition: THREE.Vector3;
+    let newUp: THREE.Vector3;
 
-      switch (direction) {
-        case "left":
-        case "right": {
-          // ✅ FIXED: Simple rotation around world Y-axis (vertical)
-          // This matches SolidWorks/Fusion 360 behavior
-          const worldYAxis = new THREE.Vector3(0, 1, 0);
-          const rotDir = direction === "left" ? 1 : -1;
+    switch (direction) {
+      case "left":
+      case "right": {
+        // ✅ FIXED: Simple rotation around world Y-axis (vertical)
+        // This matches SolidWorks/Fusion 360 behavior
+        const worldYAxis = new THREE.Vector3(0, 1, 0);
+        const rotDir = direction === "left" ? 1 : -1;
 
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(worldYAxis, rotationAngle * rotDir);
-          newPosition.add(target);
+        newPosition = currentPosition.clone().sub(target);
+        newPosition.applyAxisAngle(worldYAxis, rotationAngle * rotDir);
+        newPosition.add(target);
 
-          // Rotate up vector as well to maintain orientation
-          newUp = currentUp.clone().applyAxisAngle(worldYAxis, rotationAngle * rotDir);
-          break;
-        }
-
-        case "up":
-        case "down": {
-          // ✅ Use camera's own right vector (from quaternion)
-          // This eliminates gimbal lock because we're using the camera's actual orientation
-          const cameraRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-          const rotDir = direction === "up" ? 1 : -1;
-
-          newPosition = currentPosition.clone().sub(target);
-          newPosition.applyAxisAngle(cameraRight, rotationAngle * rotDir);
-          newPosition.add(target);
-          newUp = currentUp.clone().applyAxisAngle(cameraRight, rotationAngle * rotDir);
-          break;
-        }
-
-        case "cw":
-        case "ccw": {
-          // Roll around view direction
-          const rotDir = direction === "cw" ? -1 : 1;
-          newPosition = currentPosition.clone();
-          newUp = currentUp.clone().applyAxisAngle(viewDir, rotationAngle * rotDir);
-          break;
-        }
-
-        default:
-          return;
+        // Rotate up vector as well to maintain orientation
+        newUp = currentUp.clone().applyAxisAngle(worldYAxis, rotationAngle * rotDir);
+        break;
       }
 
-      // Apply rotation
-      camera.position.copy(newPosition);
-      camera.up.copy(newUp);
-      camera.lookAt(target);
-      controls.target.copy(target);
-      controls.update();
+      case "up":
+      case "down": {
+        // ✅ Use camera's own right vector (from quaternion)
+        // This eliminates gimbal lock because we're using the camera's actual orientation
+        const cameraRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        const rotDir = direction === "up" ? 1 : -1;
 
-      console.log("✅ Camera rotated successfully!");
-      console.log("   New position:", {
-        x: newPosition.x.toFixed(2),
-        y: newPosition.y.toFixed(2),
-        z: newPosition.z.toFixed(2),
-      });
-      console.log("   New up vector:", {
-        x: newUp.x.toFixed(2),
-        y: newUp.y.toFixed(2),
-        z: newUp.z.toFixed(2),
-      });
-    },
-    [boundingBox],
-  );
+        newPosition = currentPosition.clone().sub(target);
+        newPosition.applyAxisAngle(cameraRight, rotationAngle * rotDir);
+        newPosition.add(target);
+        newUp = currentUp.clone().applyAxisAngle(cameraRight, rotationAngle * rotDir);
+        break;
+      }
+
+      case "cw":
+      case "ccw": {
+        // Roll around view direction
+        const rotDir = direction === "cw" ? -1 : 1;
+        newPosition = currentPosition.clone();
+        newUp = currentUp.clone().applyAxisAngle(viewDir, rotationAngle * rotDir);
+        break;
+      }
+
+      default:
+        return;
+    }
+
+    // Apply rotation
+    camera.position.copy(newPosition);
+    camera.up.copy(newUp);
+    camera.lookAt(target);
+    controls.target.copy(target);
+    controls.update();
+
+    console.log("✅ Camera rotated successfully!");
+    console.log("   New position:", {
+      x: newPosition.x.toFixed(2),
+      y: newPosition.y.toFixed(2),
+      z: newPosition.z.toFixed(2),
+    });
+    console.log("   New up vector:", {
+      x: newUp.x.toFixed(2),
+      y: newUp.y.toFixed(2),
+      z: newUp.z.toFixed(2),
+    });
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
