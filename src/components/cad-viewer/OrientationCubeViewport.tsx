@@ -1,5 +1,5 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ FIXED: Drag rotation now accounts for camera orientation (upside down detection)
+// ✅ FIXED: Proper group ref handling for rotation sync and face detection
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -33,6 +33,7 @@ function CubeSyncWrapper({
 }) {
   const cubeGroupRef = useRef<THREE.Group>(null);
 
+  // ✅ Rotation sync effect
   useEffect(() => {
     if (!mainCameraRef?.current || !cubeGroupRef.current) return;
 
@@ -41,7 +42,7 @@ function CubeSyncWrapper({
 
     const syncRotation = () => {
       if (mainCameraRef.current && cubeGroupRef.current) {
-        // ✅ Rotate the cube mesh group to match main camera orientation
+        // Copy camera quaternion to cube group
         cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
 
         if (frameCount % 60 === 0) {
@@ -61,7 +62,7 @@ function CubeSyncWrapper({
     };
   }, [mainCameraRef]);
 
-  // ✅ FIXED: Handle drag-to-rotate with proper orientation detection
+  // ✅ Handle drag-to-rotate with upside-down detection
   const handleDragRotate = useCallback(
     (deltaX: number, deltaY: number) => {
       if (!mainCameraRef.current || !controlsRef?.current) return;
@@ -70,25 +71,18 @@ function CubeSyncWrapper({
       const controls = controlsRef.current;
       const target = controls.target.clone();
 
-      // ✅ CRITICAL FIX: Detect if camera is upside down
-      // When camera.up.y is negative, we're looking from below
+      // Detect if camera is upside down
       const isUpsideDown = camera.up.y < 0;
 
-      // Rotation sensitivity (lower = more sensitive)
       const rotationSpeed = 0.005;
-
-      // ✅ FIXED: Invert horizontal rotation when upside down
       const horizontalMultiplier = isUpsideDown ? 1 : -1;
       const deltaAzimuth = deltaX * rotationSpeed * horizontalMultiplier;
-
-      // Vertical rotation stays the same
       const deltaPolar = -deltaY * rotationSpeed;
 
-      // Get current camera state
       const currentPosition = camera.position.clone();
       const currentUp = camera.up.clone();
 
-      // Step 1: Horizontal rotation (around world Y-axis)
+      // Horizontal rotation (around world Y-axis)
       const worldYAxis = new THREE.Vector3(0, 1, 0);
       let newPosition = currentPosition.clone().sub(target);
       newPosition.applyAxisAngle(worldYAxis, deltaAzimuth);
@@ -96,7 +90,7 @@ function CubeSyncWrapper({
 
       let newUp = currentUp.clone().applyAxisAngle(worldYAxis, deltaAzimuth);
 
-      // Step 2: Vertical rotation (around camera's right vector)
+      // Vertical rotation (around camera's right vector)
       camera.position.copy(newPosition);
       camera.up.copy(newUp);
       camera.lookAt(target);
@@ -108,27 +102,20 @@ function CubeSyncWrapper({
 
       newUp = camera.up.clone().applyAxisAngle(cameraRight, deltaPolar);
 
-      // Apply final rotation
       camera.position.copy(newPosition);
       camera.up.copy(newUp);
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      // Debug logging for orientation
-      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-        console.log("🔄 Drag rotation:", {
-          isUpsideDown,
-          upY: camera.up.y.toFixed(3),
-          deltaX,
-          deltaAzimuth: deltaAzimuth.toFixed(4),
-        });
-      }
     },
     [mainCameraRef, controlsRef],
   );
 
-  return <OrientationCubeMesh ref={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />;
+  return (
+    <group ref={cubeGroupRef} position={[0, 0, 0]} rotation={[0, 0, 0]}>
+      <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />
+    </group>
+  );
 }
 
 export function OrientationCubeViewport({
@@ -207,7 +194,6 @@ export function OrientationCubeViewport({
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
                 dpr={window.devicePixelRatio || 1}
               >
-                {/* ✅ Camera stays fixed, looking at origin */}
                 <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={38} near={0.1} far={100} />
 
                 <ambientLight intensity={0.3} />
@@ -215,7 +201,6 @@ export function OrientationCubeViewport({
                 <directionalLight position={[-2, -1, -2]} intensity={0.4} />
                 <directionalLight position={[0, -2, 0]} intensity={0.3} />
 
-                {/* ✅ Cube mesh rotates to match main camera + supports drag */}
                 <CubeSyncWrapper mainCameraRef={mainCameraRef} controlsRef={controlsRef} onCubeClick={onCubeClick} />
               </Canvas>
             </div>
