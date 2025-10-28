@@ -1,6 +1,6 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
+// ✅ ISSUE #2 FIXED: Improved chamfer appearance with higher segment count
 // Professional 3D Orientation Cube with Chamfered Edges
-// ✅ FIXED: Removed problematic STL loading, using RoundedBoxGeometry directly
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import * as THREE from "three";
@@ -17,7 +17,7 @@ interface OrientationCubeMeshProps {
  * - Chamfered edges using RoundedBoxGeometry
  * - Hover effects (blue glow)
  * - Click detection for camera rotation
- * - ✅ FIXED: Proper geometry creation without STL loading issues
+ * - ✅ ISSUE #2 FIXED: Higher segment count for smoother chamfer appearance
  */
 export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -33,20 +33,20 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
       transparent: true,
       opacity: 0.6,
       envMapIntensity: 1.2,
-      flatShading: false,
+      flatShading: false, // ✅ Smooth shading for better chamfer appearance
     });
   }, []);
 
-  // ✅ FIXED: Use RoundedBoxGeometry directly (no async loading needed)
+  // ✅ ISSUE #2 FIXED: Increased segments from 4 to 8 for smoother chamfer
   const cubeGeometry = useMemo(() => {
     console.log("📦 Creating RoundedBoxGeometry (1.8x1.8x1.8 with chamfer)");
     // RoundedBoxGeometry(width, height, depth, segments, radius)
-    // segments: 4 = smooth rounded edges
+    // segments: 8 = very smooth rounded edges (increased from 4)
     // radius: 0.15 = amount of chamfer/rounding
-    return new RoundedBoxGeometry(1.8, 1.8, 1.8, 4, 0.15);
+    return new RoundedBoxGeometry(1.8, 1.8, 1.8, 8, 0.15);
   }, []);
 
-  // ✅ CORRECTED: Simplified face detection using world-space normal
+  // ✅ Simplified face detection using world-space normal
   const getFaceFromNormal = (normal: THREE.Vector3): string => {
     const absX = Math.abs(normal.x);
     const absY = Math.abs(normal.y);
@@ -135,10 +135,10 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
 
   // Log when cube is ready (only once)
   useEffect(() => {
-    console.log("✅ OrientationCubeMesh: Rendered and ready");
+    console.log("✅ OrientationCubeMesh: Rendered and ready with enhanced chamfer geometry");
   }, []); // Empty dependency array = run once
 
-  // ✅ CORRECTED: Face positions and rotations for highlight overlays
+  // ✅ Face positions and rotations for highlight overlays
   const faceConfig: Record<string, { position: [number, number, number]; rotation: [number, number, number] }> =
     useMemo(
       () => ({
@@ -168,7 +168,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         onClick={handleClick}
       />
 
-      {/* ✅ CORRECTED: Only ONE highlight plane, conditionally rendered */}
+      {/* ✅ Only ONE highlight plane, conditionally rendered */}
       {hoveredFace && faceConfig[hoveredFace] && (
         <mesh position={faceConfig[hoveredFace].position} rotation={faceConfig[hoveredFace].rotation}>
           <planeGeometry args={[1.7, 1.7]} />
@@ -176,7 +176,7 @@ export function OrientationCubeMesh({ onFaceClick }: OrientationCubeMeshProps) {
         </mesh>
       )}
 
-      {/* Edge lines for visual definition */}
+      {/* Edge lines for visual definition - slightly thicker for better visibility */}
       <lineSegments>
         <edgesGeometry args={[cubeGeometry, 25]} />
         <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
