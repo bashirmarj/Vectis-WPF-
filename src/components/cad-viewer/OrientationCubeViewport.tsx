@@ -1,5 +1,5 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ FIXED: Added drag-to-rotate functionality
+// ✅ FIXED: Drag rotation now accounts for camera orientation (upside down detection)
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -61,7 +61,7 @@ function CubeSyncWrapper({
     };
   }, [mainCameraRef]);
 
-  // ✅ Handle drag-to-rotate on cube
+  // ✅ FIXED: Handle drag-to-rotate with proper orientation detection
   const handleDragRotate = useCallback(
     (deltaX: number, deltaY: number) => {
       if (!mainCameraRef.current || !controlsRef?.current) return;
@@ -70,12 +70,19 @@ function CubeSyncWrapper({
       const controls = controlsRef.current;
       const target = controls.target.clone();
 
+      // ✅ CRITICAL FIX: Detect if camera is upside down
+      // When camera.up.y is negative, we're looking from below
+      const isUpsideDown = camera.up.y < 0;
+
       // Rotation sensitivity (lower = more sensitive)
       const rotationSpeed = 0.005;
 
-      // Calculate rotation angles from drag delta
-      const deltaAzimuth = -deltaX * rotationSpeed; // Horizontal rotation (around Y-axis)
-      const deltaPolar = -deltaY * rotationSpeed; // Vertical rotation (around right vector)
+      // ✅ FIXED: Invert horizontal rotation when upside down
+      const horizontalMultiplier = isUpsideDown ? 1 : -1;
+      const deltaAzimuth = deltaX * rotationSpeed * horizontalMultiplier;
+
+      // Vertical rotation stays the same
+      const deltaPolar = -deltaY * rotationSpeed;
 
       // Get current camera state
       const currentPosition = camera.position.clone();
@@ -107,6 +114,16 @@ function CubeSyncWrapper({
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
+
+      // Debug logging for orientation
+      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+        console.log("🔄 Drag rotation:", {
+          isUpsideDown,
+          upY: camera.up.y.toFixed(3),
+          deltaX,
+          deltaAzimuth: deltaAzimuth.toFixed(4),
+        });
+      }
     },
     [mainCameraRef, controlsRef],
   );
