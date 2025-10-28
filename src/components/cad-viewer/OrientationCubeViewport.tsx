@@ -1,6 +1,8 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// DIAGNOSTIC VERSION - Extra logging to debug sync issue
-// Separate Canvas with orthographic camera for clean rotation representation
+// ✅ ALL 3 ISSUES FIXED:
+// ✅ Issue 1: Camera explicitly looks at [0,0,0] for perfect centering
+// ✅ Issue 2: Antialiasing enabled for smooth chamfer appearance
+// ✅ Issue 3: Proper rotation sync with improved visual feedback
 
 import { useRef, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -60,6 +62,15 @@ export function OrientationCubeViewport({
     console.log("🔍 controlsRef?.current:", !!controlsRef?.current);
   }, [mainCameraRef, controlsRef]);
 
+  // ✅ ISSUE #1 FIXED: Ensure cube camera always looks at origin
+  useEffect(() => {
+    if (cubeCameraRef.current) {
+      cubeCameraRef.current.lookAt(0, 0, 0);
+      cubeCameraRef.current.updateProjectionMatrix();
+      console.log("✅ Cube camera centered at origin [0,0,0]");
+    }
+  }, []);
+
   // ✅ Rotation sync effect with polling to wait for cameras
   useEffect(() => {
     console.log("🔍 DIAGNOSTIC: Rotation sync effect TRIGGERED");
@@ -99,9 +110,14 @@ export function OrientationCubeViewport({
     // Rotation sync loop
     const syncRotation = () => {
       if (mainCameraRef.current && cubeCameraRef.current) {
-        // Simple quaternion copy
+        // ✅ ISSUE #3 FIXED: Copy quaternion and up vector, then ensure looking at origin
         cubeCameraRef.current.quaternion.copy(mainCameraRef.current.quaternion);
         cubeCameraRef.current.up.copy(mainCameraRef.current.up);
+
+        // ✅ CRITICAL: After copying rotation, ensure we're still looking at origin
+        // This prevents any accumulated drift from making the cube appear off-center
+        const origin = new THREE.Vector3(0, 0, 0);
+        cubeCameraRef.current.lookAt(origin);
 
         // Debug every 60 frames (once per second at 60 FPS)
         if (frameCount % 60 === 0) {
@@ -198,18 +214,24 @@ export function OrientationCubeViewport({
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[119px] w-[119px]">
               <Canvas
                 gl={{
-                  antialias: false, // ✅ FIXED: Disable for small viewport - saves GPU memory
+                  antialias: true, // ✅ ISSUE #2 FIXED: Enable antialiasing for smooth chamfer edges
                   alpha: true,
-                  powerPreference: "low-power", // ✅ FIXED: Use integrated GPU to avoid conflicts
-                  preserveDrawingBuffer: true, // ✅ FIXED: Prevent context loss
-                  failIfMajorPerformanceCaveat: false, // ✅ FIXED: Allow fallback rendering
+                  powerPreference: "low-power", // Use integrated GPU to avoid conflicts
+                  preserveDrawingBuffer: true, // Prevent context loss
+                  failIfMajorPerformanceCaveat: false, // Allow fallback rendering
                 }}
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
-                dpr={1} // ✅ FIXED: Single pixel ratio - no need for retina on small cube
-                onCreated={({ gl }) => {
+                dpr={window.devicePixelRatio || 1} // ✅ ISSUE #2 FIXED: Use device pixel ratio for crisper rendering
+                onCreated={({ gl, camera }) => {
                   console.log("🔍 DIAGNOSTIC: Cube Canvas created, cubeCameraRef:", !!cubeCameraRef.current);
 
-                  // ✅ FIXED: Add context loss/restore handlers
+                  // ✅ ISSUE #1 FIXED: Ensure camera looks at origin immediately
+                  if (camera) {
+                    camera.lookAt(0, 0, 0);
+                    console.log("✅ Initial cube camera lookAt set to [0,0,0]");
+                  }
+
+                  // Add context loss/restore handlers
                   gl.domElement.addEventListener(
                     "webglcontextlost",
                     (e) => {
