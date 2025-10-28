@@ -12,7 +12,8 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
+import { OrientationArrows } from "./cad-viewer/OrientationArrows";
+import { OrientationCubeInCanvas } from "./cad-viewer/OrientationCubeInCanvas";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { useMeasurementStore } from "@/stores/measurementStore";
@@ -369,20 +370,9 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   return (
     <div className="w-full h-full relative">
       <CardContent className="p-0 h-full">
-        {/* ✅ FIXED: OrientationCube outside conditional - stays mounted */}
+        {/* ✅ Arrow buttons overlay - NO separate canvas */}
         {meshData && isRenderableFormat && !isLoading && !error && (
-          <OrientationCubeViewport
-            mainCameraRef={cameraRef}
-            controlsRef={controlsRef}
-            onCubeClick={(direction) => {
-              if (Math.abs(direction.x) > 0.5) {
-                handleSetView(direction.x > 0 ? "right" : "left");
-              } else if (Math.abs(direction.y) > 0.5) {
-                handleSetView(direction.y > 0 ? "top" : "bottom");
-              } else if (Math.abs(direction.z) > 0.5) {
-                handleSetView(direction.z > 0 ? "front" : "back");
-              }
-            }}
+          <OrientationArrows
             onRotateUp={() => handleRotateCamera("up")}
             onRotateDown={() => handleRotateCamera("down")}
             onRotateLeft={() => handleRotateCamera("left")}
@@ -493,6 +483,21 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                   staticMoving={false}
                   noPan={false}
                   noRotate={false}
+                />
+
+                {/* ✅ Orientation cube rendered inside main Canvas (no separate WebGL context) */}
+                <OrientationCubeInCanvas
+                  mainCameraRef={cameraRef}
+                  controlsRef={controlsRef}
+                  onCubeClick={(direction) => {
+                    if (Math.abs(direction.x) > 0.5) {
+                      handleSetView(direction.x > 0 ? "right" : "left");
+                    } else if (Math.abs(direction.y) > 0.5) {
+                      handleSetView(direction.y > 0 ? "top" : "bottom");
+                    } else if (Math.abs(direction.z) > 0.5) {
+                      handleSetView(direction.z > 0 ? "front" : "back");
+                    }
+                  }}
                 />
               </Suspense>
             </Canvas>
