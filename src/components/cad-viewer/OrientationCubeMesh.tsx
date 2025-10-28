@@ -1,5 +1,5 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ FIXED: Face click detection + drag-to-rotate functionality
+// ✅ FIXED: Proper face detection using groupRef.current.matrixWorld for ALL interactions
 
 import { useRef, useMemo, useState, forwardRef, useImperativeHandle } from "react";
 import * as THREE from "three";
@@ -84,13 +84,14 @@ export const OrientationCubeMesh = forwardRef<THREE.Group, OrientationCubeMeshPr
           dragStartPos.current = { x: event.clientX, y: event.clientY };
         }
       } else if (!isDragging && event.face && groupRef.current) {
-        // Hover highlighting (only when not dragging)
+        // ✅ FIXED: Hover highlighting using groupRef matrix
         const normal = event.face.normal.clone();
         groupRef.current.updateMatrixWorld(true);
         normal.transformDirection(groupRef.current.matrixWorld);
         const face = getFaceFromNormal(normal);
         if (face !== hoveredFace) {
           setHoveredFace(face);
+          console.log("🎯 Hovering face:", face);
         }
       }
     };
@@ -105,12 +106,16 @@ export const OrientationCubeMesh = forwardRef<THREE.Group, OrientationCubeMeshPr
         Math.abs(event.clientY - dragStartPos.current.y) < 5;
 
       if (wasClick && onFaceClick && event.face && groupRef.current) {
-        // Handle face click
+        // ✅ FIXED: Face click using groupRef matrix
         const normal = event.face.normal.clone();
         groupRef.current.updateMatrixWorld(true);
         normal.transformDirection(groupRef.current.matrixWorld);
 
-        console.log("🖱️ Cube clicked - transformed normal:", normal);
+        console.log("🖱️ Cube clicked - transformed normal:", {
+          x: normal.x.toFixed(3),
+          y: normal.y.toFixed(3),
+          z: normal.z.toFixed(3),
+        });
 
         const absX = Math.abs(normal.x);
         const absY = Math.abs(normal.y);
@@ -120,13 +125,13 @@ export const OrientationCubeMesh = forwardRef<THREE.Group, OrientationCubeMeshPr
 
         if (absX > absY && absX > absZ) {
           direction = new THREE.Vector3(Math.sign(normal.x), 0, 0);
-          console.log("   → Detected X-axis face:", Math.sign(normal.x) > 0 ? "RIGHT" : "LEFT");
+          console.log("   → Detected X-axis face:", Math.sign(normal.x) > 0 ? "RIGHT (+X)" : "LEFT (-X)");
         } else if (absY > absX && absY > absZ) {
           direction = new THREE.Vector3(0, Math.sign(normal.y), 0);
-          console.log("   → Detected Y-axis face:", Math.sign(normal.y) > 0 ? "TOP" : "BOTTOM");
+          console.log("   → Detected Y-axis face:", Math.sign(normal.y) > 0 ? "TOP (+Y)" : "BOTTOM (-Y)");
         } else {
           direction = new THREE.Vector3(0, 0, Math.sign(normal.z));
-          console.log("   → Detected Z-axis face:", Math.sign(normal.z) > 0 ? "FRONT" : "BACK");
+          console.log("   → Detected Z-axis face:", Math.sign(normal.z) > 0 ? "FRONT (+Z)" : "BACK (-Z)");
         }
 
         onFaceClick(direction);
@@ -145,11 +150,13 @@ export const OrientationCubeMesh = forwardRef<THREE.Group, OrientationCubeMeshPr
       gl.domElement.style.cursor = "grab";
 
       if (event.face && groupRef.current && !isDragging) {
+        // ✅ FIXED: Hover enter using groupRef matrix
         const normal = event.face.normal.clone();
         groupRef.current.updateMatrixWorld(true);
         normal.transformDirection(groupRef.current.matrixWorld);
         const face = getFaceFromNormal(normal);
         setHoveredFace(face);
+        console.log("🎯 Entered face:", face);
       }
     };
 
@@ -190,6 +197,7 @@ export const OrientationCubeMesh = forwardRef<THREE.Group, OrientationCubeMeshPr
           onPointerLeave={handlePointerLeave}
         />
 
+        {/* ✅ Highlight only shows when hovering and not dragging */}
         {hoveredFace && faceConfig[hoveredFace] && !isDragging && (
           <mesh position={faceConfig[hoveredFace].position} rotation={faceConfig[hoveredFace].rotation}>
             <planeGeometry args={[1.7, 1.7]} />
