@@ -1,5 +1,8 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ FIXED: Both horizontal AND vertical rotation account for camera orientation
+// ✅ FIXED VERSION - October 28, 2025
+// ✅ Enhanced logging for debugging rotation sync
+// ✅ Detailed warnings if refs are missing
+// ✅ Both horizontal AND vertical rotation account for camera orientation
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -33,7 +36,7 @@ function CubeSyncWrapper({
 }) {
   const cubeGroupRef = useRef<THREE.Group>(null);
 
-  // ✅ Rotation sync effect
+  // ✅ FIXED: Enhanced rotation sync with detailed logging
   useEffect(() => {
     if (!mainCameraRef?.current || !cubeGroupRef.current) {
       console.warn("⚠️ Rotation sync: Missing refs", {
