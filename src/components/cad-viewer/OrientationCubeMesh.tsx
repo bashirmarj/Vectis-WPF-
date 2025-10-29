@@ -1,7 +1,6 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ Reference-Accurate 54-Mesh PlaneGeometry Architecture
-// All faces, edges, and corners are individual PlaneGeometry meshes
-// Highlighting via material.color changes (orange -> blue)
+// ✅ Reference-Accurate Implementation
+// Matches ViewCube architecture from reference code
 
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import * as THREE from "three";
@@ -14,49 +13,46 @@ interface OrientationCubeMeshProps {
 }
 
 // Constants matching reference code
-const CUBE_SIZE = 1.5; // Increased from 1.0 for better visibility
-const EDGE_SIZE = 0.2; // Doubled for 2x larger highlight areas
-const DEPTH_OFFSET = 0.002; // Small offset to prevent z-fighting
-const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2); // 1.1
-const FACE_OFFSET = CUBE_SIZE / 2; // 0.75
-const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.65
+const CUBE_SIZE = 1.5;
+const EDGE_SIZE = 0.2;
+const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2);
+const FACE_OFFSET = CUBE_SIZE / 2;
+const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2);
+
+// Color scheme from reference
+const MAINCOLOR = 0xDDDDDD;
+const ACCENTCOLOR = 0xF2F5CE;
+const OUTLINECOLOR = 0xCCCCCC;
 
 /**
- * Helper function to create camera-facing text sprite for face labels
+ * Helper function to create text texture for face labels
  */
-function createTextSprite(text: string): THREE.Sprite {
+function createTextSprite(text: string): THREE.Texture {
+  const fontface = 'Arial Narrow, sans-serif';
+  const fontsize = 60;
+  const width = 200;
+  const height = 200;
+  
   const canvas = document.createElement('canvas');
-  canvas.width = 200;
-  canvas.height = 200;
+  canvas.width = width;
+  canvas.height = height;
   const context = canvas.getContext('2d')!;
   
-  // Transparent background
-  context.clearRect(0, 0, 200, 200);
+  // Solid background matching face color
+  context.fillStyle = 'rgb(221, 221, 221)'; // MAINCOLOR
+  context.fillRect(0, 0, width, height);
   
-  // Text with outline for contrast
-  context.font = 'bold 36px Arial, sans-serif';
-  context.fillStyle = 'rgba(15, 23, 42, 1.0)';
-  context.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-  context.lineWidth = 3;
+  // Bold black text
+  context.font = `bold ${fontsize}px ${fontface}`;
+  context.fillStyle = 'rgb(0, 0, 0)'; // Black text
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.strokeText(text, 100, 100);
-  context.fillText(text, 100, 100);
+  context.fillText(text, width / 2, height / 2);
   
   const texture = new THREE.Texture(canvas);
   texture.minFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  
-  const spriteMaterial = new THREE.SpriteMaterial({ 
-    map: texture,
-    transparent: true,
-    depthTest: false,
-  });
-  
-  const sprite = new THREE.Sprite(spriteMaterial);
-  sprite.scale.set(0.6, 0.6, 1);
-  
-  return sprite;
+  return texture;
 }
 
 // Helper to create a single PlaneGeometry face
@@ -64,14 +60,14 @@ function createFace(
   size: [number, number],
   position: [number, number, number],
   rotation: [number, number, number],
-  name: string
+  name: string,
+  textMap?: THREE.Texture
 ): THREE.Mesh {
   const geometry = new THREE.PlaneGeometry(size[0], size[1]);
-  const material = new THREE.MeshStandardMaterial({
-    color: 0xFFAB00,
-    metalness: 0.3,
-    roughness: 0.5,
+  const material = new THREE.MeshBasicMaterial({
+    color: MAINCOLOR,
     side: THREE.DoubleSide,
+    map: textMap,
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = name;
@@ -89,142 +85,99 @@ export function OrientationCubeMesh({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  // Build all 54 PlaneGeometry meshes and text sprites
-  const { meshes: cubeMeshes, textSprites } = useMemo(() => {
+  // Build all 54 PlaneGeometry meshes
+  const { meshes: cubeMeshes } = useMemo(() => {
     const meshes: THREE.Mesh[] = [];
     
-    // === 6 MAIN FACES (1 mesh each) ===
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom'));
+    // === 6 MAIN FACES with text labels ===
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front', createTextSprite('FRONT')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right', createTextSprite('RIGHT')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back', createTextSprite('BACK')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left', createTextSprite('LEFT')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top', createTextSprite('TOP')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom', createTextSprite('BOTTOM')));
     
-    // === 12 EDGES (2 meshes each = 24 total) - with offset to prevent z-fighting ===
+    // === 12 EDGES (2 meshes each = 24 total) ===
+    // Top edges
+    const e1 = 'edge-top-front', e2 = 'edge-top-right', e3 = 'edge-top-back', e4 = 'edge-top-left';
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e1));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, BORDER_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], e1));
     
-    // Top 4 edges (horizontal)
-    const e1 = 'edge-top-front';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e1));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET + DEPTH_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], e1));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, 0], [-Math.PI/2, 0, 0], e2));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, 0], [0, Math.PI/2, 0], e2));
     
-    const e2 = 'edge-top-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET, 0], [Math.PI/2, Math.PI/2, 0], e2));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, BORDER_OFFSET, 0], [0, Math.PI/2, 0], e2));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e3));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, BORDER_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], e3));
     
-    const e3 = 'edge-top-back';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e3));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET + DEPTH_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], e3));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, 0], [-Math.PI/2, 0, 0], e4));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e4));
     
-    const e4 = 'edge-top-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET, 0], [Math.PI/2, -Math.PI/2, 0], e4));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e4));
+    // Bottom edges
+    const e5 = 'edge-bottom-front', e6 = 'edge-bottom-right', e7 = 'edge-bottom-back', e8 = 'edge-bottom-left';
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e5));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, -BORDER_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], e5));
     
-    // Middle 4 edges (vertical)
-    const e5 = 'edge-front-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e5));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, 0, BORDER_OFFSET], [0, Math.PI/2, 0], e5));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, 0], [Math.PI/2, 0, 0], e6));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, 0], [0, Math.PI/2, 0], e6));
     
-    const e6 = 'edge-back-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e6));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, 0, -BORDER_OFFSET], [0, Math.PI/2, 0], e6));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e7));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, -BORDER_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], e7));
     
-    const e7 = 'edge-back-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e7));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, 0, -BORDER_OFFSET], [0, -Math.PI/2, 0], e7));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, 0], [Math.PI/2, 0, 0], e8));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e8));
     
-    const e8 = 'edge-front-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e8));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, 0, BORDER_OFFSET], [0, -Math.PI/2, 0], e8));
+    // Vertical edges
+    const e9 = 'edge-front-right', e10 = 'edge-back-right', e11 = 'edge-back-left', e12 = 'edge-front-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e9));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, 0, BORDER_OFFSET], [0, Math.PI/2, 0], e9));
     
-    // Bottom 4 edges (horizontal)
-    const e9 = 'edge-bottom-front';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e9));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET - DEPTH_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], e9));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e10));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, 0, -BORDER_OFFSET], [0, Math.PI/2, 0], e10));
     
-    const e10 = 'edge-bottom-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET, 0], [-Math.PI/2, Math.PI/2, 0], e10));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, -BORDER_OFFSET, 0], [0, Math.PI/2, 0], e10));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e11));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, 0, -BORDER_OFFSET], [0, -Math.PI/2, 0], e11));
     
-    const e11 = 'edge-bottom-back';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e11));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET - DEPTH_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], e11));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e12));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, 0, BORDER_OFFSET], [0, -Math.PI/2, 0], e12));
     
-    const e12 = 'edge-bottom-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET, 0], [-Math.PI/2, -Math.PI/2, 0], e12));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, -BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e12));
+    // === 8 CORNERS (3 meshes each = 24 total) ===
+    // Top corners
+    const c1 = 'corner-top-front-right', c2 = 'corner-top-back-right', c3 = 'corner-top-back-left', c4 = 'corner-top-front-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c1));
     
-    // === 8 CORNERS (3 meshes each = 24 total) - with larger offset ===
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c2));
     
-    const c1 = 'corner-top-front-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c1));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c1));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET], [-Math.PI/2, 0, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c3));
     
-    const c2 = 'corner-top-back-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c2));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c2));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c4));
     
-    const c3 = 'corner-top-back-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c3));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c3));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c3));
+    // Bottom corners
+    const c5 = 'corner-bottom-front-right', c6 = 'corner-bottom-back-right', c7 = 'corner-bottom-back-left', c8 = 'corner-bottom-front-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c5));
     
-    const c4 = 'corner-top-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c4));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c4));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET], [-Math.PI/2, 0, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c6));
     
-    const c5 = 'corner-bottom-front-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c5));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c5));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET], [Math.PI/2, 0, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c7));
     
-    const c6 = 'corner-bottom-back-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c6));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c6));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET], [Math.PI/2, 0, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
     
-    const c7 = 'corner-bottom-back-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c7));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c7));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET], [Math.PI/2, 0, 0], c7));
-    
-    const c8 = 'corner-bottom-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c8));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
-    
-    // === Camera-facing text sprites ===
-    const sprites: THREE.Sprite[] = [];
-    const labelOffset = FACE_OFFSET + 0.01;
-    
-    const frontSprite = createTextSprite('FRONT');
-    frontSprite.position.set(0, 0, labelOffset);
-    sprites.push(frontSprite);
-    
-    const rightSprite = createTextSprite('RIGHT');
-    rightSprite.position.set(labelOffset, 0, 0);
-    sprites.push(rightSprite);
-    
-    const backSprite = createTextSprite('BACK');
-    backSprite.position.set(0, 0, -labelOffset);
-    sprites.push(backSprite);
-    
-    const leftSprite = createTextSprite('LEFT');
-    leftSprite.position.set(-labelOffset, 0, 0);
-    sprites.push(leftSprite);
-    
-    const topSprite = createTextSprite('TOP');
-    topSprite.position.set(0, labelOffset, 0);
-    sprites.push(topSprite);
-    
-    const bottomSprite = createTextSprite('BOTTOM');
-    bottomSprite.position.set(0, -labelOffset, 0);
-    sprites.push(bottomSprite);
-    
-    return { meshes, textSprites: sprites };
+    return { meshes };
   }, []);
 
   // Window-level drag tracking
@@ -258,9 +211,11 @@ export function OrientationCubeMesh({
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     
-    // Reset all meshes to orange
+    // Reset all meshes to main color
     cubeMeshes.forEach(mesh => {
-      (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xFFAB00);
+      if (mesh.name && mesh.material && 'color' in mesh.material) {
+        (mesh.material as THREE.MeshBasicMaterial).color.setHex(MAINCOLOR);
+      }
     });
     
     // Highlight all meshes with matching name
@@ -269,7 +224,7 @@ export function OrientationCubeMesh({
       if (hoveredName) {
         cubeMeshes.forEach(mesh => {
           if (mesh.name === hoveredName) {
-            (mesh.material as THREE.MeshStandardMaterial).color.setHex(0x3b82f6);
+            (mesh.material as THREE.MeshBasicMaterial).color.setHex(ACCENTCOLOR);
           }
         });
         setHoveredZoneName(hoveredName);
@@ -279,8 +234,10 @@ export function OrientationCubeMesh({
   }, [cubeMeshes]);
 
   const handlePointerLeave = useCallback(() => {
-    cubeMeshes.forEach(mesh => {
-      (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xFFAB00);
+    cubeMeshes.forEach((mesh) => {
+      if (mesh.name && mesh.material && 'color' in mesh.material) {
+        (mesh.material as THREE.MeshBasicMaterial).color.setHex(MAINCOLOR);
+      }
     });
     setHoveredZoneName(null);
     document.body.style.cursor = 'default';
@@ -365,14 +322,15 @@ export function OrientationCubeMesh({
         onPointerLeave={handlePointerLeave}
       >
         {cubeMeshes.map((mesh, index) => (
-          <primitive key={index} object={mesh} />
+          <primitive key={`mesh-${index}`} object={mesh} />
         ))}
       </group>
       
-      {/* Camera-facing text labels */}
-      {textSprites.map((sprite, index) => (
-        <primitive key={`sprite-${index}`} object={sprite} />
-      ))}
+      {/* Cube outline wireframe */}
+      <lineSegments>
+        <edgesGeometry args={[new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE)]} />
+        <lineBasicMaterial color={OUTLINECOLOR} linewidth={1} />
+      </lineSegments>
     </group>
   );
 }
