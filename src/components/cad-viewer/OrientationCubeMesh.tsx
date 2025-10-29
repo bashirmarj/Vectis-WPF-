@@ -385,12 +385,13 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       <lineSegments>
         <edgesGeometry args={[loadedGeometry, 25]} />
         <lineBasicMaterial
-          color="#0f172a"
-          linewidth={2}
-          opacity={1.0}
-          transparent={true}
-          depthTest={true} // ← Add this
-          depthWrite={false} // ← Add this
+  color="#0f172a"
+  linewidth={2}
+  transparent={true}
+  opacity={0.9}
+  depthTest={true}
+  depthWrite={false}
+/>
         />
       </lineSegments>
     </group>
