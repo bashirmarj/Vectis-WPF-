@@ -348,7 +348,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
     setIsDragging(true);
     dragStartPos.current = { x: event.clientX, y: event.clientY };
-    gl.domElement.style.cursor = "grabbing";
+    gl.domElement.style.cursor = "default";
   };
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
@@ -362,14 +362,14 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       for (const intersection of event.intersections) {
         if (intersection.object.userData.type) {
           setHoveredZoneData(intersection.object.userData as ZoneData);
-          gl.domElement.style.cursor = "pointer";
+          gl.domElement.style.cursor = "default";
           return;
         }
       }
     }
     
     setHoveredZoneData(null);
-    gl.domElement.style.cursor = "grab";
+    gl.domElement.style.cursor = "default";
   };
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
@@ -391,7 +391,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
   const handleCubeEnter = () => {
     if (!isDragging) {
-      gl.domElement.style.cursor = "grab";
+      gl.domElement.style.cursor = "default";
     }
   };
 
@@ -491,7 +491,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           color="#3b82f6" 
           transparent 
           opacity={0.5}
-          depthTest={true}
+          depthTest={false}
           depthWrite={false}
         />
       </mesh>
