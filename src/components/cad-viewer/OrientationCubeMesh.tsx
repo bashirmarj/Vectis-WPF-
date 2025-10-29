@@ -354,26 +354,22 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     
-    if (!isDragging && interactionGroupRef.current) {
-      // Use raycaster to detect hover on interaction layer
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2(
-        (event.clientX / gl.domElement.clientWidth) * 2 - 1,
-        -(event.clientY / gl.domElement.clientHeight) * 2 + 1
-      );
-      raycaster.setFromCamera(mouse, camera);
-      
-      const intersects = raycaster.intersectObjects(interactionGroupRef.current.children, false);
-      
-      if (intersects.length > 0) {
-        const hitObject = intersects[0].object;
-        setHoveredZoneData(hitObject.userData as ZoneData);
-        gl.domElement.style.cursor = "pointer";
-      } else {
-        setHoveredZoneData(null);
-        gl.domElement.style.cursor = "grab";
+    if (isDragging) return;
+    
+    // R3F already did the raycasting! Just check the intersections
+    if (event.intersections.length > 0) {
+      // Find first object with userData.type
+      for (const intersection of event.intersections) {
+        if (intersection.object.userData.type) {
+          setHoveredZoneData(intersection.object.userData as ZoneData);
+          gl.domElement.style.cursor = "pointer";
+          return;
+        }
       }
     }
+    
+    setHoveredZoneData(null);
+    gl.domElement.style.cursor = "grab";
   };
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
@@ -408,7 +404,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
   return (
     <group ref={groupRef}>
-      {/* Layer 1: Visual STL cube (orange, chamfered, beautiful) */}
+      {/* Layer 1: Visual STL cube (orange, chamfered, beautiful) - NO INTERACTION */}
       {centeredGeometry && (
         <mesh
           ref={meshRef}
@@ -416,11 +412,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           castShadow
           receiveShadow
           scale={1.1}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerEnter={handleCubeEnter}
-          onPointerLeave={handleCubeLeave}
+          raycast={() => null}
         >
           <meshStandardMaterial
             color="#FFAB00"
@@ -434,12 +426,26 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         </mesh>
       )}
 
-      {/* Layer 2: Interaction primitives (26 invisible meshes) */}
-      <primitive object={interactionGroup} ref={interactionGroupRef} />
+      {/* Layer 2: Interaction primitives (26 invisible meshes) - ALL EVENTS HERE */}
+      <group
+        scale={1.16}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerEnter={handleCubeEnter}
+        onPointerLeave={handleCubeLeave}
+      >
+        <primitive object={interactionGroup} ref={interactionGroupRef} />
+      </group>
 
       {/* Layer 3: Dynamic highlight mesh */}
       {hoveredZoneData && (
-        <mesh position={hoveredZoneData.position} rotation={hoveredZoneData.rotation || [0, 0, 0]}>
+        <mesh 
+          position={hoveredZoneData.position} 
+          rotation={hoveredZoneData.rotation || [0, 0, 0]}
+          scale={1.16}
+          renderOrder={1}
+        >
           {hoveredZoneData.type === 'face' && (
             <planeGeometry args={[1.15, 1.15]} />
           )}
@@ -453,7 +459,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
             color="#3b82f6" 
             transparent 
             opacity={0.5}
-            depthTest={false}
+            depthTest={true}
             depthWrite={false}
           />
         </mesh>
