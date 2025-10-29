@@ -460,6 +460,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       <mesh 
         position={(() => {
           const localPos = new THREE.Vector3(...hoveredZoneData.position);
+          localPos.multiplyScalar(1.16);
           return groupRef.current!.localToWorld(localPos.clone());
         })()}
         rotation={(() => {
@@ -475,17 +476,20 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           const euler = new THREE.Euler().setFromQuaternion(worldQuat);
           return euler.toArray().slice(0, 3) as [number, number, number];
         })()}
-        scale={1.16}
         renderOrder={999}
       >
         {hoveredZoneData.type === 'face' && (
-          <planeGeometry args={[1.15, 1.15]} />
+          <planeGeometry args={[1.15 * 1.16, 1.15 * 1.16]} />
         )}
         {hoveredZoneData.type === 'edge' && (
-          <boxGeometry args={hoveredZoneData.size} />
+          <boxGeometry args={[
+            (hoveredZoneData.size?.[0] || 0) * 1.16,
+            (hoveredZoneData.size?.[1] || 0) * 1.16,
+            (hoveredZoneData.size?.[2] || 0) * 1.16
+          ]} />
         )}
         {hoveredZoneData.type === 'corner' && (
-          <sphereGeometry args={[hoveredZoneData.radius, 16, 16]} />
+          <sphereGeometry args={[(hoveredZoneData.radius || 0.08) * 1.16, 16, 16]} />
         )}
         <meshBasicMaterial 
           color="#3b82f6" 
