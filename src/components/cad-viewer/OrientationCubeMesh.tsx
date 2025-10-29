@@ -1,7 +1,9 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ COMPLETE VERSION - Face/Edge/Corner Detection
-// ✅ STL geometry properly centered for rotation
-// ✅ 6 faces + 12 edges + 8 corners = 26 clickable zones
+// ✅ Layered Geometry Architecture - Industry Standard Pattern
+// Layer 1: Visual STL cube (chamfered, beautiful)
+// Layer 2: Interaction primitives (26 invisible meshes)
+// Layer 3: Dynamic highlight mesh
+// Layer 4: Wireframe edges
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import * as THREE from "three";
@@ -14,13 +16,24 @@ interface OrientationCubeMeshProps {
   groupRef: React.RefObject<THREE.Group>;
 }
 
+interface ZoneData {
+  type: 'face' | 'edge' | 'corner';
+  name: string;
+  position: [number, number, number];
+  direction: THREE.Vector3;
+  size?: [number, number, number]; // For edges
+  radius?: number; // For corners
+  rotation?: [number, number, number]; // For faces
+}
+
 export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: OrientationCubeMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
+  const interactionGroupRef = useRef<THREE.Group>(null);
+  const [hoveredZoneData, setHoveredZoneData] = useState<ZoneData | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const [centeredGeometry, setCenteredGeometry] = useState<THREE.BufferGeometry | null>(null);
-  const { gl } = useThree();
+  const { gl, camera } = useThree();
 
   // ✅ Load STL geometry
   const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
@@ -28,16 +41,12 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   // ✅ Center the geometry at origin for correct rotation
   useEffect(() => {
     if (loadedGeometry) {
-      // Clone the geometry so we don't modify the cached loader data
       const cloned = loadedGeometry.clone();
-
-      // Compute bounding box
       cloned.computeBoundingBox();
       const bbox = cloned.boundingBox!;
       const center = new THREE.Vector3();
       bbox.getCenter(center);
 
-      // Translate all vertices to center
       const positions = cloned.attributes.position;
       for (let i = 0; i < positions.count; i++) {
         positions.setX(i, positions.getX(i) - center.x);
@@ -58,28 +67,24 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   useEffect(() => {
     if (!isDragging) return;
 
-  const handleWindowMouseMove = (e: MouseEvent) => {
-    if (dragStartPos.current && onDragRotate) {
-      const deltaX = e.clientX - dragStartPos.current.x;
-      const deltaY = e.clientY - dragStartPos.current.y;
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      if (dragStartPos.current && onDragRotate) {
+        const deltaX = e.clientX - dragStartPos.current.x;
+        const deltaY = e.clientY - dragStartPos.current.y;
 
-      if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-        // Rotate the main camera
-        onDragRotate(deltaX, deltaY);
-        
-        // Rotate the orange cube in sync with the drag
-        if (groupRef.current) {
-          const rotationSpeed = 0.01;
-          // Horizontal rotation (around Y-axis)
-          groupRef.current.rotation.y += deltaX * rotationSpeed;
-          // Vertical rotation (around X-axis)
-          groupRef.current.rotation.x += deltaY * rotationSpeed;
+        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+          onDragRotate(deltaX, deltaY);
+          
+          if (groupRef.current) {
+            const rotationSpeed = 0.01;
+            groupRef.current.rotation.y += deltaX * rotationSpeed;
+            groupRef.current.rotation.x += deltaY * rotationSpeed;
+          }
+          
+          dragStartPos.current = { x: e.clientX, y: e.clientY };
         }
-        
-        dragStartPos.current = { x: e.clientX, y: e.clientY };
       }
-    }
-  };
+    };
 
     const handleWindowMouseUp = () => {
       setIsDragging(false);
@@ -94,166 +99,248 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
-  }, [isDragging, onDragRotate, gl]);
+  }, [isDragging, onDragRotate, gl, groupRef]);
 
-  // ✅ Define 6 FACE click zones
-  const faceDefinitions = [
+  // ✅ Define 6 FACE zones
+  const faceDefinitions: ZoneData[] = useMemo(() => [
     {
+      type: 'face',
       name: "face-right",
-      label: "RIGHT",
       direction: new THREE.Vector3(1, 0, 0),
-      position: [0.91, 0, 0] as [number, number, number],
-      rotation: [0, Math.PI / 2, 0] as [number, number, number],
+      position: [0.575, 0, 0],
+      rotation: [0, Math.PI / 2, 0],
     },
     {
+      type: 'face',
       name: "face-left",
-      label: "LEFT",
       direction: new THREE.Vector3(-1, 0, 0),
-      position: [-0.91, 0, 0] as [number, number, number],
-      rotation: [0, -Math.PI / 2, 0] as [number, number, number],
+      position: [-0.575, 0, 0],
+      rotation: [0, -Math.PI / 2, 0],
     },
     {
+      type: 'face',
       name: "face-top",
-      label: "TOP",
       direction: new THREE.Vector3(0, 1, 0),
-      position: [0, 0.91, 0] as [number, number, number],
-      rotation: [-Math.PI / 2, 0, 0] as [number, number, number],
+      position: [0, 0.575, 0],
+      rotation: [-Math.PI / 2, 0, 0],
     },
     {
+      type: 'face',
       name: "face-bottom",
-      label: "BOTTOM",
       direction: new THREE.Vector3(0, -1, 0),
-      position: [0, -0.91, 0] as [number, number, number],
-      rotation: [Math.PI / 2, 0, 0] as [number, number, number],
+      position: [0, -0.575, 0],
+      rotation: [Math.PI / 2, 0, 0],
     },
     {
+      type: 'face',
       name: "face-front",
-      label: "FRONT",
       direction: new THREE.Vector3(0, 0, 1),
-      position: [0, 0, 0.91] as [number, number, number],
-      rotation: [0, 0, 0] as [number, number, number],
+      position: [0, 0, 0.575],
+      rotation: [0, 0, 0],
     },
     {
+      type: 'face',
       name: "face-back",
-      label: "BACK",
       direction: new THREE.Vector3(0, 0, -1),
-      position: [0, 0, -0.91] as [number, number, number],
-      rotation: [0, Math.PI, 0] as [number, number, number],
+      position: [0, 0, -0.575],
+      rotation: [0, Math.PI, 0],
     },
-  ];
+  ], []);
 
-  // ✅ Define 12 EDGE click zones (for aligned views)
-  const edgeDefinitions = [
+  // ✅ Define 12 EDGE zones
+  const edgeDefinitions: ZoneData[] = useMemo(() => [
     // Top edges
     {
+      type: 'edge',
       name: "edge-top-front",
       direction: new THREE.Vector3(0, 1, 1).normalize(),
-      position: [0, 0.65, 0.65] as [number, number, number],
+      position: [0, 0.575, 0.575],
+      size: [1.15, 0.05, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-top-back",
       direction: new THREE.Vector3(0, 1, -1).normalize(),
-      position: [0, 0.65, -0.65] as [number, number, number],
+      position: [0, 0.575, -0.575],
+      size: [1.15, 0.05, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-top-left",
       direction: new THREE.Vector3(-1, 1, 0).normalize(),
-      position: [-0.65, 0.65, 0] as [number, number, number],
+      position: [-0.575, 0.575, 0],
+      size: [0.05, 0.05, 1.15],
     },
     {
+      type: 'edge',
       name: "edge-top-right",
       direction: new THREE.Vector3(1, 1, 0).normalize(),
-      position: [0.65, 0.65, 0] as [number, number, number],
+      position: [0.575, 0.575, 0],
+      size: [0.05, 0.05, 1.15],
     },
-
-    // Middle edges (vertical)
+    // Middle vertical edges
     {
+      type: 'edge',
       name: "edge-front-left",
       direction: new THREE.Vector3(-1, 0, 1).normalize(),
-      position: [-0.65, 0, 0.65] as [number, number, number],
+      position: [-0.575, 0, 0.575],
+      size: [0.05, 1.15, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-front-right",
       direction: new THREE.Vector3(1, 0, 1).normalize(),
-      position: [0.65, 0, 0.65] as [number, number, number],
+      position: [0.575, 0, 0.575],
+      size: [0.05, 1.15, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-back-left",
       direction: new THREE.Vector3(-1, 0, -1).normalize(),
-      position: [-0.65, 0, -0.65] as [number, number, number],
+      position: [-0.575, 0, -0.575],
+      size: [0.05, 1.15, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-back-right",
       direction: new THREE.Vector3(1, 0, -1).normalize(),
-      position: [0.65, 0, -0.65] as [number, number, number],
+      position: [0.575, 0, -0.575],
+      size: [0.05, 1.15, 0.05],
     },
-
     // Bottom edges
     {
+      type: 'edge',
       name: "edge-bottom-front",
       direction: new THREE.Vector3(0, -1, 1).normalize(),
-      position: [0, -0.65, 0.65] as [number, number, number],
+      position: [0, -0.575, 0.575],
+      size: [1.15, 0.05, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-bottom-back",
       direction: new THREE.Vector3(0, -1, -1).normalize(),
-      position: [0, -0.65, -0.65] as [number, number, number],
+      position: [0, -0.575, -0.575],
+      size: [1.15, 0.05, 0.05],
     },
     {
+      type: 'edge',
       name: "edge-bottom-left",
       direction: new THREE.Vector3(-1, -1, 0).normalize(),
-      position: [-0.65, -0.65, 0] as [number, number, number],
+      position: [-0.575, -0.575, 0],
+      size: [0.05, 0.05, 1.15],
     },
     {
+      type: 'edge',
       name: "edge-bottom-right",
       direction: new THREE.Vector3(1, -1, 0).normalize(),
-      position: [0.65, -0.65, 0] as [number, number, number],
+      position: [0.575, -0.575, 0],
+      size: [0.05, 0.05, 1.15],
     },
-  ];
+  ], []);
 
-  // ✅ Define 8 CORNER click zones (for isometric views)
-  const cornerDefinitions = [
+  // ✅ Define 8 CORNER zones
+  const cornerDefinitions: ZoneData[] = useMemo(() => [
     {
+      type: 'corner',
       name: "corner-top-front-right",
       direction: new THREE.Vector3(1, 1, 1).normalize(),
-      position: [0.65, 0.65, 0.65] as [number, number, number],
+      position: [0.575, 0.575, 0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-top-front-left",
       direction: new THREE.Vector3(-1, 1, 1).normalize(),
-      position: [-0.65, 0.65, 0.65] as [number, number, number],
+      position: [-0.575, 0.575, 0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-top-back-right",
       direction: new THREE.Vector3(1, 1, -1).normalize(),
-      position: [0.65, 0.65, -0.65] as [number, number, number],
+      position: [0.575, 0.575, -0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-top-back-left",
       direction: new THREE.Vector3(-1, 1, -1).normalize(),
-      position: [-0.65, 0.65, -0.65] as [number, number, number],
+      position: [-0.575, 0.575, -0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-bottom-front-right",
       direction: new THREE.Vector3(1, -1, 1).normalize(),
-      position: [0.65, -0.65, 0.65] as [number, number, number],
+      position: [0.575, -0.575, 0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-bottom-front-left",
       direction: new THREE.Vector3(-1, -1, 1).normalize(),
-      position: [-0.65, -0.65, 0.65] as [number, number, number],
+      position: [-0.575, -0.575, 0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-bottom-back-right",
       direction: new THREE.Vector3(1, -1, -1).normalize(),
-      position: [0.65, -0.65, -0.65] as [number, number, number],
+      position: [0.575, -0.575, -0.575],
+      radius: 0.08,
     },
     {
+      type: 'corner',
       name: "corner-bottom-back-left",
       direction: new THREE.Vector3(-1, -1, -1).normalize(),
-      position: [-0.65, -0.65, -0.65] as [number, number, number],
+      position: [-0.575, -0.575, -0.575],
+      radius: 0.08,
     },
-  ];
+  ], []);
+
+  // ✅ Create interaction layer (26 invisible primitive meshes)
+  const interactionGroup = useMemo(() => {
+    const group = new THREE.Group();
+    
+    // Create face interaction planes
+    faceDefinitions.forEach(face => {
+      const geometry = new THREE.PlaneGeometry(1.15, 1.15);
+      const material = new THREE.MeshBasicMaterial({ 
+        visible: false,
+        side: THREE.DoubleSide 
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(...face.position);
+      mesh.rotation.set(...(face.rotation || [0, 0, 0]));
+      mesh.name = face.name;
+      mesh.userData = face;
+      group.add(mesh);
+    });
+    
+    // Create edge interaction boxes
+    edgeDefinitions.forEach(edge => {
+      const geometry = new THREE.BoxGeometry(...(edge.size || [0.1, 0.1, 0.1]));
+      const material = new THREE.MeshBasicMaterial({ visible: false });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(...edge.position);
+      mesh.name = edge.name;
+      mesh.userData = edge;
+      group.add(mesh);
+    });
+    
+    // Create corner interaction spheres
+    cornerDefinitions.forEach(corner => {
+      const geometry = new THREE.SphereGeometry(corner.radius || 0.08, 8, 8);
+      const material = new THREE.MeshBasicMaterial({ visible: false });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(...corner.position);
+      mesh.name = corner.name;
+      mesh.userData = corner;
+      group.add(mesh);
+    });
+    
+    return group;
+  }, [faceDefinitions, edgeDefinitions, cornerDefinitions]);
 
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
@@ -266,10 +353,44 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
+    
+    if (!isDragging && interactionGroupRef.current) {
+      // Use raycaster to detect hover on interaction layer
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2(
+        (event.clientX / gl.domElement.clientWidth) * 2 - 1,
+        -(event.clientY / gl.domElement.clientHeight) * 2 + 1
+      );
+      raycaster.setFromCamera(mouse, camera);
+      
+      const intersects = raycaster.intersectObjects(interactionGroupRef.current.children, false);
+      
+      if (intersects.length > 0) {
+        const hitObject = intersects[0].object;
+        setHoveredZoneData(hitObject.userData as ZoneData);
+        gl.domElement.style.cursor = "pointer";
+      } else {
+        setHoveredZoneData(null);
+        gl.domElement.style.cursor = "grab";
+      }
+    }
   };
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
+    
+    const wasClick =
+      dragStartPos.current &&
+      Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
+      Math.abs(event.clientY - dragStartPos.current.y) < 3;
+
+    if (wasClick && hoveredZoneData && onFaceClick) {
+      console.log(`🖱️ ${hoveredZoneData.name} clicked →`, hoveredZoneData.direction);
+      onFaceClick(hoveredZoneData.direction);
+    }
+
+    setIsDragging(false);
+    dragStartPos.current = null;
   };
 
   const handleCubeEnter = () => {
@@ -278,162 +399,16 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     }
   };
 
-  // ✅ Generic zone click handler
-  const handleZoneClick =
-    (zoneName: string, zoneLabel: string, direction: THREE.Vector3) => (event: ThreeEvent<MouseEvent>) => {
-      event.stopPropagation();
-
-      const wasClick =
-        dragStartPos.current &&
-        Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
-        Math.abs(event.clientY - dragStartPos.current.y) < 3;
-
-      if (wasClick && onFaceClick) {
-        console.log(`🖱️ ${zoneLabel} clicked →`, direction);
-        onFaceClick(direction);
-      }
-
-      setIsDragging(false);
-      dragStartPos.current = null;
-    };
-
-  const handleZoneEnter = (zoneName: string) => () => {
+  const handleCubeLeave = () => {
     if (!isDragging) {
-      setHoveredZone(zoneName);
+      setHoveredZoneData(null);
+      gl.domElement.style.cursor = "default";
     }
   };
-
-  const handleZoneLeave = () => {
-    if (!isDragging) {
-      setHoveredZone(null);
-    }
-  };
-
-  // ✅ Detect zone from 3D point on interaction cube
-  const detectZoneFromPoint = (point: THREE.Vector3) => {
-    const abs = { x: Math.abs(point.x), y: Math.abs(point.y), z: Math.abs(point.z) };
-    const max = Math.max(abs.x, abs.y, abs.z);
-    const tolerance = 0.15;
-
-    // Count how many axes are at maximum
-    const atMax = [
-      abs.x > max - tolerance ? "x" : null,
-      abs.y > max - tolerance ? "y" : null,
-      abs.z > max - tolerance ? "z" : null,
-    ].filter(Boolean);
-
-    if (atMax.length === 1) {
-      // FACE: Only one axis at max
-      if (point.x > 0.4) return { name: "face-right", direction: new THREE.Vector3(1, 0, 0) };
-      if (point.x < -0.4) return { name: "face-left", direction: new THREE.Vector3(-1, 0, 0) };
-      if (point.y > 0.4) return { name: "face-top", direction: new THREE.Vector3(0, 1, 0) };
-      if (point.y < -0.4) return { name: "face-bottom", direction: new THREE.Vector3(0, -1, 0) };
-      if (point.z > 0.4) return { name: "face-front", direction: new THREE.Vector3(0, 0, 1) };
-      if (point.z < -0.4) return { name: "face-back", direction: new THREE.Vector3(0, 0, -1) };
-    } else if (atMax.length === 2) {
-      // EDGE: Two axes at max
-      const dir = new THREE.Vector3(
-        abs.x > max - tolerance ? Math.sign(point.x) : 0,
-        abs.y > max - tolerance ? Math.sign(point.y) : 0,
-        abs.z > max - tolerance ? Math.sign(point.z) : 0,
-      );
-      return {
-        name: `edge-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`,
-        direction: dir.normalize(),
-      };
-    } else if (atMax.length === 3) {
-      // CORNER: All three axes at max
-      const dir = new THREE.Vector3(Math.sign(point.x), Math.sign(point.y), Math.sign(point.z));
-      return {
-        name: `corner-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`,
-        direction: dir.normalize(),
-      };
-    }
-
-    return null;
-  };
-
-  // ✅ Click handler for interaction cube
-  const handleInteractionCubeClick = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-
-    const wasClick =
-      dragStartPos.current &&
-      Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
-      Math.abs(event.clientY - dragStartPos.current.y) < 3;
-
-    if (wasClick && onFaceClick && event.point) {
-      const zone = detectZoneFromPoint(event.point);
-      if (zone) {
-        console.log(`🖱️ ${zone.name} clicked →`, zone.direction);
-        onFaceClick(zone.direction);
-      }
-    }
-
-    setIsDragging(false);
-    dragStartPos.current = null;
-  };
-
-
-  // ✅ Helper: Create geometry with colored vertices for highlight overlay
-  const createHighlightGeometry = (
-    baseGeometry: THREE.BufferGeometry,
-    hoveredZone: string | null
-  ): THREE.BufferGeometry => {
-    const geometry = baseGeometry.clone();
-    const positions = geometry.attributes.position;
-    const colors = new Float32Array(positions.count * 3);
-
-    if (!hoveredZone) {
-      // All transparent when nothing is hovered
-      for (let i = 0; i < positions.count; i++) {
-        colors[i * 3] = 0;     // R
-        colors[i * 3 + 1] = 0; // G
-        colors[i * 3 + 2] = 0; // B
-      }
-      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      geometry.attributes.color.needsUpdate = true;
-      return geometry;
-    }
-
-    // Calculate which vertices belong to the hovered zone
-    for (let i = 0; i < positions.count; i++) {
-      const x = positions.getX(i);
-      const y = positions.getY(i);
-      const z = positions.getZ(i);
-      const point = new THREE.Vector3(x, y, z);
-
-      // Use existing detectZoneFromPoint logic
-      const zone = detectZoneFromPoint(point);
-
-      if (zone?.name === hoveredZone) {
-        // Blue color (#2563eb) for vertices in hovered zone
-        colors[i * 3] = 0.145;     // R = 37/255
-        colors[i * 3 + 1] = 0.388; // G = 99/255
-        colors[i * 3 + 2] = 0.922; // B = 235/255
-      } else {
-        // Transparent for all other vertices
-        colors[i * 3] = 0;
-        colors[i * 3 + 1] = 0;
-        colors[i * 3 + 2] = 0;
-      }
-    }
-
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geometry.attributes.color.needsUpdate = true;
-
-    return geometry;
-  };
-
-  // ✅ Compute highlight geometry whenever hoveredZone changes
-  const highlightGeometry = useMemo(() => {
-    if (!centeredGeometry) return null;
-    return createHighlightGeometry(centeredGeometry, hoveredZone);
-  }, [centeredGeometry, hoveredZone]);
 
   return (
     <group ref={groupRef}>
-      {/* Main cube mesh from STL - properly centered */}
+      {/* Layer 1: Visual STL cube (orange, chamfered, beautiful) */}
       {centeredGeometry && (
         <mesh
           ref={meshRef}
@@ -445,6 +420,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerEnter={handleCubeEnter}
+          onPointerLeave={handleCubeLeave}
         >
           <meshStandardMaterial
             color="#FFAB00"
@@ -458,41 +434,32 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         </mesh>
       )}
 
-      {/* ✅ Third cube - ONLY highlight + click detection (NO rotation) */}
-      {highlightGeometry && (
-        <mesh
-          position={[0, 0, 0]}
-          scale={1.15}
-          geometry={highlightGeometry}
-          onClick={handleInteractionCubeClick}
-          onPointerMove={(e) => {
-            if (!isDragging && e.point) {
-              const zone = detectZoneFromPoint(e.point);
-              setHoveredZone(zone?.name || null);
-            }
-          }}
-          onPointerEnter={() => {
-            if (!isDragging) {
-              gl.domElement.style.cursor = "pointer";
-            }
-          }}
-          onPointerLeave={() => {
-            setHoveredZone(null);
-          }}
-          raycast={isDragging ? () => null : undefined}
-        >
-          <meshBasicMaterial
-            vertexColors
-            transparent
-            opacity={hoveredZone ? 1 : 0}
+      {/* Layer 2: Interaction primitives (26 invisible meshes) */}
+      <primitive object={interactionGroup} ref={interactionGroupRef} />
+
+      {/* Layer 3: Dynamic highlight mesh */}
+      {hoveredZoneData && (
+        <mesh position={hoveredZoneData.position} rotation={hoveredZoneData.rotation || [0, 0, 0]}>
+          {hoveredZoneData.type === 'face' && (
+            <planeGeometry args={[1.15, 1.15]} />
+          )}
+          {hoveredZoneData.type === 'edge' && (
+            <boxGeometry args={hoveredZoneData.size} />
+          )}
+          {hoveredZoneData.type === 'corner' && (
+            <sphereGeometry args={[hoveredZoneData.radius, 16, 16]} />
+          )}
+          <meshBasicMaterial 
+            color="#3b82f6" 
+            transparent 
+            opacity={0.5}
             depthTest={false}
             depthWrite={false}
-            side={THREE.DoubleSide}
           />
         </mesh>
       )}
 
-      {/* Edge lines - Dual-layer: Simple box for clean 12 outer edges */}
+      {/* Layer 4: Wireframe edges */}
       {centeredGeometry && (
         <lineSegments scale={1.1}>
           <edgesGeometry args={[centeredGeometry]} />
