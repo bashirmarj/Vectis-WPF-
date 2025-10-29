@@ -1,13 +1,11 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ Layered Geometry Architecture - Industry Standard Pattern
-// Layer 1: Visual box cube (simple geometry)
-// Layer 2: Interaction primitives (26 invisible meshes)
-// Layer 3: Dynamic highlight mesh
-// Layer 4: Wireframe edges
+// ✅ Reference-Accurate 54-Mesh PlaneGeometry Architecture
+// All faces, edges, and corners are individual PlaneGeometry meshes
+// Highlighting via material.color changes (orange -> blue)
 
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import * as THREE from "three";
-import { ThreeEvent, useThree } from "@react-three/fiber";
+import { ThreeEvent } from "@react-three/fiber";
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -15,459 +13,302 @@ interface OrientationCubeMeshProps {
   groupRef: React.RefObject<THREE.Group>;
 }
 
-interface ZoneData {
-  type: 'face' | 'edge' | 'corner';
-  name: string;
-  position: [number, number, number];
-  direction: THREE.Vector3;
-  size?: [number, number, number]; // For edges
-  radius?: number; // For corners
-  rotation?: [number, number, number]; // For faces
+// Constants matching reference code
+const CUBE_SIZE = 1.0;
+const EDGE_SIZE = 0.1;
+const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2); // 0.8
+const FACE_OFFSET = CUBE_SIZE / 2; // 0.5
+const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.45
+
+// Helper to create a single PlaneGeometry face
+function createFace(
+  size: [number, number],
+  position: [number, number, number],
+  rotation: [number, number, number],
+  name: string
+): THREE.Mesh {
+  const geometry = new THREE.PlaneGeometry(size[0], size[1]);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xFFAB00,
+    metalness: 0.3,
+    roughness: 0.5,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = name;
+  mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+  mesh.position.set(position[0], position[1], position[2]);
+  return mesh;
 }
 
-export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: OrientationCubeMeshProps) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const interactionGroupRef = useRef<THREE.Group>(null);
-  const [hoveredZoneData, setHoveredZoneData] = useState<ZoneData | null>(null);
+export function OrientationCubeMesh({
+  onFaceClick,
+  onDragRotate,
+  groupRef,
+}: OrientationCubeMeshProps) {
+  const [hoveredZoneName, setHoveredZoneName] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
-  const { gl, camera } = useThree();
 
-  // ✅ Window-level drag tracking
+  // Build all 54 PlaneGeometry meshes
+  const cubeMeshes = useMemo(() => {
+    const meshes: THREE.Mesh[] = [];
+    
+    // === 6 MAIN FACES (1 mesh each) ===
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom'));
+    
+    // === 12 EDGES (2 meshes each = 24 total) ===
+    
+    // Top 4 edges (horizontal)
+    const e1 = 'edge-top-front';
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e1));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], e1));
+    
+    const e2 = 'edge-top-right';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, FACE_OFFSET, 0], [Math.PI/2, Math.PI/2, 0], e2));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, 0], [0, Math.PI/2, 0], e2));
+    
+    const e3 = 'edge-top-back';
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e3));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], e3));
+    
+    const e4 = 'edge-top-left';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, FACE_OFFSET, 0], [Math.PI/2, -Math.PI/2, 0], e4));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e4));
+    
+    // Middle 4 edges (vertical)
+    const e5 = 'edge-front-right';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e5));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, BORDER_OFFSET], [0, Math.PI/2, 0], e5));
+    
+    const e6 = 'edge-back-right';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e6));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, -BORDER_OFFSET], [0, Math.PI/2, 0], e6));
+    
+    const e7 = 'edge-back-left';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e7));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, -BORDER_OFFSET], [0, -Math.PI/2, 0], e7));
+    
+    const e8 = 'edge-front-left';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e8));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, BORDER_OFFSET], [0, -Math.PI/2, 0], e8));
+    
+    // Bottom 4 edges (horizontal)
+    const e9 = 'edge-bottom-front';
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e9));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], e9));
+    
+    const e10 = 'edge-bottom-right';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, -FACE_OFFSET, 0], [-Math.PI/2, Math.PI/2, 0], e10));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, 0], [0, Math.PI/2, 0], e10));
+    
+    const e11 = 'edge-bottom-back';
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e11));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], e11));
+    
+    const e12 = 'edge-bottom-left';
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, 0], [-Math.PI/2, -Math.PI/2, 0], e12));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e12));
+    
+    // === 8 CORNERS (3 meshes each = 24 total) ===
+    
+    const c1 = 'corner-top-front-right';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c1));
+    
+    const c2 = 'corner-top-back-right';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c2));
+    
+    const c3 = 'corner-top-back-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c3));
+    
+    const c4 = 'corner-top-front-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c4));
+    
+    const c5 = 'corner-bottom-front-right';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c5));
+    
+    const c6 = 'corner-bottom-back-right';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c6));
+    
+    const c7 = 'corner-bottom-back-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c7));
+    
+    const c8 = 'corner-bottom-front-left';
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
+    
+    return meshes;
+  }, []);
+
+  // Window-level drag tracking
   useEffect(() => {
-    if (!isDragging) return;
-
-    const handleWindowMouseMove = (e: MouseEvent) => {
-      if (dragStartPos.current && onDragRotate) {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging && dragStartPos.current && onDragRotate) {
         const deltaX = e.clientX - dragStartPos.current.x;
         const deltaY = e.clientY - dragStartPos.current.y;
-
-        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-          onDragRotate(deltaX, deltaY);
-          
-          if (groupRef.current) {
-            const rotationSpeed = 0.01;
-            groupRef.current.rotation.y += deltaX * rotationSpeed;
-            groupRef.current.rotation.x += deltaY * rotationSpeed;
-          }
-          
-          dragStartPos.current = { x: e.clientX, y: e.clientY };
-        }
+        onDragRotate(deltaX, deltaY);
+        dragStartPos.current = { x: e.clientX, y: e.clientY };
       }
     };
 
-    const handleWindowMouseUp = () => {
+    const handleMouseUp = () => {
       setIsDragging(false);
       dragStartPos.current = null;
-      gl.domElement.style.cursor = "default";
     };
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    window.addEventListener("mouseup", handleWindowMouseUp);
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
 
     return () => {
-      window.removeEventListener("mousemove", handleWindowMouseMove);
-      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, onDragRotate, gl, groupRef]);
+  }, [isDragging, onDragRotate]);
 
-  // ✅ Define 6 FACE zones
-  const faceDefinitions: ZoneData[] = useMemo(() => [
-    {
-      type: 'face',
-      name: "face-right",
-      direction: new THREE.Vector3(1, 0, 0),
-      position: [0.575, 0, 0],
-      rotation: [0, Math.PI / 2, 0],
-    },
-    {
-      type: 'face',
-      name: "face-left",
-      direction: new THREE.Vector3(-1, 0, 0),
-      position: [-0.575, 0, 0],
-      rotation: [0, -Math.PI / 2, 0],
-    },
-    {
-      type: 'face',
-      name: "face-top",
-      direction: new THREE.Vector3(0, 1, 0),
-      position: [0, 0.575, 0],
-      rotation: [-Math.PI / 2, 0, 0],
-    },
-    {
-      type: 'face',
-      name: "face-bottom",
-      direction: new THREE.Vector3(0, -1, 0),
-      position: [0, -0.575, 0],
-      rotation: [Math.PI / 2, 0, 0],
-    },
-    {
-      type: 'face',
-      name: "face-front",
-      direction: new THREE.Vector3(0, 0, 1),
-      position: [0, 0, 0.575],
-      rotation: [0, 0, 0],
-    },
-    {
-      type: 'face',
-      name: "face-back",
-      direction: new THREE.Vector3(0, 0, -1),
-      position: [0, 0, -0.575],
-      rotation: [0, Math.PI, 0],
-    },
-  ], []);
-
-  // ✅ Define 12 EDGE zones
-  const edgeDefinitions: ZoneData[] = useMemo(() => [
-    // Top edges
-    {
-      type: 'edge',
-      name: "edge-top-front",
-      direction: new THREE.Vector3(0, 1, 1).normalize(),
-      position: [0, 0.575, 0.575],
-      size: [1.15, 0.05, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-top-back",
-      direction: new THREE.Vector3(0, 1, -1).normalize(),
-      position: [0, 0.575, -0.575],
-      size: [1.15, 0.05, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-top-left",
-      direction: new THREE.Vector3(-1, 1, 0).normalize(),
-      position: [-0.575, 0.575, 0],
-      size: [0.05, 0.05, 1.15],
-    },
-    {
-      type: 'edge',
-      name: "edge-top-right",
-      direction: new THREE.Vector3(1, 1, 0).normalize(),
-      position: [0.575, 0.575, 0],
-      size: [0.05, 0.05, 1.15],
-    },
-    // Middle vertical edges
-    {
-      type: 'edge',
-      name: "edge-front-left",
-      direction: new THREE.Vector3(-1, 0, 1).normalize(),
-      position: [-0.575, 0, 0.575],
-      size: [0.05, 1.15, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-front-right",
-      direction: new THREE.Vector3(1, 0, 1).normalize(),
-      position: [0.575, 0, 0.575],
-      size: [0.05, 1.15, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-back-left",
-      direction: new THREE.Vector3(-1, 0, -1).normalize(),
-      position: [-0.575, 0, -0.575],
-      size: [0.05, 1.15, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-back-right",
-      direction: new THREE.Vector3(1, 0, -1).normalize(),
-      position: [0.575, 0, -0.575],
-      size: [0.05, 1.15, 0.05],
-    },
-    // Bottom edges
-    {
-      type: 'edge',
-      name: "edge-bottom-front",
-      direction: new THREE.Vector3(0, -1, 1).normalize(),
-      position: [0, -0.575, 0.575],
-      size: [1.15, 0.05, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-bottom-back",
-      direction: new THREE.Vector3(0, -1, -1).normalize(),
-      position: [0, -0.575, -0.575],
-      size: [1.15, 0.05, 0.05],
-    },
-    {
-      type: 'edge',
-      name: "edge-bottom-left",
-      direction: new THREE.Vector3(-1, -1, 0).normalize(),
-      position: [-0.575, -0.575, 0],
-      size: [0.05, 0.05, 1.15],
-    },
-    {
-      type: 'edge',
-      name: "edge-bottom-right",
-      direction: new THREE.Vector3(1, -1, 0).normalize(),
-      position: [0.575, -0.575, 0],
-      size: [0.05, 0.05, 1.15],
-    },
-  ], []);
-
-  // ✅ Define 8 CORNER zones
-  const cornerDefinitions: ZoneData[] = useMemo(() => [
-    {
-      type: 'corner',
-      name: "corner-top-front-right",
-      direction: new THREE.Vector3(1, 1, 1).normalize(),
-      position: [0.575, 0.575, 0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-top-front-left",
-      direction: new THREE.Vector3(-1, 1, 1).normalize(),
-      position: [-0.575, 0.575, 0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-top-back-right",
-      direction: new THREE.Vector3(1, 1, -1).normalize(),
-      position: [0.575, 0.575, -0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-top-back-left",
-      direction: new THREE.Vector3(-1, 1, -1).normalize(),
-      position: [-0.575, 0.575, -0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-bottom-front-right",
-      direction: new THREE.Vector3(1, -1, 1).normalize(),
-      position: [0.575, -0.575, 0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-bottom-front-left",
-      direction: new THREE.Vector3(-1, -1, 1).normalize(),
-      position: [-0.575, -0.575, 0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-bottom-back-right",
-      direction: new THREE.Vector3(1, -1, -1).normalize(),
-      position: [0.575, -0.575, -0.575],
-      radius: 0.08,
-    },
-    {
-      type: 'corner',
-      name: "corner-bottom-back-left",
-      direction: new THREE.Vector3(-1, -1, -1).normalize(),
-      position: [-0.575, -0.575, -0.575],
-      radius: 0.08,
-    },
-  ], []);
-
-  // ✅ Create interaction layer (26 invisible primitive meshes)
-  const interactionGroup = useMemo(() => {
-    const group = new THREE.Group();
-    
-    // Create face interaction planes
-    faceDefinitions.forEach(face => {
-      const geometry = new THREE.PlaneGeometry(1.15, 1.15);
-      const material = new THREE.MeshBasicMaterial({ 
-        visible: false,
-        side: THREE.DoubleSide 
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(...face.position);
-      mesh.rotation.set(...(face.rotation || [0, 0, 0]));
-      mesh.name = face.name;
-      mesh.userData = face;
-      group.add(mesh);
-    });
-    
-    // Create edge interaction boxes
-    edgeDefinitions.forEach(edge => {
-      const geometry = new THREE.BoxGeometry(...(edge.size || [0.1, 0.1, 0.1]));
-      const material = new THREE.MeshBasicMaterial({ visible: false });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(...edge.position);
-      mesh.name = edge.name;
-      mesh.userData = edge;
-      group.add(mesh);
-    });
-    
-    // Create corner interaction spheres
-    cornerDefinitions.forEach(corner => {
-      const geometry = new THREE.SphereGeometry(corner.radius || 0.08, 8, 8);
-      const material = new THREE.MeshBasicMaterial({ visible: false });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(...corner.position);
-      mesh.name = corner.name;
-      mesh.userData = corner;
-      group.add(mesh);
-    });
-    
-    return group;
-  }, [faceDefinitions, edgeDefinitions, cornerDefinitions]);
-
-  const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
+  // Event handlers
+  const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
-    if (isDragging) return;
+    
+    // Reset all meshes to orange
+    cubeMeshes.forEach(mesh => {
+      (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xFFAB00);
+    });
+    
+    // Highlight all meshes with matching name
+    if (event.intersections.length > 0) {
+      const hoveredName = event.intersections[0].object.name;
+      if (hoveredName) {
+        cubeMeshes.forEach(mesh => {
+          if (mesh.name === hoveredName) {
+            (mesh.material as THREE.MeshStandardMaterial).color.setHex(0x3b82f6);
+          }
+        });
+        setHoveredZoneName(hoveredName);
+        document.body.style.cursor = 'pointer';
+      }
+    }
+  }, [cubeMeshes]);
 
+  const handlePointerLeave = useCallback(() => {
+    cubeMeshes.forEach(mesh => {
+      (mesh.material as THREE.MeshStandardMaterial).color.setHex(0xFFAB00);
+    });
+    setHoveredZoneName(null);
+    document.body.style.cursor = 'default';
+  }, [cubeMeshes]);
+
+  const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
     setIsDragging(true);
     dragStartPos.current = { x: event.clientX, y: event.clientY };
-    gl.domElement.style.cursor = "default";
-  };
+  }, []);
 
-  const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
+  const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
+    const wasDragging = isDragging;
+    setIsDragging(false);
+    dragStartPos.current = null;
     
-    if (isDragging) return;
-    
-    // R3F already did the raycasting! Just check the intersections
-    if (event.intersections.length > 0) {
-      // Find first object with userData.type
-      for (const intersection of event.intersections) {
-        if (intersection.object.userData.type) {
-          setHoveredZoneData(intersection.object.userData as ZoneData);
-          gl.domElement.style.cursor = "default";
-          return;
+    if (!wasDragging && event.intersections.length > 0) {
+      const clickedName = event.intersections[0].object.name;
+      
+      // Extract direction from clicked zone
+      if (clickedName.startsWith('face-')) {
+        const directionMap: { [key: string]: THREE.Vector3 } = {
+          'face-front': new THREE.Vector3(0, 0, 1),
+          'face-back': new THREE.Vector3(0, 0, -1),
+          'face-right': new THREE.Vector3(1, 0, 0),
+          'face-left': new THREE.Vector3(-1, 0, 0),
+          'face-top': new THREE.Vector3(0, 1, 0),
+          'face-bottom': new THREE.Vector3(0, -1, 0),
+        };
+        const direction = directionMap[clickedName];
+        if (direction && onFaceClick) {
+          onFaceClick(direction);
+        }
+      } else if (clickedName.startsWith('edge-')) {
+        // Edge directions (diagonal)
+        const edgeDirectionMap: { [key: string]: THREE.Vector3 } = {
+          'edge-top-front': new THREE.Vector3(0, 1, 1).normalize(),
+          'edge-top-right': new THREE.Vector3(1, 1, 0).normalize(),
+          'edge-top-back': new THREE.Vector3(0, 1, -1).normalize(),
+          'edge-top-left': new THREE.Vector3(-1, 1, 0).normalize(),
+          'edge-front-right': new THREE.Vector3(1, 0, 1).normalize(),
+          'edge-back-right': new THREE.Vector3(1, 0, -1).normalize(),
+          'edge-back-left': new THREE.Vector3(-1, 0, -1).normalize(),
+          'edge-front-left': new THREE.Vector3(-1, 0, 1).normalize(),
+          'edge-bottom-front': new THREE.Vector3(0, -1, 1).normalize(),
+          'edge-bottom-right': new THREE.Vector3(1, -1, 0).normalize(),
+          'edge-bottom-back': new THREE.Vector3(0, -1, -1).normalize(),
+          'edge-bottom-left': new THREE.Vector3(-1, -1, 0).normalize(),
+        };
+        const direction = edgeDirectionMap[clickedName];
+        if (direction && onFaceClick) {
+          onFaceClick(direction);
+        }
+      } else if (clickedName.startsWith('corner-')) {
+        // Corner directions (3D diagonal)
+        const cornerDirectionMap: { [key: string]: THREE.Vector3 } = {
+          'corner-top-front-right': new THREE.Vector3(1, 1, 1).normalize(),
+          'corner-top-back-right': new THREE.Vector3(1, 1, -1).normalize(),
+          'corner-top-back-left': new THREE.Vector3(-1, 1, -1).normalize(),
+          'corner-top-front-left': new THREE.Vector3(-1, 1, 1).normalize(),
+          'corner-bottom-front-right': new THREE.Vector3(1, -1, 1).normalize(),
+          'corner-bottom-back-right': new THREE.Vector3(1, -1, -1).normalize(),
+          'corner-bottom-back-left': new THREE.Vector3(-1, -1, -1).normalize(),
+          'corner-bottom-front-left': new THREE.Vector3(-1, -1, 1).normalize(),
+        };
+        const direction = cornerDirectionMap[clickedName];
+        if (direction && onFaceClick) {
+          onFaceClick(direction);
         }
       }
     }
-    
-    setHoveredZoneData(null);
-    gl.domElement.style.cursor = "default";
-  };
-
-  const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
-    event.stopPropagation();
-    
-    const wasClick =
-      dragStartPos.current &&
-      Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
-      Math.abs(event.clientY - dragStartPos.current.y) < 3;
-
-    if (wasClick && hoveredZoneData && onFaceClick) {
-      console.log(`🖱️ ${hoveredZoneData.name} clicked →`, hoveredZoneData.direction);
-      onFaceClick(hoveredZoneData.direction);
-    }
-
-    setIsDragging(false);
-    dragStartPos.current = null;
-  };
-
-  const handleCubeEnter = () => {
-    if (!isDragging) {
-      gl.domElement.style.cursor = "default";
-    }
-  };
-
-  const handleCubeLeave = () => {
-    if (!isDragging) {
-      setHoveredZoneData(null);
-      gl.domElement.style.cursor = "default";
-    }
-  };
+  }, [isDragging, onFaceClick]);
 
   return (
-    <>
     <group ref={groupRef}>
-      {/* Layer 1: Visual box cube (orange, simple geometry) - NO INTERACTION */}
-      <mesh
-        ref={meshRef}
-        castShadow
-        receiveShadow
-        scale={1.1}
-        raycast={() => null}
-      >
-        <boxGeometry args={[1.15, 1.15, 1.15]} />
-        <meshStandardMaterial
-          color="#FFAB00"
-          metalness={0.3}
-          roughness={0.5}
-          transparent={false}
-          opacity={1}
-          envMapIntensity={1.5}
-          side={THREE.FrontSide}
-        />
-      </mesh>
-
-      {/* Layer 2: Interaction primitives (26 invisible meshes) - ALL EVENTS HERE */}
+      {/* Single interactive layer: 54 visible PlaneGeometry meshes */}
       <group
-        scale={1.16}
-        onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
+        onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        onPointerEnter={handleCubeEnter}
-        onPointerLeave={handleCubeLeave}
+        onPointerLeave={handlePointerLeave}
       >
-        <primitive object={interactionGroup} ref={interactionGroupRef} />
+        {cubeMeshes.map((mesh, index) => (
+          <primitive key={index} object={mesh} />
+        ))}
       </group>
-
-      {/* Layer 4: Wireframe edges */}
-      <lineSegments scale={1.1}>
+      
+      {/* Wireframe */}
+      <lineSegments>
         <edgesGeometry>
-          <boxGeometry args={[1.15, 1.15, 1.15]} />
+          <boxGeometry args={[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]} />
         </edgesGeometry>
-        <lineBasicMaterial
-          color="#0f172a"
-          linewidth={2}
-          transparent={true}
-          opacity={0.9}
-          depthTest={true}
-          depthWrite={false}
-        />
+        <lineBasicMaterial color="#0f172a" linewidth={2} />
       </lineSegments>
     </group>
-
-    {/* Layer 3: Dynamic highlight mesh - OUTSIDE rotating group, in world space */}
-    {hoveredZoneData && groupRef.current && (
-      <mesh 
-        position={(() => {
-          const localPos = new THREE.Vector3(...hoveredZoneData.position);
-          localPos.multiplyScalar(1.16);
-          return groupRef.current!.localToWorld(localPos.clone());
-        })()}
-        rotation={(() => {
-          const worldQuat = new THREE.Quaternion();
-          groupRef.current!.getWorldQuaternion(worldQuat);
-          
-          if (hoveredZoneData.rotation) {
-            const zoneEuler = new THREE.Euler(...hoveredZoneData.rotation);
-            const zoneQuat = new THREE.Quaternion().setFromEuler(zoneEuler);
-            worldQuat.multiply(zoneQuat);
-          }
-          
-          const euler = new THREE.Euler().setFromQuaternion(worldQuat);
-          return euler.toArray().slice(0, 3) as [number, number, number];
-        })()}
-        renderOrder={999}
-      >
-        {hoveredZoneData.type === 'face' && (
-          <planeGeometry args={[1.15 * 1.16, 1.15 * 1.16]} />
-        )}
-        {hoveredZoneData.type === 'edge' && (
-          <boxGeometry args={[
-            (hoveredZoneData.size?.[0] || 0) * 1.16,
-            (hoveredZoneData.size?.[1] || 0) * 1.16,
-            (hoveredZoneData.size?.[2] || 0) * 1.16
-          ]} />
-        )}
-        {hoveredZoneData.type === 'corner' && (
-          <sphereGeometry args={[(hoveredZoneData.radius || 0.08) * 1.16, 16, 16]} />
-        )}
-        <meshBasicMaterial 
-          color="#3b82f6" 
-          transparent 
-          opacity={0.5}
-          depthTest={false}
-          depthWrite={false}
-        />
-      </mesh>
-    )}
-    </>
   );
 }
