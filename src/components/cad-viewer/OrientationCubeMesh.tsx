@@ -18,45 +18,11 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const meshRef = useRef<THREE.Mesh>(null);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [geometryCentered, setGeometryCentered] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
 
   // ✅ Load STL geometry
   const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
-
-  // ✅ CRITICAL: Center the geometry properly for correct rotation
-  useEffect(() => {
-    if (loadedGeometry) {
-      // Compute bounding box
-      loadedGeometry.computeBoundingBox();
-      const bbox = loadedGeometry.boundingBox!;
-
-      // Calculate center offset
-      const center = new THREE.Vector3();
-      bbox.getCenter(center);
-
-      // Translate all vertices to center the geometry
-      const positions = loadedGeometry.attributes.position;
-      for (let i = 0; i < positions.count; i++) {
-        positions.setX(i, positions.getX(i) - center.x);
-        positions.setY(i, positions.getY(i) - center.y);
-        positions.setZ(i, positions.getZ(i) - center.z);
-      }
-
-      positions.needsUpdate = true;
-      loadedGeometry.computeVertexNormals();
-      loadedGeometry.computeBoundingBox();
-      loadedGeometry.computeBoundingSphere();
-
-      console.log("✅ STL geometry centered at origin", {
-        center: center,
-        boundingBox: loadedGeometry.boundingBox,
-      });
-      
-      setGeometryCentered(true);
-    }
-  }, [loadedGeometry]);
 
   // ✅ Window-level drag tracking
   useEffect(() => {
@@ -385,19 +351,17 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       )}
 
       {/* Edge lines - Dual-layer: Simple box for clean 12 outer edges */}
-      {geometryCentered && (
-        <lineSegments scale={0.9}>
-          <edgesGeometry args={[loadedGeometry]} />
-          <lineBasicMaterial
-            color="#0f172a"
-            linewidth={2}
-            transparent={true}
-            opacity={0.9}
-            depthTest={true}
-            depthWrite={false}
-          />
-        </lineSegments>
-      )}
+      <lineSegments scale={0.9}>
+        <edgesGeometry args={[loadedGeometry]} />
+        <lineBasicMaterial
+          color="#0f172a"
+          linewidth={2}
+          transparent={true}
+          opacity={0.9}
+          depthTest={true}
+          depthWrite={false}
+        />
+      </lineSegments>
     </group>
   );
 }
