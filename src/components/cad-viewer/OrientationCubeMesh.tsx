@@ -314,7 +314,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           onPointerEnter={handleCubeEnter}
         >
           <meshStandardMaterial
-            color="#f3f4f6"
+            color="#b45309"
             metalness={0.3}
             roughness={0.5}
             transparent={false}
@@ -376,12 +376,13 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
       {/* Highlight overlay when hovering ANY zone */}
       {hoveredZone && (
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[1.2, 16, 16]} />
+        <mesh position={[0, 0, 0]} raycast={() => null}>
+          <sphereGeometry args={[1.35, 16, 16]} />
           <meshBasicMaterial
-            color="#2563eb" // ← Changed from #60a5fa (solid blue)
-            transparent={false} // ← Changed from true
-            opacity={1.0} // ← Changed from 0.15
+            color="#2563eb"
+            transparent={false}
+            opacity={1.0}
+            depthTest={false}
             depthWrite={false}
           />
         </mesh>
