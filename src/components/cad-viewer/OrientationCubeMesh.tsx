@@ -16,6 +16,7 @@ interface OrientationCubeMeshProps {
 // Constants matching reference code
 const CUBE_SIZE = 1.5; // Increased from 1.0 for better visibility
 const EDGE_SIZE = 0.2; // Doubled for 2x larger highlight areas
+const DEPTH_OFFSET = 0.002; // Small offset to prevent z-fighting
 const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2); // 1.1
 const FACE_OFFSET = CUBE_SIZE / 2; // 0.75
 const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.65
@@ -100,100 +101,100 @@ export function OrientationCubeMesh({
     meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top'));
     meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom'));
     
-    // === 12 EDGES (2 meshes each = 24 total) ===
+    // === 12 EDGES (2 meshes each = 24 total) - with offset to prevent z-fighting ===
     
     // Top 4 edges (horizontal)
     const e1 = 'edge-top-front';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e1));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], e1));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e1));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET + DEPTH_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], e1));
     
     const e2 = 'edge-top-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, FACE_OFFSET, 0], [Math.PI/2, Math.PI/2, 0], e2));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, 0], [0, Math.PI/2, 0], e2));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET, 0], [Math.PI/2, Math.PI/2, 0], e2));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, BORDER_OFFSET, 0], [0, Math.PI/2, 0], e2));
     
     const e3 = 'edge-top-back';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e3));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], e3));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e3));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, FACE_OFFSET + DEPTH_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], e3));
     
     const e4 = 'edge-top-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, FACE_OFFSET, 0], [Math.PI/2, -Math.PI/2, 0], e4));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e4));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET, 0], [Math.PI/2, -Math.PI/2, 0], e4));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e4));
     
     // Middle 4 edges (vertical)
     const e5 = 'edge-front-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e5));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, BORDER_OFFSET], [0, Math.PI/2, 0], e5));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e5));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, 0, BORDER_OFFSET], [0, Math.PI/2, 0], e5));
     
     const e6 = 'edge-back-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e6));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, -BORDER_OFFSET], [0, Math.PI/2, 0], e6));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, 0, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e6));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, 0, -BORDER_OFFSET], [0, Math.PI/2, 0], e6));
     
     const e7 = 'edge-back-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e7));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, -BORDER_OFFSET], [0, -Math.PI/2, 0], e7));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e7));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, 0, -BORDER_OFFSET], [0, -Math.PI/2, 0], e7));
     
     const e8 = 'edge-front-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e8));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, BORDER_OFFSET], [0, -Math.PI/2, 0], e8));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, 0, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e8));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, 0, BORDER_OFFSET], [0, -Math.PI/2, 0], e8));
     
     // Bottom 4 edges (horizontal)
     const e9 = 'edge-bottom-front';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e9));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], e9));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET], [0, 0, 0], e9));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET - DEPTH_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], e9));
     
     const e10 = 'edge-bottom-right';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, -FACE_OFFSET, 0], [-Math.PI/2, Math.PI/2, 0], e10));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, 0], [0, Math.PI/2, 0], e10));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET, 0], [-Math.PI/2, Math.PI/2, 0], e10));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET, -BORDER_OFFSET, 0], [0, Math.PI/2, 0], e10));
     
     const e11 = 'edge-bottom-back';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e11));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], e11));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET], [0, Math.PI, 0], e11));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -FACE_OFFSET - DEPTH_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], e11));
     
     const e12 = 'edge-bottom-left';
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, 0], [-Math.PI/2, -Math.PI/2, 0], e12));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e12));
+    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET, 0], [-Math.PI/2, -Math.PI/2, 0], e12));
+    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET, -BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e12));
     
-    // === 8 CORNERS (3 meshes each = 24 total) ===
+    // === 8 CORNERS (3 meshes each = 24 total) - with larger offset ===
     
     const c1 = 'corner-top-front-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c1));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c1));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c1));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET], [-Math.PI/2, 0, 0], c1));
     
     const c2 = 'corner-top-back-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c2));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c2));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c2));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c2));
     
     const c3 = 'corner-top-back-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c3));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c3));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c3));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c3));
     
     const c4 = 'corner-top-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c4));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c4));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c4));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2, BORDER_OFFSET], [-Math.PI/2, 0, 0], c4));
     
     const c5 = 'corner-bottom-front-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c5));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c5));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c5));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET], [Math.PI/2, 0, 0], c5));
     
     const c6 = 'corner-bottom-back-right';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c6));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c6));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET + DEPTH_OFFSET * 2, -BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c6));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET], [Math.PI/2, 0, 0], c6));
     
     const c7 = 'corner-bottom-back-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c7));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c7));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2], [0, Math.PI, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c7));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET], [Math.PI/2, 0, 0], c7));
     
     const c8 = 'corner-bottom-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c8));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET + DEPTH_OFFSET * 2], [0, 0, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET - DEPTH_OFFSET * 2, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
+    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET - DEPTH_OFFSET * 2, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
     
     // === Camera-facing text sprites ===
     const sprites: THREE.Sprite[] = [];
