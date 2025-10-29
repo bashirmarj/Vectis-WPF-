@@ -1,8 +1,7 @@
 // src/components/cad-viewer/OrientationCubeViewport.tsx
-// ✅ FIXED VERSION - October 28, 2025
-// ✅ Enhanced logging for debugging rotation sync
-// ✅ Detailed warnings if refs are missing
-// ✅ Both horizontal AND vertical rotation account for camera orientation
+// ✅ FIXED: Inverted camera quaternion for correct part-relative orientation
+// The cube should show the part's orientation relative to the viewer,
+// not the camera's orientation in world space
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
@@ -36,7 +35,9 @@ function CubeSyncWrapper({
 }) {
   const cubeGroupRef = useRef<THREE.Group>(null);
 
-  // ✅ FIXED: Enhanced rotation sync with retry mechanism
+  // ✅ CRITICAL FIX: Use INVERTED camera quaternion
+  // In CAD viewers, the cube shows how you're looking AT the part,
+  // not the camera's orientation itself
   useEffect(() => {
     let animationFrameId: number;
     let retryCount = 0;
@@ -48,7 +49,7 @@ function CubeSyncWrapper({
           retryCount++;
           setTimeout(() => {
             animationFrameId = requestAnimationFrame(checkAndSync);
-          }, 100); // Retry every 100ms
+          }, 100);
         } else {
           console.warn("⚠️ Rotation sync: Missing refs after retries", {
             hasMainCamera: !!mainCameraRef?.current,
@@ -58,11 +59,15 @@ function CubeSyncWrapper({
         return;
       }
 
-      console.log("✅ Rotation sync initialized successfully");
+      console.log("✅ Rotation sync initialized with INVERTED quaternion");
 
       const syncRotation = () => {
         if (mainCameraRef.current && cubeGroupRef.current) {
-          cubeGroupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
+          // ✅ KEY FIX: Use inverse() to show part-relative orientation
+          // This makes the cube show the part's coordinate system as seen from the camera,
+          // not the camera's coordinate system
+          const invertedQuaternion = mainCameraRef.current.quaternion.clone().invert();
+          cubeGroupRef.current.quaternion.copy(invertedQuaternion);
         }
         animationFrameId = requestAnimationFrame(syncRotation);
       };
@@ -79,7 +84,7 @@ function CubeSyncWrapper({
     };
   }, [mainCameraRef]);
 
-  // ✅ FIXED: Handle drag-to-rotate with BOTH horizontal AND vertical inversion
+  // ✅ Handle drag-to-rotate with orientation awareness
   const handleDragRotate = useCallback(
     (deltaX: number, deltaY: number) => {
       if (!mainCameraRef.current || !controlsRef?.current) return;
@@ -88,12 +93,12 @@ function CubeSyncWrapper({
       const controls = controlsRef.current;
       const target = controls.target.clone();
 
-      // ✅ CRITICAL FIX: Detect if camera is upside down
+      // Detect if camera is upside down
       const isUpsideDown = camera.up.y < 0;
 
       const rotationSpeed = 0.005;
 
-      // ✅ FIXED: Invert BOTH horizontal and vertical when upside down
+      // Invert both horizontal and vertical when upside down
       const horizontalMultiplier = isUpsideDown ? 1 : -1;
       const verticalMultiplier = isUpsideDown ? 1 : -1;
 
@@ -128,23 +133,21 @@ function CubeSyncWrapper({
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      // Debug logging
-      if ((Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) && Math.random() < 0.1) {
-        console.log("🔄 Drag rotation:", {
-          isUpsideDown,
-          upY: camera.up.y.toFixed(3),
-          deltaX,
-          deltaY,
-          deltaAzimuth: deltaAzimuth.toFixed(4),
-          deltaPolar: deltaPolar.toFixed(4),
-        });
-      }
     },
     [mainCameraRef, controlsRef],
   );
 
-  return <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />;
+  return (
+    <group>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 5, 5]} intensity={0.8} />
+      <directionalLight position={[-3, -3, -3]} intensity={0.3} />
+
+      <group ref={cubeGroupRef} scale={0.8}>
+        <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />
+      </group>
+    </group>
+  );
 }
 
 export function OrientationCubeViewport({
@@ -238,7 +241,6 @@ export function OrientationCubeViewport({
                 style={{ width: "100%", height: "100%", borderRadius: "0.375rem" }}
                 dpr={Math.min(window.devicePixelRatio || 1, 2)}
                 onCreated={({ gl }) => {
-                  // Handle WebGL context loss/restore
                   gl.domElement.addEventListener(
                     "webglcontextlost",
                     (e) => {
@@ -256,13 +258,8 @@ export function OrientationCubeViewport({
                   );
                 }}
               >
-                <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={38} near={0.1} far={100} />
-
-                <ambientLight intensity={0.3} />
-                <directionalLight position={[2, 3, 2]} intensity={0.7} />
-                <directionalLight position={[-2, -1, -2]} intensity={0.4} />
-                <directionalLight position={[0, -2, 0]} intensity={0.3} />
-
+                <color attach="background" args={["#f8f9fa"]} />
+                <OrthographicCamera position={[0, 0, 10]} zoom={85} near={0.1} far={1000} makeDefault />
                 <CubeSyncWrapper mainCameraRef={mainCameraRef} controlsRef={controlsRef} onCubeClick={onCubeClick} />
               </Canvas>
             </div>
@@ -286,24 +283,8 @@ export function OrientationCubeViewport({
               </Tooltip>
             </div>
 
-            {/* Bottom Arrows */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={activeButton === "ccw" ? "default" : "ghost"}
-                    size="icon"
-                    className="h-8 w-8 transition-all hover:scale-110"
-                    onClick={() => handleButtonClick("ccw", onRotateCounterClockwise)}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p className="text-xs">Roll CCW 90°</p>
-                </TooltipContent>
-              </Tooltip>
-
+            {/* Bottom Arrow */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -319,7 +300,10 @@ export function OrientationCubeViewport({
                   <p className="text-xs">Rotate Down 90°</p>
                 </TooltipContent>
               </Tooltip>
+            </div>
 
+            {/* Clockwise Rotation */}
+            <div className="absolute bottom-2 right-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -332,21 +316,31 @@ export function OrientationCubeViewport({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p className="text-xs">Roll CW 90°</p>
+                  <p className="text-xs">Roll Clockwise 90°</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
+            {/* Counter-Clockwise Rotation */}
+            <div className="absolute bottom-2 left-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeButton === "ccw" ? "default" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 transition-all hover:scale-110"
+                    onClick={() => handleButtonClick("ccw", onRotateCounterClockwise)}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Roll Counter-Clockwise 90°</p>
                 </TooltipContent>
               </Tooltip>
             </div>
           </div>
         </TooltipProvider>
-      </div>
-
-      <div className="bg-background/98 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
-        <p className="text-[11px] font-medium text-muted-foreground text-center leading-tight">
-          Click cube to orient view
-        </p>
-        <p className="text-[9px] text-muted-foreground/70 text-center leading-tight mt-0.5">
-          Drag to rotate • Use arrows for 90°
-        </p>
       </div>
     </div>
   );
