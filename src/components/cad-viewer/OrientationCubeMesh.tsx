@@ -3,7 +3,7 @@
 // ✅ STL geometry properly centered for rotation
 // ✅ 6 faces + 12 edges + 8 corners = 26 clickable zones
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { ThreeEvent, useThree, useLoader } from "@react-three/fiber";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
@@ -372,6 +372,62 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     setHoveredZone(zone?.name || null);
   };
 
+  // ✅ Helper: Create geometry with colored vertices for highlight overlay
+  const createHighlightGeometry = (
+    baseGeometry: THREE.BufferGeometry,
+    hoveredZone: string | null
+  ): THREE.BufferGeometry => {
+    const geometry = baseGeometry.clone();
+    const positions = geometry.attributes.position;
+    const colors = new Float32Array(positions.count * 3);
+
+    if (!hoveredZone) {
+      // All transparent when nothing is hovered
+      for (let i = 0; i < positions.count; i++) {
+        colors[i * 3] = 0;     // R
+        colors[i * 3 + 1] = 0; // G
+        colors[i * 3 + 2] = 0; // B
+      }
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.attributes.color.needsUpdate = true;
+      return geometry;
+    }
+
+    // Calculate which vertices belong to the hovered zone
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i);
+      const y = positions.getY(i);
+      const z = positions.getZ(i);
+      const point = new THREE.Vector3(x, y, z);
+
+      // Use existing detectZoneFromPoint logic
+      const zone = detectZoneFromPoint(point);
+
+      if (zone?.name === hoveredZone) {
+        // Blue color (#2563eb) for vertices in hovered zone
+        colors[i * 3] = 0.145;     // R = 37/255
+        colors[i * 3 + 1] = 0.388; // G = 99/255
+        colors[i * 3 + 2] = 0.922; // B = 235/255
+      } else {
+        // Transparent for all other vertices
+        colors[i * 3] = 0;
+        colors[i * 3 + 1] = 0;
+        colors[i * 3 + 2] = 0;
+      }
+    }
+
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.attributes.color.needsUpdate = true;
+
+    return geometry;
+  };
+
+  // ✅ Compute highlight geometry whenever hoveredZone changes
+  const highlightGeometry = useMemo(() => {
+    if (!centeredGeometry) return null;
+    return createHighlightGeometry(centeredGeometry, hoveredZone);
+  }, [centeredGeometry, hoveredZone]);
+
   return (
     <group ref={groupRef}>
       {/* Main cube mesh from STL - properly centered */}
@@ -399,11 +455,16 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         </mesh>
       )}
 
-      {/* ✅ Third invisible interaction cube - handles all 26 zones */}
-      {centeredGeometry && (
+      {/* ✅ Third cube - STL-based interaction + highlight layer */}
+      {highlightGeometry && (
         <mesh
           position={[0, 0, 0]}
-          scale={1.1}
+          scale={1.15}
+          geometry={highlightGeometry}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            dragStartPos.current = { x: e.clientX, y: e.clientY };
+          }}
           onClick={handleInteractionCubeClick}
           onPointerMove={handleInteractionCubeMove}
           onPointerEnter={() => (gl.domElement.style.cursor = "pointer")}
@@ -413,16 +474,14 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           }}
           visible={!isDragging}
         >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial transparent opacity={0} side={THREE.BackSide} depthWrite={false} />
-        </mesh>
-      )}
-
-      {/* Highlight overlay when hovering ANY zone */}
-      {hoveredZone && (
-        <mesh position={[0, 0, 0]} raycast={() => null}>
-          <sphereGeometry args={[1.5, 16, 16]} />
-          <meshBasicMaterial color="#2563eb" transparent={true} opacity={0.3} depthTest={false} depthWrite={false} />
+          <meshBasicMaterial
+            vertexColors
+            transparent
+            opacity={1}
+            depthTest={false}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       )}
 
