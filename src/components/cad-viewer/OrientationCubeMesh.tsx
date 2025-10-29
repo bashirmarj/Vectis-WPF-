@@ -18,6 +18,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const meshRef = useRef<THREE.Mesh>(null);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [geometryCentered, setGeometryCentered] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
 
@@ -52,6 +53,8 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         center: center,
         boundingBox: loadedGeometry.boundingBox,
       });
+      
+      setGeometryCentered(true);
     }
   }, [loadedGeometry]);
 
@@ -382,17 +385,19 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       )}
 
       {/* Edge lines - Dual-layer: Simple box for clean 12 outer edges */}
-      <lineSegments scale={0.9}>
-        <edgesGeometry args={[loadedGeometry]} />
-        <lineBasicMaterial
-          color="#0f172a"
-          linewidth={2}
-          transparent={true}
-          opacity={0.9}
-          depthTest={true}
-          depthWrite={false}
-        />
-      </lineSegments>
+      {geometryCentered && (
+        <lineSegments scale={0.9}>
+          <edgesGeometry args={[loadedGeometry]} />
+          <lineBasicMaterial
+            color="#0f172a"
+            linewidth={2}
+            transparent={true}
+            opacity={0.9}
+            depthTest={true}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
     </group>
   );
 }
