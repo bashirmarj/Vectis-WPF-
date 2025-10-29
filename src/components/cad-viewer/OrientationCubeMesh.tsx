@@ -24,9 +24,9 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   // ✅ Load STL geometry
   const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
 
-  // ✅ CRITICAL: Apply centering to parent group instead of geometry vertices
+  // ✅ CRITICAL: Center the geometry properly for correct rotation
   useEffect(() => {
-    if (loadedGeometry && groupRef.current) {
+    if (loadedGeometry) {
       // Compute bounding box
       loadedGeometry.computeBoundingBox();
       const bbox = loadedGeometry.boundingBox!;
@@ -35,15 +35,25 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       const center = new THREE.Vector3();
       bbox.getCenter(center);
 
-      // Apply negative offset to group to center it
-      groupRef.current.position.set(-center.x, -center.y, -center.z);
+      // Translate all vertices to center the geometry
+      const positions = loadedGeometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        positions.setX(i, positions.getX(i) - center.x);
+        positions.setY(i, positions.getY(i) - center.y);
+        positions.setZ(i, positions.getZ(i) - center.z);
+      }
 
-      console.log("✅ Group centered at origin", {
+      positions.needsUpdate = true;
+      loadedGeometry.computeVertexNormals();
+      loadedGeometry.computeBoundingBox();
+      loadedGeometry.computeBoundingSphere();
+
+      console.log("✅ STL geometry centered at origin", {
         center: center,
-        groupPosition: groupRef.current.position,
+        boundingBox: loadedGeometry.boundingBox,
       });
     }
-  }, [loadedGeometry, groupRef]);
+  }, [loadedGeometry]);
 
   // ✅ Window-level drag tracking
   useEffect(() => {
