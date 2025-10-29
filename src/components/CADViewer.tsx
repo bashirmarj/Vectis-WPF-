@@ -12,7 +12,6 @@ import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
 import { MeshModel } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
-import { OrientationArrows } from "./cad-viewer/OrientationArrows";
 import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
@@ -370,18 +369,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   return (
     <div className="w-full h-full relative">
       <CardContent className="p-0 h-full">
-        {/* ✅ Arrow buttons overlay - NO separate canvas */}
-        {meshData && isRenderableFormat && !isLoading && !error && (
-          <OrientationArrows
-            onRotateUp={() => handleRotateCamera("up")}
-            onRotateDown={() => handleRotateCamera("down")}
-            onRotateLeft={() => handleRotateCamera("left")}
-            onRotateRight={() => handleRotateCamera("right")}
-            onRotateClockwise={() => handleRotateCamera("cw")}
-            onRotateCounterClockwise={() => handleRotateCamera("ccw")}
-          />
-        )}
-
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
