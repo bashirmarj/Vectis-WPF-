@@ -314,7 +314,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           onPointerEnter={handleCubeEnter}
         >
           <meshStandardMaterial
-            color="#FFD54F"
+            color="#FFA726"
             metalness={0.3}
             roughness={0.5}
             transparent={false}
