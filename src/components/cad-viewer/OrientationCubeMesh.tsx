@@ -307,7 +307,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         geometry={loadedGeometry}
         castShadow
         receiveShadow
-        scale={0.018}
+        scale={0.012}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
