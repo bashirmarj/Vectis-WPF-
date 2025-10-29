@@ -143,7 +143,7 @@ function CubeSyncWrapper({
       <directionalLight position={[5, 5, 5]} intensity={0.8} />
       <directionalLight position={[-3, -3, -3]} intensity={0.3} />
 
-      <group ref={cubeGroupRef} scale={0.42}>
+      <group ref={cubeGroupRef} scale={0.4}>
         <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />
       </group>
     </group>
