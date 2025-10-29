@@ -363,14 +363,6 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     dragStartPos.current = null;
   };
 
-  // ✅ Move handler for interaction cube
-  const handleInteractionCubeMove = (event: ThreeEvent<PointerEvent>) => {
-    event.stopPropagation();
-    if (isDragging || !event.point) return;
-
-    const zone = detectZoneFromPoint(event.point);
-    setHoveredZone(zone?.name || null);
-  };
 
   // ✅ Helper: Create geometry with colored vertices for highlight overlay
   const createHighlightGeometry = (
@@ -455,29 +447,33 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         </mesh>
       )}
 
-      {/* ✅ Third cube - STL-based interaction + highlight layer */}
+      {/* ✅ Third cube - ONLY highlight + click detection (NO rotation) */}
       {highlightGeometry && (
         <mesh
           position={[0, 0, 0]}
           scale={1.15}
           geometry={highlightGeometry}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            dragStartPos.current = { x: e.clientX, y: e.clientY };
-          }}
           onClick={handleInteractionCubeClick}
-          onPointerMove={handleInteractionCubeMove}
-          onPointerEnter={() => (gl.domElement.style.cursor = "pointer")}
+          onPointerMove={(e) => {
+            if (!isDragging && e.point) {
+              const zone = detectZoneFromPoint(e.point);
+              setHoveredZone(zone?.name || null);
+            }
+          }}
+          onPointerEnter={() => {
+            if (!isDragging) {
+              gl.domElement.style.cursor = "pointer";
+            }
+          }}
           onPointerLeave={() => {
-            gl.domElement.style.cursor = "auto";
             setHoveredZone(null);
           }}
-          visible={!isDragging}
+          raycast={isDragging ? () => null : undefined}
         >
           <meshBasicMaterial
             vertexColors
             transparent
-            opacity={1}
+            opacity={hoveredZone ? 1 : 0}
             depthTest={false}
             depthWrite={false}
             side={THREE.DoubleSide}
