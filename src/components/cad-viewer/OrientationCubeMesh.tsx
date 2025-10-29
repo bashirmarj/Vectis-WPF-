@@ -14,18 +14,45 @@ interface OrientationCubeMeshProps {
 }
 
 // Constants matching reference code
-const CUBE_SIZE = 1.0;
+const CUBE_SIZE = 1.5; // Increased from 1.0 for better visibility
 const EDGE_SIZE = 0.1;
 const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2); // 0.8
-const FACE_OFFSET = CUBE_SIZE / 2; // 0.5
-const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.45
+const FACE_OFFSET = CUBE_SIZE / 2; // 0.75
+const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.70
+
+/**
+ * Helper function to create text sprite for face labels
+ */
+function createTextSprite(text: string): THREE.Texture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 200;
+  const context = canvas.getContext('2d')!;
+  
+  // Background
+  context.fillStyle = 'rgba(255, 171, 0, 1.0)';
+  context.fillRect(0, 0, 200, 200);
+  
+  // Text
+  context.font = 'bold 30px Arial Narrow, sans-serif';
+  context.fillStyle = 'rgba(15, 23, 42, 1.0)';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, 100, 100);
+  
+  const texture = new THREE.Texture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 // Helper to create a single PlaneGeometry face
 function createFace(
   size: [number, number],
   position: [number, number, number],
   rotation: [number, number, number],
-  name: string
+  name: string,
+  textMap?: THREE.Texture
 ): THREE.Mesh {
   const geometry = new THREE.PlaneGeometry(size[0], size[1]);
   const material = new THREE.MeshStandardMaterial({
@@ -33,6 +60,7 @@ function createFace(
     metalness: 0.3,
     roughness: 0.5,
     side: THREE.DoubleSide,
+    map: textMap, // Apply texture if provided
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = name;
@@ -54,13 +82,13 @@ export function OrientationCubeMesh({
   const cubeMeshes = useMemo(() => {
     const meshes: THREE.Mesh[] = [];
     
-    // === 6 MAIN FACES (1 mesh each) ===
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top'));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom'));
+    // === 6 MAIN FACES (1 mesh each) with text labels ===
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front', createTextSprite('FRONT')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right', createTextSprite('RIGHT')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back', createTextSprite('BACK')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left', createTextSprite('LEFT')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top', createTextSprite('TOP')));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom', createTextSprite('BOTTOM')));
     
     // === 12 EDGES (2 meshes each = 24 total) ===
     

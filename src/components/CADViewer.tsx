@@ -251,6 +251,23 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox],
   );
 
+  // Handle orientation cube clicks (converts Vector3 direction to view preset)
+  const handleCubeClick = useCallback((direction: THREE.Vector3) => {
+    const threshold = 0.9; // For diagonal detection
+    
+    // Check for primary axis alignment (faces)
+    if (Math.abs(direction.z) > threshold) {
+      handleSetView(direction.z > 0 ? 'front' : 'back');
+    } else if (Math.abs(direction.x) > threshold) {
+      handleSetView(direction.x > 0 ? 'right' : 'left');
+    } else if (Math.abs(direction.y) > threshold) {
+      handleSetView(direction.y > 0 ? 'top' : 'bottom');
+    } else {
+      // For edges and corners, use isometric or calculate best view
+      handleSetView('isometric');
+    }
+  }, [handleSetView]);
+
   // ✅ CRITICAL FIX: Empty dependency array since function only uses refs
   const handleRotateCamera = useCallback(
     (direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
@@ -478,33 +495,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
             <OrientationCubeViewport
               mainCameraRef={cameraRef}
               controlsRef={controlsRef}
-              onCubeClick={(direction) => {
-                if (!cameraRef.current || !controlsRef.current) return;
-
-                const camera = cameraRef.current;
-                const controls = controlsRef.current;
-                const target = boundingBox.center;
-                const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-                const distance = maxDim * 2;
-
-                // Determine up vector based on view direction
-                let up = new THREE.Vector3(0, 1, 0);
-                
-                // Special case: if looking straight up/down (y-axis dominant)
-                if (Math.abs(direction.y) > 0.9) {
-                  up = new THREE.Vector3(0, 0, direction.y > 0 ? -1 : 1);
-                }
-
-                // Calculate new camera position along the clicked direction
-                const newPosition = target.clone().add(direction.clone().multiplyScalar(distance));
-
-                // Apply transformation (same logic as handleSetView)
-                camera.position.copy(newPosition);
-                camera.up.copy(up);
-                camera.lookAt(target);
-                controls.target.copy(target);
-                controls.update();
-              }}
+              onCubeClick={handleCubeClick}
               onRotateUp={() => handleRotateCamera("up")}
               onRotateDown={() => handleRotateCamera("down")}
               onRotateLeft={() => handleRotateCamera("left")}

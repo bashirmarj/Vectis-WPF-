@@ -88,7 +88,7 @@ export function OrientationCubeInCanvas({ mainCameraRef, controlsRef, onCubeClic
   return (
     <Hud renderPriority={1}>
       {/* Orthographic camera for HUD rendering */}
-      <OrthographicCamera position={[0, 0, 10]} zoom={85} near={0.1} far={1000} />
+      <OrthographicCamera position={[0, 0, 10]} zoom={127} near={0.1} far={1000} />
 
       {/* Position cube in screen space (top-right corner) */}
       {/* Screen coordinates: (0,0) is center, positive X is right, positive Y is up */}
@@ -99,7 +99,7 @@ export function OrientationCubeInCanvas({ mainCameraRef, controlsRef, onCubeClic
         <directionalLight position={[-3, -3, -3]} intensity={0.3} />
 
         {/* Cube group that syncs with main camera rotation */}
-        <group ref={cubeGroupRef} scale={0.8}>
+        <group ref={cubeGroupRef} scale={1.2}>
           <Suspense
             fallback={
               <mesh>

@@ -143,7 +143,7 @@ function CubeSyncWrapper({
       <directionalLight position={[5, 5, 5]} intensity={0.8} />
       <directionalLight position={[-3, -3, -3]} intensity={0.3} />
 
-      <group ref={cubeGroupRef} scale={0.35}>
+      <group ref={cubeGroupRef} scale={0.52}>
         <OrientationCubeMesh groupRef={cubeGroupRef} onFaceClick={onCubeClick} onDragRotate={handleDragRotate} />
       </group>
     </group>
@@ -259,7 +259,7 @@ export function OrientationCubeViewport({
                 }}
               >
                 <color attach="background" args={["#f8f9fa"]} />
-                <OrthographicCamera position={[0, 0, 10]} zoom={85} near={0.1} far={1000} makeDefault />
+                <OrthographicCamera position={[0, 0, 10]} zoom={127} near={0.1} far={1000} makeDefault />
                 <CubeSyncWrapper mainCameraRef={mainCameraRef} controlsRef={controlsRef} onCubeClick={onCubeClick} />
               </Canvas>
             </div>
