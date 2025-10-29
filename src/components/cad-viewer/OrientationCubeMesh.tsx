@@ -1,14 +1,13 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
 // ✅ Layered Geometry Architecture - Industry Standard Pattern
-// Layer 1: Visual STL cube (chamfered, beautiful)
+// Layer 1: Visual box cube (simple geometry)
 // Layer 2: Interaction primitives (26 invisible meshes)
 // Layer 3: Dynamic highlight mesh
 // Layer 4: Wireframe edges
 
 import { useRef, useState, useEffect, useMemo } from "react";
 import * as THREE from "three";
-import { ThreeEvent, useThree, useLoader } from "@react-three/fiber";
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { ThreeEvent, useThree } from "@react-three/fiber";
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -32,36 +31,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const [hoveredZoneData, setHoveredZoneData] = useState<ZoneData | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
-  const [centeredGeometry, setCenteredGeometry] = useState<THREE.BufferGeometry | null>(null);
   const { gl, camera } = useThree();
-
-  // ✅ Load STL geometry
-  const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
-
-  // ✅ Center the geometry at origin for correct rotation
-  useEffect(() => {
-    if (loadedGeometry) {
-      const cloned = loadedGeometry.clone();
-      cloned.computeBoundingBox();
-      const bbox = cloned.boundingBox!;
-      const center = new THREE.Vector3();
-      bbox.getCenter(center);
-
-      const positions = cloned.attributes.position;
-      for (let i = 0; i < positions.count; i++) {
-        positions.setX(i, positions.getX(i) - center.x);
-        positions.setY(i, positions.getY(i) - center.y);
-        positions.setZ(i, positions.getZ(i) - center.z);
-      }
-
-      positions.needsUpdate = true;
-      cloned.computeVertexNormals();
-      cloned.computeBoundingBox();
-      cloned.computeBoundingSphere();
-
-      setCenteredGeometry(cloned);
-    }
-  }, [loadedGeometry]);
 
   // ✅ Window-level drag tracking
   useEffect(() => {
@@ -405,27 +375,25 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   return (
     <>
     <group ref={groupRef}>
-      {/* Layer 1: Visual STL cube (orange, chamfered, beautiful) - NO INTERACTION */}
-      {centeredGeometry && (
-        <mesh
-          ref={meshRef}
-          geometry={centeredGeometry}
-          castShadow
-          receiveShadow
-          scale={1.1}
-          raycast={() => null}
-        >
-          <meshStandardMaterial
-            color="#FFAB00"
-            metalness={0.3}
-            roughness={0.5}
-            transparent={false}
-            opacity={1}
-            envMapIntensity={1.5}
-            side={THREE.FrontSide}
-          />
-        </mesh>
-      )}
+      {/* Layer 1: Visual box cube (orange, simple geometry) - NO INTERACTION */}
+      <mesh
+        ref={meshRef}
+        castShadow
+        receiveShadow
+        scale={1.1}
+        raycast={() => null}
+      >
+        <boxGeometry args={[1.15, 1.15, 1.15]} />
+        <meshStandardMaterial
+          color="#FFAB00"
+          metalness={0.3}
+          roughness={0.5}
+          transparent={false}
+          opacity={1}
+          envMapIntensity={1.5}
+          side={THREE.FrontSide}
+        />
+      </mesh>
 
       {/* Layer 2: Interaction primitives (26 invisible meshes) - ALL EVENTS HERE */}
       <group
@@ -440,19 +408,19 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       </group>
 
       {/* Layer 4: Wireframe edges */}
-      {centeredGeometry && (
-        <lineSegments scale={1.1}>
-          <edgesGeometry args={[centeredGeometry]} />
-          <lineBasicMaterial
-            color="#0f172a"
-            linewidth={2}
-            transparent={true}
-            opacity={0.9}
-            depthTest={true}
-            depthWrite={false}
-          />
-        </lineSegments>
-      )}
+      <lineSegments scale={1.1}>
+        <edgesGeometry>
+          <boxGeometry args={[1.15, 1.15, 1.15]} />
+        </edgesGeometry>
+        <lineBasicMaterial
+          color="#0f172a"
+          linewidth={2}
+          transparent={true}
+          opacity={0.9}
+          depthTest={true}
+          depthWrite={false}
+        />
+      </lineSegments>
     </group>
 
     {/* Layer 3: Dynamic highlight mesh - OUTSIDE rotating group, in world space */}
