@@ -387,8 +387,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         <lineBasicMaterial
           color="#0f172a"
           linewidth={2}
-          transparent
-          opacity={0.3}
+          opacity={1.0}
           depthTest={true} // ← Add this
           depthWrite={false} // ← Add this
         />
