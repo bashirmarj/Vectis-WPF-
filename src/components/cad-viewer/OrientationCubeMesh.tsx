@@ -383,7 +383,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
       {/* Edge lines */}
       <lineSegments>
-        <edgesGeometry args={[loadedGeometry, 80]} />
+        <edgesGeometry args={[loadedGeometry, 25]} />
         <lineBasicMaterial
           color="#0f172a"
           linewidth={2}
