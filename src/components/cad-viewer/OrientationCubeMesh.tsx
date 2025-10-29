@@ -382,7 +382,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       )}
 
       {/* Edge lines - Dual-layer: Simple box for clean 12 outer edges */}
-      <lineSegments scale={0.91}>
+      <lineSegments scale={0.9}>
         <edgesGeometry args={[loadedGeometry]} />
         <lineBasicMaterial
           color="#0f172a"
