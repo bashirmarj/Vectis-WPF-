@@ -403,6 +403,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   };
 
   return (
+    <>
     <group ref={groupRef}>
       {/* Layer 1: Visual STL cube (orange, chamfered, beautiful) - NO INTERACTION */}
       {centeredGeometry && (
@@ -438,33 +439,6 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         <primitive object={interactionGroup} ref={interactionGroupRef} />
       </group>
 
-      {/* Layer 3: Dynamic highlight mesh */}
-      {hoveredZoneData && (
-        <mesh 
-          position={hoveredZoneData.position} 
-          rotation={hoveredZoneData.rotation || [0, 0, 0]}
-          scale={1.16}
-          renderOrder={1}
-        >
-          {hoveredZoneData.type === 'face' && (
-            <planeGeometry args={[1.15, 1.15]} />
-          )}
-          {hoveredZoneData.type === 'edge' && (
-            <boxGeometry args={hoveredZoneData.size} />
-          )}
-          {hoveredZoneData.type === 'corner' && (
-            <sphereGeometry args={[hoveredZoneData.radius, 16, 16]} />
-          )}
-          <meshBasicMaterial 
-            color="#3b82f6" 
-            transparent 
-            opacity={0.5}
-            depthTest={true}
-            depthWrite={false}
-          />
-        </mesh>
-      )}
-
       {/* Layer 4: Wireframe edges */}
       {centeredGeometry && (
         <lineSegments scale={1.1}>
@@ -480,5 +454,48 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         </lineSegments>
       )}
     </group>
+
+    {/* Layer 3: Dynamic highlight mesh - OUTSIDE rotating group, in world space */}
+    {hoveredZoneData && groupRef.current && (
+      <mesh 
+        position={(() => {
+          const localPos = new THREE.Vector3(...hoveredZoneData.position);
+          return groupRef.current!.localToWorld(localPos.clone());
+        })()}
+        rotation={(() => {
+          const worldQuat = new THREE.Quaternion();
+          groupRef.current!.getWorldQuaternion(worldQuat);
+          
+          if (hoveredZoneData.rotation) {
+            const zoneEuler = new THREE.Euler(...hoveredZoneData.rotation);
+            const zoneQuat = new THREE.Quaternion().setFromEuler(zoneEuler);
+            worldQuat.multiply(zoneQuat);
+          }
+          
+          const euler = new THREE.Euler().setFromQuaternion(worldQuat);
+          return euler.toArray().slice(0, 3) as [number, number, number];
+        })()}
+        scale={1.16}
+        renderOrder={999}
+      >
+        {hoveredZoneData.type === 'face' && (
+          <planeGeometry args={[1.15, 1.15]} />
+        )}
+        {hoveredZoneData.type === 'edge' && (
+          <boxGeometry args={hoveredZoneData.size} />
+        )}
+        {hoveredZoneData.type === 'corner' && (
+          <sphereGeometry args={[hoveredZoneData.radius, 16, 16]} />
+        )}
+        <meshBasicMaterial 
+          color="#3b82f6" 
+          transparent 
+          opacity={0.5}
+          depthTest={true}
+          depthWrite={false}
+        />
+      </mesh>
+    )}
+    </>
   );
 }
