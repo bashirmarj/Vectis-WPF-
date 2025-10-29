@@ -1,7 +1,7 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ UPDATED VERSION - Using STL file for realistic appearance
-// ✅ Loads orientation-cube.stl for proper chamfered edges
-// ✅ All interaction logic preserved
+// ✅ COMPLETE VERSION - Face/Edge/Corner Detection
+// ✅ STL geometry properly centered for rotation
+// ✅ 6 faces + 12 edges + 8 corners = 26 clickable zones
 
 import { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
@@ -16,25 +16,46 @@ interface OrientationCubeMeshProps {
 
 export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: OrientationCubeMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const [hoveredFace, setHoveredFace] = useState<string | null>(null);
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
 
   // ✅ Load STL geometry
-  const geometry = useLoader(STLLoader, "/orientation-cube.stl");
+  const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
 
+  // ✅ CRITICAL: Center the geometry properly for correct rotation
   useEffect(() => {
-    if (geometry) {
-      geometry.center();
-      geometry.computeVertexNormals();
-      geometry.computeBoundingBox();
-      geometry.computeBoundingSphere();
-      console.log("✅ Orientation cube STL loaded successfully");
-    }
-  }, [geometry]);
+    if (loadedGeometry) {
+      // Compute bounding box
+      loadedGeometry.computeBoundingBox();
+      const bbox = loadedGeometry.boundingBox!;
 
-  // ✅ CRITICAL: Track mouse movement at window level during drag
+      // Calculate center offset
+      const center = new THREE.Vector3();
+      bbox.getCenter(center);
+
+      // Translate all vertices to center the geometry
+      const positions = loadedGeometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        positions.setX(i, positions.getX(i) - center.x);
+        positions.setY(i, positions.getY(i) - center.y);
+        positions.setZ(i, positions.getZ(i) - center.z);
+      }
+
+      positions.needsUpdate = true;
+      loadedGeometry.computeVertexNormals();
+      loadedGeometry.computeBoundingBox();
+      loadedGeometry.computeBoundingSphere();
+
+      console.log("✅ STL geometry centered at origin", {
+        center: center,
+        boundingBox: loadedGeometry.boundingBox,
+      });
+    }
+  }, [loadedGeometry]);
+
+  // ✅ Window-level drag tracking
   useEffect(() => {
     if (!isDragging) return;
 
@@ -50,8 +71,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       }
     };
 
-    const handleWindowMouseUp = (e: MouseEvent) => {
-      console.log("🖱️ Window mouse UP - dragging stopped");
+    const handleWindowMouseUp = () => {
       setIsDragging(false);
       dragStartPos.current = null;
       gl.domElement.style.cursor = "default";
@@ -66,83 +86,180 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     };
   }, [isDragging, onDragRotate, gl]);
 
-  // ✅ Define 6 clickable face planes with their directions
+  // ✅ Define 6 FACE click zones
   const faceDefinitions = [
     {
-      name: "right",
+      name: "face-right",
+      label: "RIGHT",
       direction: new THREE.Vector3(1, 0, 0),
       position: [0.91, 0, 0] as [number, number, number],
       rotation: [0, Math.PI / 2, 0] as [number, number, number],
     },
     {
-      name: "left",
+      name: "face-left",
+      label: "LEFT",
       direction: new THREE.Vector3(-1, 0, 0),
       position: [-0.91, 0, 0] as [number, number, number],
       rotation: [0, -Math.PI / 2, 0] as [number, number, number],
     },
     {
-      name: "top",
+      name: "face-top",
+      label: "TOP",
       direction: new THREE.Vector3(0, 1, 0),
       position: [0, 0.91, 0] as [number, number, number],
       rotation: [-Math.PI / 2, 0, 0] as [number, number, number],
     },
     {
-      name: "bottom",
+      name: "face-bottom",
+      label: "BOTTOM",
       direction: new THREE.Vector3(0, -1, 0),
       position: [0, -0.91, 0] as [number, number, number],
       rotation: [Math.PI / 2, 0, 0] as [number, number, number],
     },
     {
-      name: "front",
+      name: "face-front",
+      label: "FRONT",
       direction: new THREE.Vector3(0, 0, 1),
       position: [0, 0, 0.91] as [number, number, number],
       rotation: [0, 0, 0] as [number, number, number],
     },
     {
-      name: "back",
+      name: "face-back",
+      label: "BACK",
       direction: new THREE.Vector3(0, 0, -1),
       position: [0, 0, -0.91] as [number, number, number],
       rotation: [0, Math.PI, 0] as [number, number, number],
     },
   ];
 
+  // ✅ Define 12 EDGE click zones (for aligned views)
+  const edgeDefinitions = [
+    // Top edges
+    {
+      name: "edge-top-front",
+      direction: new THREE.Vector3(0, 1, 1).normalize(),
+      position: [0, 0.65, 0.65] as [number, number, number],
+    },
+    {
+      name: "edge-top-back",
+      direction: new THREE.Vector3(0, 1, -1).normalize(),
+      position: [0, 0.65, -0.65] as [number, number, number],
+    },
+    {
+      name: "edge-top-left",
+      direction: new THREE.Vector3(-1, 1, 0).normalize(),
+      position: [-0.65, 0.65, 0] as [number, number, number],
+    },
+    {
+      name: "edge-top-right",
+      direction: new THREE.Vector3(1, 1, 0).normalize(),
+      position: [0.65, 0.65, 0] as [number, number, number],
+    },
+
+    // Middle edges (vertical)
+    {
+      name: "edge-front-left",
+      direction: new THREE.Vector3(-1, 0, 1).normalize(),
+      position: [-0.65, 0, 0.65] as [number, number, number],
+    },
+    {
+      name: "edge-front-right",
+      direction: new THREE.Vector3(1, 0, 1).normalize(),
+      position: [0.65, 0, 0.65] as [number, number, number],
+    },
+    {
+      name: "edge-back-left",
+      direction: new THREE.Vector3(-1, 0, -1).normalize(),
+      position: [-0.65, 0, -0.65] as [number, number, number],
+    },
+    {
+      name: "edge-back-right",
+      direction: new THREE.Vector3(1, 0, -1).normalize(),
+      position: [0.65, 0, -0.65] as [number, number, number],
+    },
+
+    // Bottom edges
+    {
+      name: "edge-bottom-front",
+      direction: new THREE.Vector3(0, -1, 1).normalize(),
+      position: [0, -0.65, 0.65] as [number, number, number],
+    },
+    {
+      name: "edge-bottom-back",
+      direction: new THREE.Vector3(0, -1, -1).normalize(),
+      position: [0, -0.65, -0.65] as [number, number, number],
+    },
+    {
+      name: "edge-bottom-left",
+      direction: new THREE.Vector3(-1, -1, 0).normalize(),
+      position: [-0.65, -0.65, 0] as [number, number, number],
+    },
+    {
+      name: "edge-bottom-right",
+      direction: new THREE.Vector3(1, -1, 0).normalize(),
+      position: [0.65, -0.65, 0] as [number, number, number],
+    },
+  ];
+
+  // ✅ Define 8 CORNER click zones (for isometric views)
+  const cornerDefinitions = [
+    {
+      name: "corner-top-front-right",
+      direction: new THREE.Vector3(1, 1, 1).normalize(),
+      position: [0.65, 0.65, 0.65] as [number, number, number],
+    },
+    {
+      name: "corner-top-front-left",
+      direction: new THREE.Vector3(-1, 1, 1).normalize(),
+      position: [-0.65, 0.65, 0.65] as [number, number, number],
+    },
+    {
+      name: "corner-top-back-right",
+      direction: new THREE.Vector3(1, 1, -1).normalize(),
+      position: [0.65, 0.65, -0.65] as [number, number, number],
+    },
+    {
+      name: "corner-top-back-left",
+      direction: new THREE.Vector3(-1, 1, -1).normalize(),
+      position: [-0.65, 0.65, -0.65] as [number, number, number],
+    },
+    {
+      name: "corner-bottom-front-right",
+      direction: new THREE.Vector3(1, -1, 1).normalize(),
+      position: [0.65, -0.65, 0.65] as [number, number, number],
+    },
+    {
+      name: "corner-bottom-front-left",
+      direction: new THREE.Vector3(-1, -1, 1).normalize(),
+      position: [-0.65, -0.65, 0.65] as [number, number, number],
+    },
+    {
+      name: "corner-bottom-back-right",
+      direction: new THREE.Vector3(1, -1, -1).normalize(),
+      position: [0.65, -0.65, -0.65] as [number, number, number],
+    },
+    {
+      name: "corner-bottom-back-left",
+      direction: new THREE.Vector3(-1, -1, -1).normalize(),
+      position: [-0.65, -0.65, -0.65] as [number, number, number],
+    },
+  ];
+
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
-
-    if (isDragging) {
-      console.warn("⚠️ Pointer DOWN while already dragging - ignoring");
-      return;
-    }
+    if (isDragging) return;
 
     setIsDragging(true);
     dragStartPos.current = { x: event.clientX, y: event.clientY };
     gl.domElement.style.cursor = "grabbing";
-    console.log("🖱️ Pointer DOWN - dragging started (window tracking enabled)");
   };
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
-    // Window-level listener handles drag tracking, this just prevents event propagation
   };
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
-
-    // Window listener handles drag end, this is just for clicking the cube body
-    if (!isDragging) {
-      return;
-    }
-
-    const wasClick =
-      dragStartPos.current &&
-      Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
-      Math.abs(event.clientY - dragStartPos.current.y) < 3;
-
-    if (wasClick) {
-      console.log("🖱️ Cube body clicked (no specific face)");
-    }
-
-    // Window listener will handle state reset
   };
 
   const handleCubeEnter = () => {
@@ -151,46 +268,46 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     }
   };
 
-  // ✅ Individual face click handlers
-  const handleFaceClick = (faceName: string, direction: THREE.Vector3) => (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
+  // ✅ Generic zone click handler
+  const handleZoneClick =
+    (zoneName: string, zoneLabel: string, direction: THREE.Vector3) => (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
 
-    const wasClick =
-      dragStartPos.current &&
-      Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
-      Math.abs(event.clientY - dragStartPos.current.y) < 3;
+      const wasClick =
+        dragStartPos.current &&
+        Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
+        Math.abs(event.clientY - dragStartPos.current.y) < 3;
 
-    if (wasClick && onFaceClick) {
-      console.log(`🖱️ Face clicked: ${faceName.toUpperCase()} → direction:`, direction);
-      onFaceClick(direction);
+      if (wasClick && onFaceClick) {
+        console.log(`🖱️ ${zoneLabel} clicked →`, direction);
+        onFaceClick(direction);
+      }
+
+      setIsDragging(false);
+      dragStartPos.current = null;
+    };
+
+  const handleZoneEnter = (zoneName: string) => () => {
+    if (!isDragging) {
+      setHoveredZone(zoneName);
     }
-
-    // Always reset drag state after click
-    setIsDragging(false);
-    dragStartPos.current = null;
   };
 
-  const handleFaceEnter = (faceName: string) => () => {
+  const handleZoneLeave = () => {
     if (!isDragging) {
-      setHoveredFace(faceName);
-    }
-  };
-
-  const handleFaceLeave = () => {
-    if (!isDragging) {
-      setHoveredFace(null);
+      setHoveredZone(null);
     }
   };
 
   return (
     <group ref={groupRef}>
-      {/* Main cube mesh from STL */}
+      {/* Main cube mesh from STL - properly centered */}
       <mesh
         ref={meshRef}
-        geometry={geometry}
+        geometry={loadedGeometry}
         castShadow
         receiveShadow
-        scale={0.018} // Scale STL to appropriate size
+        scale={0.018}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -207,37 +324,66 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         />
       </mesh>
 
-      {/* ✅ 6 invisible clickable face planes - always rendered for face selection */}
+      {/* ✅ 6 FACE click zones (large planes) */}
       {faceDefinitions.map((face) => (
         <mesh
           key={face.name}
           position={face.position}
           rotation={face.rotation}
           onPointerDown={handlePointerDown}
-          onPointerUp={handleFaceClick(face.name, face.direction)}
-          onPointerEnter={handleFaceEnter(face.name)}
-          onPointerLeave={handleFaceLeave}
-          visible={!isDragging} // Hide during drag to prevent interference
+          onPointerUp={handleZoneClick(face.name, face.label, face.direction)}
+          onPointerEnter={handleZoneEnter(face.name)}
+          onPointerLeave={handleZoneLeave}
+          visible={!isDragging}
         >
-          <planeGeometry args={[1.7, 1.7]} />
+          <planeGeometry args={[1.0, 1.0]} />
           <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
       ))}
 
-      {/* Highlight overlay when hovering */}
-      {hoveredFace && faceDefinitions.find((f) => f.name === hoveredFace) && !isDragging && (
+      {/* ✅ 12 EDGE click zones (small spheres) */}
+      {edgeDefinitions.map((edge) => (
         <mesh
-          position={faceDefinitions.find((f) => f.name === hoveredFace)!.position}
-          rotation={faceDefinitions.find((f) => f.name === hoveredFace)!.rotation}
+          key={edge.name}
+          position={edge.position}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handleZoneClick(edge.name, edge.name.toUpperCase(), edge.direction)}
+          onPointerEnter={handleZoneEnter(edge.name)}
+          onPointerLeave={handleZoneLeave}
+          visible={!isDragging}
         >
-          <planeGeometry args={[1.7, 1.7]} />
-          <meshBasicMaterial color="#60a5fa" transparent opacity={0.4} side={THREE.DoubleSide} depthWrite={false} />
+          <sphereGeometry args={[0.2, 8, 8]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      ))}
+
+      {/* ✅ 8 CORNER click zones (small spheres) */}
+      {cornerDefinitions.map((corner) => (
+        <mesh
+          key={corner.name}
+          position={corner.position}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handleZoneClick(corner.name, corner.name.toUpperCase(), corner.direction)}
+          onPointerEnter={handleZoneEnter(corner.name)}
+          onPointerLeave={handleZoneLeave}
+          visible={!isDragging}
+        >
+          <sphereGeometry args={[0.25, 8, 8]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      ))}
+
+      {/* Highlight overlay when hovering ANY zone */}
+      {hoveredZone && (
+        <mesh position={[0, 0, 0]}>
+          <sphereGeometry args={[1.2, 16, 16]} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.15} depthWrite={false} />
         </mesh>
       )}
 
       {/* Edge lines */}
       <lineSegments>
-        <edgesGeometry args={[geometry, 25]} />
+        <edgesGeometry args={[loadedGeometry, 25]} />
         <lineBasicMaterial color="#0f172a" linewidth={2} transparent opacity={0.7} />
       </lineSegments>
     </group>
