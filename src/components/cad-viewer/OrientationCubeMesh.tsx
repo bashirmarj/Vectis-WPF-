@@ -15,35 +15,47 @@ interface OrientationCubeMeshProps {
 
 // Constants matching reference code
 const CUBE_SIZE = 1.5; // Increased from 1.0 for better visibility
-const EDGE_SIZE = 0.1;
-const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2); // 0.8
+const EDGE_SIZE = 0.2; // Doubled for 2x larger highlight areas
+const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2); // 1.1
 const FACE_OFFSET = CUBE_SIZE / 2; // 0.75
-const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.70
+const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2); // 0.65
 
 /**
- * Helper function to create text sprite for face labels
+ * Helper function to create camera-facing text sprite for face labels
  */
-function createTextSprite(text: string): THREE.Texture {
+function createTextSprite(text: string): THREE.Sprite {
   const canvas = document.createElement('canvas');
   canvas.width = 200;
   canvas.height = 200;
   const context = canvas.getContext('2d')!;
   
-  // Background
-  context.fillStyle = 'rgba(255, 171, 0, 1.0)';
-  context.fillRect(0, 0, 200, 200);
+  // Transparent background
+  context.clearRect(0, 0, 200, 200);
   
-  // Text
-  context.font = 'bold 30px Arial Narrow, sans-serif';
+  // Text with outline for contrast
+  context.font = 'bold 36px Arial, sans-serif';
   context.fillStyle = 'rgba(15, 23, 42, 1.0)';
+  context.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  context.lineWidth = 3;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
+  context.strokeText(text, 100, 100);
   context.fillText(text, 100, 100);
   
   const texture = new THREE.Texture(canvas);
   texture.minFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  return texture;
+  
+  const spriteMaterial = new THREE.SpriteMaterial({ 
+    map: texture,
+    transparent: true,
+    depthTest: false,
+  });
+  
+  const sprite = new THREE.Sprite(spriteMaterial);
+  sprite.scale.set(0.6, 0.6, 1);
+  
+  return sprite;
 }
 
 // Helper to create a single PlaneGeometry face
@@ -51,8 +63,7 @@ function createFace(
   size: [number, number],
   position: [number, number, number],
   rotation: [number, number, number],
-  name: string,
-  textMap?: THREE.Texture
+  name: string
 ): THREE.Mesh {
   const geometry = new THREE.PlaneGeometry(size[0], size[1]);
   const material = new THREE.MeshStandardMaterial({
@@ -60,7 +71,6 @@ function createFace(
     metalness: 0.3,
     roughness: 0.5,
     side: THREE.DoubleSide,
-    map: textMap, // Apply texture if provided
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = name;
@@ -78,17 +88,17 @@ export function OrientationCubeMesh({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  // Build all 54 PlaneGeometry meshes
-  const cubeMeshes = useMemo(() => {
+  // Build all 54 PlaneGeometry meshes and text sprites
+  const { meshes: cubeMeshes, textSprites } = useMemo(() => {
     const meshes: THREE.Mesh[] = [];
     
-    // === 6 MAIN FACES (1 mesh each) with text labels ===
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front', createTextSprite('FRONT')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right', createTextSprite('RIGHT')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back', createTextSprite('BACK')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left', createTextSprite('LEFT')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top', createTextSprite('TOP')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom', createTextSprite('BOTTOM')));
+    // === 6 MAIN FACES (1 mesh each) ===
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top'));
+    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom'));
     
     // === 12 EDGES (2 meshes each = 24 total) ===
     
@@ -185,7 +195,35 @@ export function OrientationCubeMesh({
     meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
     meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -FACE_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
     
-    return meshes;
+    // === Camera-facing text sprites ===
+    const sprites: THREE.Sprite[] = [];
+    const labelOffset = FACE_OFFSET + 0.01;
+    
+    const frontSprite = createTextSprite('FRONT');
+    frontSprite.position.set(0, 0, labelOffset);
+    sprites.push(frontSprite);
+    
+    const rightSprite = createTextSprite('RIGHT');
+    rightSprite.position.set(labelOffset, 0, 0);
+    sprites.push(rightSprite);
+    
+    const backSprite = createTextSprite('BACK');
+    backSprite.position.set(0, 0, -labelOffset);
+    sprites.push(backSprite);
+    
+    const leftSprite = createTextSprite('LEFT');
+    leftSprite.position.set(-labelOffset, 0, 0);
+    sprites.push(leftSprite);
+    
+    const topSprite = createTextSprite('TOP');
+    topSprite.position.set(0, labelOffset, 0);
+    sprites.push(topSprite);
+    
+    const bottomSprite = createTextSprite('BOTTOM');
+    bottomSprite.position.set(0, -labelOffset, 0);
+    sprites.push(bottomSprite);
+    
+    return { meshes, textSprites: sprites };
   }, []);
 
   // Window-level drag tracking
@@ -318,7 +356,7 @@ export function OrientationCubeMesh({
 
   return (
     <group ref={groupRef}>
-      {/* Single interactive layer: 54 visible PlaneGeometry meshes */}
+      {/* Interactive meshes */}
       <group
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
@@ -330,13 +368,10 @@ export function OrientationCubeMesh({
         ))}
       </group>
       
-      {/* Wireframe */}
-      <lineSegments>
-        <edgesGeometry>
-          <boxGeometry args={[CUBE_SIZE, CUBE_SIZE, CUBE_SIZE]} />
-        </edgesGeometry>
-        <lineBasicMaterial color="#0f172a" linewidth={2} />
-      </lineSegments>
+      {/* Camera-facing text labels */}
+      {textSprites.map((sprite, index) => (
+        <primitive key={`sprite-${index}`} object={sprite} />
+      ))}
     </group>
   );
 }

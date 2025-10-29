@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface OrientationCubeViewportProps {
   mainCameraRef: React.RefObject<THREE.PerspectiveCamera>;
-  controlsRef?: React.ReffObject<any>;
+  controlsRef?: React.RefObject<any>;
   onCubeClick?: (direction: THREE.Vector3) => void;
   onRotateUp?: () => void;
   onRotateDown?: () => void;
