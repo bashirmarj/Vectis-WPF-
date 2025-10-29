@@ -316,9 +316,9 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         <meshStandardMaterial
           color="#ffffff"
           metalness={0.3}
-          roughness={0.6}
-          transparent={true}
-          opacity={0.8}
+          roughness={0.5}
+          transparent={false}
+          opacity={1.0}
           envMapIntensity={1.5}
           side={THREE.FrontSide}
         />
