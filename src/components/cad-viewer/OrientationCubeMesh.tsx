@@ -30,13 +30,13 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     if (loadedGeometry) {
       // Clone the geometry so we don't modify the cached loader data
       const cloned = loadedGeometry.clone();
-      
+
       // Compute bounding box
       cloned.computeBoundingBox();
       const bbox = cloned.boundingBox!;
       const center = new THREE.Vector3();
       bbox.getCenter(center);
-      
+
       // Translate all vertices to center
       const positions = cloned.attributes.position;
       for (let i = 0; i < positions.count; i++) {
@@ -44,12 +44,12 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         positions.setY(i, positions.getY(i) - center.y);
         positions.setZ(i, positions.getZ(i) - center.z);
       }
-      
+
       positions.needsUpdate = true;
       cloned.computeVertexNormals();
       cloned.computeBoundingBox();
       cloned.computeBoundingSphere();
-      
+
       setCenteredGeometry(cloned);
     }
   }, [loadedGeometry]);
@@ -307,7 +307,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           geometry={centeredGeometry}
           castShadow
           receiveShadow
-          scale={0.9}
+          scale={1.1}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -384,7 +384,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
       {/* Edge lines - Dual-layer: Simple box for clean 12 outer edges */}
       {centeredGeometry && (
-        <lineSegments scale={0.9}>
+        <lineSegments scale={1.1}>
           <edgesGeometry args={[centeredGeometry]} />
           <lineBasicMaterial
             color="#0f172a"
