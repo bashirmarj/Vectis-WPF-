@@ -3,9 +3,10 @@
 // ✅ STL geometry properly centered for rotation
 // ✅ 6 faces + 12 edges + 8 corners = 26 clickable zones
 
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect } from "react";
 import * as THREE from "three";
-import { ThreeEvent, useThree } from "@react-three/fiber";
+import { ThreeEvent, useThree, useLoader } from "@react-three/fiber";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 
 interface OrientationCubeMeshProps {
   onFaceClick?: (direction: THREE.Vector3) => void;
@@ -20,12 +21,39 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const { gl } = useThree();
 
-  // ✅ Create simple BoxGeometry for clean edges
-  const loadedGeometry = useMemo(() => {
-    const geo = new THREE.BoxGeometry(1, 1, 1);
-    geo.computeVertexNormals();
-    return geo;
-  }, []);
+  // ✅ Load STL geometry
+  const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
+
+  // ✅ CRITICAL: Center the geometry properly for correct rotation
+  useEffect(() => {
+    if (loadedGeometry) {
+      // Compute bounding box
+      loadedGeometry.computeBoundingBox();
+      const bbox = loadedGeometry.boundingBox!;
+
+      // Calculate center offset
+      const center = new THREE.Vector3();
+      bbox.getCenter(center);
+
+      // Translate all vertices to center the geometry
+      const positions = loadedGeometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        positions.setX(i, positions.getX(i) - center.x);
+        positions.setY(i, positions.getY(i) - center.y);
+        positions.setZ(i, positions.getZ(i) - center.z);
+      }
+
+      positions.needsUpdate = true;
+      loadedGeometry.computeVertexNormals();
+      loadedGeometry.computeBoundingBox();
+      loadedGeometry.computeBoundingSphere();
+
+      console.log("✅ STL geometry centered at origin", {
+        center: center,
+        boundingBox: loadedGeometry.boundingBox,
+      });
+    }
+  }, [loadedGeometry]);
 
   // ✅ Window-level drag tracking
   useEffect(() => {
@@ -273,12 +301,13 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
 
   return (
     <group ref={groupRef}>
-      {/* Main cube mesh - BoxGeometry for clean edges */}
+      {/* Main cube mesh from STL - properly centered */}
       <mesh
         ref={meshRef}
         geometry={loadedGeometry}
         castShadow
         receiveShadow
+        scale={0.018}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
