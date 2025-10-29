@@ -19,10 +19,40 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const [centeredGeometry, setCenteredGeometry] = useState<THREE.BufferGeometry | null>(null);
   const { gl } = useThree();
 
   // ✅ Load STL geometry
   const loadedGeometry = useLoader(STLLoader, "/orientation-cube.stl");
+
+  // ✅ Center the geometry at origin for correct rotation
+  useEffect(() => {
+    if (loadedGeometry) {
+      // Clone the geometry so we don't modify the cached loader data
+      const cloned = loadedGeometry.clone();
+      
+      // Compute bounding box
+      cloned.computeBoundingBox();
+      const bbox = cloned.boundingBox!;
+      const center = new THREE.Vector3();
+      bbox.getCenter(center);
+      
+      // Translate all vertices to center
+      const positions = cloned.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        positions.setX(i, positions.getX(i) - center.x);
+        positions.setY(i, positions.getY(i) - center.y);
+        positions.setZ(i, positions.getZ(i) - center.z);
+      }
+      
+      positions.needsUpdate = true;
+      cloned.computeVertexNormals();
+      cloned.computeBoundingBox();
+      cloned.computeBoundingSphere();
+      
+      setCenteredGeometry(cloned);
+    }
+  }, [loadedGeometry]);
 
   // ✅ Window-level drag tracking
   useEffect(() => {
@@ -271,27 +301,29 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   return (
     <group ref={groupRef}>
       {/* Main cube mesh from STL - properly centered */}
-      <mesh
-        ref={meshRef}
-        geometry={loadedGeometry}
-        castShadow
-        receiveShadow
-        scale={0.9}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerEnter={handleCubeEnter}
-      >
-        <meshStandardMaterial
-          color="#e5e7eb"
-          metalness={0.3}
-          roughness={0.5}
-          transparent={false}
-          opacity={0.75}
-          envMapIntensity={1.5}
-          side={THREE.FrontSide}
-        />
-      </mesh>
+      {centeredGeometry && (
+        <mesh
+          ref={meshRef}
+          geometry={centeredGeometry}
+          castShadow
+          receiveShadow
+          scale={0.9}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerEnter={handleCubeEnter}
+        >
+          <meshStandardMaterial
+            color="#e5e7eb"
+            metalness={0.3}
+            roughness={0.5}
+            transparent={false}
+            opacity={0.75}
+            envMapIntensity={1.5}
+            side={THREE.FrontSide}
+          />
+        </mesh>
+      )}
 
       {/* ✅ 6 FACE click zones (large planes) */}
       {faceDefinitions.map((face) => (
@@ -351,17 +383,19 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       )}
 
       {/* Edge lines - Dual-layer: Simple box for clean 12 outer edges */}
-      <lineSegments scale={0.9}>
-        <edgesGeometry args={[loadedGeometry]} />
-        <lineBasicMaterial
-          color="#0f172a"
-          linewidth={2}
-          transparent={true}
-          opacity={0.9}
-          depthTest={true}
-          depthWrite={false}
-        />
-      </lineSegments>
+      {centeredGeometry && (
+        <lineSegments scale={0.9}>
+          <edgesGeometry args={[centeredGeometry]} />
+          <lineBasicMaterial
+            color="#0f172a"
+            linewidth={2}
+            transparent={true}
+            opacity={0.9}
+            depthTest={true}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
     </group>
   );
 }
