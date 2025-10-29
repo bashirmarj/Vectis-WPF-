@@ -58,17 +58,28 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleWindowMouseMove = (e: MouseEvent) => {
-      if (dragStartPos.current && onDragRotate) {
-        const deltaX = e.clientX - dragStartPos.current.x;
-        const deltaY = e.clientY - dragStartPos.current.y;
+  const handleWindowMouseMove = (e: MouseEvent) => {
+    if (dragStartPos.current && onDragRotate) {
+      const deltaX = e.clientX - dragStartPos.current.x;
+      const deltaY = e.clientY - dragStartPos.current.y;
 
-        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-          onDragRotate(deltaX, deltaY);
-          dragStartPos.current = { x: e.clientX, y: e.clientY };
+      if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+        // Rotate the main camera
+        onDragRotate(deltaX, deltaY);
+        
+        // Rotate the orange cube in sync with the drag
+        if (groupRef.current) {
+          const rotationSpeed = 0.01;
+          // Horizontal rotation (around Y-axis)
+          groupRef.current.rotation.y += deltaX * rotationSpeed;
+          // Vertical rotation (around X-axis)
+          groupRef.current.rotation.x += deltaY * rotationSpeed;
         }
+        
+        dragStartPos.current = { x: e.clientX, y: e.clientY };
       }
-    };
+    }
+  };
 
     const handleWindowMouseUp = () => {
       setIsDragging(false);
