@@ -303,43 +303,49 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     const abs = { x: Math.abs(point.x), y: Math.abs(point.y), z: Math.abs(point.z) };
     const max = Math.max(abs.x, abs.y, abs.z);
     const tolerance = 0.15;
-    
+
     // Count how many axes are at maximum
     const atMax = [
-      abs.x > max - tolerance ? 'x' : null,
-      abs.y > max - tolerance ? 'y' : null,
-      abs.z > max - tolerance ? 'z' : null,
+      abs.x > max - tolerance ? "x" : null,
+      abs.y > max - tolerance ? "y" : null,
+      abs.z > max - tolerance ? "z" : null,
     ].filter(Boolean);
-    
+
     if (atMax.length === 1) {
       // FACE: Only one axis at max
-      if (point.x > 0.4) return { name: 'face-right', direction: new THREE.Vector3(1, 0, 0) };
-      if (point.x < -0.4) return { name: 'face-left', direction: new THREE.Vector3(-1, 0, 0) };
-      if (point.y > 0.4) return { name: 'face-top', direction: new THREE.Vector3(0, 1, 0) };
-      if (point.y < -0.4) return { name: 'face-bottom', direction: new THREE.Vector3(0, -1, 0) };
-      if (point.z > 0.4) return { name: 'face-front', direction: new THREE.Vector3(0, 0, 1) };
-      if (point.z < -0.4) return { name: 'face-back', direction: new THREE.Vector3(0, 0, -1) };
+      if (point.x > 0.4) return { name: "face-right", direction: new THREE.Vector3(1, 0, 0) };
+      if (point.x < -0.4) return { name: "face-left", direction: new THREE.Vector3(-1, 0, 0) };
+      if (point.y > 0.4) return { name: "face-top", direction: new THREE.Vector3(0, 1, 0) };
+      if (point.y < -0.4) return { name: "face-bottom", direction: new THREE.Vector3(0, -1, 0) };
+      if (point.z > 0.4) return { name: "face-front", direction: new THREE.Vector3(0, 0, 1) };
+      if (point.z < -0.4) return { name: "face-back", direction: new THREE.Vector3(0, 0, -1) };
     } else if (atMax.length === 2) {
       // EDGE: Two axes at max
       const dir = new THREE.Vector3(
         abs.x > max - tolerance ? Math.sign(point.x) : 0,
         abs.y > max - tolerance ? Math.sign(point.y) : 0,
-        abs.z > max - tolerance ? Math.sign(point.z) : 0
+        abs.z > max - tolerance ? Math.sign(point.z) : 0,
       );
-      return { name: `edge-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`, direction: dir.normalize() };
+      return {
+        name: `edge-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`,
+        direction: dir.normalize(),
+      };
     } else if (atMax.length === 3) {
       // CORNER: All three axes at max
       const dir = new THREE.Vector3(Math.sign(point.x), Math.sign(point.y), Math.sign(point.z));
-      return { name: `corner-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`, direction: dir.normalize() };
+      return {
+        name: `corner-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`,
+        direction: dir.normalize(),
+      };
     }
-    
+
     return null;
   };
 
   // ✅ Click handler for interaction cube
   const handleInteractionCubeClick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
-    
+
     const wasClick =
       dragStartPos.current &&
       Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
@@ -361,7 +367,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
   const handleInteractionCubeMove = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     if (isDragging || !event.point) return;
-    
+
     const zone = detectZoneFromPoint(event.point);
     setHoveredZone(zone?.name || null);
   };
@@ -382,7 +388,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           onPointerEnter={handleCubeEnter}
         >
           <meshStandardMaterial
-            color="#b45309"
+            color="#FFAB00"
             metalness={0.3}
             roughness={0.5}
             transparent={false}
@@ -400,20 +406,15 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           scale={1.1}
           onClick={handleInteractionCubeClick}
           onPointerMove={handleInteractionCubeMove}
-          onPointerEnter={() => gl.domElement.style.cursor = 'pointer'}
+          onPointerEnter={() => (gl.domElement.style.cursor = "pointer")}
           onPointerLeave={() => {
-            gl.domElement.style.cursor = 'auto';
+            gl.domElement.style.cursor = "auto";
             setHoveredZone(null);
           }}
           visible={!isDragging}
         >
           <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial 
-            transparent 
-            opacity={0} 
-            side={THREE.BackSide}
-            depthWrite={false}
-          />
+          <meshBasicMaterial transparent opacity={0} side={THREE.BackSide} depthWrite={false} />
         </mesh>
       )}
 
@@ -421,13 +422,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
       {hoveredZone && (
         <mesh position={[0, 0, 0]} raycast={() => null}>
           <sphereGeometry args={[1.5, 16, 16]} />
-          <meshBasicMaterial 
-            color="#2563eb" 
-            transparent={true} 
-            opacity={0.3} 
-            depthTest={false} 
-            depthWrite={false} 
-          />
+          <meshBasicMaterial color="#2563eb" transparent={true} opacity={0.3} depthTest={false} depthWrite={false} />
         </mesh>
       )}
 
