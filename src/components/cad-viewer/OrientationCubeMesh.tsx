@@ -298,6 +298,74 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
     }
   };
 
+  // ✅ Detect zone from 3D point on interaction cube
+  const detectZoneFromPoint = (point: THREE.Vector3) => {
+    const abs = { x: Math.abs(point.x), y: Math.abs(point.y), z: Math.abs(point.z) };
+    const max = Math.max(abs.x, abs.y, abs.z);
+    const tolerance = 0.15;
+    
+    // Count how many axes are at maximum
+    const atMax = [
+      abs.x > max - tolerance ? 'x' : null,
+      abs.y > max - tolerance ? 'y' : null,
+      abs.z > max - tolerance ? 'z' : null,
+    ].filter(Boolean);
+    
+    if (atMax.length === 1) {
+      // FACE: Only one axis at max
+      if (point.x > 0.4) return { name: 'face-right', direction: new THREE.Vector3(1, 0, 0) };
+      if (point.x < -0.4) return { name: 'face-left', direction: new THREE.Vector3(-1, 0, 0) };
+      if (point.y > 0.4) return { name: 'face-top', direction: new THREE.Vector3(0, 1, 0) };
+      if (point.y < -0.4) return { name: 'face-bottom', direction: new THREE.Vector3(0, -1, 0) };
+      if (point.z > 0.4) return { name: 'face-front', direction: new THREE.Vector3(0, 0, 1) };
+      if (point.z < -0.4) return { name: 'face-back', direction: new THREE.Vector3(0, 0, -1) };
+    } else if (atMax.length === 2) {
+      // EDGE: Two axes at max
+      const dir = new THREE.Vector3(
+        abs.x > max - tolerance ? Math.sign(point.x) : 0,
+        abs.y > max - tolerance ? Math.sign(point.y) : 0,
+        abs.z > max - tolerance ? Math.sign(point.z) : 0
+      );
+      return { name: `edge-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`, direction: dir.normalize() };
+    } else if (atMax.length === 3) {
+      // CORNER: All three axes at max
+      const dir = new THREE.Vector3(Math.sign(point.x), Math.sign(point.y), Math.sign(point.z));
+      return { name: `corner-${Math.sign(point.x)}-${Math.sign(point.y)}-${Math.sign(point.z)}`, direction: dir.normalize() };
+    }
+    
+    return null;
+  };
+
+  // ✅ Click handler for interaction cube
+  const handleInteractionCubeClick = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    
+    const wasClick =
+      dragStartPos.current &&
+      Math.abs(event.clientX - dragStartPos.current.x) < 3 &&
+      Math.abs(event.clientY - dragStartPos.current.y) < 3;
+
+    if (wasClick && onFaceClick && event.point) {
+      const zone = detectZoneFromPoint(event.point);
+      if (zone) {
+        console.log(`🖱️ ${zone.name} clicked →`, zone.direction);
+        onFaceClick(zone.direction);
+      }
+    }
+
+    setIsDragging(false);
+    dragStartPos.current = null;
+  };
+
+  // ✅ Move handler for interaction cube
+  const handleInteractionCubeMove = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    if (isDragging || !event.point) return;
+    
+    const zone = detectZoneFromPoint(event.point);
+    setHoveredZone(zone?.name || null);
+  };
+
   return (
     <group ref={groupRef}>
       {/* Main cube mesh from STL - properly centered */}
@@ -314,7 +382,7 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
           onPointerEnter={handleCubeEnter}
         >
           <meshStandardMaterial
-            color="#FFAB00"
+            color="#b45309"
             metalness={0.3}
             roughness={0.5}
             transparent={false}
@@ -325,60 +393,41 @@ export function OrientationCubeMesh({ onFaceClick, onDragRotate, groupRef }: Ori
         </mesh>
       )}
 
-      {/* ✅ 6 FACE click zones (large planes) */}
-      {faceDefinitions.map((face) => (
+      {/* ✅ Third invisible interaction cube - handles all 26 zones */}
+      {centeredGeometry && (
         <mesh
-          key={face.name}
-          position={face.position}
-          rotation={face.rotation}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handleZoneClick(face.name, face.label, face.direction)}
-          onPointerEnter={handleZoneEnter(face.name)}
-          onPointerLeave={handleZoneLeave}
+          position={[0, 0, 0]}
+          scale={1.1}
+          onClick={handleInteractionCubeClick}
+          onPointerMove={handleInteractionCubeMove}
+          onPointerEnter={() => gl.domElement.style.cursor = 'pointer'}
+          onPointerLeave={() => {
+            gl.domElement.style.cursor = 'auto';
+            setHoveredZone(null);
+          }}
           visible={!isDragging}
         >
-          <planeGeometry args={[1.0, 1.0]} />
-          <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} />
+          <boxGeometry args={[1, 1, 1]} />
+          <meshBasicMaterial 
+            transparent 
+            opacity={0} 
+            side={THREE.BackSide}
+            depthWrite={false}
+          />
         </mesh>
-      ))}
-
-      {/* ✅ 12 EDGE click zones (small spheres) */}
-      {edgeDefinitions.map((edge) => (
-        <mesh
-          key={edge.name}
-          position={edge.position}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handleZoneClick(edge.name, edge.name.toUpperCase(), edge.direction)}
-          onPointerEnter={handleZoneEnter(edge.name)}
-          onPointerLeave={handleZoneLeave}
-          visible={!isDragging}
-        >
-          <sphereGeometry args={[0.2, 8, 8]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-      ))}
-
-      {/* ✅ 8 CORNER click zones (small spheres) */}
-      {cornerDefinitions.map((corner) => (
-        <mesh
-          key={corner.name}
-          position={corner.position}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handleZoneClick(corner.name, corner.name.toUpperCase(), corner.direction)}
-          onPointerEnter={handleZoneEnter(corner.name)}
-          onPointerLeave={handleZoneLeave}
-          visible={!isDragging}
-        >
-          <sphereGeometry args={[0.25, 8, 8]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-      ))}
+      )}
 
       {/* Highlight overlay when hovering ANY zone */}
       {hoveredZone && (
         <mesh position={[0, 0, 0]} raycast={() => null}>
-          <sphereGeometry args={[1.35, 16, 16]} />
-          <meshBasicMaterial color="#2563eb" transparent={false} opacity={1.0} depthTest={false} depthWrite={false} />
+          <sphereGeometry args={[1.5, 16, 16]} />
+          <meshBasicMaterial 
+            color="#2563eb" 
+            transparent={true} 
+            opacity={0.3} 
+            depthTest={false} 
+            depthWrite={false} 
+          />
         </mesh>
       )}
 
