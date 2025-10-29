@@ -1,6 +1,6 @@
 // src/components/cad-viewer/OrientationCubeMesh.tsx
-// ✅ Reference-Accurate Implementation
-// Matches ViewCube architecture from reference code
+// ✅ Group-Based Architecture Implementation
+// Matches reference ViewCube structure using THREE.Group rotation
 
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import * as THREE from "three";
@@ -17,7 +17,6 @@ const CUBE_SIZE = 1.5;
 const EDGE_SIZE = 0.2;
 const FACE_SIZE = CUBE_SIZE - (EDGE_SIZE * 2);
 const FACE_OFFSET = CUBE_SIZE / 2;
-const BORDER_OFFSET = FACE_OFFSET - (EDGE_SIZE / 2);
 
 // Color scheme from reference
 const MAINCOLOR = 0xDDDDDD;
@@ -55,25 +54,94 @@ function createTextSprite(text: string): THREE.Texture {
   return texture;
 }
 
-// Helper to create a single PlaneGeometry face
-function createFace(
-  size: [number, number],
-  position: [number, number, number],
-  rotation: [number, number, number],
-  name: string,
-  textMap?: THREE.Texture
-): THREE.Mesh {
-  const geometry = new THREE.PlaneGeometry(size[0], size[1]);
-  const material = new THREE.MeshBasicMaterial({
-    color: MAINCOLOR,
-    side: THREE.DoubleSide,
-    map: textMap,
-  });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = name;
-  mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
-  mesh.position.set(position[0], position[1], position[2]);
-  return mesh;
+/**
+ * Creates a corner group with 3 faces (like reference _createCornerFaces)
+ */
+function createCornerGroup(borderSize: number, offset: number, name: string): THREE.Group {
+  const corner = new THREE.Group();
+  const borderOffset = offset - borderSize / 2;
+  
+  // Face 1: Front-facing
+  const geo1 = new THREE.PlaneGeometry(borderSize, borderSize);
+  const mat1 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh1 = new THREE.Mesh(geo1, mat1);
+  mesh1.name = name;
+  mesh1.position.set(borderOffset, borderOffset, offset);
+  corner.add(mesh1);
+  
+  // Face 2: Right-facing
+  const geo2 = new THREE.PlaneGeometry(borderSize, borderSize);
+  const mat2 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh2 = new THREE.Mesh(geo2, mat2);
+  mesh2.name = name;
+  mesh2.position.set(offset, borderOffset, borderOffset);
+  mesh2.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+  corner.add(mesh2);
+  
+  // Face 3: Top-facing
+  const geo3 = new THREE.PlaneGeometry(borderSize, borderSize);
+  const mat3 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh3 = new THREE.Mesh(geo3, mat3);
+  mesh3.name = name;
+  mesh3.position.set(borderOffset, offset, borderOffset);
+  mesh3.rotateOnAxis(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  corner.add(mesh3);
+  
+  return corner;
+}
+
+/**
+ * Creates horizontal edge group with 2 faces
+ */
+function createHorzEdgeGroup(width: number, height: number, offset: number, name: string): THREE.Group {
+  const edge = new THREE.Group();
+  const borderOffset = offset - height / 2;
+  
+  // Face 1: Front
+  const geo1 = new THREE.PlaneGeometry(width, height);
+  const mat1 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh1 = new THREE.Mesh(geo1, mat1);
+  mesh1.name = name;
+  mesh1.position.set(0, borderOffset, offset);
+  edge.add(mesh1);
+  
+  // Face 2: Top
+  const geo2 = new THREE.PlaneGeometry(width, height);
+  const mat2 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh2 = new THREE.Mesh(geo2, mat2);
+  mesh2.name = name;
+  mesh2.position.set(0, offset, borderOffset);
+  mesh2.rotateOnAxis(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  edge.add(mesh2);
+  
+  return edge;
+}
+
+/**
+ * Creates vertical edge group with 2 faces
+ */
+function createVertEdgeGroup(width: number, height: number, offset: number, name: string): THREE.Group {
+  const edge = new THREE.Group();
+  const borderOffset = offset - width / 2;
+  
+  // Face 1: Front
+  const geo1 = new THREE.PlaneGeometry(width, height);
+  const mat1 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh1 = new THREE.Mesh(geo1, mat1);
+  mesh1.name = name;
+  mesh1.position.set(borderOffset, 0, offset);
+  edge.add(mesh1);
+  
+  // Face 2: Right
+  const geo2 = new THREE.PlaneGeometry(width, height);
+  const mat2 = new THREE.MeshBasicMaterial({ color: MAINCOLOR });
+  const mesh2 = new THREE.Mesh(geo2, mat2);
+  mesh2.name = name;
+  mesh2.position.set(offset, 0, borderOffset);
+  mesh2.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+  edge.add(mesh2);
+  
+  return edge;
 }
 
 export function OrientationCubeMesh({
@@ -85,99 +153,143 @@ export function OrientationCubeMesh({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  // Build all 54 PlaneGeometry meshes
-  const { meshes: cubeMeshes } = useMemo(() => {
-    const meshes: THREE.Mesh[] = [];
+  // Build cube using group rotation pattern (like reference _build())
+  const cubeGroup = useMemo(() => {
+    const mainGroup = new THREE.Group();
     
-    // === 6 MAIN FACES with text labels ===
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, FACE_OFFSET], [0, 0, 0], 'face-front', createTextSprite('FRONT')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [FACE_OFFSET, 0, 0], [0, Math.PI/2, 0], 'face-right', createTextSprite('RIGHT')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, 0, -FACE_OFFSET], [0, Math.PI, 0], 'face-back', createTextSprite('BACK')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [-FACE_OFFSET, 0, 0], [0, -Math.PI/2, 0], 'face-left', createTextSprite('LEFT')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, FACE_OFFSET, 0], [-Math.PI/2, 0, 0], 'face-top', createTextSprite('TOP')));
-    meshes.push(createFace([FACE_SIZE, FACE_SIZE], [0, -FACE_OFFSET, 0], [Math.PI/2, 0, 0], 'face-bottom', createTextSprite('BOTTOM')));
+    // === 6 MAIN FACES ===
+    const frontMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE),
+      new THREE.MeshBasicMaterial({ color: MAINCOLOR, map: createTextSprite('FRONT') })
+    );
+    frontMesh.name = 'face-front';
+    frontMesh.position.set(0, 0, FACE_OFFSET);
+    mainGroup.add(frontMesh);
     
-    // === 12 EDGES (2 meshes each = 24 total) ===
-    // Top edges
-    const e1 = 'edge-top-front', e2 = 'edge-top-right', e3 = 'edge-top-back', e4 = 'edge-top-left';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e1));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, BORDER_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], e1));
+    const rightMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE),
+      new THREE.MeshBasicMaterial({ color: MAINCOLOR, map: createTextSprite('RIGHT') })
+    );
+    rightMesh.name = 'face-right';
+    rightMesh.position.set(FACE_OFFSET, 0, 0);
+    rightMesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+    mainGroup.add(rightMesh);
     
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, 0], [-Math.PI/2, 0, 0], e2));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, 0], [0, Math.PI/2, 0], e2));
+    const backMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE),
+      new THREE.MeshBasicMaterial({ color: MAINCOLOR, map: createTextSprite('BACK') })
+    );
+    backMesh.name = 'face-back';
+    backMesh.position.set(0, 0, -FACE_OFFSET);
+    backMesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
+    mainGroup.add(backMesh);
     
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e3));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, BORDER_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], e3));
+    const leftMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE),
+      new THREE.MeshBasicMaterial({ color: MAINCOLOR, map: createTextSprite('LEFT') })
+    );
+    leftMesh.name = 'face-left';
+    leftMesh.position.set(-FACE_OFFSET, 0, 0);
+    leftMesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+    mainGroup.add(leftMesh);
     
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, 0], [-Math.PI/2, 0, 0], e4));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e4));
+    const topMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE),
+      new THREE.MeshBasicMaterial({ color: MAINCOLOR, map: createTextSprite('TOP') })
+    );
+    topMesh.name = 'face-top';
+    topMesh.position.set(0, FACE_OFFSET, 0);
+    topMesh.rotateOnAxis(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    mainGroup.add(topMesh);
     
-    // Bottom edges
-    const e5 = 'edge-bottom-front', e6 = 'edge-bottom-right', e7 = 'edge-bottom-back', e8 = 'edge-bottom-left';
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], e5));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, -BORDER_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], e5));
+    const bottomMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FACE_SIZE, FACE_SIZE),
+      new THREE.MeshBasicMaterial({ color: MAINCOLOR, map: createTextSprite('BOTTOM') })
+    );
+    bottomMesh.name = 'face-bottom';
+    bottomMesh.position.set(0, -FACE_OFFSET, 0);
+    bottomMesh.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    mainGroup.add(bottomMesh);
     
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, 0], [Math.PI/2, 0, 0], e6));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, 0], [0, Math.PI/2, 0], e6));
+    // === 8 CORNERS (using rotation like reference) ===
+    // Top 4 corners
+    const topCornerNames = [
+      'corner-top-front-right',
+      'corner-top-back-right', 
+      'corner-top-back-left',
+      'corner-top-front-left'
+    ];
     
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [0, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], e7));
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [0, -BORDER_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], e7));
+    for (let i = 0; i < 4; i++) {
+      const corner = createCornerGroup(EDGE_SIZE, FACE_OFFSET, topCornerNames[i]);
+      corner.rotateOnAxis(new THREE.Vector3(0, 1, 0), (i * 90) * Math.PI / 180);
+      mainGroup.add(corner);
+    }
     
-    meshes.push(createFace([EDGE_SIZE, FACE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, 0], [Math.PI/2, 0, 0], e8));
-    meshes.push(createFace([FACE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, 0], [0, -Math.PI/2, 0], e8));
+    // Bottom 4 corners
+    const bottomCornersGroup = new THREE.Group();
+    const bottomCornerNames = [
+      'corner-bottom-back-right',
+      'corner-bottom-front-right',
+      'corner-bottom-front-left',
+      'corner-bottom-back-left'
+    ];
     
-    // Vertical edges
-    const e9 = 'edge-front-right', e10 = 'edge-back-right', e11 = 'edge-back-left', e12 = 'edge-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e9));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, 0, BORDER_OFFSET], [0, Math.PI/2, 0], e9));
+    for (let i = 0; i < 4; i++) {
+      const corner = createCornerGroup(EDGE_SIZE, FACE_OFFSET, bottomCornerNames[i]);
+      corner.rotateOnAxis(new THREE.Vector3(0, 1, 0), (i * 90) * Math.PI / 180);
+      bottomCornersGroup.add(corner);
+    }
+    bottomCornersGroup.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI);
+    mainGroup.add(bottomCornersGroup);
     
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e10));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, 0, -BORDER_OFFSET], [0, Math.PI/2, 0], e10));
+    // === 12 EDGES ===
+    // Top 4 horizontal edges
+    const topEdgeNames = [
+      'edge-top-front',
+      'edge-top-right',
+      'edge-top-back',
+      'edge-top-left'
+    ];
     
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, 0, -FACE_OFFSET], [0, Math.PI, 0], e11));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, 0, -BORDER_OFFSET], [0, -Math.PI/2, 0], e11));
+    for (let i = 0; i < 4; i++) {
+      const edge = createHorzEdgeGroup(FACE_SIZE, EDGE_SIZE, FACE_OFFSET, topEdgeNames[i]);
+      edge.rotateOnAxis(new THREE.Vector3(0, 1, 0), (i * 90) * Math.PI / 180);
+      mainGroup.add(edge);
+    }
     
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, 0, FACE_OFFSET], [0, 0, 0], e12));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, 0, BORDER_OFFSET], [0, -Math.PI/2, 0], e12));
+    // Bottom 4 horizontal edges
+    const bottomEdgesGroup = new THREE.Group();
+    const bottomEdgeNames = [
+      'edge-bottom-back',
+      'edge-bottom-right',
+      'edge-bottom-front',
+      'edge-bottom-left'
+    ];
     
-    // === 8 CORNERS (3 meshes each = 24 total) ===
-    // Top corners
-    const c1 = 'corner-top-front-right', c2 = 'corner-top-back-right', c3 = 'corner-top-back-left', c4 = 'corner-top-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c1));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c1));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c1));
+    for (let i = 0; i < 4; i++) {
+      const edge = createHorzEdgeGroup(FACE_SIZE, EDGE_SIZE, FACE_OFFSET, bottomEdgeNames[i]);
+      edge.rotateOnAxis(new THREE.Vector3(0, 1, 0), (i * 90) * Math.PI / 180);
+      bottomEdgesGroup.add(edge);
+    }
+    bottomEdgesGroup.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI);
+    mainGroup.add(bottomEdgesGroup);
     
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c2));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c2));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c2));
+    // 4 vertical side edges
+    const verticalEdgeNames = [
+      'edge-front-right',
+      'edge-back-right',
+      'edge-back-left',
+      'edge-front-left'
+    ];
     
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c3));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c3));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, -BORDER_OFFSET], [-Math.PI/2, 0, 0], c3));
+    for (let i = 0; i < 4; i++) {
+      const edge = createVertEdgeGroup(EDGE_SIZE, FACE_SIZE, FACE_OFFSET, verticalEdgeNames[i]);
+      edge.rotateOnAxis(new THREE.Vector3(0, 1, 0), (i * 90) * Math.PI / 180);
+      mainGroup.add(edge);
+    }
     
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c4));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c4));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, BORDER_OFFSET, BORDER_OFFSET], [-Math.PI/2, 0, 0], c4));
-    
-    // Bottom corners
-    const c5 = 'corner-bottom-front-right', c6 = 'corner-bottom-back-right', c7 = 'corner-bottom-back-left', c8 = 'corner-bottom-front-left';
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c5));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, Math.PI/2, 0], c5));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c5));
-    
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c6));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, Math.PI/2, 0], c6));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [BORDER_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c6));
-    
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -FACE_OFFSET], [0, Math.PI, 0], c7));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [0, -Math.PI/2, 0], c7));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, -BORDER_OFFSET], [Math.PI/2, 0, 0], c7));
-    
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, FACE_OFFSET], [0, 0, 0], c8));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-FACE_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [0, -Math.PI/2, 0], c8));
-    meshes.push(createFace([EDGE_SIZE, EDGE_SIZE], [-BORDER_OFFSET, -BORDER_OFFSET, BORDER_OFFSET], [Math.PI/2, 0, 0], c8));
-    
-    return { meshes };
+    return mainGroup;
   }, []);
 
   // Window-level drag tracking
@@ -211,37 +323,37 @@ export function OrientationCubeMesh({
   const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     
-    // Reset all meshes to main color
-    cubeMeshes.forEach(mesh => {
-      if (mesh.name && mesh.material && 'color' in mesh.material) {
-        (mesh.material as THREE.MeshBasicMaterial).color.setHex(MAINCOLOR);
+    // Reset all colors by traversing the group
+    cubeGroup.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.name) {
+        (obj.material as THREE.MeshBasicMaterial).color.setHex(MAINCOLOR);
       }
     });
     
-    // Highlight all meshes with matching name
+    // Highlight hovered
     if (event.intersections.length > 0) {
       const hoveredName = event.intersections[0].object.name;
       if (hoveredName) {
-        cubeMeshes.forEach(mesh => {
-          if (mesh.name === hoveredName) {
-            (mesh.material as THREE.MeshBasicMaterial).color.setHex(ACCENTCOLOR);
+        cubeGroup.traverse((obj) => {
+          if (obj instanceof THREE.Mesh && obj.name === hoveredName) {
+            (obj.material as THREE.MeshBasicMaterial).color.setHex(ACCENTCOLOR);
           }
         });
         setHoveredZoneName(hoveredName);
         document.body.style.cursor = 'pointer';
       }
     }
-  }, [cubeMeshes]);
+  }, [cubeGroup]);
 
   const handlePointerLeave = useCallback(() => {
-    cubeMeshes.forEach((mesh) => {
-      if (mesh.name && mesh.material && 'color' in mesh.material) {
-        (mesh.material as THREE.MeshBasicMaterial).color.setHex(MAINCOLOR);
+    cubeGroup.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.name) {
+        (obj.material as THREE.MeshBasicMaterial).color.setHex(MAINCOLOR);
       }
     });
     setHoveredZoneName(null);
     document.body.style.cursor = 'default';
-  }, [cubeMeshes]);
+  }, [cubeGroup]);
 
   const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
@@ -314,17 +426,13 @@ export function OrientationCubeMesh({
 
   return (
     <group ref={groupRef}>
-      {/* Interactive meshes */}
-      <group
+      <primitive 
+        object={cubeGroup}
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-      >
-        {cubeMeshes.map((mesh, index) => (
-          <primitive key={`mesh-${index}`} object={mesh} />
-        ))}
-      </group>
+      />
       
       {/* Cube outline wireframe */}
       <lineSegments>
