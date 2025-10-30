@@ -154,10 +154,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           
           if (classification.type === 'circle' || classification.type === 'arc') {
             value = classification.radius || 0;
-            label = `${classification.type.toUpperCase()}: R=${value.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`;
+            label = `R${value.toFixed(2)}`;
           } else {
             value = edge.distance();
-            label = `LINE: ${value.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`;
+            label = `${value.toFixed(2)}`;
           }
           
           addMeasurement({
@@ -270,7 +270,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         return (
           <mesh position={midpoint} quaternion={quaternion}>
             <cylinderGeometry args={[2, 2, length, 8]} />
-            <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.3} />
+            <meshStandardMaterial color="#FFB84D" emissive="#FFB84D" emissiveIntensity={0.5} transparent opacity={0.6} />
           </mesh>
         );
       })()}
@@ -296,7 +296,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         
         return (
           <mesh geometry={geometry}>
-            <meshBasicMaterial color="#00ff00" transparent opacity={0.3} side={THREE.DoubleSide} />
+            <meshBasicMaterial color="#FFB84D" transparent opacity={0.3} side={THREE.DoubleSide} />
           </mesh>
         );
       })()}

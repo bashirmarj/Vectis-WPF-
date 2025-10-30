@@ -122,32 +122,34 @@ export const DimensionAnnotation: React.FC<DimensionAnnotationProps> = ({ measur
       <primitive object={new THREE.Line(createLineGeometry(geometries.extension2.start, geometries.extension2.end), new THREE.LineBasicMaterial({ color: "#888888", transparent: true, opacity: 0.6 }))} />
       
       {/* Dimension line (thicker, solid) */}
-      <primitive object={new THREE.Line(createLineGeometry(geometries.dimensionLine.start, geometries.dimensionLine.end), new THREE.LineBasicMaterial({ color: "#00ff00" }))} />
+      <primitive object={new THREE.Line(createLineGeometry(geometries.dimensionLine.start, geometries.dimensionLine.end), new THREE.LineBasicMaterial({ color: "#0066CC" }))} />
       
       {/* Arrow 1 */}
       <mesh geometry={createArrowGeometry(geometries.arrow1.pos, geometries.arrow1.dir, geometries.arrow1.size)}>
-        <meshBasicMaterial color="#00ff00" side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#0066CC" side={THREE.DoubleSide} />
       </mesh>
       
       {/* Arrow 2 */}
       <mesh geometry={createArrowGeometry(geometries.arrow2.pos, geometries.arrow2.dir, geometries.arrow2.size)}>
-        <meshBasicMaterial color="#00ff00" side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#0066CC" side={THREE.DoubleSide} />
       </mesh>
       
-      {/* Dimension text label */}
+      {/* Dimension text label - SolidWorks style */}
       <Html position={labelPosition} center distanceFactor={10}>
         <div
           style={{
-            background: 'rgba(0, 0, 0, 0.95)',
-            color: '#00ff00',
-            padding: '3px 8px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontWeight: 'bold',
+            background: 'rgba(255, 255, 255, 0.95)',
+            color: '#000000',
+            padding: '6px 12px',
+            borderRadius: '2px',
+            fontSize: '14px',
+            fontWeight: '600',
+            fontFamily: 'Arial, Helvetica, sans-serif',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
-            border: '1px solid rgba(0, 255, 0, 0.4)',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+            border: '1px solid rgba(0, 0, 0, 0.25)',
+            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+            letterSpacing: '0.3px'
           }}
         >
           {measurement.label}
