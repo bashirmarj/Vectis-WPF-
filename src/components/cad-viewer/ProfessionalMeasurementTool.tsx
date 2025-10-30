@@ -53,13 +53,26 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           setSnapInfo(snapped);
           
           // Generate label based on snap type
-          if (activeTool === 'edge-select' && snapped.surfaceType === 'edge') {
-            const edge = new THREE.Line3(
-              new THREE.Vector3().fromArray(meshData.vertices.slice(0, 3)),
-              new THREE.Vector3().fromArray(meshData.vertices.slice(3, 6))
+          if (activeTool === 'edge-select' && snapped.surfaceType === 'edge' && snapped.metadata) {
+            const startPoint = new THREE.Vector3(
+              snapped.metadata.startPoint[0],
+              snapped.metadata.startPoint[1],
+              snapped.metadata.startPoint[2]
             );
+            const endPoint = new THREE.Vector3(
+              snapped.metadata.endPoint[0],
+              snapped.metadata.endPoint[1],
+              snapped.metadata.endPoint[2]
+            );
+            const edge = new THREE.Line3(startPoint, endPoint);
             const classification = classifyEdge(edge, meshData);
-            setLabelText(`${classification.type.toUpperCase()}: ${classification.confidence.toFixed(0)}%`);
+            
+            if (classification.type === 'circle' || classification.type === 'arc') {
+              setLabelText(`${classification.type.toUpperCase()}: R=${classification.radius?.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`);
+            } else {
+              const length = edge.distance();
+              setLabelText(`LINE: ${length.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`);
+            }
           } else {
             setLabelText(snapped.surfaceType.toUpperCase());
           }
@@ -102,26 +115,46 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       // For edge-select, complete on first click
       if (activeTool === 'edge-select') {
         if (snapInfo.surfaceType === 'edge' && snapInfo.metadata) {
-          const edge = new THREE.Line3(
-            new THREE.Vector3().fromArray(meshData.vertices.slice(0, 3)),
-            new THREE.Vector3().fromArray(meshData.vertices.slice(3, 6))
+          const startPoint = new THREE.Vector3(
+            snapInfo.metadata.startPoint[0],
+            snapInfo.metadata.startPoint[1],
+            snapInfo.metadata.startPoint[2]
           );
+          const endPoint = new THREE.Vector3(
+            snapInfo.metadata.endPoint[0],
+            snapInfo.metadata.endPoint[1],
+            snapInfo.metadata.endPoint[2]
+          );
+          const edge = new THREE.Line3(startPoint, endPoint);
           const classification = classifyEdge(edge, meshData);
+          
+          let label = '';
+          let value = 0;
+          
+          if (classification.type === 'circle' || classification.type === 'arc') {
+            value = classification.radius || 0;
+            label = `${classification.type.toUpperCase()}: R=${value.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`;
+          } else {
+            value = edge.distance();
+            label = `LINE: ${value.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`;
+          }
           
           addMeasurement({
             id: crypto.randomUUID(),
             type: 'edge-select',
             points: [newPoint],
-            value: classification.type === 'circle' ? classification.radius || 0 : 0,
-            unit: classification.type === 'circle' ? 'mm' : 'coord',
-            label: `${classification.type.toUpperCase()} (${classification.confidence.toFixed(0)}%)`,
+            value,
+            unit: 'mm',
+            label,
             visible: true,
             color: '#00ff00',
             createdAt: new Date(),
             metadata: {
               edgeType: classification.type,
               arcRadius: classification.radius,
-              arcCenter: classification.center
+              arcCenter: classification.center,
+              edgeStart: snapInfo.metadata.startPoint,
+              edgeEnd: snapInfo.metadata.endPoint
             }
           });
           clearTempPoints();
@@ -196,6 +229,21 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         <sphereGeometry args={[snapInfo ? 3 : 2, 16, 16]} />
         <meshBasicMaterial color={snapInfo ? "#00ff00" : "#ffff00"} transparent opacity={0.8} />
       </mesh>
+
+      {/* Edge highlight for edge-select tool */}
+      {activeTool === 'edge-select' && snapInfo?.surfaceType === 'edge' && snapInfo.metadata && (
+        <line>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={2}
+              array={new Float32Array([...snapInfo.metadata.startPoint, ...snapInfo.metadata.endPoint])}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <lineBasicMaterial color="#00ff00" linewidth={3} />
+        </line>
+      )}
 
       {/* Label */}
       {labelText && (
