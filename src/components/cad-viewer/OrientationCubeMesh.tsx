@@ -361,13 +361,15 @@ export function OrientationCubeMesh({
     dragStartPos.current = { x: event.clientX, y: event.clientY };
   }, []);
 
-  const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
-    event.stopPropagation();
-    const wasDragging = isDragging;
+  const handlePointerUp = useCallback(() => {
     setIsDragging(false);
     dragStartPos.current = null;
+  }, []);
+
+  const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
     
-    if (!wasDragging && event.intersections.length > 0) {
+    if (event.intersections.length > 0) {
       const clickedName = event.intersections[0].object.name;
       
       // Extract direction from clicked zone
@@ -422,7 +424,7 @@ export function OrientationCubeMesh({
         }
       }
     }
-  }, [isDragging, onFaceClick]);
+  }, [onFaceClick]);
 
   return (
     <group ref={groupRef}>
@@ -432,6 +434,7 @@ export function OrientationCubeMesh({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
+        onClick={handleClick}
       />
       
       {/* Cube outline wireframe */}
