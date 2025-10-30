@@ -15,6 +15,10 @@ import {
   ZoomIn,
   Layers,
   X,
+  Sparkles,
+  ArrowLeftRight,
+  Square,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,13 +49,33 @@ interface UnifiedCADToolbarProps {
   showEdges: boolean;
   onToggleEdges: () => void;
 
-  // Measurement - ✅ FIXED: Added all measurement types including edge-select
-  measurementMode: "distance" | "angle" | "radius" | "diameter" | "edge-to-edge" | "face-to-face" | "coordinate" | "edge-select" | null;
-  onMeasurementModeChange: (mode: "distance" | "angle" | "radius" | "diameter" | "edge-to-edge" | "face-to-face" | "coordinate" | "edge-select" | null) => void;
+  // Measurement - ✅ FIXED: Added all measurement types
+  measurementMode:
+    | "distance"
+    | "angle"
+    | "radius"
+    | "diameter"
+    | "edge-to-edge"
+    | "face-to-face"
+    | "coordinate"
+    | "edge-select"
+    | null;
+  onMeasurementModeChange: (
+    mode:
+      | "distance"
+      | "angle"
+      | "radius"
+      | "diameter"
+      | "edge-to-edge"
+      | "face-to-face"
+      | "coordinate"
+      | "edge-select"
+      | null,
+  ) => void;
   measurementCount?: number;
   onClearMeasurements?: () => void;
 
-  // Section Planes - ✅ FIXED: Removed individual axes ("x", "y", "z")
+  // Section Planes
   sectionPlane: "xy" | "xz" | "yz" | null;
   onSectionPlaneChange: (plane: "xy" | "xz" | "yz" | null) => void;
   sectionPosition?: number;
@@ -99,91 +123,46 @@ export function UnifiedCADToolbar({
 
   // Auto-show section panel when section tool activated
   useEffect(() => {
-    if (sectionPlane !== null) {
+    if (sectionPlane) {
       setShowSectionPanel(true);
-    } else {
-      setShowSectionPanel(false);
     }
   }, [sectionPlane]);
 
-  // ✅ FIXED: Calculate proportional slider range and step size (removed individual axis cases)
-  const getSectionRange = () => {
-    if (!boundingBox) return { min: -50, max: 50, center: 0, step: 1 };
+  // Handle section tool button click
+  const handleSectionToolClick = () => {
+    if (!sectionPlane) {
+      // Activate default section plane
+      onSectionPlaneChange("xy");
+      setShowSectionPanel(true);
+    } else {
+      // Toggle panel visibility
+      setShowSectionPanel(!showSectionPanel);
+    }
+  };
 
-    const { min, max, center } = boundingBox;
-
-    // Determine range based on active section plane
-    let rangeMin: number, rangeMax: number, rangeCenter: number;
+  // Calculate slider range based on bounding box
+  const getSectionRange = (): [number, number] => {
+    if (!boundingBox) return [-100, 100];
 
     switch (sectionPlane) {
       case "xy":
-        rangeMin = min.z;
-        rangeMax = max.z;
-        rangeCenter = center.z;
-        break;
+        return [boundingBox.min.z - 10, boundingBox.max.z + 10];
       case "xz":
-        rangeMin = min.y;
-        rangeMax = max.y;
-        rangeCenter = center.y;
-        break;
+        return [boundingBox.min.y - 10, boundingBox.max.y + 10];
       case "yz":
-        rangeMin = min.x;
-        rangeMax = max.x;
-        rangeCenter = center.x;
-        break;
+        return [boundingBox.min.x - 10, boundingBox.max.x + 10];
       default:
-        rangeMin = -50;
-        rangeMax = 50;
-        rangeCenter = 0;
-    }
-
-    // Calculate step size as 0.5% of total dimension
-    // This ensures smooth movement regardless of part size
-    const totalDimension = Math.abs(rangeMax - rangeMin);
-    const step = Math.max(0.1, totalDimension * 0.005); // 0.5% of dimension, min 0.1mm
-
-    return {
-      min: rangeMin,
-      max: rangeMax,
-      center: rangeCenter,
-      step: step,
-    };
-  };
-
-  const sectionRange = getSectionRange();
-
-  // Initialize section position to center when plane activated
-  useEffect(() => {
-    if (sectionPlane !== null && onSectionPositionChange) {
-      onSectionPositionChange(sectionRange.center);
-    }
-  }, [sectionPlane]);
-
-  const handleSectionToolClick = () => {
-    if (sectionPlane !== null) {
-      onSectionPlaneChange(null);
-      setShowSectionPanel(false);
-    } else {
-      onSectionPlaneChange("xy");
-      setShowSectionPanel(true);
+        return [-100, 100];
     }
   };
 
-  // ✅ FIXED: Updated function signature to only accept plane types
-  const handleSectionPlaneSelect = (plane: "xy" | "xz" | "yz") => {
-    onSectionPlaneChange(plane);
-  };
-
-  const handleCloseSectionPanel = () => {
-    onSectionPlaneChange(null);
-    setShowSectionPanel(false);
-  };
+  const [minRange, maxRange] = getSectionRange();
 
   return (
     <>
       {/* Main Toolbar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
-        <div className="flex items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border rounded-lg shadow-lg px-3 py-2">
+      <div className="absolute top-5 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="flex items-center gap-2 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-gray-200">
           {/* View Controls Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -196,6 +175,7 @@ export function UnifiedCADToolbar({
                 <Home className="mr-2 h-4 w-4" />
                 Home View
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onFrontView}>
                 <Box className="mr-2 h-4 w-4" />
                 Front View
@@ -257,7 +237,7 @@ export function UnifiedCADToolbar({
 
           <Separator orientation="vertical" className="h-6" />
 
-          {/* Measurement Tools Dropdown */}
+          {/* Measurement Tools Dropdown - ✅ COMPLETE WITH ALL TYPES */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -277,44 +257,85 @@ export function UnifiedCADToolbar({
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuContent align="start" className="w-64">
+              {/* ✅ SMART EDGE SELECT - Featured at top */}
+              <DropdownMenuItem
+                onClick={() => onMeasurementModeChange(measurementMode === "edge-select" ? null : "edge-select")}
+                className={cn(measurementMode === "edge-select" && "bg-accent")}
+              >
+                <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
+                <div className="flex flex-col items-start">
+                  <span className="font-semibold">Smart Edge Select</span>
+                  <span className="text-xs text-muted-foreground">Auto-detect line/arc/circle</span>
+                </div>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* ✅ BASIC MEASUREMENTS */}
               <DropdownMenuItem
                 onClick={() => onMeasurementModeChange(measurementMode === "distance" ? null : "distance")}
                 className={cn(measurementMode === "distance" && "bg-accent")}
               >
                 <Ruler className="mr-2 h-4 w-4" />
-                Distance
+                Distance (2 points)
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onMeasurementModeChange(measurementMode === "angle" ? null : "angle")}
                 className={cn(measurementMode === "angle" && "bg-accent")}
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Angle
+                Angle (3 points)
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onMeasurementModeChange(measurementMode === "radius" ? null : "radius")}
                 className={cn(measurementMode === "radius" && "bg-accent")}
               >
                 <Circle className="mr-2 h-4 w-4" />
-                Radius
+                Radius (3 points)
               </DropdownMenuItem>
-              {/* ✅ FIXED: Added diameter measurement option */}
               <DropdownMenuItem
                 onClick={() => onMeasurementModeChange(measurementMode === "diameter" ? null : "diameter")}
                 className={cn(measurementMode === "diameter" && "bg-accent")}
               >
                 <Circle className="mr-2 h-4 w-4" />
-                Diameter
+                Diameter (3 points)
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
+
+              {/* ✅ ADVANCED MEASUREMENTS - Previously Missing */}
               <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "edge-select" ? null : "edge-select")}
-                className={cn(measurementMode === "edge-select" && "bg-accent")}
+                onClick={() => onMeasurementModeChange(measurementMode === "edge-to-edge" ? null : "edge-to-edge")}
+                className={cn(measurementMode === "edge-to-edge" && "bg-accent")}
               >
-                <Ruler className="mr-2 h-4 w-4" />
-                Smart Edge Select
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                <div className="flex flex-col items-start">
+                  <span>Edge to Edge</span>
+                  <span className="text-xs text-muted-foreground">Perpendicular distance</span>
+                </div>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onMeasurementModeChange(measurementMode === "face-to-face" ? null : "face-to-face")}
+                className={cn(measurementMode === "face-to-face" && "bg-accent")}
+              >
+                <Square className="mr-2 h-4 w-4" />
+                <div className="flex flex-col items-start">
+                  <span>Face to Face</span>
+                  <span className="text-xs text-muted-foreground">Parallel faces distance</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onMeasurementModeChange(measurementMode === "coordinate" ? null : "coordinate")}
+                className={cn(measurementMode === "coordinate" && "bg-accent")}
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                <div className="flex flex-col items-start">
+                  <span>Coordinate</span>
+                  <span className="text-xs text-muted-foreground">XYZ position</span>
+                </div>
+              </DropdownMenuItem>
+
               {measurementMode && (
                 <>
                   <DropdownMenuSeparator />
@@ -360,11 +381,11 @@ export function UnifiedCADToolbar({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={onToggleShadows}>
-                <Layers className="mr-2 h-4 w-4" />
+                <Eye className="mr-2 h-4 w-4" />
                 {shadowsEnabled ? "Disable" : "Enable"} Shadows
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onToggleSSAO}>
-                <Circle className="mr-2 h-4 w-4" />
+                <Eye className="mr-2 h-4 w-4" />
                 {ssaoEnabled ? "Disable" : "Enable"} SSAO
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -372,70 +393,67 @@ export function UnifiedCADToolbar({
         </div>
       </div>
 
-      {/* Section Control Panel - appears below toolbar when active */}
-      {showSectionPanel && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40">
-          <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border rounded-lg shadow-lg p-4 min-w-[400px]">
+      {/* Section Panel - Auto-shows when section tool active */}
+      {showSectionPanel && sectionPlane && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-white/95 backdrop-blur-sm px-4 py-3 rounded-lg shadow-lg border border-gray-200 w-80">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Section Plane Controls</h3>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleCloseSectionPanel} title="Close">
+              <h3 className="text-sm font-semibold text-gray-700">Section Plane</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => {
+                  onSectionPlaneChange(null);
+                  setShowSectionPanel(false);
+                }}
+              >
                 <X className="h-3 w-3" />
               </Button>
             </div>
 
-            {/* ✅ FIXED: Plane Selection - Removed individual X button */}
-            <div className="flex gap-2 mb-4">
+            {/* Plane Selection */}
+            <div className="flex gap-2 mb-3">
               <Button
                 variant={sectionPlane === "xy" ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleSectionPlaneSelect("xy")}
+                onClick={() => onSectionPlaneChange("xy")}
                 className="flex-1"
               >
-                XY Plane
+                XY
               </Button>
               <Button
                 variant={sectionPlane === "xz" ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleSectionPlaneSelect("xz")}
+                onClick={() => onSectionPlaneChange("xz")}
                 className="flex-1"
               >
-                XZ Plane
+                XZ
               </Button>
               <Button
                 variant={sectionPlane === "yz" ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleSectionPlaneSelect("yz")}
+                onClick={() => onSectionPlaneChange("yz")}
                 className="flex-1"
               >
-                YZ Plane
+                YZ
               </Button>
             </div>
 
-            {/* Position Slider - Uses proportional steps */}
+            {/* Position Slider - ✅ FIXED: Uses bounding box for range */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-gray-600">
                 <span>Position</span>
-                <span className="font-mono">{sectionPosition?.toFixed(2)} mm</span>
+                <span className="font-mono">{sectionPosition.toFixed(1)}mm</span>
               </div>
-
               <Slider
-                value={[sectionPosition || 0]}
+                value={[sectionPosition]}
                 onValueChange={(values) => onSectionPositionChange?.(values[0])}
-                min={sectionRange.min}
-                max={sectionRange.max}
-                step={sectionRange.step}
+                min={minRange}
+                max={maxRange}
+                step={0.1}
                 className="w-full"
               />
-
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>{sectionRange.min.toFixed(1)}</span>
-                <span className="text-center text-muted-foreground/70">Step: {sectionRange.step.toFixed(2)}mm</span>
-                <span>{sectionRange.max.toFixed(1)}</span>
-              </div>
-            </div>
-
-            <div className="mt-3 text-[10px] text-muted-foreground">
-              💡 Tip: Slider step size is proportional to part size ({sectionRange.step.toFixed(2)}mm per step)
             </div>
           </div>
         </div>
