@@ -17,6 +17,7 @@ import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLigh
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasurementTool";
 import { MeasurementRenderer } from "./cad-viewer/MeasurementRenderer";
+import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
@@ -254,39 +255,43 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   );
 
   // Handle orientation cube clicks - directly use direction vector for camera positioning
-  const handleCubeClick = useCallback((direction: THREE.Vector3) => {
-    if (!cameraRef.current || !controlsRef.current) return;
-    
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    const target = boundingBox.center;
-    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
-    const distance = maxDim * 2;
-    
-    // Determine appropriate up vector based on click
-    let up = new THREE.Vector3(0, 1, 0);
-    
-    // Special case: top/bottom views need different up vectors
-    if (Math.abs(direction.y) > 0.9) {
-      up = direction.y > 0 
-        ? new THREE.Vector3(0, 0, -1)  // Top view
-        : new THREE.Vector3(0, 0, 1);   // Bottom view
-    }
-    
-    // Position camera in the direction we're looking FROM
-    const newPosition = target.clone().add(direction.clone().multiplyScalar(distance));
-    
-    camera.position.copy(newPosition);
-    camera.up.copy(up);
-    camera.lookAt(target);
-    controls.target.copy(target);
-    controls.update();
-    
-    console.log('📍 Camera moved to:', {
-      direction: direction.toArray(),
-      position: newPosition.toArray()
-    });
-  }, [boundingBox]);
+  const handleCubeClick = useCallback(
+    (direction: THREE.Vector3) => {
+      if (!cameraRef.current || !controlsRef.current) return;
+
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      const target = boundingBox.center;
+      const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
+      const distance = maxDim * 2;
+
+      // Determine appropriate up vector based on click
+      let up = new THREE.Vector3(0, 1, 0);
+
+      // Special case: top/bottom views need different up vectors
+      if (Math.abs(direction.y) > 0.9) {
+        up =
+          direction.y > 0
+            ? new THREE.Vector3(0, 0, -1) // Top view
+            : new THREE.Vector3(0, 0, 1); // Bottom view
+      }
+
+      // Position camera in the direction we're looking FROM
+      const newPosition = target.clone().add(direction.clone().multiplyScalar(distance));
+
+      camera.position.copy(newPosition);
+      camera.up.copy(up);
+      camera.lookAt(target);
+      controls.target.copy(target);
+      controls.update();
+
+      console.log("📍 Camera moved to:", {
+        direction: direction.toArray(),
+        position: newPosition.toArray(),
+      });
+    },
+    [boundingBox],
+  );
 
   // ✅ CRITICAL FIX: Empty dependency array since function only uses refs
   const handleRotateCamera = useCallback(
@@ -495,12 +500,8 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 <DimensionAnnotations boundingBox={boundingBox} />
 
                 {/* Professional Measurement Tool */}
-                <ProfessionalMeasurementTool
-                  meshData={meshData}
-                  meshRef={meshRef}
-                  enabled={!!activeTool}
-                />
-                
+                <ProfessionalMeasurementTool meshData={meshData} meshRef={meshRef} enabled={!!activeTool} />
+
                 {/* Measurement Renderer */}
                 <MeasurementRenderer />
 
@@ -533,6 +534,9 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               onRotateClockwise={() => handleRotateCamera("cw")}
               onRotateCounterClockwise={() => handleRotateCamera("ccw")}
             />
+
+            {/* ✅ Measurement Panel - Shows measurement list and controls */}
+            <MeasurementPanel />
           </div>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
