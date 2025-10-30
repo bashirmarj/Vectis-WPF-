@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SnapType } from '@/stores/measurementStore';
 
 interface MeshData {
   vertices: number[];
@@ -12,8 +13,27 @@ interface MeshData {
 export interface SnapResult {
   position: THREE.Vector3;
   normal: THREE.Vector3;
-  surfaceType: 'vertex' | 'edge' | 'face';
+  surfaceType: SnapType;
   confidence: number;
+  edgeIndex?: number;
+  faceIndex?: number;
+  metadata?: {
+    edgeType?: 'line' | 'arc' | 'circle';
+    radius?: number;
+    center?: THREE.Vector3;
+    startPoint?: THREE.Vector3;
+    endPoint?: THREE.Vector3;
+  };
+}
+
+export interface EdgeClassification {
+  type: 'line' | 'arc' | 'circle';
+  start: THREE.Vector3;
+  end: THREE.Vector3;
+  length?: number;
+  radius?: number;
+  center?: THREE.Vector3;
+  angle?: number;
 }
 
 /**
@@ -83,6 +103,10 @@ export function formatMeasurement(value: number, unit: string): string {
     return `${value.toFixed(2)}°`;
   }
   
+  if (unit === 'coord') {
+    return `${value.toFixed(3)}`;
+  }
+  
   // For mm measurements - adaptive precision
   if (value < 1) {
     return `${value.toFixed(3)} ${unit}`; // Sub-millimeter: 3 decimals
@@ -147,6 +171,341 @@ export function snapToVertex(
   return null;
 }
 
+export function extractEdges(meshData: MeshData): THREE.Line3[] {
+  const edges: THREE.Line3[] = [];
+  const edgeSet = new Set<string>();
+  
+  for (let i = 0; i < meshData.indices.length; i += 3) {
+    const i0 = meshData.indices[i] * 3;
+    const i1 = meshData.indices[i + 1] * 3;
+    const i2 = meshData.indices[i + 2] * 3;
+    
+    const v0 = new THREE.Vector3(meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2]);
+    const v1 = new THREE.Vector3(meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2]);
+    const v2 = new THREE.Vector3(meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]);
+    
+    const edgePairs = [
+      [v0, v1],
+      [v1, v2],
+      [v2, v0]
+    ];
+    
+    edgePairs.forEach(([start, end]) => {
+      const key = `${start.x.toFixed(6)},${start.y.toFixed(6)},${start.z.toFixed(6)}-${end.x.toFixed(6)},${end.y.toFixed(6)},${end.z.toFixed(6)}`;
+      const reverseKey = `${end.x.toFixed(6)},${end.y.toFixed(6)},${end.z.toFixed(6)}-${start.x.toFixed(6)},${start.y.toFixed(6)},${start.z.toFixed(6)}`;
+      
+      if (!edgeSet.has(key) && !edgeSet.has(reverseKey)) {
+        edgeSet.add(key);
+        edges.push(new THREE.Line3(start, end));
+      }
+    });
+  }
+  
+  return edges;
+}
+
+function checkCollinearity(points: THREE.Vector3[], tolerance: number): boolean {
+  if (points.length < 3) return true;
+  
+  const firstDir = new THREE.Vector3().subVectors(points[1], points[0]).normalize();
+  
+  for (let i = 2; i < points.length; i++) {
+    const currentDir = new THREE.Vector3().subVectors(points[i], points[i - 1]).normalize();
+    const cross = new THREE.Vector3().crossVectors(firstDir, currentDir);
+    
+    if (cross.length() > tolerance) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+function fitCircleToPoints(points: THREE.Vector3[]): { center: THREE.Vector3; radius: number } | null {
+  if (points.length < 3) return null;
+  
+  const p1 = points[0];
+  const p2 = points[Math.floor(points.length / 2)];
+  const p3 = points[points.length - 1];
+  
+  const mid1 = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+  const mid2 = new THREE.Vector3().addVectors(p2, p3).multiplyScalar(0.5);
+  
+  const dir1 = new THREE.Vector3().subVectors(p2, p1);
+  const dir2 = new THREE.Vector3().subVectors(p3, p2);
+  
+  const normal = new THREE.Vector3().crossVectors(dir1, dir2).normalize();
+  
+  if (normal.length() < 0.001) {
+    return null;
+  }
+  
+  const perp1 = new THREE.Vector3().crossVectors(dir1, normal).normalize();
+  const perp2 = new THREE.Vector3().crossVectors(dir2, normal).normalize();
+  
+  const radius1 = p1.distanceTo(mid1);
+  const radius2 = p2.distanceTo(mid1);
+  const radius3 = p3.distanceTo(mid2);
+  
+  const avgRadius = (radius1 + radius2 + radius3) / 3;
+  
+  const center = new THREE.Vector3()
+    .addVectors(p1, p2)
+    .add(p3)
+    .divideScalar(3);
+  
+  let maxError = 0;
+  for (const point of points) {
+    const dist = point.distanceTo(center);
+    const error = Math.abs(dist - avgRadius);
+    maxError = Math.max(maxError, error);
+  }
+  
+  if (maxError > avgRadius * 0.2) {
+    return null;
+  }
+  
+  return { center, radius: avgRadius };
+}
+
+export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassification {
+  const tolerance = 0.01;
+  
+  const samples = 10;
+  const edgePoints: THREE.Vector3[] = [];
+  
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const point = new THREE.Vector3();
+    edge.at(t, point);
+    
+    let nearestPoint = point.clone();
+    let minDist = Infinity;
+    
+    for (let j = 0; j < meshData.vertices.length; j += 3) {
+      const meshPoint = new THREE.Vector3(
+        meshData.vertices[j],
+        meshData.vertices[j + 1],
+        meshData.vertices[j + 2]
+      );
+      
+      const dist = point.distanceTo(meshPoint);
+      if (dist < minDist && dist < 1.0) {
+        minDist = dist;
+        nearestPoint = meshPoint;
+      }
+    }
+    
+    edgePoints.push(nearestPoint);
+  }
+  
+  const isCollinear = checkCollinearity(edgePoints, tolerance);
+  
+  if (isCollinear) {
+    return {
+      type: 'line',
+      start: edge.start,
+      end: edge.end,
+      length: edge.distance()
+    };
+  }
+  
+  const circleFit = fitCircleToPoints(edgePoints);
+  
+  if (circleFit) {
+    const { center, radius } = circleFit;
+    
+    const startVec = new THREE.Vector3().subVectors(edgePoints[0], center);
+    const endVec = new THREE.Vector3().subVectors(edgePoints[edgePoints.length - 1], center);
+    const angle = startVec.angleTo(endVec);
+    
+    const isFullCircle = edgePoints[0].distanceTo(edgePoints[edgePoints.length - 1]) < tolerance;
+    
+    if (isFullCircle || angle > Math.PI * 1.8) {
+      return {
+        type: 'circle',
+        start: edge.start,
+        end: edge.end,
+        radius: radius,
+        center: center
+      };
+    } else {
+      return {
+        type: 'arc',
+        start: edge.start,
+        end: edge.end,
+        radius: radius,
+        center: center,
+        angle: angle
+      };
+    }
+  }
+  
+  return {
+    type: 'line',
+    start: edge.start,
+    end: edge.end,
+    length: edge.distance()
+  };
+}
+
+export function snapToEdge(
+  point: THREE.Vector3,
+  meshData: MeshData,
+  snapDistance: number = 2
+): SnapResult | null {
+  const edges = extractEdges(meshData);
+  let closestPoint: THREE.Vector3 | null = null;
+  let minDistance = snapDistance;
+  let closestEdgeIndex = -1;
+  let closestEdge: THREE.Line3 | null = null;
+  
+  edges.forEach((edge, index) => {
+    const closestOnEdge = new THREE.Vector3();
+    edge.closestPointToPoint(point, true, closestOnEdge);
+    
+    const distance = point.distanceTo(closestOnEdge);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestPoint = closestOnEdge;
+      closestEdgeIndex = index;
+      closestEdge = edge;
+    }
+  });
+  
+  if (closestPoint && closestEdge) {
+    const classification = classifyEdge(closestEdge, meshData);
+    
+    return {
+      position: closestPoint,
+      normal: new THREE.Vector3(0, 1, 0),
+      surfaceType: 'edge',
+      confidence: 1 - (minDistance / snapDistance),
+      edgeIndex: closestEdgeIndex,
+      metadata: {
+        edgeType: classification.type,
+        radius: classification.radius,
+        center: classification.center,
+        startPoint: classification.start,
+        endPoint: classification.end
+      }
+    };
+  }
+  
+  return null;
+}
+
+export function snapToMidpoint(
+  point: THREE.Vector3,
+  meshData: MeshData,
+  snapDistance: number = 2
+): SnapResult | null {
+  const edges = extractEdges(meshData);
+  let closestMidpoint: THREE.Vector3 | null = null;
+  let minDistance = snapDistance;
+  let closestEdgeIndex = -1;
+  
+  edges.forEach((edge, index) => {
+    const midpoint = new THREE.Vector3().addVectors(edge.start, edge.end).multiplyScalar(0.5);
+    const distance = point.distanceTo(midpoint);
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestMidpoint = midpoint;
+      closestEdgeIndex = index;
+    }
+  });
+  
+  if (closestMidpoint) {
+    return {
+      position: closestMidpoint,
+      normal: new THREE.Vector3(0, 1, 0),
+      surfaceType: 'midpoint',
+      confidence: 1 - (minDistance / snapDistance),
+      edgeIndex: closestEdgeIndex
+    };
+  }
+  
+  return null;
+}
+
+export function snapToFaceCenter(
+  point: THREE.Vector3,
+  meshData: MeshData,
+  snapDistance: number = 2
+): SnapResult | null {
+  let closestCenter: THREE.Vector3 | null = null;
+  let closestNormal: THREE.Vector3 | null = null;
+  let minDistance = snapDistance;
+  let closestFaceIndex = -1;
+  
+  for (let i = 0; i < meshData.indices.length; i += 3) {
+    const i0 = meshData.indices[i] * 3;
+    const i1 = meshData.indices[i + 1] * 3;
+    const i2 = meshData.indices[i + 2] * 3;
+    
+    const v0 = new THREE.Vector3(meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2]);
+    const v1 = new THREE.Vector3(meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2]);
+    const v2 = new THREE.Vector3(meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]);
+    
+    const center = new THREE.Vector3()
+      .addVectors(v0, v1)
+      .add(v2)
+      .divideScalar(3);
+    
+    const distance = point.distanceTo(center);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestCenter = center;
+      closestFaceIndex = i / 3;
+      
+      const e1 = new THREE.Vector3().subVectors(v1, v0);
+      const e2 = new THREE.Vector3().subVectors(v2, v0);
+      closestNormal = new THREE.Vector3().crossVectors(e1, e2).normalize();
+    }
+  }
+  
+  if (closestCenter && closestNormal) {
+    return {
+      position: closestCenter,
+      normal: closestNormal,
+      surfaceType: 'center',
+      confidence: 1 - (minDistance / snapDistance),
+      faceIndex: closestFaceIndex
+    };
+  }
+  
+  return null;
+}
+
+export function performMultiSnap(
+  point: THREE.Vector3,
+  meshData: MeshData,
+  activeSnapTypes: SnapType[],
+  snapDistance: number = 2
+): SnapResult | null {
+  const snapFunctions = {
+    vertex: () => snapToVertex(point, meshData, snapDistance),
+    midpoint: () => snapToMidpoint(point, meshData, snapDistance),
+    center: () => snapToFaceCenter(point, meshData, snapDistance),
+    edge: () => snapToEdge(point, meshData, snapDistance),
+    face: () => snapToFaceCenter(point, meshData, snapDistance * 1.5),
+    intersection: () => null
+  };
+  
+  for (const snapType of activeSnapTypes) {
+    const snapFunc = snapFunctions[snapType];
+    if (snapFunc) {
+      const result = snapFunc();
+      if (result && result.confidence > 0.5) {
+        return result;
+      }
+    }
+  }
+  
+  return null;
+}
+
 /**
  * Find the midpoint between two points
  * @param p1 First point
@@ -180,6 +539,14 @@ export function generateMeasurementLabel(
       return `Radius: ${formattedValue}`;
     case 'diameter':
       return `Diameter: ${formattedValue}`;
+    case 'edge-to-edge':
+      return `Edge Distance: ${formattedValue}`;
+    case 'face-to-face':
+      return `Face Distance: ${formattedValue}`;
+    case 'coordinate':
+      return `Coordinate: ${formattedValue}`;
+    case 'edge-select':
+      return formattedValue;
     default:
       return formattedValue;
   }
@@ -200,4 +567,73 @@ export function formatCoordinate(coord: number): string {
  */
 export function generateMeasurementId(): string {
   return `measurement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function calculateEdgeToEdgeDistance(
+  edge1Start: THREE.Vector3,
+  edge1End: THREE.Vector3,
+  edge2Start: THREE.Vector3,
+  edge2End: THREE.Vector3
+): { distance: number; point1: THREE.Vector3; point2: THREE.Vector3 } {
+  const line1 = new THREE.Line3(edge1Start, edge1End);
+  const line2 = new THREE.Line3(edge2Start, edge2End);
+  
+  let minDist = Infinity;
+  let closestP1 = edge1Start.clone();
+  let closestP2 = edge2Start.clone();
+  
+  const samples = 20;
+  for (let i = 0; i <= samples; i++) {
+    const t1 = i / samples;
+    const p1 = new THREE.Vector3();
+    line1.at(t1, p1);
+    
+    for (let j = 0; j <= samples; j++) {
+      const t2 = j / samples;
+      const p2 = new THREE.Vector3();
+      line2.at(t2, p2);
+      
+      const dist = p1.distanceTo(p2);
+      if (dist < minDist) {
+        minDist = dist;
+        closestP1 = p1.clone();
+        closestP2 = p2.clone();
+      }
+    }
+  }
+  
+  return {
+    distance: minDist,
+    point1: closestP1,
+    point2: closestP2
+  };
+}
+
+export function calculateFaceToFaceDistance(
+  face1Center: THREE.Vector3,
+  face1Normal: THREE.Vector3,
+  face2Center: THREE.Vector3,
+  face2Normal: THREE.Vector3
+): number | null {
+  const dot = Math.abs(face1Normal.dot(face2Normal));
+  
+  if (dot > 0.99) {
+    const vector = new THREE.Vector3().subVectors(face2Center, face1Center);
+    const distance = Math.abs(vector.dot(face1Normal));
+    return distance;
+  }
+  
+  return null;
+}
+
+export function calculateDeltas(p1: THREE.Vector3, p2: THREE.Vector3): {
+  deltaX: number;
+  deltaY: number;
+  deltaZ: number;
+} {
+  return {
+    deltaX: Math.abs(p2.x - p1.x),
+    deltaY: Math.abs(p2.y - p1.y),
+    deltaZ: Math.abs(p2.z - p1.z)
+  };
 }

@@ -45,9 +45,9 @@ interface UnifiedCADToolbarProps {
   showEdges: boolean;
   onToggleEdges: () => void;
 
-  // Measurement - ✅ FIXED: Added "diameter" to type
-  measurementMode: "distance" | "angle" | "radius" | "diameter" | null;
-  onMeasurementModeChange: (mode: "distance" | "angle" | "radius" | "diameter" | null) => void;
+  // Measurement - ✅ FIXED: Added all measurement types including edge-select
+  measurementMode: "distance" | "angle" | "radius" | "diameter" | "edge-to-edge" | "face-to-face" | "coordinate" | "edge-select" | null;
+  onMeasurementModeChange: (mode: "distance" | "angle" | "radius" | "diameter" | "edge-to-edge" | "face-to-face" | "coordinate" | "edge-select" | null) => void;
   measurementCount?: number;
   onClearMeasurements?: () => void;
 

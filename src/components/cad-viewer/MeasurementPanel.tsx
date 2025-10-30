@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Minimize2,
+  Sparkles,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -112,6 +113,17 @@ export function MeasurementPanel() {
           {/* Compact Toolbar */}
           <div className="p-2 border-b border-gray-200">
             <div className="grid grid-cols-2 gap-1.5">
+              {/* ✅ NEW: Smart Edge Select Tool */}
+              <Button
+                variant={activeTool === "edge-select" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTool(activeTool === "edge-select" ? null : "edge-select")}
+                className="h-8 text-xs col-span-2"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                Smart Edge (1 click)
+              </Button>
+
               <Button
                 variant={activeTool === "distance" ? "default" : "outline"}
                 size="sm"
@@ -156,7 +168,9 @@ export function MeasurementPanel() {
             {activeTool && (
               <div className="mt-2 p-1.5 bg-blue-50 rounded text-xs text-blue-700">
                 <span className="font-semibold">Active: </span>
-                Click {activeTool === "distance" ? "2" : "3"} points
+                {activeTool === "edge-select" 
+                  ? "Click on an edge (line/arc/circle)" 
+                  : `Click ${activeTool === "distance" ? "2" : "3"} points`}
                 <div className="text-blue-600 text-xs mt-0.5">Press ESC to cancel</div>
               </div>
             )}
@@ -209,6 +223,14 @@ export function MeasurementPanel() {
                           </Badge>
                         </div>
                         <div className="text-xs font-bold text-gray-900 truncate">{measurement.label}</div>
+                        
+                        {/* ✅ NEW: Show edge type metadata for edge-select measurements */}
+                        {measurement.type === 'edge-select' && measurement.metadata?.edgeType && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Type: {measurement.metadata.edgeType.toUpperCase()}
+                            {measurement.metadata.arcRadius && ` | R: ${measurement.metadata.arcRadius.toFixed(2)}mm`}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-0.5 flex-shrink-0">
