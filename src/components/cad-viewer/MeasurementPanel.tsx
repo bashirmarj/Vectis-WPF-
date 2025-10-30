@@ -22,6 +22,8 @@ import { useState } from "react";
 /**
  * Compact Measurement Panel Component
  * Professional, space-efficient measurement management
+ * Positioned at TOP-LEFT to avoid overlapping orientation cube (top-right)
+ * Only visible when measurement tool is active
  */
 export function MeasurementPanel() {
   const {
@@ -36,6 +38,9 @@ export function MeasurementPanel() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showList, setShowList] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // ✅ CRITICAL FIX: Only show panel when measurement tool is active OR measurements exist
+  const shouldShowPanel = activeTool !== null || measurements.length > 0;
 
   // Export measurements to CSV
   const exportToCSV = () => {
@@ -61,10 +66,13 @@ export function MeasurementPanel() {
     window.URL.revokeObjectURL(url);
   };
 
-  // Minimized view - just a button
+  // ✅ Don't render at all if no active tool and no measurements
+  if (!shouldShowPanel) return null;
+
+  // Minimized view - just a button (TOP-LEFT)
   if (isMinimized) {
     return (
-      <div className="absolute top-24 right-5 z-30">
+      <div className="absolute top-24 left-5 z-30">
         <Button variant="default" size="sm" onClick={() => setIsMinimized(false)} className="shadow-lg">
           <Ruler className="w-4 h-4 mr-2" />
           Measurements ({measurements.length})
@@ -74,7 +82,7 @@ export function MeasurementPanel() {
   }
 
   return (
-    <div className="absolute top-24 right-5 z-30 w-60 bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200">
+    <div className="absolute top-24 left-5 z-30 w-60 bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200">
       {/* Header */}
       <div className="p-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -168,8 +176,8 @@ export function MeasurementPanel() {
             {activeTool && (
               <div className="mt-2 p-1.5 bg-blue-50 rounded text-xs text-blue-700">
                 <span className="font-semibold">Active: </span>
-                {activeTool === "edge-select" 
-                  ? "Click on an edge (line/arc/circle)" 
+                {activeTool === "edge-select"
+                  ? "Click on an edge (line/arc/circle)"
                   : `Click ${activeTool === "distance" ? "2" : "3"} points`}
                 <div className="text-blue-600 text-xs mt-0.5">Press ESC to cancel</div>
               </div>
@@ -223,9 +231,9 @@ export function MeasurementPanel() {
                           </Badge>
                         </div>
                         <div className="text-xs font-bold text-gray-900 truncate">{measurement.label}</div>
-                        
+
                         {/* ✅ NEW: Show edge type metadata for edge-select measurements */}
-                        {measurement.type === 'edge-select' && measurement.metadata?.edgeType && (
+                        {measurement.type === "edge-select" && measurement.metadata?.edgeType && (
                           <div className="text-xs text-muted-foreground mt-1">
                             Type: {measurement.metadata.edgeType.toUpperCase()}
                             {measurement.metadata.arcRadius && ` | R: ${measurement.metadata.arcRadius.toFixed(2)}mm`}
