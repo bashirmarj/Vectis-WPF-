@@ -307,6 +307,14 @@ export function UnifiedCADToolbar({
                 <Circle className="mr-2 h-4 w-4" />
                 Diameter
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onMeasurementModeChange(measurementMode === "edge-select" ? null : "edge-select")}
+                className={cn(measurementMode === "edge-select" && "bg-accent")}
+              >
+                <Ruler className="mr-2 h-4 w-4" />
+                Smart Edge Select
+              </DropdownMenuItem>
               {measurementMode && (
                 <>
                   <DropdownMenuSeparator />

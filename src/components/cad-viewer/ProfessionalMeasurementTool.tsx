@@ -53,28 +53,49 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           setSnapInfo(snapped);
           
           // Generate label based on snap type
-          if (activeTool === 'edge-select' && snapped.surfaceType === 'edge' && snapped.metadata) {
-            const startPoint = new THREE.Vector3(
-              snapped.metadata.startPoint[0],
-              snapped.metadata.startPoint[1],
-              snapped.metadata.startPoint[2]
-            );
-            const endPoint = new THREE.Vector3(
-              snapped.metadata.endPoint[0],
-              snapped.metadata.endPoint[1],
-              snapped.metadata.endPoint[2]
-            );
-            const edge = new THREE.Line3(startPoint, endPoint);
-            const classification = classifyEdge(edge, meshData);
-            
-            if (classification.type === 'circle' || classification.type === 'arc') {
-              setLabelText(`${classification.type.toUpperCase()}: R=${classification.radius?.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`);
+          if (activeTool === 'edge-select') {
+            if (snapped.surfaceType === 'edge' && snapped.metadata) {
+              const startPoint = new THREE.Vector3(
+                snapped.metadata.startPoint[0],
+                snapped.metadata.startPoint[1],
+                snapped.metadata.startPoint[2]
+              );
+              const endPoint = new THREE.Vector3(
+                snapped.metadata.endPoint[0],
+                snapped.metadata.endPoint[1],
+                snapped.metadata.endPoint[2]
+              );
+              const edge = new THREE.Line3(startPoint, endPoint);
+              const classification = classifyEdge(edge, meshData);
+              
+              if (classification.type === 'circle' || classification.type === 'arc') {
+                setLabelText(`${classification.type.toUpperCase()}: R=${classification.radius?.toFixed(2)}mm`);
+              } else {
+                const length = edge.distance();
+                setLabelText(`LINE: ${length.toFixed(2)}mm`);
+              }
+            } else if (snapped.surfaceType === 'face' && snapped.faceIndex !== undefined) {
+              // Calculate face area for face snapping
+              const i = snapped.faceIndex * 3;
+              const i0 = meshData.indices[i] * 3;
+              const i1 = meshData.indices[i + 1] * 3;
+              const i2 = meshData.indices[i + 2] * 3;
+              
+              const v0 = new THREE.Vector3(meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2]);
+              const v1 = new THREE.Vector3(meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2]);
+              const v2 = new THREE.Vector3(meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]);
+              
+              const edge1 = new THREE.Vector3().subVectors(v1, v0);
+              const edge2 = new THREE.Vector3().subVectors(v2, v0);
+              const crossProduct = new THREE.Vector3().crossVectors(edge1, edge2);
+              const area = crossProduct.length() / 2;
+              
+              setLabelText(`FACE: ${area.toFixed(2)}mm²`);
             } else {
-              const length = edge.distance();
-              setLabelText(`LINE: ${length.toFixed(2)}mm (${classification.confidence.toFixed(0)}%)`);
+              setLabelText('');
             }
           } else {
-            setLabelText(snapped.surfaceType.toUpperCase());
+            setLabelText('');
           }
         } else {
           setHoverPoint(point);
@@ -224,14 +245,6 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   return (
     <>
-      {/* Hover point indicator - hidden for edge-select mode */}
-      {activeTool !== 'edge-select' && (
-        <mesh position={hoverPoint}>
-          <sphereGeometry args={[snapInfo ? 3 : 2, 16, 16]} />
-          <meshBasicMaterial color={snapInfo ? "#00ff00" : "#ffff00"} transparent opacity={0.8} />
-        </mesh>
-      )}
-
       {/* Edge highlight for edge-select tool - thick tube geometry */}
       {activeTool === 'edge-select' && snapInfo?.surfaceType === 'edge' && snapInfo.metadata && (() => {
         const start = new THREE.Vector3(
@@ -256,26 +269,53 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
         return (
           <mesh position={midpoint} quaternion={quaternion}>
-            <cylinderGeometry args={[1.5, 1.5, length, 8]} />
-            <meshBasicMaterial color="#00ff00" />
+            <cylinderGeometry args={[2, 2, length, 8]} />
+            <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.3} />
           </mesh>
         );
       })()}
 
-      {/* Label */}
-      {labelText && (
-        <Html position={hoverPoint} center>
+      {/* Face highlight for edge-select tool */}
+      {activeTool === 'edge-select' && snapInfo?.surfaceType === 'face' && snapInfo.faceIndex !== undefined && (() => {
+        const i = snapInfo.faceIndex * 3;
+        const i0 = meshData!.indices[i] * 3;
+        const i1 = meshData!.indices[i + 1] * 3;
+        const i2 = meshData!.indices[i + 2] * 3;
+        
+        const v0 = new THREE.Vector3(meshData!.vertices[i0], meshData!.vertices[i0 + 1], meshData!.vertices[i0 + 2]);
+        const v1 = new THREE.Vector3(meshData!.vertices[i1], meshData!.vertices[i1 + 1], meshData!.vertices[i1 + 2]);
+        const v2 = new THREE.Vector3(meshData!.vertices[i2], meshData!.vertices[i2 + 1], meshData!.vertices[i2 + 2]);
+        
+        const geometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+          v0.x, v0.y, v0.z,
+          v1.x, v1.y, v1.z,
+          v2.x, v2.y, v2.z
+        ]);
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        
+        return (
+          <mesh geometry={geometry}>
+            <meshBasicMaterial color="#00ff00" transparent opacity={0.3} side={THREE.DoubleSide} />
+          </mesh>
+        );
+      })()}
+
+      {/* Label - minimal tooltip */}
+      {activeTool === 'edge-select' && labelText && (
+        <Html position={hoverPoint} center distanceFactor={10}>
           <div
             style={{
-              background: 'rgba(0, 0, 0, 0.8)',
-              color: snapInfo ? '#00ff00' : '#ffffff',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '12px',
+              background: 'rgba(0, 0, 0, 0.9)',
+              color: '#00ff00',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontSize: '10px',
               fontWeight: 'bold',
               whiteSpace: 'nowrap',
               pointerEvents: 'none',
-              userSelect: 'none'
+              userSelect: 'none',
+              border: '1px solid rgba(0, 255, 0, 0.3)'
             }}
           >
             {labelText}
