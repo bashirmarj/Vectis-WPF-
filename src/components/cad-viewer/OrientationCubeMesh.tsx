@@ -369,62 +369,84 @@ export function OrientationCubeMesh({
   const handleClick = useCallback((event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     
-    if (event.intersections.length > 0) {
-      const clickedName = event.intersections[0].object.name;
-      
-      // Extract direction from clicked zone
-      if (clickedName.startsWith('face-')) {
-        const directionMap: { [key: string]: THREE.Vector3 } = {
-          'face-front': new THREE.Vector3(0, 0, 1),
-          'face-back': new THREE.Vector3(0, 0, -1),
-          'face-right': new THREE.Vector3(1, 0, 0),
-          'face-left': new THREE.Vector3(-1, 0, 0),
-          'face-top': new THREE.Vector3(0, 1, 0),
-          'face-bottom': new THREE.Vector3(0, -1, 0),
-        };
-        const direction = directionMap[clickedName];
-        if (direction && onFaceClick) {
-          onFaceClick(direction);
-        }
-      } else if (clickedName.startsWith('edge-')) {
-        // Edge directions (diagonal)
-        const edgeDirectionMap: { [key: string]: THREE.Vector3 } = {
-          'edge-top-front': new THREE.Vector3(0, 1, 1).normalize(),
-          'edge-top-right': new THREE.Vector3(1, 1, 0).normalize(),
-          'edge-top-back': new THREE.Vector3(0, 1, -1).normalize(),
-          'edge-top-left': new THREE.Vector3(-1, 1, 0).normalize(),
-          'edge-front-right': new THREE.Vector3(1, 0, 1).normalize(),
-          'edge-back-right': new THREE.Vector3(1, 0, -1).normalize(),
-          'edge-back-left': new THREE.Vector3(-1, 0, -1).normalize(),
-          'edge-front-left': new THREE.Vector3(-1, 0, 1).normalize(),
-          'edge-bottom-front': new THREE.Vector3(0, -1, 1).normalize(),
-          'edge-bottom-right': new THREE.Vector3(1, -1, 0).normalize(),
-          'edge-bottom-back': new THREE.Vector3(0, -1, -1).normalize(),
-          'edge-bottom-left': new THREE.Vector3(-1, -1, 0).normalize(),
-        };
-        const direction = edgeDirectionMap[clickedName];
-        if (direction && onFaceClick) {
-          onFaceClick(direction);
-        }
-      } else if (clickedName.startsWith('corner-')) {
-        // Corner directions (3D diagonal)
-        const cornerDirectionMap: { [key: string]: THREE.Vector3 } = {
-          'corner-top-front-right': new THREE.Vector3(1, 1, 1).normalize(),
-          'corner-top-back-right': new THREE.Vector3(1, 1, -1).normalize(),
-          'corner-top-back-left': new THREE.Vector3(-1, 1, -1).normalize(),
-          'corner-top-front-left': new THREE.Vector3(-1, 1, 1).normalize(),
-          'corner-bottom-front-right': new THREE.Vector3(1, -1, 1).normalize(),
-          'corner-bottom-back-right': new THREE.Vector3(1, -1, -1).normalize(),
-          'corner-bottom-back-left': new THREE.Vector3(-1, -1, -1).normalize(),
-          'corner-bottom-front-left': new THREE.Vector3(-1, -1, 1).normalize(),
-        };
-        const direction = cornerDirectionMap[clickedName];
-        if (direction && onFaceClick) {
-          onFaceClick(direction);
+    // Manual raycasting like reference code
+    const raycaster = new THREE.Raycaster();
+    const camera = event.camera;
+    
+    // Convert screen coordinates to NDC
+    const x = (event.nativeEvent.offsetX / (event.nativeEvent.target as HTMLElement).clientWidth) * 2 - 1;
+    const y = -(event.nativeEvent.offsetY / (event.nativeEvent.target as HTMLElement).clientHeight) * 2 + 1;
+    
+    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+    
+    // Intersect recursively like reference: intersectObjects(children, true)
+    const intersects = raycaster.intersectObjects(cubeGroup.children, true);
+    
+    if (intersects.length) {
+      // Find first intersection with a name (like reference code)
+      for (const intersection of intersects) {
+        const clickedName = intersection.object.name;
+        
+        if (clickedName) {
+          // Extract direction from clicked zone
+          if (clickedName.startsWith('face-')) {
+            const face = clickedName.replace('face-', '');
+            const directions: Record<string, THREE.Vector3> = {
+              'top': new THREE.Vector3(0, 1, 0),
+              'bottom': new THREE.Vector3(0, -1, 0),
+              'front': new THREE.Vector3(0, 0, 1),
+              'back': new THREE.Vector3(0, 0, -1),
+              'right': new THREE.Vector3(1, 0, 0),
+              'left': new THREE.Vector3(-1, 0, 0)
+            };
+            
+            if (onFaceClick && directions[face]) {
+              onFaceClick(directions[face]);
+            }
+          } else if (clickedName.startsWith('edge-')) {
+            const edgeMap: Record<string, THREE.Vector3> = {
+              'top-front': new THREE.Vector3(0, 1, 1).normalize(),
+              'top-back': new THREE.Vector3(0, 1, -1).normalize(),
+              'top-left': new THREE.Vector3(-1, 1, 0).normalize(),
+              'top-right': new THREE.Vector3(1, 1, 0).normalize(),
+              'bottom-front': new THREE.Vector3(0, -1, 1).normalize(),
+              'bottom-back': new THREE.Vector3(0, -1, -1).normalize(),
+              'bottom-left': new THREE.Vector3(-1, -1, 0).normalize(),
+              'bottom-right': new THREE.Vector3(1, -1, 0).normalize(),
+              'front-left': new THREE.Vector3(-1, 0, 1).normalize(),
+              'front-right': new THREE.Vector3(1, 0, 1).normalize(),
+              'back-left': new THREE.Vector3(-1, 0, -1).normalize(),
+              'back-right': new THREE.Vector3(1, 0, -1).normalize()
+            };
+            
+            const edgeName = clickedName.replace('edge-', '');
+            if (onFaceClick && edgeMap[edgeName]) {
+              onFaceClick(edgeMap[edgeName]);
+            }
+          } else if (clickedName.startsWith('corner-')) {
+            const cornerMap: Record<string, THREE.Vector3> = {
+              'top-front-left': new THREE.Vector3(-1, 1, 1).normalize(),
+              'top-front-right': new THREE.Vector3(1, 1, 1).normalize(),
+              'top-back-left': new THREE.Vector3(-1, 1, -1).normalize(),
+              'top-back-right': new THREE.Vector3(1, 1, -1).normalize(),
+              'bottom-front-left': new THREE.Vector3(-1, -1, 1).normalize(),
+              'bottom-front-right': new THREE.Vector3(1, -1, 1).normalize(),
+              'bottom-back-left': new THREE.Vector3(-1, -1, -1).normalize(),
+              'bottom-back-right': new THREE.Vector3(1, -1, -1).normalize()
+            };
+            
+            const cornerName = clickedName.replace('corner-', '');
+            if (onFaceClick && cornerMap[cornerName]) {
+              onFaceClick(cornerMap[cornerName]);
+            }
+          }
+          
+          // Take first named intersection
+          break;
         }
       }
     }
-  }, [onFaceClick]);
+  }, [cubeGroup, onFaceClick]);
 
   return (
     <group ref={groupRef}>
