@@ -251,22 +251,40 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
     [boundingBox],
   );
 
-  // Handle orientation cube clicks (converts Vector3 direction to view preset)
+  // Handle orientation cube clicks - directly use direction vector for camera positioning
   const handleCubeClick = useCallback((direction: THREE.Vector3) => {
-    const threshold = 0.9; // For diagonal detection
+    if (!cameraRef.current || !controlsRef.current) return;
     
-    // Check for primary axis alignment (faces)
-    if (Math.abs(direction.z) > threshold) {
-      handleSetView(direction.z > 0 ? 'front' : 'back');
-    } else if (Math.abs(direction.x) > threshold) {
-      handleSetView(direction.x > 0 ? 'right' : 'left');
-    } else if (Math.abs(direction.y) > threshold) {
-      handleSetView(direction.y > 0 ? 'top' : 'bottom');
-    } else {
-      // For edges and corners, use isometric or calculate best view
-      handleSetView('isometric');
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const target = boundingBox.center;
+    const maxDim = Math.max(boundingBox.width, boundingBox.height, boundingBox.depth);
+    const distance = maxDim * 2;
+    
+    // Determine appropriate up vector based on click
+    let up = new THREE.Vector3(0, 1, 0);
+    
+    // Special case: top/bottom views need different up vectors
+    if (Math.abs(direction.y) > 0.9) {
+      up = direction.y > 0 
+        ? new THREE.Vector3(0, 0, -1)  // Top view
+        : new THREE.Vector3(0, 0, 1);   // Bottom view
     }
-  }, [handleSetView]);
+    
+    // Position camera in the direction we're looking FROM
+    const newPosition = target.clone().add(direction.clone().multiplyScalar(distance));
+    
+    camera.position.copy(newPosition);
+    camera.up.copy(up);
+    camera.lookAt(target);
+    controls.target.copy(target);
+    controls.update();
+    
+    console.log('📍 Camera moved to:', {
+      direction: direction.toArray(),
+      position: newPosition.toArray()
+    });
+  }, [boundingBox]);
 
   // ✅ CRITICAL FIX: Empty dependency array since function only uses refs
   const handleRotateCamera = useCallback(
