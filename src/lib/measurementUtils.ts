@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { SnapType } from '@/stores/measurementStore';
 
-interface MeshData {
+export interface MeshData {
   vertices: number[];
   indices: number[];
   normals: number[];
@@ -30,6 +30,7 @@ export interface EdgeClassification {
   type: 'line' | 'arc' | 'circle';
   start: THREE.Vector3;
   end: THREE.Vector3;
+  confidence: number;
   length?: number;
   radius?: number;
   center?: THREE.Vector3;
@@ -306,7 +307,8 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
       type: 'line',
       start: edge.start,
       end: edge.end,
-      length: edge.distance()
+      length: edge.distance(),
+      confidence: 95
     };
   }
   
@@ -327,7 +329,8 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
         start: edge.start,
         end: edge.end,
         radius: radius,
-        center: center
+        center: center,
+        confidence: 90
       };
     } else {
       return {
@@ -336,7 +339,8 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
         end: edge.end,
         radius: radius,
         center: center,
-        angle: angle
+        angle: angle,
+        confidence: 85
       };
     }
   }
@@ -345,7 +349,8 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
     type: 'line',
     start: edge.start,
     end: edge.end,
-    length: edge.distance()
+    length: edge.distance(),
+    confidence: 80
   };
 }
 

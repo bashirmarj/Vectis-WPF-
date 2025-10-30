@@ -15,6 +15,7 @@ import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
 import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
+import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasurementTool";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
@@ -491,6 +492,13 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
+
+                {/* Professional Measurement Tool */}
+                <ProfessionalMeasurementTool
+                  meshData={meshData}
+                  meshRef={meshRef}
+                  enabled={!!activeTool}
+                />
 
                 <TrackballControls
                   ref={controlsRef}
