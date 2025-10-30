@@ -224,26 +224,43 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   return (
     <>
-      {/* Hover point indicator */}
-      <mesh position={hoverPoint}>
-        <sphereGeometry args={[snapInfo ? 3 : 2, 16, 16]} />
-        <meshBasicMaterial color={snapInfo ? "#00ff00" : "#ffff00"} transparent opacity={0.8} />
-      </mesh>
-
-      {/* Edge highlight for edge-select tool */}
-      {activeTool === 'edge-select' && snapInfo?.surfaceType === 'edge' && snapInfo.metadata && (
-        <line>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={2}
-              array={new Float32Array([...snapInfo.metadata.startPoint, ...snapInfo.metadata.endPoint])}
-              itemSize={3}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial color="#00ff00" linewidth={3} />
-        </line>
+      {/* Hover point indicator - hidden for edge-select mode */}
+      {activeTool !== 'edge-select' && (
+        <mesh position={hoverPoint}>
+          <sphereGeometry args={[snapInfo ? 3 : 2, 16, 16]} />
+          <meshBasicMaterial color={snapInfo ? "#00ff00" : "#ffff00"} transparent opacity={0.8} />
+        </mesh>
       )}
+
+      {/* Edge highlight for edge-select tool - thick tube geometry */}
+      {activeTool === 'edge-select' && snapInfo?.surfaceType === 'edge' && snapInfo.metadata && (() => {
+        const start = new THREE.Vector3(
+          snapInfo.metadata.startPoint[0],
+          snapInfo.metadata.startPoint[1],
+          snapInfo.metadata.startPoint[2]
+        );
+        const end = new THREE.Vector3(
+          snapInfo.metadata.endPoint[0],
+          snapInfo.metadata.endPoint[1],
+          snapInfo.metadata.endPoint[2]
+        );
+        const direction = new THREE.Vector3().subVectors(end, start);
+        const length = direction.length();
+        const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+        
+        const quaternion = new THREE.Quaternion();
+        quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 1, 0),
+          direction.normalize()
+        );
+
+        return (
+          <mesh position={midpoint} quaternion={quaternion}>
+            <cylinderGeometry args={[1.5, 1.5, length, 8]} />
+            <meshBasicMaterial color="#00ff00" />
+          </mesh>
+        );
+      })()}
 
       {/* Label */}
       {labelText && (

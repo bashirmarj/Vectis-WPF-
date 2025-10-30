@@ -16,6 +16,7 @@ import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasurementTool";
+import { MeasurementRenderer } from "./cad-viewer/MeasurementRenderer";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
@@ -499,6 +500,9 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                   meshRef={meshRef}
                   enabled={!!activeTool}
                 />
+                
+                {/* Measurement Renderer */}
+                <MeasurementRenderer />
 
                 <TrackballControls
                   ref={controlsRef}
