@@ -221,9 +221,25 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const dot1 = n1.dot(viewDir);
           const dot2 = n2.dot(viewDir);
 
-          // Silhouette: one face visible, one hidden
-          if ((dot1 > 0.01 && dot2 < -0.01) || (dot1 < -0.01 && dot2 > 0.01)) {
-            visibleEdges.push(v1World.x, v1World.y, v1World.z, v2World.x, v2World.y, v2World.z);
+          // ✅ ENHANCED: Silhouette detection with relaxed threshold for circular surfaces
+          // Original: (dot1 > 0.01 && dot2 < -0.01) - too strict for cylinders/circles
+          // New: Detect silhouette OR feature edges (sharp angle between normals)
+
+          // Calculate angle between normals
+          const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
+          const normalAngleDeg = normalAngle * (180 / Math.PI);
+
+          // Feature edge: sharp angle between adjacent faces (> 20 degrees)
+          const isFeatureEdge = normalAngleDeg > 20;
+
+          // Silhouette edge: one face visible, one hidden (relaxed threshold)
+          const isSilhouette = (dot1 > -0.1 && dot2 < 0.1) || (dot1 < 0.1 && dot2 > -0.1);
+
+          if (isSilhouette || isFeatureEdge) {
+            // Show visible edges only if at least one face is somewhat visible
+            if (dot1 > -0.3 || dot2 > -0.3) {
+              visibleEdges.push(v1World.x, v1World.y, v1World.z, v2World.x, v2World.y, v2World.z);
+            }
           }
         }
       });
