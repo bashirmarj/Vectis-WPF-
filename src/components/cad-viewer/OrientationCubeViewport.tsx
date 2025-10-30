@@ -181,7 +181,7 @@ export function OrientationCubeViewport({
     >
       <div className="bg-transparent rounded-xl p-3">
         <TooltipProvider delayDuration={300}>
-          <div className="relative h-[160px] w-[160px]">
+          <div className="relative h-[180px] w-[180px]">
             {/* Top Arrow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2">
               <Tooltip>
