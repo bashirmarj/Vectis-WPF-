@@ -1184,6 +1184,7 @@ def analyze_cad():
                 'normals': mesh_data['normals'],
                 'vertex_colors': mesh_data['vertex_colors'],
                 'feature_edges': feature_edges,
+                'edge_classifications': edge_classifications,
                 'triangle_count': mesh_data['triangle_count'],
                 'face_classification_method': 'mesh_based_with_propagation',
                 'edge_extraction_method': 'smart_filtering_20deg'
