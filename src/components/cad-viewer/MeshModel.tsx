@@ -258,6 +258,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         metalness: 0.0,
         roughness: 0.9,
         envMapIntensity: 0.3,
+        flatShading: true,
       };
 
       if (displayStyle === "wireframe") {
