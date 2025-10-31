@@ -3,7 +3,13 @@ import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useMeasurementStore } from "@/stores/measurementStore";
-import { classifyEdge, calculateDistance, calculateAngle, calculateRadius } from "@/lib/measurementUtils";
+import {
+  classifyEdge,
+  calculateDistance,
+  calculateAngle,
+  calculateRadius,
+  detectCylindricalSurface,
+} from "@/lib/measurementUtils";
 
 interface MeshData {
   vertices: number[];
@@ -42,6 +48,67 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
   const [labelText, setLabelText] = useState<string>("");
 
   const { activeTool, tempPoints, addTempPoint, clearTempPoints, addMeasurement } = useMeasurementStore();
+
+  // ✅ NEW: Detect all triangles belonging to the same planar face
+  const getFullFaceTriangles = (faceIndex: number, meshData: MeshData, angleThreshold = 0.01): number[] => {
+    const faceTriangles: number[] = [faceIndex];
+
+    // Get normal of clicked face
+    const fi = faceIndex * 3;
+    const i0 = meshData.indices[fi] * 3;
+    const i1 = meshData.indices[fi + 1] * 3;
+    const i2 = meshData.indices[fi + 2] * 3;
+
+    const v0 = new THREE.Vector3(meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2]);
+    const v1 = new THREE.Vector3(meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2]);
+    const v2 = new THREE.Vector3(meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]);
+
+    const e1 = new THREE.Vector3().subVectors(v1, v0);
+    const e2 = new THREE.Vector3().subVectors(v2, v0);
+    const clickedNormal = new THREE.Vector3().crossVectors(e1, e2).normalize();
+
+    // Find all coplanar triangles
+    const totalTriangles = meshData.indices.length / 3;
+    for (let i = 0; i < totalTriangles; i++) {
+      if (i === faceIndex) continue;
+
+      const ti = i * 3;
+      const ti0 = meshData.indices[ti] * 3;
+      const ti1 = meshData.indices[ti + 1] * 3;
+      const ti2 = meshData.indices[ti + 2] * 3;
+
+      const tv0 = new THREE.Vector3(meshData.vertices[ti0], meshData.vertices[ti0 + 1], meshData.vertices[ti0 + 2]);
+      const tv1 = new THREE.Vector3(meshData.vertices[ti1], meshData.vertices[ti1 + 1], meshData.vertices[ti1 + 2]);
+      const tv2 = new THREE.Vector3(meshData.vertices[ti2], meshData.vertices[ti2 + 1], meshData.vertices[ti2 + 2]);
+
+      const te1 = new THREE.Vector3().subVectors(tv1, tv0);
+      const te2 = new THREE.Vector3().subVectors(tv2, tv0);
+      const testNormal = new THREE.Vector3().crossVectors(te1, te2).normalize();
+
+      // Check if normals are parallel (same plane)
+      const normalDot = Math.abs(clickedNormal.dot(testNormal));
+      if (normalDot > 1 - angleThreshold) {
+        // Check if triangles share at least one vertex (connected)
+        const clickedVerts = [
+          `${v0.x.toFixed(6)},${v0.y.toFixed(6)},${v0.z.toFixed(6)}`,
+          `${v1.x.toFixed(6)},${v1.y.toFixed(6)},${v1.z.toFixed(6)}`,
+          `${v2.x.toFixed(6)},${v2.y.toFixed(6)},${v2.z.toFixed(6)}`,
+        ];
+        const testVerts = [
+          `${tv0.x.toFixed(6)},${tv0.y.toFixed(6)},${tv0.z.toFixed(6)}`,
+          `${tv1.x.toFixed(6)},${tv1.y.toFixed(6)},${tv1.z.toFixed(6)}`,
+          `${tv2.x.toFixed(6)},${tv2.y.toFixed(6)},${tv2.z.toFixed(6)}`,
+        ];
+
+        const hasSharedVertex = clickedVerts.some((cv) => testVerts.includes(cv));
+        if (hasSharedVertex) {
+          faceTriangles.push(i);
+        }
+      }
+    }
+
+    return faceTriangles;
+  };
 
   // ✅ ENHANCED: Better edge extraction with proper indexing
   const extractEdges = (data: MeshData): Map<string, { start: THREE.Vector3; end: THREE.Vector3; faces: number[] }> => {
@@ -270,8 +337,35 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
         switch (activeTool) {
           case "distance":
-            value = calculateDistance(allPoints[0].position, allPoints[1].position);
-            label = `${value.toFixed(2)} mm`;
+            // ✅ NEW: Detect cylindrical surface and use arc length if applicable
+            const cylinderInfo = detectCylindricalSurface(allPoints[0].position, allPoints[1].position, meshData);
+            if (cylinderInfo) {
+              value = cylinderInfo.arcLength;
+              label = `${value.toFixed(2)} mm (arc)`;
+              // Store cylinder info in metadata
+              addMeasurement({
+                id: crypto.randomUUID(),
+                type: activeTool,
+                points: allPoints,
+                value,
+                unit: "mm",
+                label,
+                visible: true,
+                color: "#0066ff",
+                createdAt: new Date(),
+                metadata: {
+                  cylindrical: true,
+                  radius: cylinderInfo.radius,
+                  center: cylinderInfo.center,
+                  axis: cylinderInfo.axis,
+                },
+              });
+              clearTempPoints();
+              return;
+            } else {
+              value = calculateDistance(allPoints[0].position, allPoints[1].position);
+              label = `${value.toFixed(2)} mm`;
+            }
             break;
           case "angle":
             value = calculateAngle(allPoints[0].position, allPoints[1].position, allPoints[2].position);
@@ -285,8 +379,28 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             break;
           case "edge-to-edge":
             value = calculateDistance(allPoints[0].position, allPoints[1].position);
+            const deltas = {
+              deltaX: Math.abs(allPoints[1].position.x - allPoints[0].position.x),
+              deltaY: Math.abs(allPoints[1].position.y - allPoints[0].position.y),
+              deltaZ: Math.abs(allPoints[1].position.z - allPoints[0].position.z),
+            };
             label = `${value.toFixed(2)} mm`;
-            break;
+
+            // Add measurement with axis breakdowns
+            addMeasurement({
+              id: crypto.randomUUID(),
+              type: activeTool,
+              points: allPoints,
+              value,
+              unit: "mm",
+              label,
+              visible: true,
+              color: "#00BCD4",
+              createdAt: new Date(),
+              metadata: deltas,
+            });
+            clearTempPoints();
+            return;
           case "face-to-face":
             value = calculateDistance(allPoints[0].position, allPoints[1].position);
             label = `${value.toFixed(2)} mm`;
@@ -336,22 +450,43 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   return (
     <>
-      {/* ✅ FIXED: Full face highlighting (triangle, not sphere) */}
+      {/* ✅ ENHANCED: Full face highlighting (all coplanar triangles) */}
       {hoverInfo.type === "face" &&
         hoverInfo.faceIndex !== undefined &&
         (() => {
-          const i = hoverInfo.faceIndex * 3;
-          const i0 = meshData!.indices[i] * 3;
-          const i1 = meshData!.indices[i + 1] * 3;
-          const i2 = meshData!.indices[i + 2] * 3;
+          // Get all triangles that belong to this planar face
+          const faceTriangles = getFullFaceTriangles(hoverInfo.faceIndex, meshData!);
 
-          const v0 = new THREE.Vector3(meshData!.vertices[i0], meshData!.vertices[i0 + 1], meshData!.vertices[i0 + 2]);
-          const v1 = new THREE.Vector3(meshData!.vertices[i1], meshData!.vertices[i1 + 1], meshData!.vertices[i1 + 2]);
-          const v2 = new THREE.Vector3(meshData!.vertices[i2], meshData!.vertices[i2 + 1], meshData!.vertices[i2 + 2]);
+          // Create merged geometry from all coplanar triangles
+          const allVertices: number[] = [];
+
+          faceTriangles.forEach((triIndex) => {
+            const i = triIndex * 3;
+            const i0 = meshData!.indices[i] * 3;
+            const i1 = meshData!.indices[i + 1] * 3;
+            const i2 = meshData!.indices[i + 2] * 3;
+
+            const v0 = new THREE.Vector3(
+              meshData!.vertices[i0],
+              meshData!.vertices[i0 + 1],
+              meshData!.vertices[i0 + 2],
+            );
+            const v1 = new THREE.Vector3(
+              meshData!.vertices[i1],
+              meshData!.vertices[i1 + 1],
+              meshData!.vertices[i1 + 2],
+            );
+            const v2 = new THREE.Vector3(
+              meshData!.vertices[i2],
+              meshData!.vertices[i2 + 1],
+              meshData!.vertices[i2 + 2],
+            );
+
+            allVertices.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+          });
 
           const geometry = new THREE.BufferGeometry();
-          const vertices = new Float32Array([v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z]);
-          geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+          geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(allVertices), 3));
 
           return (
             <mesh geometry={geometry}>
@@ -360,7 +495,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           );
         })()}
 
-      {/* ✅ FIXED: Edge highlighting (cylinder geometry along edge) */}
+      {/* ✅ FIXED: Edge highlighting (cylinder geometry along edge) - Professional sizing */}
       {hoverInfo.type === "edge" &&
         hoverInfo.edgeInfo &&
         (() => {
@@ -375,38 +510,40 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
           return (
             <mesh position={midpoint} quaternion={quaternion}>
-              <cylinderGeometry args={[1.5, 1.5, length, 8]} />
-              <meshBasicMaterial color="#FFB84D" transparent opacity={0.7} depthTest={false} />
+              {/* ✅ ENHANCED: Larger, more visible edge highlight */}
+              <cylinderGeometry args={[2.0, 2.0, length, 12]} />
+              <meshBasicMaterial color="#FFB84D" transparent opacity={0.8} depthTest={false} />
             </mesh>
           );
         })()}
 
-      {/* Hover point marker */}
+      {/* ✅ ENHANCED: Professional hover point marker with better sizing */}
       <mesh position={hoverInfo.point}>
-        <sphereGeometry args={[1.5, 16, 16]} />
+        <sphereGeometry args={[2.0, 20, 20]} />
         <meshBasicMaterial color={hoverInfo.type === "edge" ? "#FFB84D" : "#4CAF50"} depthTest={false} />
       </mesh>
 
-      {/* Label */}
+      {/* ✅ ENHANCED: Larger, more legible label */}
       {labelText && (
         <Html
           position={hoverInfo.point.clone().add(hoverInfo.normal.clone().multiplyScalar(5))}
           center
-          distanceFactor={10}
+          distanceFactor={7}
         >
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.9)",
-              color: hoverInfo.type === "edge" ? "#FFB84D" : "#4CAF50",
-              padding: "4px 8px",
-              borderRadius: "4px",
-              fontSize: "11px",
+              background: "rgba(0, 0, 0, 0.92)",
+              color: hoverInfo.type === "edge" ? "#FFD700" : "#4CAF50",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              fontSize: "13px",
               fontWeight: "bold",
               whiteSpace: "nowrap",
               pointerEvents: "none",
               userSelect: "none",
-              border: `2px solid ${hoverInfo.type === "edge" ? "#FFB84D" : "#4CAF50"}`,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              border: `2px solid ${hoverInfo.type === "edge" ? "#FFD700" : "#4CAF50"}`,
+              boxShadow: "0 3px 12px rgba(0,0,0,0.4)",
+              fontFamily: "system-ui, -apple-system, sans-serif",
             }}
           >
             {labelText}
@@ -414,11 +551,11 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         </Html>
       )}
 
-      {/* Temp points */}
+      {/* ✅ ENHANCED: Professional temp points with better visibility */}
       {tempPoints.map((point, index) => (
         <mesh key={index} position={point.position}>
-          <sphereGeometry args={[2, 16, 16]} />
-          <meshBasicMaterial color="#ff00ff" depthTest={false} />
+          <sphereGeometry args={[2.5, 20, 20]} />
+          <meshBasicMaterial color="#FF00FF" depthTest={false} />
         </mesh>
       ))}
     </>
