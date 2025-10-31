@@ -230,7 +230,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const normalAngleDeg = normalAngle * (180 / Math.PI);
 
           // Feature edge: sharp angle between adjacent faces (> 20 degrees)
-          const isFeatureEdge = normalAngleDeg > 20;
+          const isFeatureEdge = normalAngleDeg > 50;
 
           // Silhouette edge: one face visible, one hidden (relaxed threshold)
           const isSilhouette = (dot1 > -0.1 && dot2 < 0.1) || (dot1 < 0.1 && dot2 > -0.1);
