@@ -151,7 +151,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       if (classification.type === "circle") {
         addMeasurement({
           id: generateMeasurementId(),
-          type: "diameter",
+          type: "edge-select",
           points: [{ id: generateMeasurementId(), position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
           value: classification.diameter || 0,
           unit: "mm",
@@ -164,7 +164,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       } else if (classification.type === "arc") {
         addMeasurement({
           id: generateMeasurementId(),
-          type: "radius",
+          type: "edge-select",
           points: [{ id: generateMeasurementId(), position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
           value: classification.radius || 0,
           unit: "mm",
@@ -177,7 +177,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       } else {
         addMeasurement({
           id: generateMeasurementId(),
-          type: "distance",
+          type: "edge-select",
           points: [
             { id: generateMeasurementId(), position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" },
             { id: generateMeasurementId(), position: edge.end, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }

@@ -10,16 +10,8 @@ export const MeasurementRenderer: React.FC = () => {
   const renderMeasurement = (measurement: Measurement) => {
     if (!measurement.visible || measurement.points.length === 0) return null;
 
-    switch (measurement.type) {
-      case "distance":
-        return renderDistanceMeasurement(measurement);
-      case "edge-select":
-        return renderEdgeSelectMeasurement(measurement);
-      case "edge-to-edge":
-        return renderEdgeToEdgeMeasurement(measurement);
-      default:
-        return renderDefaultMeasurement(measurement);
-    }
+    // All measurements are now edge-select type
+    return renderEdgeSelectMeasurement(measurement);
   };
 
   const renderDistanceMeasurement = (m: Measurement) => {

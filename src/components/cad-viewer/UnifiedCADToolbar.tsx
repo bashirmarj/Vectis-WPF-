@@ -5,20 +5,13 @@ import {
   Ruler,
   Scissors,
   Settings,
-  ChevronDown,
   Box,
   Grid3x3,
   Package,
   Circle,
-  Move,
-  RotateCcw,
   ZoomIn,
   Layers,
   X,
-  Sparkles,
-  ArrowLeftRight,
-  Square,
-  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,29 +42,9 @@ interface UnifiedCADToolbarProps {
   showEdges: boolean;
   onToggleEdges: () => void;
 
-  // Measurement - ✅ FIXED: Added all measurement types
-  measurementMode:
-    | "distance"
-    | "angle"
-    | "radius"
-    | "diameter"
-    | "edge-to-edge"
-    | "face-to-face"
-    | "coordinate"
-    | "edge-select"
-    | null;
-  onMeasurementModeChange: (
-    mode:
-      | "distance"
-      | "angle"
-      | "radius"
-      | "diameter"
-      | "edge-to-edge"
-      | "face-to-face"
-      | "coordinate"
-      | "edge-select"
-      | null,
-  ) => void;
+  // Measurement - Smart Edge Select only
+  measurementMode: "edge-select" | null;
+  onMeasurementModeChange: (mode: "edge-select" | null) => void;
   measurementCount?: number;
   onClearMeasurements?: () => void;
 
@@ -237,94 +210,24 @@ export function UnifiedCADToolbar({
 
           <Separator orientation="vertical" className="h-6" />
 
-          {/* Measurement Tools Dropdown - ✅ COMPLETE WITH ALL TYPES */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={measurementMode ? "default" : "ghost"}
-                size="sm"
-                className="h-9 w-9 p-0 relative"
-                title="Measurement Tools"
+          {/* Measurement Tool - Direct Smart Edge Select */}
+          <Button
+            variant={measurementMode === "edge-select" ? "default" : "ghost"}
+            size="sm"
+            className="h-9 w-9 p-0 relative"
+            title="Smart Edge Select (Click edges to measure)"
+            onClick={() => onMeasurementModeChange(measurementMode === "edge-select" ? null : "edge-select")}
+          >
+            <Ruler className="h-4 w-4" />
+            {measurementCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
               >
-                <Ruler className="h-4 w-4" />
-                {measurementCount > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                  >
-                    {measurementCount}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              {/* ✅ SMART EDGE SELECT - Featured at top */}
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "edge-select" ? null : "edge-select")}
-                className={cn(measurementMode === "edge-select" && "bg-accent")}
-              >
-                <Sparkles className="mr-2 h-4 w-4 text-yellow-500" />
-                <div className="flex flex-col items-start">
-                  <span className="font-semibold">Smart Edge Select</span>
-                  <span className="text-xs text-muted-foreground">Auto-detect line/arc/circle</span>
-                </div>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-
-              {/* ✅ ADVANCED MEASUREMENTS - Previously Missing */}
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "edge-to-edge" ? null : "edge-to-edge")}
-                className={cn(measurementMode === "edge-to-edge" && "bg-accent")}
-              >
-                <ArrowLeftRight className="mr-2 h-4 w-4" />
-                <div className="flex flex-col items-start">
-                  <span>Edge to Edge</span>
-                  <span className="text-xs text-muted-foreground">Perpendicular distance</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "face-to-face" ? null : "face-to-face")}
-                className={cn(measurementMode === "face-to-face" && "bg-accent")}
-              >
-                <Square className="mr-2 h-4 w-4" />
-                <div className="flex flex-col items-start">
-                  <span>Face to Face</span>
-                  <span className="text-xs text-muted-foreground">Parallel faces distance</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "coordinate" ? null : "coordinate")}
-                className={cn(measurementMode === "coordinate" && "bg-accent")}
-              >
-                <MapPin className="mr-2 h-4 w-4" />
-                <div className="flex flex-col items-start">
-                  <span>Coordinate</span>
-                  <span className="text-xs text-muted-foreground">XYZ position</span>
-                </div>
-              </DropdownMenuItem>
-
-              {measurementMode && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onMeasurementModeChange(null)}>
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel Measurement
-                  </DropdownMenuItem>
-                </>
-              )}
-              {measurementCount > 0 && onClearMeasurements && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onClearMeasurements} className="text-destructive">
-                    <X className="mr-2 h-4 w-4" />
-                    Clear All ({measurementCount})
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {measurementCount}
+              </Badge>
+            )}
+          </Button>
 
           <Separator orientation="vertical" className="h-6" />
 

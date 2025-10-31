@@ -396,7 +396,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           setShowEdges((prev) => !prev);
           break;
         case "m":
-          setActiveTool(activeTool ? null : "distance");
+          setActiveTool(activeTool ? null : "edge-select");
           break;
         case "escape":
           setActiveTool(null);

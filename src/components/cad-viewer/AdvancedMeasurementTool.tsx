@@ -160,28 +160,9 @@ export function AdvancedMeasurementTool({
     let value = 0;
     let unit: 'mm' | 'deg' = 'mm';
     
-    switch (activeTool) {
-      case 'distance':
-        if (points.length >= 2) {
-          value = calculateDistance(points[0].position, points[1].position);
-        }
-        break;
-      case 'angle':
-        if (points.length >= 3) {
-          value = calculateAngle(points[0].position, points[1].position, points[2].position);
-          unit = 'deg';
-        }
-        break;
-      case 'radius':
-        if (points.length >= 3) {
-          value = calculateRadius(points[0].position, points[1].position, points[2].position);
-        }
-        break;
-      case 'diameter':
-        if (points.length >= 3) {
-          value = calculateRadius(points[0].position, points[1].position, points[2].position) * 2;
-        }
-        break;
+    // For edge-select, calculate distance between points
+    if (activeTool === 'edge-select' && points.length >= 2) {
+      value = calculateDistance(points[0].position, points[1].position);
     }
     
     const measurement: Measurement = {
@@ -283,12 +264,8 @@ export function AdvancedMeasurementTool({
   const renderMeasurementLabel = (measurement: Measurement) => {
     let labelPosition: THREE.Vector3;
     
-    if (measurement.type === 'distance' && measurement.points.length >= 2) {
+    if (measurement.points.length >= 2) {
       labelPosition = getMidpoint(measurement.points[0].position, measurement.points[1].position);
-    } else if (measurement.points.length >= 2) {
-      // For angle/radius, use second point (vertex)
-      labelPosition = measurement.points[1].position.clone();
-      labelPosition.y += 2; // Offset above
     } else {
       return null;
     }

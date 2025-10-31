@@ -1,15 +1,7 @@
 import { create } from 'zustand';
 import * as THREE from 'three';
 
-export type MeasurementType = 
-  | 'distance' 
-  | 'angle' 
-  | 'radius' 
-  | 'diameter'
-  | 'edge-to-edge'
-  | 'face-to-face'
-  | 'coordinate'
-  | 'edge-select';  // ✅ NEW: Single-click edge measurement
+export type MeasurementType = 'edge-select';  // Smart Edge Select: Auto-detect line/arc/circle
 
 export type SnapType = 
   | 'vertex' 
