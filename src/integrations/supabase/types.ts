@@ -27,6 +27,7 @@ export type Database = {
           line_item_id: string | null
           normals: number[]
           quotation_id: string | null
+          tagged_feature_edges: Json | null
           triangle_count: number
           vertex_colors: string[] | null
           vertices: number[]
@@ -43,6 +44,7 @@ export type Database = {
           line_item_id?: string | null
           normals: number[]
           quotation_id?: string | null
+          tagged_feature_edges?: Json | null
           triangle_count: number
           vertex_colors?: string[] | null
           vertices: number[]
@@ -59,6 +61,7 @@ export type Database = {
           line_item_id?: string | null
           normals?: number[]
           quotation_id?: string | null
+          tagged_feature_edges?: Json | null
           triangle_count?: number
           vertex_colors?: string[] | null
           vertices?: number[]

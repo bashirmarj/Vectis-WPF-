@@ -7,6 +7,7 @@ import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils
 import { classifyFeatureEdge } from "@/lib/featureEdgeClassification";
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { validateMeasurement, findClosestBackendEdge } from "@/lib/measurementValidation";
+import { findEdgeByFeatureId, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
 
 interface EdgeClassification {
   type: 'line' | 'circle' | 'arc';
@@ -64,6 +65,7 @@ interface MeshData {
   triangle_count: number;
   feature_edges?: number[][][];
   edge_classifications?: BackendEdgeClassification[];  // Backend ground truth
+  tagged_feature_edges?: TaggedFeatureEdge[];  // NEW: Direct feature_id lookup
 }
 
 interface ProfessionalMeasurementToolProps {
@@ -414,9 +416,22 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     const handleClick = () => {
       const { classification, edge } = hoverInfo;
       
-      // Get the edge group to access backend classification
+      // NEW: Try direct feature_id lookup first
+      const directMatch = findEdgeByFeatureId(edge, meshData?.tagged_feature_edges);
+      
+      // Get the edge group to access backend classification (fallback)
       const edgeGroup = edgeGroupsCache.get(edge);
-      const backendClassification = edgeGroup?.backendClassification;
+      const backendClassification = directMatch ? {
+        id: directMatch.feature_id,
+        feature_id: directMatch.feature_id,
+        type: directMatch.type,
+        start_point: directMatch.start,
+        end_point: directMatch.end,
+        diameter: directMatch.diameter,
+        radius: directMatch.radius,
+        length: directMatch.length,
+        segment_count: 32
+      } as BackendEdgeClassification : edgeGroup?.backendClassification;
 
       if (classification.type === "circle") {
         // Validate against backend

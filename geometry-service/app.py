@@ -630,6 +630,65 @@ def calculate_face_center(triangulation, transform):
         return [0, 0, 0]
 
 
+def tag_feature_edges_for_frontend(edge_classifications):
+    """
+    Tag edge segments with feature_id for direct frontend lookup.
+    Tessellates each classified edge into line segments and tags them.
+    
+    Args:
+        edge_classifications: List of backend edge classifications with feature_id
+    
+    Returns:
+        List of tagged edge segments: [{ feature_id, start, end, type, diameter, radius, length }, ...]
+    """
+    if not edge_classifications:
+        return []
+    
+    tagged_edges = []
+    
+    for edge_cls in edge_classifications:
+        feature_id = edge_cls.get('feature_id')
+        edge_type = edge_cls.get('type')
+        
+        # Tessellate edge into 32 segments (matches rendering)
+        start_pt = edge_cls.get('start_point', [0, 0, 0])
+        end_pt = edge_cls.get('end_point', [0, 0, 0])
+        
+        for i in range(32):
+            t0 = i / 32.0
+            t1 = (i + 1) / 32.0
+            
+            seg_start = [
+                start_pt[0] + t0 * (end_pt[0] - start_pt[0]),
+                start_pt[1] + t0 * (end_pt[1] - start_pt[1]),
+                start_pt[2] + t0 * (end_pt[2] - start_pt[2])
+            ]
+            seg_end = [
+                start_pt[0] + t1 * (end_pt[0] - start_pt[0]),
+                start_pt[1] + t1 * (end_pt[1] - start_pt[1]),
+                start_pt[2] + t1 * (end_pt[2] - start_pt[2])
+            ]
+            
+            tagged_edge = {
+                'feature_id': feature_id,
+                'start': seg_start,
+                'end': seg_end,
+                'type': edge_type
+            }
+            
+            # Copy measurement data
+            if edge_cls.get('diameter'):
+                tagged_edge['diameter'] = edge_cls['diameter']
+            if edge_cls.get('radius'):
+                tagged_edge['radius'] = edge_cls['radius']
+            if edge_cls.get('length'):
+                tagged_edge['length'] = edge_cls['length']
+            
+            tagged_edges.append(tagged_edge)
+    
+    return tagged_edges
+
+
 def compute_smooth_vertex_normals(vertices, indices):
     """
     Compute smooth per-vertex normals by averaging adjacent face normals.
@@ -1270,6 +1329,7 @@ def analyze_cad():
                 'face_classifications': mesh_data['face_classifications'],  # Detailed face data
                 'feature_edges': feature_edges,
                 'edge_classifications': edge_classifications,
+                'tagged_feature_edges': tag_feature_edges_for_frontend(edge_classifications),  # NEW: Direct feature_id lookup
                 'triangle_count': mesh_data['triangle_count'],
                 'face_classification_method': 'mesh_based_with_propagation',
                 'edge_extraction_method': 'smart_filtering_20deg'
