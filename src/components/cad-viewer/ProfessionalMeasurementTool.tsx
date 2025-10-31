@@ -303,7 +303,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           unit: "mm",
           label,
           visible: true,
-          color: "#00ff00",
+          color: "#0066CC",
           createdAt: new Date(),
           metadata: {
             edgeType: classification.type,
@@ -311,6 +311,46 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             arcCenter: classification.center,
             edgeStart: hoverInfo.edgeInfo.start,
             edgeEnd: hoverInfo.edgeInfo.end,
+          },
+        });
+        clearTempPoints();
+        return;
+      }
+
+      // Face select: complete on first click with full face vertices
+      if (activeTool === "edge-select" && hoverInfo.type === "face" && meshData) {
+        const faceTriangles = getFullFaceTriangles(
+          hoverInfo.faceIndex!,
+          meshData,
+          0.01
+        );
+        
+        const faceVertices: number[] = [];
+        faceTriangles.forEach(triIndex => {
+          const i = triIndex * 3;
+          const i0 = meshData.indices[i] * 3;
+          const i1 = meshData.indices[i + 1] * 3;
+          const i2 = meshData.indices[i + 2] * 3;
+          
+          faceVertices.push(
+            meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2],
+            meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2],
+            meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]
+          );
+        });
+        
+        addMeasurement({
+          id: crypto.randomUUID(),
+          type: "edge-select",
+          points: [newPoint],
+          value: 0,
+          unit: "mm",
+          label: "FACE",
+          visible: true,
+          color: "#0066CC",
+          createdAt: new Date(),
+          metadata: {
+            faceVertices,
           },
         });
         clearTempPoints();
@@ -351,7 +391,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
                 unit: "mm",
                 label,
                 visible: true,
-                color: "#0066ff",
+                color: "#0066CC",
                 createdAt: new Date(),
                 metadata: {
                   cylindrical: true,
@@ -395,7 +435,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               unit: "mm",
               label,
               visible: true,
-              color: "#00BCD4",
+              color: "#0066CC",
               createdAt: new Date(),
               metadata: deltas,
             });
@@ -420,7 +460,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           unit: activeTool === "angle" ? "deg" : activeTool === "coordinate" ? "coord" : "mm",
           label,
           visible: true,
-          color: "#0066ff",
+          color: "#0066CC",
           createdAt: new Date(),
           metadata:
             activeTool === "coordinate"
@@ -490,7 +530,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
           return (
             <mesh geometry={geometry}>
-              <meshBasicMaterial color="#4CAF50" transparent opacity={0.4} side={THREE.DoubleSide} depthTest={false} />
+              <meshBasicMaterial color="#0066CC" transparent opacity={0.2} side={THREE.DoubleSide} depthTest={false} />
             </mesh>
           );
         })()}
@@ -510,39 +550,40 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
           return (
             <mesh position={midpoint} quaternion={quaternion}>
-              {/* ✅ ENHANCED: Larger, more visible edge highlight */}
-              <cylinderGeometry args={[2.0, 2.0, length, 12]} />
-              <meshBasicMaterial color="#FFB84D" transparent opacity={0.8} depthTest={false} />
+              <cylinderGeometry args={[1.5, 1.5, length, 12]} />
+              <meshBasicMaterial color="#0066CC" transparent opacity={0.7} depthTest={false} />
             </mesh>
           );
         })()}
 
-      {/* ✅ ENHANCED: Professional hover point marker with better sizing */}
+      {/* Hover point marker */}
       <mesh position={hoverInfo.point}>
-        <sphereGeometry args={[2.0, 20, 20]} />
-        <meshBasicMaterial color={hoverInfo.type === "edge" ? "#FFB84D" : "#4CAF50"} depthTest={false} />
+        <sphereGeometry args={[1.0, 20, 20]} />
+        <meshBasicMaterial color="#0066CC" transparent opacity={0.8} depthTest={false} />
       </mesh>
 
-      {/* ✅ ENHANCED: Larger, more legible label */}
+      {/* Hover label */}
       {labelText && (
         <Html
           position={hoverInfo.point.clone().add(hoverInfo.normal.clone().multiplyScalar(5))}
           center
-          distanceFactor={7}
+          distanceFactor={6}
         >
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.92)",
-              color: hoverInfo.type === "edge" ? "#FFD700" : "#4CAF50",
-              padding: "6px 12px",
+              background: "rgba(255, 255, 255, 0.95)",
+              color: "#1a1a1a",
+              padding: "8px 16px",
               borderRadius: "6px",
-              fontSize: "13px",
-              fontWeight: "bold",
+              fontSize: "16px",
+              fontWeight: "600",
               whiteSpace: "nowrap",
               pointerEvents: "none",
               userSelect: "none",
-              border: `2px solid ${hoverInfo.type === "edge" ? "#FFD700" : "#4CAF50"}`,
-              boxShadow: "0 3px 12px rgba(0,0,0,0.4)",
+              border: "2px solid #0066CC",
+              boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
+              minWidth: "140px",
+              textAlign: "center",
               fontFamily: "system-ui, -apple-system, sans-serif",
             }}
           >
@@ -551,11 +592,11 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         </Html>
       )}
 
-      {/* ✅ ENHANCED: Professional temp points with better visibility */}
+      {/* Temp points */}
       {tempPoints.map((point, index) => (
         <mesh key={index} position={point.position}>
-          <sphereGeometry args={[2.5, 20, 20]} />
-          <meshBasicMaterial color="#FF00FF" depthTest={false} />
+          <sphereGeometry args={[1.5, 20, 20]} />
+          <meshBasicMaterial color="#0066CC" transparent opacity={0.9} depthTest={false} />
         </mesh>
       ))}
     </>

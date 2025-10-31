@@ -51,6 +51,7 @@ export interface Measurement {
     radius?: number;
     center?: THREE.Vector3;
     axis?: THREE.Vector3;
+    faceVertices?: number[];
   };
 }
 

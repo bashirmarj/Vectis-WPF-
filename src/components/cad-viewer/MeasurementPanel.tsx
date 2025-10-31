@@ -120,7 +120,7 @@ export function MeasurementPanel() {
         <>
           {/* Compact Toolbar */}
           <div className="p-2 border-b border-gray-200">
-            <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
               {/* ✅ Smart Edge Select Tool */}
               <Button
                 variant={activeTool === "edge-select" ? "default" : "outline"}
@@ -131,50 +131,9 @@ export function MeasurementPanel() {
                 <Sparkles className="w-3 h-3 mr-1" />
                 Smart Edge (1 click)
               </Button>
-
-              {/* Basic Measurements */}
-              <Button
-                variant={activeTool === "distance" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTool(activeTool === "distance" ? null : "distance")}
-                className="h-8 text-xs"
-              >
-                <Ruler className="w-3 h-3 mr-1" />
-                Distance
-              </Button>
-
-              <Button
-                variant={activeTool === "angle" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTool(activeTool === "angle" ? null : "angle")}
-                className="h-8 text-xs"
-              >
-                <Triangle className="w-3 h-3 mr-1" />
-                Angle
-              </Button>
-
-              <Button
-                variant={activeTool === "radius" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTool(activeTool === "radius" ? null : "radius")}
-                className="h-8 text-xs"
-              >
-                <Circle className="w-3 h-3 mr-1" />
-                Radius
-              </Button>
-
-              <Button
-                variant={activeTool === "diameter" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveTool(activeTool === "diameter" ? null : "diameter")}
-                className="h-8 text-xs"
-              >
-                <Circle className="w-3 h-3 mr-1" />
-                Diameter
-              </Button>
             </div>
 
-            {/* ✅ ADDED: Advanced Measurements Row 2 */}
+            {/* Advanced Measurements */}
             <div className="grid grid-cols-3 gap-1.5 mt-1.5">
               <Button
                 variant={activeTool === "edge-to-edge" ? "default" : "outline"}

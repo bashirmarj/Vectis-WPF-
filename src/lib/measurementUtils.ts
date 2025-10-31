@@ -205,9 +205,25 @@ function checkCollinearity(points: THREE.Vector3[], tolerance: number): boolean 
 function fitCircleToPoints(points: THREE.Vector3[]): { center: THREE.Vector3; radius: number } | null {
   if (points.length < 3) return null;
 
-  const p1 = points[0];
-  const p2 = points[Math.floor(points.length / 2)];
-  const p3 = points[points.length - 1];
+  // ✅ ENHANCED: Filter outliers before fitting
+  const distances: number[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    distances.push(points[i].distanceTo(points[i + 1]));
+  }
+  distances.sort((a, b) => a - b);
+  const medianDist = distances[Math.floor(distances.length / 2)];
+  
+  const filteredPoints = points.filter((p, i) => {
+    if (i === 0 || i === points.length - 1) return true;
+    const dist = p.distanceTo(points[i - 1]);
+    return Math.abs(dist - medianDist) < medianDist * 2; // Allow 2x deviation
+  });
+
+  if (filteredPoints.length < 3) return null;
+
+  const p1 = filteredPoints[0];
+  const p2 = filteredPoints[Math.floor(filteredPoints.length / 2)];
+  const p3 = filteredPoints[filteredPoints.length - 1];
 
   const mid1 = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
   const mid2 = new THREE.Vector3().addVectors(p2, p3).multiplyScalar(0.5);
@@ -233,7 +249,7 @@ function fitCircleToPoints(points: THREE.Vector3[]): { center: THREE.Vector3; ra
   const center = new THREE.Vector3().addVectors(p1, p2).add(p3).divideScalar(3);
 
   let maxError = 0;
-  for (const point of points) {
+  for (const point of filteredPoints) {
     const dist = point.distanceTo(center);
     const error = Math.abs(dist - avgRadius);
     maxError = Math.max(maxError, error);
@@ -250,7 +266,7 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
   const tolerance = 0.01;
 
   // ✅ ENHANCED: Increased samples for better circle/arc detection
-  const samples = 20; // Increased from 10
+  const samples = 40; // Increased from 20 for better detection
   const edgePoints: THREE.Vector3[] = [];
 
   for (let i = 0; i <= samples; i++) {
@@ -297,18 +313,19 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
     const endVec = new THREE.Vector3().subVectors(edgePoints[edgePoints.length - 1], center);
     const angle = startVec.angleTo(endVec);
 
-    // ✅ ENHANCED: Better circle detection thresholds
+    // ✅ ENHANCED: Better circle detection with relaxed threshold
     const startToEndDist = edgePoints[0].distanceTo(edgePoints[edgePoints.length - 1]);
-    const isFullCircle = startToEndDist < tolerance * 10; // More lenient for circle detection
+    const radiusTolerance = radius * 0.05; // 5% of radius (more lenient)
 
-    // Check if arc angle covers nearly full circle (>340 degrees = >5.93 radians)
-    if (isFullCircle || angle > Math.PI * 1.88) {
+    // Check if arc angle covers nearly full circle (>351 degrees = >6.13 radians)
+    if (startToEndDist < radiusTolerance || angle > Math.PI * 1.95) {
       return {
         type: "circle",
         start: edge.start,
         end: edge.end,
         radius: radius,
         center: center,
+        angle: Math.PI * 2,
         confidence: 90,
       };
     } else {

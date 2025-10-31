@@ -272,37 +272,6 @@ export function UnifiedCADToolbar({
 
               <DropdownMenuSeparator />
 
-              {/* ✅ BASIC MEASUREMENTS */}
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "distance" ? null : "distance")}
-                className={cn(measurementMode === "distance" && "bg-accent")}
-              >
-                <Ruler className="mr-2 h-4 w-4" />
-                Distance (2 points)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "angle" ? null : "angle")}
-                className={cn(measurementMode === "angle" && "bg-accent")}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Angle (3 points)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "radius" ? null : "radius")}
-                className={cn(measurementMode === "radius" && "bg-accent")}
-              >
-                <Circle className="mr-2 h-4 w-4" />
-                Radius (3 points)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onMeasurementModeChange(measurementMode === "diameter" ? null : "diameter")}
-                className={cn(measurementMode === "diameter" && "bg-accent")}
-              >
-                <Circle className="mr-2 h-4 w-4" />
-                Diameter (3 points)
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
 
               {/* ✅ ADVANCED MEASUREMENTS - Previously Missing */}
               <DropdownMenuItem

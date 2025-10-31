@@ -134,25 +134,26 @@ export const DimensionAnnotation: React.FC<DimensionAnnotationProps> = ({ measur
         <meshBasicMaterial color="#0066CC" side={THREE.DoubleSide} />
       </mesh>
       
-      {/* Dimension text label - SolidWorks style */}
-      <Html position={labelPosition} center distanceFactor={10}>
+      {/* Dimension text label */}
+      <Html position={labelPosition} center distanceFactor={6}>
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.95)',
-            color: '#000000',
-            padding: '6px 12px',
-            borderRadius: '2px',
-            fontSize: '14px',
+            color: '#1a1a1a',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '16px',
             fontWeight: '600',
             fontFamily: 'Arial, Helvetica, sans-serif',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
-            border: '1px solid rgba(0, 0, 0, 0.25)',
-            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
-            letterSpacing: '0.3px'
+            border: '2px solid #0066CC',
+            boxShadow: '0 3px 10px rgba(0, 0, 0, 0.2)',
+            minWidth: '140px',
+            textAlign: 'center',
           }}
         >
-          {measurement.label}
+          <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0066CC'}}>{measurement.label}</div>
         </div>
       </Html>
     </>
