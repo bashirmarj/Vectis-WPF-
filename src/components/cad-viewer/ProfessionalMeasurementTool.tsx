@@ -1,15 +1,11 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useMeasurementStore } from "@/stores/measurementStore";
-import {
-  classifyEdge,
-  calculateDistance,
-  calculateAngle,
-  calculateRadius,
-  detectCylindricalSurface,
-} from "@/lib/measurementUtils";
+import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
+import { classifyFeatureEdge } from "@/lib/featureEdgeClassification";
+import { MeasurementRenderer } from "./MeasurementRenderer";
 
 interface MeshData {
   vertices: number[];
@@ -22,220 +18,92 @@ interface MeshData {
 
 interface ProfessionalMeasurementToolProps {
   meshData: MeshData | null;
-  meshRef: React.RefObject<THREE.Mesh>;
+  meshRef: THREE.Mesh | null;
+  featureEdgesGeometry: THREE.BufferGeometry | null;
   enabled: boolean;
-}
-
-interface HoverInfo {
-  point: THREE.Vector3;
-  normal: THREE.Vector3;
-  type: "face" | "edge" | "vertex";
-  faceIndex?: number;
-  edgeInfo?: {
-    start: THREE.Vector3;
-    end: THREE.Vector3;
-    classification: any;
-  };
 }
 
 export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolProps> = ({
   meshData,
   meshRef,
+  featureEdgesGeometry,
   enabled,
 }) => {
-  const { camera, raycaster, scene } = useThree();
-  const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
+  const { camera, gl, raycaster } = useThree();
+  const [hoverInfo, setHoverInfo] = useState<{
+    position: THREE.Vector3;
+    classification: any;
+    edge: THREE.Line3;
+  } | null>(null);
   const [labelText, setLabelText] = useState<string>("");
 
-  const { activeTool, tempPoints, addTempPoint, clearTempPoints, addMeasurement } = useMeasurementStore();
+  const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
 
-  // ✅ NEW: Detect all triangles belonging to the same planar face
-  const getFullFaceTriangles = (faceIndex: number, meshData: MeshData, angleThreshold = 0.01): number[] => {
-    const faceTriangles: number[] = [faceIndex];
-
-    // Get normal of clicked face
-    const fi = faceIndex * 3;
-    const i0 = meshData.indices[fi] * 3;
-    const i1 = meshData.indices[fi + 1] * 3;
-    const i2 = meshData.indices[fi + 2] * 3;
-
-    const v0 = new THREE.Vector3(meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2]);
-    const v1 = new THREE.Vector3(meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2]);
-    const v2 = new THREE.Vector3(meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]);
-
-    const e1 = new THREE.Vector3().subVectors(v1, v0);
-    const e2 = new THREE.Vector3().subVectors(v2, v0);
-    const clickedNormal = new THREE.Vector3().crossVectors(e1, e2).normalize();
-
-    // Find all coplanar triangles
-    const totalTriangles = meshData.indices.length / 3;
-    for (let i = 0; i < totalTriangles; i++) {
-      if (i === faceIndex) continue;
-
-      const ti = i * 3;
-      const ti0 = meshData.indices[ti] * 3;
-      const ti1 = meshData.indices[ti + 1] * 3;
-      const ti2 = meshData.indices[ti + 2] * 3;
-
-      const tv0 = new THREE.Vector3(meshData.vertices[ti0], meshData.vertices[ti0 + 1], meshData.vertices[ti0 + 2]);
-      const tv1 = new THREE.Vector3(meshData.vertices[ti1], meshData.vertices[ti1 + 1], meshData.vertices[ti1 + 2]);
-      const tv2 = new THREE.Vector3(meshData.vertices[ti2], meshData.vertices[ti2 + 1], meshData.vertices[ti2 + 2]);
-
-      const te1 = new THREE.Vector3().subVectors(tv1, tv0);
-      const te2 = new THREE.Vector3().subVectors(tv2, tv0);
-      const testNormal = new THREE.Vector3().crossVectors(te1, te2).normalize();
-
-      // Check if normals are parallel (same plane)
-      const normalDot = Math.abs(clickedNormal.dot(testNormal));
-      if (normalDot > 1 - angleThreshold) {
-        // Check if triangles share at least one vertex (connected)
-        const clickedVerts = [
-          `${v0.x.toFixed(6)},${v0.y.toFixed(6)},${v0.z.toFixed(6)}`,
-          `${v1.x.toFixed(6)},${v1.y.toFixed(6)},${v1.z.toFixed(6)}`,
-          `${v2.x.toFixed(6)},${v2.y.toFixed(6)},${v2.z.toFixed(6)}`,
-        ];
-        const testVerts = [
-          `${tv0.x.toFixed(6)},${tv0.y.toFixed(6)},${tv0.z.toFixed(6)}`,
-          `${tv1.x.toFixed(6)},${tv1.y.toFixed(6)},${tv1.z.toFixed(6)}`,
-          `${tv2.x.toFixed(6)},${tv2.y.toFixed(6)},${tv2.z.toFixed(6)}`,
-        ];
-
-        const hasSharedVertex = clickedVerts.some((cv) => testVerts.includes(cv));
-        if (hasSharedVertex) {
-          faceTriangles.push(i);
-        }
-      }
+  // Convert feature edges to Line3 array
+  const edgeLines = React.useMemo(() => {
+    if (!featureEdgesGeometry) return [];
+    const lines: THREE.Line3[] = [];
+    const positions = featureEdgesGeometry.attributes.position;
+    for (let i = 0; i < positions.count; i += 2) {
+      lines.push(new THREE.Line3(
+        new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i)),
+        new THREE.Vector3(positions.getX(i + 1), positions.getY(i + 1), positions.getZ(i + 1))
+      ));
     }
+    return lines;
+  }, [featureEdgesGeometry]);
 
-    return faceTriangles;
-  };
-
-  // ✅ ENHANCED: Better edge extraction with proper indexing
-  const extractEdges = (data: MeshData): Map<string, { start: THREE.Vector3; end: THREE.Vector3; faces: number[] }> => {
-    const edgeMap = new Map<string, { start: THREE.Vector3; end: THREE.Vector3; faces: number[] }>();
-
-    for (let i = 0; i < data.indices.length; i += 3) {
-      const faceIndex = i / 3;
-      const i0 = data.indices[i] * 3;
-      const i1 = data.indices[i + 1] * 3;
-      const i2 = data.indices[i + 2] * 3;
-
-      const v0 = new THREE.Vector3(data.vertices[i0], data.vertices[i0 + 1], data.vertices[i0 + 2]);
-      const v1 = new THREE.Vector3(data.vertices[i1], data.vertices[i1 + 1], data.vertices[i1 + 2]);
-      const v2 = new THREE.Vector3(data.vertices[i2], data.vertices[i2 + 1], data.vertices[i2 + 2]);
-
-      const edges = [
-        { v1: v0, v2: v1, key: `${Math.min(i0, i1)}_${Math.max(i0, i1)}` },
-        { v1: v1, v2: v2, key: `${Math.min(i1, i2)}_${Math.max(i1, i2)}` },
-        { v1: v2, v2: v0, key: `${Math.min(i2, i0)}_${Math.max(i2, i0)}` },
-      ];
-
-      edges.forEach((edge) => {
-        if (!edgeMap.has(edge.key)) {
-          edgeMap.set(edge.key, {
-            start: edge.v1.clone(),
-            end: edge.v2.clone(),
-            faces: [faceIndex],
-          });
-        } else {
-          edgeMap.get(edge.key)!.faces.push(faceIndex);
-        }
-      });
-    }
-
-    return edgeMap;
-  };
-
-  // ✅ FIXED: Proper hover detection with face and edge priority
+  // Handle hover detection
   useEffect(() => {
-    if (!enabled || !meshData || !meshRef.current || !activeTool) return;
+    if (!enabled || !meshRef || edgeLines.length === 0) {
+      setHoverInfo(null);
+      setLabelText("");
+      return;
+    }
 
     const handlePointerMove = (event: PointerEvent) => {
-      const rect = (event.target as HTMLElement).getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      const canvas = gl.domElement;
+      const rect = canvas.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
 
-      raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-      const intersects = raycaster.intersectObject(meshRef.current!);
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(meshRef, false);
 
       if (intersects.length > 0) {
-        const intersection = intersects[0];
-        const point = intersection.point;
-        const faceIndex = intersection.faceIndex !== undefined ? intersection.faceIndex : -1;
+        const point = intersects[0].point;
 
-        // Get face normal
-        let normal = new THREE.Vector3(0, 1, 0);
-        if (faceIndex >= 0) {
-          const i = faceIndex * 3;
-          const i0 = meshData.indices[i] * 3;
-          const i1 = meshData.indices[i + 1] * 3;
-          const i2 = meshData.indices[i + 2] * 3;
+        // Find closest edge
+        let closestEdge: THREE.Line3 | null = null;
+        let minDist = 0.5;
 
-          const v0 = new THREE.Vector3(meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2]);
-          const v1 = new THREE.Vector3(meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2]);
-          const v2 = new THREE.Vector3(meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]);
+        edgeLines.forEach(edge => {
+          const closestPoint = new THREE.Vector3();
+          edge.closestPointToPoint(point, true, closestPoint);
+          const dist = point.distanceTo(closestPoint);
 
-          const e1 = new THREE.Vector3().subVectors(v1, v0);
-          const e2 = new THREE.Vector3().subVectors(v2, v0);
-          normal = new THREE.Vector3().crossVectors(e1, e2).normalize();
-        }
-
-        // ✅ ENHANCED: Check for edge proximity (within 3mm of edge)
-        const edgeMap = extractEdges(meshData);
-        let closestEdge: { start: THREE.Vector3; end: THREE.Vector3; distance: number } | null = null;
-        let minEdgeDist = 3; // 3mm threshold for edge detection
-
-        edgeMap.forEach((edgeData) => {
-          const edge = new THREE.Line3(edgeData.start, edgeData.end);
-          const closestOnEdge = new THREE.Vector3();
-          edge.closestPointToPoint(point, true, closestOnEdge);
-          const dist = point.distanceTo(closestOnEdge);
-
-          if (dist < minEdgeDist) {
-            minEdgeDist = dist;
-            closestEdge = {
-              start: edgeData.start,
-              end: edgeData.end,
-              distance: dist,
-            };
+          if (dist < minDist) {
+            minDist = dist;
+            closestEdge = edge;
           }
         });
 
-        // Determine hover type and generate label
-        if (closestEdge && activeTool === "edge-select") {
-          // EDGE HOVER
-          const edge = new THREE.Line3(closestEdge.start, closestEdge.end);
-          const classification = classifyEdge(edge, meshData);
+        if (closestEdge) {
+          const classification = classifyFeatureEdge(closestEdge, edgeLines);
 
           let label = "";
           if (classification.type === "circle") {
-            label = `⊙ Circle: ø ${(classification.radius! * 2).toFixed(2)}mm`;
+            label = `⊙ Diameter: ø ${formatMeasurement(classification.diameter || 0, "mm")}`;
           } else if (classification.type === "arc") {
-            label = `⌒ Arc: R ${classification.radius!.toFixed(2)}mm`;
+            label = `⌒ Radius: R ${formatMeasurement(classification.radius || 0, "mm")}`;
           } else {
-            label = `📏 Line: ${edge.distance().toFixed(2)}mm`;
+            label = `📏 Length: ${formatMeasurement(classification.length || 0, "mm")}`;
           }
 
-          setHoverInfo({
-            point,
-            normal,
-            type: "edge",
-            edgeInfo: {
-              start: closestEdge.start,
-              end: closestEdge.end,
-              classification,
-            },
-          });
           setLabelText(label);
-        } else if (faceIndex >= 0) {
-          // FACE HOVER
-          setHoverInfo({
-            point,
-            normal,
-            type: "face",
-            faceIndex,
-          });
-          setLabelText("Click face");
+          setHoverInfo({ position: point, classification, edge: closestEdge });
         } else {
           setHoverInfo(null);
           setLabelText("");
@@ -246,359 +114,98 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       }
     };
 
-    const canvas = scene.children[0]?.parent as any;
-    const domElement = canvas?.domElement || document.querySelector("canvas");
+    canvas.addEventListener("pointermove", handlePointerMove);
+    return () => canvas.removeEventListener("pointermove", handlePointerMove);
+  }, [enabled, meshRef, edgeLines, camera, gl, raycaster]);
 
-    if (domElement) {
-      domElement.addEventListener("pointermove", handlePointerMove);
-      return () => domElement.removeEventListener("pointermove", handlePointerMove);
-    }
-  }, [enabled, meshData, meshRef, camera, raycaster, scene, activeTool]);
-
-  // ✅ FIXED: Click handler with proper edge-select
+  // Handle click
   useEffect(() => {
-    if (!enabled || !meshData || !activeTool || !hoverInfo) return;
+    if (!enabled || !hoverInfo) return;
 
-    const handleClick = (event: PointerEvent) => {
-      if (!hoverInfo) return;
+    const handleClick = () => {
+      const { classification, edge } = hoverInfo;
 
-      const newPoint = {
-        id: crypto.randomUUID(),
-        position: hoverInfo.point.clone(),
-        normal: hoverInfo.normal.clone(),
-        surfaceType: hoverInfo.type as any,
-        faceIndex: hoverInfo.faceIndex,
-        metadata: hoverInfo.edgeInfo
-          ? {
-              startPoint: [hoverInfo.edgeInfo.start.x, hoverInfo.edgeInfo.start.y, hoverInfo.edgeInfo.start.z],
-              endPoint: [hoverInfo.edgeInfo.end.x, hoverInfo.edgeInfo.end.y, hoverInfo.edgeInfo.end.z],
-            }
-          : undefined,
-      };
-
-      // Edge-select: complete on first click
-      if (activeTool === "edge-select" && hoverInfo.type === "edge" && hoverInfo.edgeInfo) {
-        const edge = new THREE.Line3(hoverInfo.edgeInfo.start, hoverInfo.edgeInfo.end);
-        const classification = hoverInfo.edgeInfo.classification;
-
-        let label = "";
-        let value = 0;
-
-        if (classification.type === "circle") {
-          value = classification.radius! * 2; // Diameter
-          label = `ø ${value.toFixed(2)}mm`;
-        } else if (classification.type === "arc") {
-          value = classification.radius!;
-          label = `R ${value.toFixed(2)}mm`;
-        } else {
-          value = edge.distance();
-          label = `${value.toFixed(2)}mm`;
-        }
-
+      if (classification.type === "circle") {
         addMeasurement({
-          id: crypto.randomUUID(),
-          type: "edge-select",
-          points: [newPoint],
-          value,
+          id: generateMeasurementId(),
+          type: "diameter",
+          points: [{ position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
+          value: classification.diameter || 0,
           unit: "mm",
-          label,
-          visible: true,
+          label: `⊙ ${formatMeasurement(classification.diameter || 0, "mm")}`,
           color: "#0066CC",
-          createdAt: new Date(),
-          metadata: {
-            edgeType: classification.type,
-            arcRadius: classification.radius,
-            arcCenter: classification.center,
-            edgeStart: hoverInfo.edgeInfo.start,
-            edgeEnd: hoverInfo.edgeInfo.end,
-          },
+          visible: true,
+          metadata: { edgeType: "circle", center: classification.center },
         });
-        clearTempPoints();
-        return;
-      }
-
-      // Face select: complete on first click with full face vertices
-      if (activeTool === "edge-select" && hoverInfo.type === "face" && meshData) {
-        const faceTriangles = getFullFaceTriangles(
-          hoverInfo.faceIndex!,
-          meshData,
-          0.01
-        );
-        
-        const faceVertices: number[] = [];
-        faceTriangles.forEach(triIndex => {
-          const i = triIndex * 3;
-          const i0 = meshData.indices[i] * 3;
-          const i1 = meshData.indices[i + 1] * 3;
-          const i2 = meshData.indices[i + 2] * 3;
-          
-          faceVertices.push(
-            meshData.vertices[i0], meshData.vertices[i0 + 1], meshData.vertices[i0 + 2],
-            meshData.vertices[i1], meshData.vertices[i1 + 1], meshData.vertices[i1 + 2],
-            meshData.vertices[i2], meshData.vertices[i2 + 1], meshData.vertices[i2 + 2]
-          );
-        });
-        
+      } else if (classification.type === "arc") {
         addMeasurement({
-          id: crypto.randomUUID(),
-          type: "edge-select",
-          points: [newPoint],
-          value: 0,
+          id: generateMeasurementId(),
+          type: "radius",
+          points: [{ position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
+          value: classification.radius || 0,
           unit: "mm",
-          label: "FACE",
-          visible: true,
+          label: `R ${formatMeasurement(classification.radius || 0, "mm")}`,
           color: "#0066CC",
-          createdAt: new Date(),
-          metadata: {
-            faceVertices,
-          },
+          visible: true,
+          metadata: { edgeType: "arc", center: classification.center },
         });
-        clearTempPoints();
-        return;
-      }
-
-      // Standard measurement flow
-      addTempPoint(newPoint);
-      const pointsCount = tempPoints.length + 1;
-
-      // Complete measurement based on type
-      if (
-        (activeTool === "distance" && pointsCount === 2) ||
-        (activeTool === "angle" && pointsCount === 3) ||
-        (activeTool === "radius" && pointsCount === 3) ||
-        (activeTool === "diameter" && pointsCount === 3) ||
-        (activeTool === "edge-to-edge" && pointsCount === 2) ||
-        (activeTool === "face-to-face" && pointsCount === 2) ||
-        (activeTool === "coordinate" && pointsCount === 1)
-      ) {
-        const allPoints = [...tempPoints, newPoint];
-        let value = 0;
-        let label = "";
-
-        switch (activeTool) {
-          case "distance":
-            // ✅ NEW: Detect cylindrical surface and use arc length if applicable
-            const cylinderInfo = detectCylindricalSurface(allPoints[0].position, allPoints[1].position, meshData);
-            if (cylinderInfo) {
-              value = cylinderInfo.arcLength;
-              label = `${value.toFixed(2)} mm (arc)`;
-              // Store cylinder info in metadata
-              addMeasurement({
-                id: crypto.randomUUID(),
-                type: activeTool,
-                points: allPoints,
-                value,
-                unit: "mm",
-                label,
-                visible: true,
-                color: "#0066CC",
-                createdAt: new Date(),
-                metadata: {
-                  cylindrical: true,
-                  radius: cylinderInfo.radius,
-                  center: cylinderInfo.center,
-                  axis: cylinderInfo.axis,
-                },
-              });
-              clearTempPoints();
-              return;
-            } else {
-              value = calculateDistance(allPoints[0].position, allPoints[1].position);
-              label = `${value.toFixed(2)} mm`;
-            }
-            break;
-          case "angle":
-            value = calculateAngle(allPoints[0].position, allPoints[1].position, allPoints[2].position);
-            label = `${value.toFixed(1)}°`;
-            break;
-          case "radius":
-          case "diameter":
-            value = calculateRadius(allPoints[0].position, allPoints[1].position, allPoints[2].position);
-            if (activeTool === "diameter") value *= 2;
-            label = `${value.toFixed(2)} mm`;
-            break;
-          case "edge-to-edge":
-            value = calculateDistance(allPoints[0].position, allPoints[1].position);
-            const deltas = {
-              deltaX: Math.abs(allPoints[1].position.x - allPoints[0].position.x),
-              deltaY: Math.abs(allPoints[1].position.y - allPoints[0].position.y),
-              deltaZ: Math.abs(allPoints[1].position.z - allPoints[0].position.z),
-            };
-            label = `${value.toFixed(2)} mm`;
-
-            // Add measurement with axis breakdowns
-            addMeasurement({
-              id: crypto.randomUUID(),
-              type: activeTool,
-              points: allPoints,
-              value,
-              unit: "mm",
-              label,
-              visible: true,
-              color: "#0066CC",
-              createdAt: new Date(),
-              metadata: deltas,
-            });
-            clearTempPoints();
-            return;
-          case "face-to-face":
-            value = calculateDistance(allPoints[0].position, allPoints[1].position);
-            label = `${value.toFixed(2)} mm`;
-            break;
-          case "coordinate":
-            const pos = allPoints[0].position;
-            label = `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`;
-            value = 0;
-            break;
-        }
-
+      } else {
         addMeasurement({
-          id: crypto.randomUUID(),
-          type: activeTool,
-          points: allPoints,
-          value,
-          unit: activeTool === "angle" ? "deg" : activeTool === "coordinate" ? "coord" : "mm",
-          label,
-          visible: true,
+          id: generateMeasurementId(),
+          type: "distance",
+          points: [
+            { position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" },
+            { position: edge.end, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }
+          ],
+          value: classification.length || 0,
+          unit: "mm",
+          label: `${formatMeasurement(classification.length || 0, "mm")}`,
           color: "#0066CC",
-          createdAt: new Date(),
-          metadata:
-            activeTool === "coordinate"
-              ? {
-                  deltaX: allPoints[0].position.x,
-                  deltaY: allPoints[0].position.y,
-                  deltaZ: allPoints[0].position.z,
-                }
-              : undefined,
+          visible: true,
+          metadata: { edgeType: "line" },
         });
-
-        clearTempPoints();
       }
     };
 
-    const canvas = scene.children[0]?.parent as any;
-    const domElement = canvas?.domElement || document.querySelector("canvas");
-
-    if (domElement) {
-      domElement.addEventListener("click", handleClick);
-      return () => domElement.removeEventListener("click", handleClick);
-    }
-  }, [enabled, meshData, activeTool, hoverInfo, tempPoints, addTempPoint, clearTempPoints, addMeasurement, scene]);
-
-  // Render hover indicators
-  if (!enabled || !hoverInfo || !activeTool) return null;
+    canvas.addEventListener("click", handleClick);
+    return () => canvas.removeEventListener("click", handleClick);
+  }, [enabled, hoverInfo, addMeasurement]);
 
   return (
     <>
-      {/* ✅ ENHANCED: Full face highlighting (all coplanar triangles) */}
-      {hoverInfo.type === "face" &&
-        hoverInfo.faceIndex !== undefined &&
-        (() => {
-          // Get all triangles that belong to this planar face
-          const faceTriangles = getFullFaceTriangles(hoverInfo.faceIndex, meshData!);
+      {hoverInfo && (
+        <>
+          <line key="hover-edge">
+            <bufferGeometry>
+              <bufferAttribute
+                attach="attributes-position"
+                count={2}
+                array={new Float32Array([
+                  hoverInfo.edge.start.x, hoverInfo.edge.start.y, hoverInfo.edge.start.z,
+                  hoverInfo.edge.end.x, hoverInfo.edge.end.y, hoverInfo.edge.end.z,
+                ])}
+                itemSize={3}
+              />
+            </bufferGeometry>
+            <lineBasicMaterial color="#FF8C00" linewidth={2} transparent opacity={0.8} depthTest={false} />
+          </line>
 
-          // Create merged geometry from all coplanar triangles
-          const allVertices: number[] = [];
-
-          faceTriangles.forEach((triIndex) => {
-            const i = triIndex * 3;
-            const i0 = meshData!.indices[i] * 3;
-            const i1 = meshData!.indices[i + 1] * 3;
-            const i2 = meshData!.indices[i + 2] * 3;
-
-            const v0 = new THREE.Vector3(
-              meshData!.vertices[i0],
-              meshData!.vertices[i0 + 1],
-              meshData!.vertices[i0 + 2],
-            );
-            const v1 = new THREE.Vector3(
-              meshData!.vertices[i1],
-              meshData!.vertices[i1 + 1],
-              meshData!.vertices[i1 + 2],
-            );
-            const v2 = new THREE.Vector3(
-              meshData!.vertices[i2],
-              meshData!.vertices[i2 + 1],
-              meshData!.vertices[i2 + 2],
-            );
-
-            allVertices.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
-          });
-
-          const geometry = new THREE.BufferGeometry();
-          geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(allVertices), 3));
-
-          return (
-            <mesh geometry={geometry}>
-              <meshBasicMaterial color="#0066CC" transparent opacity={0.2} side={THREE.DoubleSide} depthTest={false} />
-            </mesh>
-          );
-        })()}
-
-      {/* ✅ FIXED: Edge highlighting (cylinder geometry along edge) - Professional sizing */}
-      {hoverInfo.type === "edge" &&
-        hoverInfo.edgeInfo &&
-        (() => {
-          const start = hoverInfo.edgeInfo.start;
-          const end = hoverInfo.edgeInfo.end;
-          const direction = new THREE.Vector3().subVectors(end, start);
-          const length = direction.length();
-          const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-
-          const quaternion = new THREE.Quaternion();
-          quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-
-          return (
-            <mesh position={midpoint} quaternion={quaternion}>
-              <cylinderGeometry args={[1.5, 1.5, length, 12]} />
-              <meshBasicMaterial color="#0066CC" transparent opacity={0.7} depthTest={false} />
-            </mesh>
-          );
-        })()}
-
-      {/* Hover point marker */}
-      <mesh position={hoverInfo.point}>
-        <sphereGeometry args={[1.0, 20, 20]} />
-        <meshBasicMaterial color="#0066CC" transparent opacity={0.8} depthTest={false} />
-      </mesh>
-
-      {/* Hover label */}
-      {labelText && (
-        <Html
-          position={hoverInfo.point.clone().add(hoverInfo.normal.clone().multiplyScalar(5))}
-          center
-          distanceFactor={6}
-        >
-          <div
-            style={{
-              background: "rgba(255, 255, 255, 0.95)",
-              color: "#1a1a1a",
-              padding: "8px 16px",
-              borderRadius: "6px",
-              fontSize: "16px",
+          <Html position={hoverInfo.position} center style={{ pointerEvents: 'none' }}>
+            <div style={{
+              color: "white",
+              fontSize: "14px",
               fontWeight: "600",
               whiteSpace: "nowrap",
-              pointerEvents: "none",
+              textShadow: "1px 1px 2px black, -1px -1px 2px black",
               userSelect: "none",
-              border: "2px solid #0066CC",
-              boxShadow: "0 3px 10px rgba(0,0,0,0.2)",
-              minWidth: "140px",
-              textAlign: "center",
-              fontFamily: "system-ui, -apple-system, sans-serif",
-            }}
-          >
-            {labelText}
-          </div>
-        </Html>
+            }}>
+              {labelText}
+            </div>
+          </Html>
+        </>
       )}
 
-      {/* Temp points */}
-      {tempPoints.map((point, index) => (
-        <mesh key={index} position={point.position}>
-          <sphereGeometry args={[1.5, 20, 20]} />
-          <meshBasicMaterial color="#0066CC" transparent opacity={0.9} depthTest={false} />
-        </mesh>
-      ))}
+      <MeasurementRenderer />
     </>
   );
 };

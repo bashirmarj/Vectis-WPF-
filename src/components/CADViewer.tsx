@@ -10,7 +10,7 @@ import { Loader2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import * as THREE from "three";
 import { supabase } from "@/integrations/supabase/client";
-import { MeshModel } from "./cad-viewer/MeshModel";
+import { MeshModel, type MeshModelHandle } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
 import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
@@ -51,7 +51,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<MeshModelHandle>(null);
 
   // File extension detection
   const fileExtension = useMemo(() => {
@@ -500,7 +500,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 <DimensionAnnotations boundingBox={boundingBox} />
 
                 {/* Professional Measurement Tool */}
-                <ProfessionalMeasurementTool meshData={meshData} meshRef={meshRef} enabled={!!activeTool} />
+                <ProfessionalMeasurementTool 
+                  meshData={meshData} 
+                  meshRef={meshRef.current?.mesh || null} 
+                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                  enabled={!!activeTool} 
+                />
 
                 {/* Measurement Renderer */}
                 <MeasurementRenderer />

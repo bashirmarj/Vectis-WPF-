@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useRef, forwardRef } from "react";
+import * as React from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
 
@@ -34,7 +35,12 @@ const TOPOLOGY_COLORS = {
   default: "#FF6B6B",
 };
 
-export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
+export interface MeshModelHandle {
+  mesh: THREE.Mesh;
+  featureEdgesGeometry: THREE.BufferGeometry | null;
+}
+
+export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
   (
     {
       meshData,
@@ -48,7 +54,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
     ref,
   ) => {
     const internalMeshRef = useRef<THREE.Mesh>(null);
-    const meshRef = (ref as React.RefObject<THREE.Mesh>) || internalMeshRef;
+    const meshRef = internalMeshRef;
 
     // Create single unified geometry - ALWAYS USE INDEXED GEOMETRY
     // This is critical for smooth shading and vertex normal sharing
@@ -263,6 +269,12 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
 
       return { ...base, transparent: false, opacity: 1, wireframe: false };
     }, [displayStyle, clippingPlane]);
+
+    // Expose mesh and feature edges for external access
+    React.useImperativeHandle(ref, () => ({
+      mesh: meshRef.current!,
+      featureEdgesGeometry: featureEdgesGeometry,
+    }));
 
     return (
       <group>
