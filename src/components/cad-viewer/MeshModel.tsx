@@ -229,8 +229,20 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
           const normalAngleDeg = normalAngle * (180 / Math.PI);
 
-          // Feature edge: sharp angle between adjacent faces (> 20 degrees)
-          const isFeatureEdge = normalAngleDeg > 20;
+          // Distance-adaptive feature edge threshold
+          // Close objects: 30° threshold (more lenient, shows more detail)
+          // Far objects: 50° threshold (stricter, hides triangulation)
+          const edgeMidpointWorld = new THREE.Vector3()
+            .addVectors(v1World, v2World)
+            .multiplyScalar(0.5);
+          const distanceToCamera = camera.position.distanceTo(edgeMidpointWorld);
+          const minThreshold = 30;
+          const maxThreshold = 50;
+          const transitionDistance = 5; // Adjust based on typical model size
+          const distanceFactor = Math.min(1, Math.max(0, (distanceToCamera - 2) / transitionDistance));
+          const adaptiveThreshold = minThreshold + (maxThreshold - minThreshold) * distanceFactor;
+
+          const isFeatureEdge = normalAngleDeg > adaptiveThreshold;
 
           // Silhouette edge: one face visible, one hidden (relaxed threshold)
           const isSilhouette = (dot1 > -0.1 && dot2 < 0.1) || (dot1 < 0.1 && dot2 > -0.1);
