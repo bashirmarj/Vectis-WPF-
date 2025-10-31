@@ -495,6 +495,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                   showEdges={showEdges}
                   sectionPlane={sectionPlane || "none"}
                   sectionPosition={sectionPosition}
+                  topologyColors={false}
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
