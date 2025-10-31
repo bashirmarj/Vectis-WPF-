@@ -87,7 +87,10 @@ interface MeshData {
   normals: number[];
   vertex_colors?: string[];
   triangle_count: number;
-  feature_edges?: number[][][];
+  feature_edges?: number[][][] | Array<{ start: number[], end: number[], feature_id: number }>;
+  edge_classifications?: any[];
+  vertex_face_ids?: number[];
+  face_classifications?: any[];
 }
 
 interface MachiningOperation {
@@ -746,6 +749,9 @@ async function storeMeshData(
         vertex_colors: meshData.vertex_colors || [],
         triangle_count: meshData.triangle_count,
         feature_edges: Array.isArray(meshData.feature_edges) ? meshData.feature_edges : [],
+        edge_classifications: meshData.edge_classifications || [],
+        vertex_face_ids: meshData.vertex_face_ids || [],
+        face_classifications: meshData.face_classifications || [],
       })
       .select("id")
       .single();

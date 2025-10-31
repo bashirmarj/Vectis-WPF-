@@ -89,19 +89,34 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
 
-  // Convert feature edges to Line3 array
+  // Convert feature edges to Line3 array with feature_id mapping
   const edgeLines = React.useMemo(() => {
-    if (!featureEdgesGeometry) return [];
-    const lines: THREE.Line3[] = [];
-    const positions = featureEdgesGeometry.attributes.position;
-    for (let i = 0; i < positions.count; i += 2) {
-      lines.push(new THREE.Line3(
-        new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i)),
-        new THREE.Vector3(positions.getX(i + 1), positions.getY(i + 1), positions.getZ(i + 1))
-      ));
+    if (!meshData?.feature_edges) return [];
+    
+    const lines: Array<THREE.Line3 & { feature_id?: number }> = [];
+    
+    // New format: array of objects with start, end, feature_id
+    if (meshData.feature_edges.length > 0 && typeof meshData.feature_edges[0] === 'object' && !Array.isArray(meshData.feature_edges[0])) {
+      for (const edge of meshData.feature_edges as unknown as Array<{ start: number[], end: number[], feature_id: number }>) {
+        const start = new THREE.Vector3(edge.start[0], edge.start[1], edge.start[2]);
+        const end = new THREE.Vector3(edge.end[0], edge.end[1], edge.end[2]);
+        const line = new THREE.Line3(start, end) as THREE.Line3 & { feature_id?: number };
+        line.feature_id = edge.feature_id;
+        lines.push(line);
+      }
+    } else if (featureEdgesGeometry) {
+      // Old format: use BufferGeometry (fallback for backward compatibility)
+      const positions = featureEdgesGeometry.attributes.position;
+      for (let i = 0; i < positions.count; i += 2) {
+        lines.push(new THREE.Line3(
+          new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i)),
+          new THREE.Vector3(positions.getX(i + 1), positions.getY(i + 1), positions.getZ(i + 1))
+        ));
+      }
     }
+    
     return lines;
-  }, [featureEdgesGeometry]);
+  }, [meshData?.feature_edges, featureEdgesGeometry]);
 
   // Helper function to find connected segments using directional traversal
   const findFeatureSegments = React.useCallback((startEdge: THREE.Line3, allEdges: THREE.Line3[]): THREE.Line3[] => {
@@ -241,10 +256,13 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
         center.divideScalar(segmentCount);
         
-        // Match with backend classification using first segment midpoint
-            // TODO: Once backend tags edge segments with feature_id, use direct lookup
-            const firstSegmentMid = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
-            const backendEdge = findClosestBackendEdge(firstSegmentMid, meshData?.edge_classifications);
+        // Use feature_id for direct backend lookup
+        const featureId = (segments[0] as any).feature_id;
+        const backendEdge = meshData?.edge_classifications?.find(e => e.feature_id === featureId);
+        
+        // Use backend ground truth if available
+        const trueDiameter = backendEdge?.diameter || diameter;
+        const isValidated = backendEdge?.diameter !== undefined;
         
         group = {
           segments,
@@ -252,27 +270,31 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           isClosedLoop,
           totalLength,
           type: "circle",
-          diameter,
-          radius: diameter / 2,
+          diameter: trueDiameter,
+          radius: trueDiameter / 2,
           center,
-          label: `⊙ Diameter: ø${diameter.toFixed(2)} mm`,
-          classification: { type: "circle", diameter, radius: diameter / 2, center, length: circumference },
+          label: `⊙ Diameter: ø${trueDiameter.toFixed(2)} mm${isValidated ? ' ✓' : ''}`,
+          classification: { type: "circle", diameter: trueDiameter, radius: trueDiameter / 2, center, length: circumference },
           backendClassification: backendEdge
         };
       }
-      // Line: exactly 2 segments (straight edge endpoints)
-      else if (segmentCount === 2) {
-        const midpoint = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
-        const backendEdge = findClosestBackendEdge(midpoint, meshData?.edge_classifications);
+      // Line: exactly 2 segments OR up to 3 for slightly tessellated lines
+      else if (segmentCount <= 3 && !isClosedLoop) {
+        const featureId = (segments[0] as any).feature_id;
+        const backendEdge = meshData?.edge_classifications?.find(e => e.feature_id === featureId);
+        
+        // Use backend ground truth if available
+        const trueLength = backendEdge?.length || totalLength;
+        const isValidated = backendEdge?.length !== undefined;
         
         group = {
           segments,
           count: segmentCount,
           isClosedLoop,
-          totalLength,
+          totalLength: trueLength,
           type: "line",
-          label: `📏 Length: ${totalLength.toFixed(2)} mm`,
-          classification: { type: "line", length: totalLength },
+          label: `📏 Length: ${trueLength.toFixed(2)} mm${isValidated ? ' ✓' : ''}`,
+          classification: { type: "line", length: trueLength },
           backendClassification: backendEdge
         };
       }

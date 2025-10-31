@@ -358,7 +358,7 @@ def calculate_dihedral_angle(edge, face1, face2):
 
 def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     """
-    Extract SIGNIFICANT feature edges from BREP geometry.
+    Extract SIGNIFICANT feature edges from BREP geometry with feature_id mapping.
     
     Only extracts edges that are:
     1. Boundary edges (belong to only 1 face) - always significant
@@ -372,11 +372,14 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
         angle_threshold_degrees: Minimum dihedral angle to consider edge "sharp" (default: 20°)
     
     Returns:
-        List of polylines, where each polyline is a list of [x, y, z] points
+        Tuple of (feature_edges, edge_to_feature_id_map)
+        - feature_edges: List of polylines, where each polyline is a list of [x, y, z] points
+        - edge_to_feature_id_map: Dict mapping edge hash to feature_id for later classification lookup
     """
     logger.info(f"📐 Extracting significant BREP edges (angle threshold: {angle_threshold_degrees}°)...")
     
     feature_edges = []
+    edge_to_feature_id_map = {}  # Maps edge hash -> will be filled by classify_feature_edges
     edge_count = 0
     angle_threshold_rad = math.radians(angle_threshold_degrees)
     
@@ -472,6 +475,9 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                     points.append([point.X(), point.Y(), point.Z()])
                 
                 if len(points) >= 2:
+                    # Create a unique hash for this edge based on its geometry
+                    edge_hash = f"{points[0][0]:.6f}_{points[0][1]:.6f}_{points[0][2]:.6f}_{points[-1][0]:.6f}_{points[-1][1]:.6f}_{points[-1][2]:.6f}"
+                    edge_to_feature_id_map[edge_hash] = edge_count  # Will be used to link to feature_id later
                     feature_edges.append(points)
                     edge_count += 1
                     
@@ -489,9 +495,9 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
         
     except Exception as e:
         logger.error(f"Error extracting edges: {e}")
-        return []
+        return [], {}
     
-    return feature_edges
+    return feature_edges, edge_to_feature_id_map
 
 
 def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
@@ -1206,10 +1212,39 @@ def analyze_cad():
         
         logger.info("📐 Extracting significant BREP edges...")
         # Using 20° threshold - industry standard for manufacturing CAD
-        feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
+        feature_edges, edge_to_feature_id_map = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         logger.info("🏷️  Classifying feature edges...")
         edge_classifications = classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
-        mesh_data["feature_edges"] = feature_edges
+        
+        # Tag each tessellated segment with its feature_id
+        feature_edges_with_ids = []
+        for i, edge_points in enumerate(feature_edges):
+            # Create hash for this edge
+            edge_hash = f"{edge_points[0][0]:.6f}_{edge_points[0][1]:.6f}_{edge_points[0][2]:.6f}_{edge_points[-1][0]:.6f}_{edge_points[-1][1]:.6f}_{edge_points[-1][2]:.6f}"
+            
+            # Find the corresponding classification
+            feature_id = None
+            for classification in edge_classifications:
+                # Match by start/end points
+                class_start = classification['start_point']
+                class_end = classification['end_point']
+                class_hash = f"{class_start[0]:.6f}_{class_start[1]:.6f}_{class_start[2]:.6f}_{class_end[0]:.6f}_{class_end[1]:.6f}_{class_end[2]:.6f}"
+                if class_hash == edge_hash:
+                    feature_id = classification.get('feature_id', i)
+                    break
+            
+            if feature_id is None:
+                feature_id = i  # Fallback to index
+            
+            # Convert each segment to include feature_id
+            for j in range(len(edge_points) - 1):
+                feature_edges_with_ids.append({
+                    "start": edge_points[j],
+                    "end": edge_points[j + 1],
+                    "feature_id": feature_id
+                })
+        
+        mesh_data["feature_edges"] = feature_edges_with_ids
         mesh_data["edge_classifications"] = edge_classifications
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
 
