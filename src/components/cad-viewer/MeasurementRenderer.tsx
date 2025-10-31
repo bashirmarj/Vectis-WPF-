@@ -55,7 +55,7 @@ export const MeasurementRenderer: React.FC = () => {
     if (Math.abs(direction.y) > 0.9) {
       offset.set(1, 0, 0);
     }
-    const labelPos = midpoint.clone().add(offset.multiplyScalar(5));
+    const labelPos = midpoint.clone().add(offset.multiplyScalar(6));
 
     // Create quaternion for line rotation
     const quaternion = new THREE.Quaternion();
@@ -63,28 +63,28 @@ export const MeasurementRenderer: React.FC = () => {
 
     return (
       <group key={m.id}>
-        {/* Dimension Line */}
+        {/* ✅ ENHANCED: Professional dimension line with better sizing */}
         <mesh position={midpoint} quaternion={quaternion}>
-          <cylinderGeometry args={[0.3, 0.3, length, 8]} />
-          <meshBasicMaterial color="#0066FF" transparent opacity={0.8} />
+          <cylinderGeometry args={[0.4, 0.4, length, 12]} />
+          <meshBasicMaterial color="#0066FF" transparent opacity={0.85} />
         </mesh>
 
-        {/* Extension Lines */}
+        {/* ✅ ENHANCED: Larger extension points */}
         <mesh position={p1}>
-          <sphereGeometry args={[1, 16, 16]} />
+          <sphereGeometry args={[1.2, 20, 20]} />
           <meshBasicMaterial color="#0066FF" />
         </mesh>
         <mesh position={p2}>
-          <sphereGeometry args={[1, 16, 16]} />
+          <sphereGeometry args={[1.2, 20, 20]} />
           <meshBasicMaterial color="#0066FF" />
         </mesh>
 
-        {/* Label */}
-        <Html position={labelPos} center distanceFactor={10}>
-          <div className="px-3 py-1.5 bg-white border-2 border-blue-500 rounded shadow-lg text-center pointer-events-none">
-            <div className="text-xs font-semibold text-blue-600">DISTANCE</div>
-            <div className="text-lg font-bold text-gray-900">{m.label}</div>
-            <div className="text-xs text-gray-500">{m.unit}</div>
+        {/* ✅ ENHANCED: Larger, more legible label */}
+        <Html position={labelPos} center distanceFactor={7}>
+          <div className="px-4 py-2 bg-white border-2 border-blue-500 rounded-lg shadow-xl text-center pointer-events-none">
+            <div className="text-xs font-semibold text-blue-600 uppercase">Distance</div>
+            <div className="text-xl font-bold text-gray-900 my-1">{m.label}</div>
+            {m.metadata?.cylindrical && <div className="text-xs text-blue-600 mt-1">Arc Surface</div>}
           </div>
         </Html>
       </group>
@@ -203,7 +203,7 @@ export const MeasurementRenderer: React.FC = () => {
     // Determine color based on edge type
     const colorMap = {
       line: "#00D084",
-      circle: "#FFB84D",
+      circle: "#FFD700",
       arc: "#FF6B6B",
     };
     const color = colorMap[m.metadata.edgeType || "line"] || "#00D084";
@@ -218,23 +218,22 @@ export const MeasurementRenderer: React.FC = () => {
 
     return (
       <group key={m.id}>
-        {/* Highlight the edge */}
+        {/* ✅ ENHANCED: Larger highlight sphere */}
         <mesh position={midpoint}>
-          <sphereGeometry args={[2, 16, 16]} />
-          <meshBasicMaterial color={color} />
+          <sphereGeometry args={[2.5, 24, 24]} />
+          <meshBasicMaterial color={color} transparent opacity={0.9} />
         </mesh>
 
-        {/* Label - Enhanced for edge-select */}
-        <Html position={midpoint.clone().add(new THREE.Vector3(0, 5, 0))} center distanceFactor={10}>
+        {/* ✅ ENHANCED: Larger, more professional label */}
+        <Html position={midpoint.clone().add(new THREE.Vector3(0, 6, 0))} center distanceFactor={7}>
           <div
-            className="px-3 py-1.5 bg-white border-2 rounded shadow-lg text-center pointer-events-none"
-            style={{ borderColor: color }}
+            className="px-4 py-2 bg-white border-2 rounded-lg shadow-xl text-center pointer-events-none"
+            style={{ borderColor: color, minWidth: "120px" }}
           >
-            <div className="text-sm font-semibold" style={{ color }}>
+            <div className="text-sm font-semibold mb-1" style={{ color }}>
               {icon} {m.metadata.edgeType?.toUpperCase()}
             </div>
-            <div className="text-lg font-bold text-gray-900">{m.label}</div>
-            <div className="text-xs text-gray-500">{m.unit}</div>
+            <div className="text-xl font-bold text-gray-900">{m.label}</div>
           </div>
         </Html>
       </group>
@@ -255,26 +254,42 @@ export const MeasurementRenderer: React.FC = () => {
       <group key={m.id}>
         {/* Points */}
         <mesh position={p1}>
-          <sphereGeometry args={[1, 16, 16]} />
+          <sphereGeometry args={[1.2, 16, 16]} />
           <meshBasicMaterial color="#00BCD4" />
         </mesh>
         <mesh position={p2}>
-          <sphereGeometry args={[1, 16, 16]} />
+          <sphereGeometry args={[1.2, 16, 16]} />
           <meshBasicMaterial color="#00BCD4" />
         </mesh>
 
         {/* Perpendicular distance line */}
         <mesh position={midpoint}>
-          <sphereGeometry args={[0.5, 16, 16]} />
+          <sphereGeometry args={[0.6, 16, 16]} />
           <meshBasicMaterial color="#00BCD4" />
         </mesh>
 
-        {/* Label */}
-        <Html position={midpoint.clone().add(new THREE.Vector3(0, 5, 0))} center distanceFactor={10}>
-          <div className="px-3 py-1.5 bg-white border-2 border-cyan-500 rounded shadow-lg text-center pointer-events-none">
-            <div className="text-xs font-semibold text-cyan-600">EDGE TO EDGE</div>
-            <div className="text-lg font-bold text-gray-900">{m.label}</div>
-            <div className="text-xs text-gray-500">{m.unit}</div>
+        {/* Label with X/Y/Z breakdown */}
+        <Html position={midpoint.clone().add(new THREE.Vector3(0, 6, 0))} center distanceFactor={8}>
+          <div className="px-3 py-2 bg-white border-2 border-cyan-500 rounded shadow-lg text-left pointer-events-none min-w-[120px]">
+            <div className="text-xs font-semibold text-cyan-600 mb-1">EDGE TO EDGE</div>
+            <div className="text-base font-bold text-gray-900">{m.label}</div>
+            {/* ✅ NEW: Show X/Y/Z axis distances */}
+            {m.metadata?.deltaX !== undefined && (
+              <div className="text-xs text-gray-600 mt-1 space-y-0.5">
+                <div className="flex justify-between">
+                  <span className="text-red-600 font-medium">ΔX:</span>
+                  <span className="font-mono">{m.metadata.deltaX.toFixed(2)} mm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-green-600 font-medium">ΔY:</span>
+                  <span className="font-mono">{m.metadata.deltaY.toFixed(2)} mm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-600 font-medium">ΔZ:</span>
+                  <span className="font-mono">{m.metadata.deltaZ.toFixed(2)} mm</span>
+                </div>
+              </div>
+            )}
           </div>
         </Html>
       </group>
