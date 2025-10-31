@@ -19,6 +19,7 @@ interface EdgeClassification {
 // Backend classification with ground truth
 interface BackendEdgeClassification {
   id: number;
+  feature_id?: number;  // Unique ID for this geometric feature (optional for backwards compatibility)
   type: 'line' | 'circle' | 'arc';
   start_point: [number, number, number];
   end_point: [number, number, number];
@@ -27,6 +28,16 @@ interface BackendEdgeClassification {
   diameter?: number;
   center?: [number, number, number];
   segment_count: number;
+}
+
+interface BackendFaceClassification {
+  face_id: number;
+  type: "internal" | "external" | "through" | "planar";
+  center: [number, number, number];
+  normal: [number, number, number];
+  area: number;
+  surface_type: "cylinder" | "plane" | "other";
+  radius?: number;
 }
 
 interface ConnectedEdgeGroup {
@@ -48,6 +59,8 @@ interface MeshData {
   indices: number[];
   normals: number[];
   vertex_colors?: string[];
+  vertex_face_ids?: number[];  // Map vertex index to face_id
+  face_classifications?: BackendFaceClassification[];  // Detailed face data
   triangle_count: number;
   feature_edges?: number[][][];
   edge_classifications?: BackendEdgeClassification[];  // Backend ground truth
@@ -228,8 +241,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
         center.divideScalar(segmentCount);
         
-        // Find backend classification for validation
-            // Use first segment midpoint instead of geometric center for backend matching
+        // Match with backend classification using first segment midpoint
+            // TODO: Once backend tags edge segments with feature_id, use direct lookup
             const firstSegmentMid = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
             const backendEdge = findClosestBackendEdge(firstSegmentMid, meshData?.edge_classifications);
         
@@ -281,7 +294,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         const h = Math.sqrt(Math.max(0, radius * radius - (chord / 2) * (chord / 2)));
         const center = midPoint.clone().add(perpendicular.multiplyScalar(h));
         
-            // Use first segment midpoint instead of calculated center for backend matching
+            // Match with backend classification using first segment midpoint  
+            // TODO: Once backend tags edge segments with feature_id, use direct lookup
             const firstSegmentMid = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
             const backendEdge = findClosestBackendEdge(firstSegmentMid, meshData?.edge_classifications);
         
