@@ -90,38 +90,54 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     return lines;
   }, [featureEdgesGeometry]);
 
-  // Helper function to find all connected segments forming a continuous curve
-  const findConnectedSegments = React.useCallback((startEdge: THREE.Line3, allEdges: THREE.Line3[]): THREE.Line3[] => {
-    const connected = [startEdge];
+  // Helper function to find connected segments using directional traversal
+  const findFeatureSegments = React.useCallback((startEdge: THREE.Line3, allEdges: THREE.Line3[]): THREE.Line3[] => {
+    const segments = [startEdge];
     const threshold = 0.001; // 1 micron tolerance
     const visited = new Set<THREE.Line3>([startEdge]);
     
-    // Find all edges that connect to this one
-    let changed = true;
-    while (changed) {
-      changed = false;
+    const maxSegments = 32; // Max for a full circle in tessellation
+    
+    let currentEdge = startEdge;
+    let foundNext = true;
+    
+    // Forward traversal: find segments connected to the END of current edge
+    while (foundNext && segments.length < maxSegments) {
+      foundNext = false;
       for (const edge of allEdges) {
         if (visited.has(edge)) continue;
         
-        // Check if edge connects to any edge in our chain
-        for (const chainEdge of connected) {
-          const connects = 
-            edge.start.distanceTo(chainEdge.end) < threshold ||
-            edge.end.distanceTo(chainEdge.start) < threshold ||
-            edge.start.distanceTo(chainEdge.start) < threshold ||
-            edge.end.distanceTo(chainEdge.end) < threshold;
-          
-          if (connects) {
-            connected.push(edge);
-            visited.add(edge);
-            changed = true;
-            break;
-          }
+        // Only connect if this edge starts where current edge ends (sequential)
+        if (edge.start.distanceTo(currentEdge.end) < threshold) {
+          segments.push(edge);
+          visited.add(edge);
+          currentEdge = edge;
+          foundNext = true;
+          break; // Found the next segment, stop searching
         }
       }
     }
     
-    return connected;
+    // Backward traversal: find segments connected to the START of original edge
+    currentEdge = startEdge;
+    foundNext = true;
+    while (foundNext && segments.length < maxSegments) {
+      foundNext = false;
+      for (const edge of allEdges) {
+        if (visited.has(edge)) continue;
+        
+        // Only connect if this edge ends where current edge starts (sequential)
+        if (edge.end.distanceTo(currentEdge.start) < threshold) {
+          segments.unshift(edge); // Add to beginning of array
+          visited.add(edge);
+          currentEdge = edge;
+          foundNext = true;
+          break; // Found the previous segment, stop searching
+        }
+      }
+    }
+    
+    return segments;
   }, []);
 
   // Pre-compute all edge groups once (performance optimization)
@@ -135,7 +151,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       if (processed.has(edge)) return;
       
       // Find all connected segments for this edge
-      const segments = findConnectedSegments(edge, edgeLines);
+      const segments = findFeatureSegments(edge, edgeLines);
       const segmentCount = segments.length;
       
       // Check if it's a closed loop
@@ -252,7 +268,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     });
     
     return cache;
-  }, [edgeLines, findConnectedSegments]);
+  }, [edgeLines, findFeatureSegments]);
 
   // Handle hover detection
   useEffect(() => {
