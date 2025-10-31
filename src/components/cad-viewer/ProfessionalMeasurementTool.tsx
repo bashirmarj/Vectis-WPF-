@@ -229,7 +229,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         center.divideScalar(segmentCount);
         
         // Find backend classification for validation
-        const backendEdge = findClosestBackendEdge(center, meshData?.edge_classifications);
+            // Use first segment midpoint instead of geometric center for backend matching
+            const firstSegmentMid = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
+            const backendEdge = findClosestBackendEdge(firstSegmentMid, meshData?.edge_classifications);
         
         group = {
           segments,
@@ -279,7 +281,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         const h = Math.sqrt(Math.max(0, radius * radius - (chord / 2) * (chord / 2)));
         const center = midPoint.clone().add(perpendicular.multiplyScalar(h));
         
-        const backendEdge = findClosestBackendEdge(center, meshData?.edge_classifications);
+            // Use first segment midpoint instead of calculated center for backend matching
+            const firstSegmentMid = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
+            const backendEdge = findClosestBackendEdge(firstSegmentMid, meshData?.edge_classifications);
         
         group = {
           segments,
@@ -470,7 +474,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           ],
           value: classification.length || 0,
           unit: "mm",
-          label: `${formatMeasurement(classification.length || 0, "mm")}`,
+          label: `📏 ${formatMeasurement(classification.length || 0, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
