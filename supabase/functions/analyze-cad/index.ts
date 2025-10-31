@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-test-flask, x-force-reanalyze",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-test-flask",
 };
 
 interface AnalysisRequest {
@@ -518,7 +518,6 @@ async function analyzeSTEPViaService(
   fileName: string,
   material?: string,
   tolerance?: number,
-  forceReanalyze?: boolean,
 ): Promise<AnalysisResult | null> {
   const GEOMETRY_SERVICE_URL = Deno.env.get("GEOMETRY_SERVICE_URL");
 
@@ -659,7 +658,7 @@ async function analyzeSTEPViaService(
     let mesh_id: string | undefined;
     if (data.mesh_data && data.mesh_data.vertices && data.mesh_data.vertices.length > 0) {
       console.log(`💾 Storing mesh data: ${data.mesh_data.triangle_count} triangles`);
-      mesh_id = await storeMeshData(data.mesh_data, fileName, fileData, forceReanalyze);
+      mesh_id = await storeMeshData(data.mesh_data, fileName);
       console.log(`✅ Mesh stored with ID: ${mesh_id}`);
       console.log(`📐 Mesh includes ${(data.mesh_data.feature_edges || []).length} feature edges`);
     } else {
@@ -695,46 +694,22 @@ async function analyzeSTEPViaService(
   }
 }
 
-// Calculate SHA-256 hash of file data for caching
-async function calculateFileHash(fileData: ArrayBuffer): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest("SHA-256", fileData);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+// Caching disabled - every upload generates fresh analysis
 
-// Store mesh data in database with caching
+// Store mesh data in database - NO CACHING (always fresh)
 async function storeMeshData(
   meshData: MeshData,
   fileName: string,
-  fileData: ArrayBuffer,
-  forceReanalyze?: boolean,
 ): Promise<string | undefined> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Calculate file hash for caching
-    const fileHash = await calculateFileHash(fileData);
+    // Generate timestamp-based file hash (for schema compliance, not for caching)
+    const fileHash = `${fileName}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // Check if mesh already exists (unless force reanalyze is enabled)
-    if (!forceReanalyze) {
-      console.log(`🔍 Checking cache for file hash: ${fileHash}`);
-      const { data: existingMesh } = await supabase
-        .from("cad_meshes")
-        .select("id")
-        .eq("file_hash", fileHash)
-        .maybeSingle();
-
-      if (existingMesh) {
-        console.log(`Mesh already cached for ${fileName} (hash: ${fileHash})`);
-        return existingMesh.id;
-      }
-    } else {
-      console.log(`🔄 Force reanalyze enabled - bypassing cache for ${fileName}`);
-    }
-
-    // Store new mesh
+    // Store new mesh - NO CACHE LOOKUP
     const { data: newMesh, error } = await supabase
       .from("cad_meshes")
       .insert({
@@ -1128,7 +1103,6 @@ const handler = async (req: Request): Promise<Response> => {
     let quantity: number = 1;
     let material: string | undefined;
     let tolerance: number | undefined;
-    let force_reanalyze: boolean = false;
 
     // Handle both JSON (metadata only) and multipart/form-data (with file)
     if (contentType.includes("multipart/form-data")) {
@@ -1140,7 +1114,6 @@ const handler = async (req: Request): Promise<Response> => {
       material = (formData.get("material") as string) || undefined;
       const toleranceStr = formData.get("tolerance") as string;
       tolerance = toleranceStr ? parseFloat(toleranceStr) : undefined;
-      force_reanalyze = formData.get("forceReanalyze") === "true" || formData.get("force_reanalyze") === "true";
 
       if (file) {
         file_data = await file.arrayBuffer();
@@ -1152,7 +1125,6 @@ const handler = async (req: Request): Promise<Response> => {
       quantity = body.quantity || 1;
       material = body.material;
       tolerance = body.tolerance;
-      force_reanalyze = body.force_reanalyze || false;
 
       // Decode base64 file data if provided
       if (body.file_data) {
@@ -1194,7 +1166,7 @@ const handler = async (req: Request): Promise<Response> => {
     } else if (file_data && (isSTEP || isIGES)) {
       // STEP/IGES: Always call Python microservice for accurate geometry analysis
       console.log(`🔧 Attempting geometry service analysis for: ${file_name}`);
-      const serviceResult = await analyzeSTEPViaService(file_data, file_name, material, tolerance, force_reanalyze);
+      const serviceResult = await analyzeSTEPViaService(file_data, file_name, material, tolerance);
 
       if (serviceResult && serviceResult.mesh_id) {
         analysis = serviceResult;
