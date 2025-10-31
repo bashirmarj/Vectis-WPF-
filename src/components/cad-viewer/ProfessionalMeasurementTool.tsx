@@ -201,20 +201,23 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     <>
       {hoverInfo && (
         <>
-          <line key="hover-edge">
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                count={2}
-                array={new Float32Array([
-                  hoverInfo.edge.start.x, hoverInfo.edge.start.y, hoverInfo.edge.start.z,
-                  hoverInfo.edge.end.x, hoverInfo.edge.end.y, hoverInfo.edge.end.z,
-                ])}
-                itemSize={3}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#FF8C00" linewidth={2} transparent opacity={0.8} depthTest={false} />
-          </line>
+          <primitive object={(() => {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array([
+              hoverInfo.edge.start.x, hoverInfo.edge.start.y, hoverInfo.edge.start.z,
+              hoverInfo.edge.end.x, hoverInfo.edge.end.y, hoverInfo.edge.end.z,
+            ]);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const material = new THREE.LineBasicMaterial({ 
+              color: 0xFF8C00, 
+              transparent: true, 
+              opacity: 0.8, 
+              depthTest: false 
+            });
+            
+            return new THREE.Line(geometry, material);
+          })()} />
 
           <Html position={hoverInfo.position} center style={{ pointerEvents: 'none' }}>
             <div style={{
