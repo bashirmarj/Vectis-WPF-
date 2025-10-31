@@ -13,11 +13,15 @@ import {
   ChevronUp,
   Minimize2,
   Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { getValidationBadgeColor, getValidationBadgeText } from "@/lib/measurementValidation";
 
 /**
  * Compact Measurement Panel Component
@@ -166,8 +170,27 @@ export function MeasurementPanel() {
                         </div>
                         <div className="text-xs font-bold text-gray-900 truncate">{measurement.label}</div>
 
-                        {/* ✅ NEW: Show edge type metadata for edge-select measurements */}
-                        {measurement.type === "edge-select" && measurement.metadata?.edgeType && (
+                        {/* ✅ NEW: Show validation badge */}
+                        {measurement.metadata?.validation && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <Badge 
+                              variant={getValidationBadgeColor(measurement.metadata.validation.confidence) as any}
+                              className="text-[10px] h-4 px-1"
+                            >
+                              {measurement.metadata.validation.confidence >= 0.9 ? (
+                                <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
+                              ) : measurement.metadata.validation.confidence >= 0.7 ? (
+                                <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                              ) : (
+                                <XCircle className="w-2.5 h-2.5 mr-0.5" />
+                              )}
+                              {getValidationBadgeText(measurement.metadata.validation)}
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* ✅ Show edge type metadata for edge-select measurements */}
+                        {measurement.type === "edge-select" && measurement.metadata?.edgeType && !measurement.metadata.validation && (
                           <div className="text-xs text-muted-foreground mt-1">
                             Type: {measurement.metadata.edgeType.toUpperCase()}
                             {measurement.metadata.arcRadius && ` | R: ${measurement.metadata.arcRadius.toFixed(2)}mm`}

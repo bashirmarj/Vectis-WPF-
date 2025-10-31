@@ -36,11 +36,15 @@ interface MeshData {
   face_types?: string[];
   feature_edges?: number[][][];
   edge_classifications?: Array<{
+    id: number;
     type: 'line' | 'circle' | 'arc';
+    start_point: [number, number, number];
+    end_point: [number, number, number];
     diameter?: number;
     radius?: number;
     length?: number;
     center?: [number, number, number];
+    segment_count: number;
   }>;
 }
 

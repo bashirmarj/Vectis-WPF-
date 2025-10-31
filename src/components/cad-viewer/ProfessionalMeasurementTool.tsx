@@ -6,6 +6,7 @@ import { useMeasurementStore } from "@/stores/measurementStore";
 import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
 import { classifyFeatureEdge } from "@/lib/featureEdgeClassification";
 import { MeasurementRenderer } from "./MeasurementRenderer";
+import { validateMeasurement, findClosestBackendEdge } from "@/lib/measurementValidation";
 
 interface EdgeClassification {
   type: 'line' | 'circle' | 'arc';
@@ -13,6 +14,19 @@ interface EdgeClassification {
   radius?: number;
   length?: number;
   center?: [number, number, number];
+}
+
+// Backend classification with ground truth
+interface BackendEdgeClassification {
+  id: number;
+  type: 'line' | 'circle' | 'arc';
+  start_point: [number, number, number];
+  end_point: [number, number, number];
+  length?: number;
+  radius?: number;
+  diameter?: number;
+  center?: [number, number, number];
+  segment_count: number;
 }
 
 interface ConnectedEdgeGroup {
@@ -26,6 +40,7 @@ interface ConnectedEdgeGroup {
   center?: THREE.Vector3;
   label: string;
   classification: any;
+  backendClassification?: BackendEdgeClassification;  // Ground truth from backend
 }
 
 interface MeshData {
@@ -35,7 +50,7 @@ interface MeshData {
   vertex_colors?: string[];
   triangle_count: number;
   feature_edges?: number[][][];
-  edge_classifications?: EdgeClassification[];
+  edge_classifications?: BackendEdgeClassification[];  // Backend ground truth
 }
 
 interface ProfessionalMeasurementToolProps {
@@ -144,6 +159,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
         center.divideScalar(segmentCount);
         
+        // Find backend classification for validation
+        const backendEdge = findClosestBackendEdge(center, meshData?.edge_classifications);
+        
         group = {
           segments,
           count: segmentCount,
@@ -154,11 +172,15 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           radius: diameter / 2,
           center,
           label: `⊙ Diameter: ø${diameter.toFixed(2)} mm`,
-          classification: { type: "circle", diameter, radius: diameter / 2, center, length: circumference }
+          classification: { type: "circle", diameter, radius: diameter / 2, center, length: circumference },
+          backendClassification: backendEdge
         };
-      } 
+      }
       // Line: exactly 2 segments (straight edge endpoints)
       else if (segmentCount === 2) {
+        const midpoint = new THREE.Vector3().lerpVectors(segments[0].start, segments[0].end, 0.5);
+        const backendEdge = findClosestBackendEdge(midpoint, meshData?.edge_classifications);
+        
         group = {
           segments,
           count: segmentCount,
@@ -166,9 +188,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           totalLength,
           type: "line",
           label: `📏 Length: ${totalLength.toFixed(2)} mm`,
-          classification: { type: "line", length: totalLength }
+          classification: { type: "line", length: totalLength },
+          backendClassification: backendEdge
         };
-      } 
+      }
       // Arc: 3-31 segments (curved edges)
       else if (segmentCount >= 3 && segmentCount <= 31) {
         const startPoint = segments[0].start;
@@ -187,6 +210,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         const h = Math.sqrt(Math.max(0, radius * radius - (chord / 2) * (chord / 2)));
         const center = midPoint.clone().add(perpendicular.multiplyScalar(h));
         
+        const backendEdge = findClosestBackendEdge(center, meshData?.edge_classifications);
+        
         group = {
           segments,
           count: segmentCount,
@@ -196,11 +221,17 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           radius,
           center,
           label: `⌒ Radius: R${radius.toFixed(2)} mm`,
-          classification: { type: "arc", radius, length: totalLength, center }
+          classification: { type: "arc", radius, length: totalLength, center },
+          backendClassification: backendEdge
         };
-      } 
+      }
       // Fallback for unexpected cases
       else {
+        const midpoint = segments.length > 0 
+          ? new THREE.Vector3().lerpVectors(segments[0].start, segments[segments.length - 1].end, 0.5)
+          : new THREE.Vector3();
+        const backendEdge = findClosestBackendEdge(midpoint, meshData?.edge_classifications);
+        
         group = {
           segments,
           count: segmentCount,
@@ -208,7 +239,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           totalLength,
           type: "line",
           label: `📏 Length: ${totalLength.toFixed(2)} mm`,
-          classification: { type: "line", length: totalLength }
+          classification: { type: "line", length: totalLength },
+          backendClassification: backendEdge
         };
       }
       
@@ -294,8 +326,20 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     const handleClick = () => {
       const { classification, edge } = hoverInfo;
+      
+      // Get the edge group to access backend classification
+      const edgeGroup = edgeGroupsCache.get(edge);
+      const backendClassification = edgeGroup?.backendClassification;
 
       if (classification.type === "circle") {
+        // Validate against backend
+        const validation = validateMeasurement(
+          classification.diameter || 0,
+          edgeGroup?.count || 0,
+          "diameter",
+          backendClassification
+        );
+        
         addMeasurement({
           id: generateMeasurementId(),
           type: "edge-select",
@@ -306,9 +350,22 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
-          metadata: { edgeType: "circle", center: classification.center },
+          metadata: { 
+            edgeType: "circle", 
+            center: classification.center,
+            validation,
+            segmentCount: edgeGroup?.count
+          },
         });
       } else if (classification.type === "arc") {
+        // Validate against backend
+        const validation = validateMeasurement(
+          classification.radius || 0,
+          edgeGroup?.count || 0,
+          "radius",
+          backendClassification
+        );
+        
         addMeasurement({
           id: generateMeasurementId(),
           type: "edge-select",
@@ -319,9 +376,22 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
-          metadata: { edgeType: "arc", center: classification.center },
+          metadata: { 
+            edgeType: "arc", 
+            center: classification.center,
+            validation,
+            segmentCount: edgeGroup?.count
+          },
         });
       } else {
+        // Validate against backend
+        const validation = validateMeasurement(
+          classification.length || 0,
+          edgeGroup?.count || 0,
+          "length",
+          backendClassification
+        );
+        
         addMeasurement({
           id: generateMeasurementId(),
           type: "edge-select",
@@ -335,7 +405,11 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
-          metadata: { edgeType: "line" },
+          metadata: { 
+            edgeType: "line",
+            validation,
+            segmentCount: edgeGroup?.count
+          },
         });
       }
     };
