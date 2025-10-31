@@ -121,7 +121,7 @@ export function MeasurementPanel() {
           {/* Compact Toolbar */}
           <div className="p-2 border-b border-gray-200">
             <div className="grid grid-cols-2 gap-1.5">
-              {/* ✅ NEW: Smart Edge Select Tool */}
+              {/* ✅ Smart Edge Select Tool */}
               <Button
                 variant={activeTool === "edge-select" ? "default" : "outline"}
                 size="sm"
@@ -132,6 +132,7 @@ export function MeasurementPanel() {
                 Smart Edge (1 click)
               </Button>
 
+              {/* Basic Measurements */}
               <Button
                 variant={activeTool === "distance" ? "default" : "outline"}
                 size="sm"
@@ -173,12 +174,49 @@ export function MeasurementPanel() {
               </Button>
             </div>
 
+            {/* ✅ ADDED: Advanced Measurements Row 2 */}
+            <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+              <Button
+                variant={activeTool === "edge-to-edge" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTool(activeTool === "edge-to-edge" ? null : "edge-to-edge")}
+                className="h-7 text-xs px-1"
+                title="Edge to Edge"
+              >
+                <Ruler className="w-3 h-3" />
+              </Button>
+
+              <Button
+                variant={activeTool === "face-to-face" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTool(activeTool === "face-to-face" ? null : "face-to-face")}
+                className="h-7 text-xs px-1"
+                title="Face to Face"
+              >
+                <X className="w-3 h-3" style={{ transform: "rotate(45deg)" }} />
+              </Button>
+
+              <Button
+                variant={activeTool === "coordinate" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTool(activeTool === "coordinate" ? null : "coordinate")}
+                className="h-7 text-xs px-1"
+                title="Coordinate XYZ"
+              >
+                <Triangle className="w-3 h-3" />
+              </Button>
+            </div>
+
             {activeTool && (
               <div className="mt-2 p-1.5 bg-blue-50 rounded text-xs text-blue-700">
                 <span className="font-semibold">Active: </span>
                 {activeTool === "edge-select"
                   ? "Click on an edge (line/arc/circle)"
-                  : `Click ${activeTool === "distance" ? "2" : "3"} points`}
+                  : activeTool === "coordinate"
+                    ? "Click a point for XYZ"
+                    : activeTool === "distance" || activeTool === "edge-to-edge" || activeTool === "face-to-face"
+                      ? "Click 2 points"
+                      : "Click 3 points"}
                 <div className="text-blue-600 text-xs mt-0.5">Press ESC to cancel</div>
               </div>
             )}
