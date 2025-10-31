@@ -500,11 +500,9 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     Returns PRECISE classification metadata for each edge including ground truth measurements.
     
     This provides backend-validated measurements that the frontend can use for validation.
-    Assigns feature_id to group edges belonging to the same geometric feature.
     """
     edge_classifications = []
     edge_count = 0
-    feature_id_counter = 0  # Track unique feature IDs
     angle_threshold_rad = math.radians(angle_threshold_degrees)
     
     # Build edge-to-faces map
@@ -555,8 +553,7 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                     "id": edge_count,
                     "type": "line",
                     "start_point": [start_point.X(), start_point.Y(), start_point.Z()],
-                    "end_point": [end_point.X(), end_point.Y(), end_point.Z()],
-                    "feature_id": feature_id_counter  # Assign feature_id
+                    "end_point": [end_point.X(), end_point.Y(), end_point.Z()]
                 }
                 
                 if curve_type == GeomAbs_Circle:
@@ -567,7 +564,7 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                     # Check if full circle or arc
                     angular_extent = abs(last_param - first_param)
                     if abs(angular_extent - 2 * math.pi) < 0.01:
-                        # Full circle - all segments share same feature_id
+                        # Full circle
                         classification["type"] = "circle"
                         classification["diameter"] = radius * 2
                         classification["radius"] = radius
@@ -606,7 +603,6 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                 
                 edge_classifications.append(classification)
                 edge_count += 1
-                feature_id_counter += 1  # Increment for next feature
         
         except Exception as e:
             logger.debug(f"Error classifying edge: {e}")
@@ -805,7 +801,6 @@ def tessellate_shape(shape):
             # Store face info for classification
             face_data.append({
                 'face_idx': face_idx,
-                'face_id': face_idx,  # Unique face identifier
                 'surf_type': surf_type,
                 'center': center,
                 'start_vertex': face_start_vertex,
@@ -828,21 +823,11 @@ def tessellate_shape(shape):
         smooth_normals = compute_smooth_vertex_normals(vertices, indices)
         logger.info(f"✅ Smooth normals computed for {vertex_count} vertices")
         
-        # Create vertex_face_ids mapping (each vertex knows its face_id)
-        vertex_face_ids = [-1] * vertex_count
-        for face_info in face_data:
-            start_v = face_info['start_vertex']
-            v_count = face_info['vertex_count']
-            face_id = face_info['face_id']
-            for v_idx in range(start_v, start_v + v_count):
-                vertex_face_ids[v_idx] = face_id
-        
         return {
             "vertices": vertices,
             "indices": indices,
             "normals": smooth_normals,  # ✅ Use smooth normals as primary normals
             "face_data": face_data,
-            "vertex_face_ids": vertex_face_ids,  # Map vertices to face_id
             "bbox": (xmin, ymin, zmin, xmax, ymax, zmax),
             "triangle_count": triangle_count,
         }
@@ -866,8 +851,6 @@ def classify_mesh_faces(mesh_data, shape):
     1. First classify all CYLINDRICAL faces using radius/axis logic
     2. Then PROPAGATE classification to adjacent non-cylindrical faces
     3. This ensures boss fillets, planar faces, etc. get correct colors
-    
-    Returns (vertex_colors, face_classifications)
     """
     logger.info("🎨 Starting IMPROVED mesh-based color classification with propagation...")
     
@@ -1097,72 +1080,7 @@ def classify_mesh_faces(mesh_data, shape):
         type_counts[vtype] = type_counts.get(vtype, 0) + 1
     logger.info(f"✅ Classification complete! Distribution: {type_counts}")
     
-    # Create comprehensive face_classifications array
-    detailed_face_classifications = []
-    for face_info in face_data:
-        face_id = face_info['face_id']
-        face_type = face_classifications.get(face_id, "external")
-        face_object = face_info['face_object']
-        surf_type = face_info['surf_type']
-        center = face_info['center']
-        
-        # Calculate face normal
-        try:
-            surface = BRepAdaptor_Surface(face_object)
-            u_mid = (surface.FirstUParameter() + surface.LastUParameter()) / 2
-            v_mid = (surface.FirstVParameter() + surface.LastVParameter()) / 2
-            point = gp_Pnt()
-            normal_vec = gp_Vec()
-            surface.D1(u_mid, v_mid, point, gp_Vec(), normal_vec)
-            normal = [normal_vec.X(), normal_vec.Y(), normal_vec.Z()]
-        except:
-            normal = [0, 0, 1]  # Default
-        
-        # Calculate face area (approximate from triangles)
-        triangle_count = face_info['triangle_count']
-        start_idx = face_info['start_index']
-        face_area = 0
-        for tri_idx in range(triangle_count):
-            idx_offset = start_idx + tri_idx * 3
-            if idx_offset + 2 < len(mesh_data["indices"]):
-                i0, i1, i2 = mesh_data["indices"][idx_offset:idx_offset+3]
-                v0 = vertices[i0*3:i0*3+3]
-                v1 = vertices[i1*3:i1*3+3]
-                v2 = vertices[i2*3:i2*3+3]
-                # Triangle area = 0.5 * |cross product|
-                e1 = [v1[j] - v0[j] for j in range(3)]
-                e2 = [v2[j] - v0[j] for j in range(3)]
-                cross = [
-                    e1[1]*e2[2] - e1[2]*e2[1],
-                    e1[2]*e2[0] - e1[0]*e2[2],
-                    e1[0]*e2[1] - e1[1]*e2[0]
-                ]
-                face_area += 0.5 * math.sqrt(sum(x*x for x in cross))
-        
-        face_classification = {
-            "face_id": face_id,
-            "type": face_type,
-            "center": center,
-            "normal": normal,
-            "area": face_area,
-            "surface_type": "cylinder" if surf_type == GeomAbs_Cylinder else 
-                          "plane" if surf_type == GeomAbs_Plane else "other"
-        }
-        
-        # Add radius if cylindrical
-        if surf_type == GeomAbs_Cylinder:
-            try:
-                surface = BRepAdaptor_Surface(face_object)
-                cyl = surface.Cylinder()
-                face_classification["radius"] = cyl.Radius()
-            except:
-                pass
-        
-        detailed_face_classifications.append(face_classification)
-    
-    logger.info(f"✅ Created {len(detailed_face_classifications)} detailed face classifications")
-    
-    return vertex_colors, detailed_face_classifications
+    return vertex_colors
 
 
 @app.route("/analyze-cad", methods=["POST"])
@@ -1200,9 +1118,8 @@ def analyze_cad():
         mesh_data = tessellate_shape(shape)
         
         logger.info("🎨 Classifying face colors using MESH-BASED approach...")
-        vertex_colors, face_classifications = classify_mesh_faces(mesh_data, shape)
+        vertex_colors = classify_mesh_faces(mesh_data, shape)
         mesh_data["vertex_colors"] = vertex_colors
-        mesh_data["face_classifications"] = face_classifications
         
         logger.info("📐 Extracting significant BREP edges...")
         # Using 20° threshold - industry standard for manufacturing CAD
@@ -1266,8 +1183,6 @@ def analyze_cad():
                 'indices': mesh_data['indices'],
                 'normals': mesh_data['normals'],
                 'vertex_colors': mesh_data['vertex_colors'],
-                'vertex_face_ids': mesh_data['vertex_face_ids'],  # Map vertices to faces
-                'face_classifications': mesh_data['face_classifications'],  # Detailed face data
                 'feature_edges': feature_edges,
                 'edge_classifications': edge_classifications,
                 'triangle_count': mesh_data['triangle_count'],
