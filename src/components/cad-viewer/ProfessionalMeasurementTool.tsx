@@ -93,47 +93,100 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
   // Helper function to find connected segments using directional traversal
   const findFeatureSegments = React.useCallback((startEdge: THREE.Line3, allEdges: THREE.Line3[]): THREE.Line3[] => {
     const segments = [startEdge];
-    const threshold = 0.001; // 1 micron tolerance
+    const threshold = 0.01; // Increased from 0.001 to handle tessellation gaps
     const visited = new Set<THREE.Line3>([startEdge]);
     
-    const maxSegments = 32; // Max for a full circle in tessellation
+    const maxSegments = 32; // Max for a full circle
+    
+    // Helper: Check if two edges are connected (handles both directions)
+    const areConnected = (edge1End: THREE.Vector3, edge2: THREE.Line3): { connected: boolean; reversed: boolean } => {
+      if (edge2.start.distanceTo(edge1End) < threshold) {
+        return { connected: true, reversed: false };
+      }
+      if (edge2.end.distanceTo(edge1End) < threshold) {
+        return { connected: true, reversed: true };
+      }
+      return { connected: false, reversed: false };
+    };
+    
+    // Helper: Get direction of edge (normalized)
+    const getDirection = (edge: THREE.Line3, reversed: boolean = false): THREE.Vector3 => {
+      return reversed 
+        ? new THREE.Vector3().subVectors(edge.start, edge.end).normalize()
+        : new THREE.Vector3().subVectors(edge.end, edge.start).normalize();
+    };
     
     let currentEdge = startEdge;
+    let currentDirection = getDirection(currentEdge);
     let foundNext = true;
     
-    // Forward traversal: find segments connected to the END of current edge
+    // Forward traversal
     while (foundNext && segments.length < maxSegments) {
       foundNext = false;
+      let bestCandidate: THREE.Line3 | null = null;
+      let bestReversed = false;
+      let bestAlignment = -1;
+      
       for (const edge of allEdges) {
         if (visited.has(edge)) continue;
         
-        // Only connect if this edge starts where current edge ends (sequential)
-        if (edge.start.distanceTo(currentEdge.end) < threshold) {
-          segments.push(edge);
-          visited.add(edge);
-          currentEdge = edge;
-          foundNext = true;
-          break; // Found the next segment, stop searching
+        const connection = areConnected(currentEdge.end, edge);
+        if (!connection.connected) continue;
+        
+        // Check tangent continuity (direction alignment)
+        const nextDirection = getDirection(edge, connection.reversed);
+        const alignment = currentDirection.dot(nextDirection);
+        
+        // Only accept edges that continue in roughly the same direction (>30° = 0.866)
+        if (alignment > 0.5 && alignment > bestAlignment) {
+          bestCandidate = edge;
+          bestReversed = connection.reversed;
+          bestAlignment = alignment;
         }
+      }
+      
+      if (bestCandidate) {
+        segments.push(bestCandidate);
+        visited.add(bestCandidate);
+        currentEdge = bestCandidate;
+        currentDirection = getDirection(currentEdge, bestReversed);
+        foundNext = true;
       }
     }
     
-    // Backward traversal: find segments connected to the START of original edge
+    // Backward traversal
     currentEdge = startEdge;
+    currentDirection = getDirection(currentEdge).negate(); // Opposite direction
     foundNext = true;
+    
     while (foundNext && segments.length < maxSegments) {
       foundNext = false;
+      let bestCandidate: THREE.Line3 | null = null;
+      let bestReversed = false;
+      let bestAlignment = -1;
+      
       for (const edge of allEdges) {
         if (visited.has(edge)) continue;
         
-        // Only connect if this edge ends where current edge starts (sequential)
-        if (edge.end.distanceTo(currentEdge.start) < threshold) {
-          segments.unshift(edge); // Add to beginning of array
-          visited.add(edge);
-          currentEdge = edge;
-          foundNext = true;
-          break; // Found the previous segment, stop searching
+        const connection = areConnected(currentEdge.start, edge);
+        if (!connection.connected) continue;
+        
+        const nextDirection = getDirection(edge, !connection.reversed).negate();
+        const alignment = currentDirection.dot(nextDirection);
+        
+        if (alignment > 0.5 && alignment > bestAlignment) {
+          bestCandidate = edge;
+          bestReversed = connection.reversed;
+          bestAlignment = alignment;
         }
+      }
+      
+      if (bestCandidate) {
+        segments.unshift(bestCandidate);
+        visited.add(bestCandidate);
+        currentEdge = bestCandidate;
+        currentDirection = getDirection(currentEdge, bestReversed).negate();
+        foundNext = true;
       }
     }
     
@@ -163,8 +216,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       
       let group: ConnectedEdgeGroup;
       
-      // Circle: closed loop with exactly 32 segments (backend tessellation)
-      if (isClosedLoop && segmentCount === 32) {
+      // Circle: exactly 32 segments OR closed loop with 30-32 segments (backend tessellation)
+      if (segmentCount === 32 || (isClosedLoop && segmentCount >= 30)) {
         const circumference = totalLength;
         const diameter = circumference / Math.PI;
         
