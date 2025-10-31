@@ -179,7 +179,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
 
     // Pre-compute static feature edges for solid mode (calculated once with higher threshold)
     const staticFeatureEdges = useMemo(() => {
-      if (!edgeMap || !meshRef.current) return [];
+      if (!edgeMap) return [];
       
       const edges: number[] = [];
       const FEATURE_ANGLE_THRESHOLD = 50; // Higher threshold - only genuine sharp edges
