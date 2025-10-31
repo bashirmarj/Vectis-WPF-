@@ -62,6 +62,40 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     return lines;
   }, [featureEdgesGeometry]);
 
+  // Helper function to find all connected segments forming a continuous curve
+  const findConnectedSegments = React.useCallback((startEdge: THREE.Line3, allEdges: THREE.Line3[]): THREE.Line3[] => {
+    const connected = [startEdge];
+    const threshold = 0.001; // 1 micron tolerance
+    const visited = new Set<THREE.Line3>([startEdge]);
+    
+    // Find all edges that connect to this one
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const edge of allEdges) {
+        if (visited.has(edge)) continue;
+        
+        // Check if edge connects to any edge in our chain
+        for (const chainEdge of connected) {
+          const connects = 
+            edge.start.distanceTo(chainEdge.end) < threshold ||
+            edge.end.distanceTo(chainEdge.start) < threshold ||
+            edge.start.distanceTo(chainEdge.start) < threshold ||
+            edge.end.distanceTo(chainEdge.end) < threshold;
+          
+          if (connects) {
+            connected.push(edge);
+            visited.add(edge);
+            changed = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    return connected;
+  }, []);
+
   // Handle hover detection
   useEffect(() => {
     if (!enabled || !meshRef || edgeLines.length === 0) {
@@ -100,29 +134,83 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
 
         if (closestEdge) {
-          const edgeIndex = edgeLines.indexOf(closestEdge);
-          const backendClassification = meshData?.edge_classifications?.[edgeIndex];
+          // Find all connected segments forming this curve
+          const connectedSegments = findConnectedSegments(closestEdge, edgeLines);
+          const segmentCount = connectedSegments.length;
           
-          // Use backend classification if available, otherwise fallback to client-side
-          const classification = backendClassification 
-            ? {
-                type: backendClassification.type,
-                diameter: backendClassification.diameter,
-                radius: backendClassification.radius,
-                length: backendClassification.length,
-                center: backendClassification.center 
-                  ? new THREE.Vector3(...backendClassification.center) 
-                  : undefined
-              }
-            : classifyFeatureEdge(closestEdge, edgeLines);
-
+          // Check if it's a closed loop (circle)
+          const isClosedLoop = connectedSegments.length > 0 &&
+            connectedSegments[0].start.distanceTo(
+              connectedSegments[connectedSegments.length - 1].end
+            ) < 0.001;
+          
+          let classification: any;
           let label = "";
-          if (classification.type === "circle") {
-            label = `⊙ Diameter: ø ${formatMeasurement(classification.diameter || 0, "mm")}`;
-          } else if (classification.type === "arc") {
-            label = `⌒ Radius: R ${formatMeasurement(classification.radius || 0, "mm")}`;
+          
+          if (isClosedLoop && segmentCount >= 16) {
+            // It's a circle! Calculate diameter from circumference
+            const segmentLength = closestEdge.distance();
+            const circumference = segmentLength * segmentCount;
+            const diameter = circumference / Math.PI;
+            
+            // Calculate center (average of all segment midpoints)
+            const center = new THREE.Vector3();
+            connectedSegments.forEach(seg => {
+              center.add(new THREE.Vector3().lerpVectors(seg.start, seg.end, 0.5));
+            });
+            center.divideScalar(segmentCount);
+            
+            classification = {
+              type: "circle",
+              diameter,
+              radius: diameter / 2,
+              center,
+              length: circumference
+            };
+            
+            label = `⊙ Diameter: ø${diameter.toFixed(2)} mm`;
+            console.log(`Circle detected: ${segmentCount} segments, diameter: ${diameter.toFixed(2)} mm`);
+          } else if (segmentCount === 2) {
+            // It's a straight line
+            const totalLength = connectedSegments.reduce((sum, seg) => sum + seg.distance(), 0);
+            
+            classification = {
+              type: "line",
+              length: totalLength
+            };
+            
+            label = `📏 Length: ${totalLength.toFixed(2)} mm`;
           } else {
-            label = `📏 Length: ${formatMeasurement(classification.length || 0, "mm")}`;
+            // It's an arc
+            const totalLength = connectedSegments.reduce((sum, seg) => sum + seg.distance(), 0);
+            
+            // Calculate radius from arc geometry
+            const startPoint = connectedSegments[0].start;
+            const endPoint = connectedSegments[segmentCount - 1].end;
+            const chord = startPoint.distanceTo(endPoint);
+            
+            // Estimate radius: for small arcs, use formula: r ≈ (L² + c²) / (8L)
+            // where L is arc length and c is chord length
+            const radius = chord > 0.001 
+              ? (totalLength * totalLength + chord * chord) / (8 * totalLength)
+              : totalLength / (2 * Math.PI); // fallback for near-complete circles
+            
+            // Calculate center (perpendicular bisector approach)
+            const midPoint = new THREE.Vector3().lerpVectors(startPoint, endPoint, 0.5);
+            const direction = new THREE.Vector3().subVectors(endPoint, startPoint).normalize();
+            const perpendicular = new THREE.Vector3(-direction.y, direction.x, direction.z);
+            const h = Math.sqrt(Math.max(0, radius * radius - (chord / 2) * (chord / 2)));
+            const center = midPoint.clone().add(perpendicular.multiplyScalar(h));
+            
+            classification = {
+              type: "arc",
+              radius,
+              length: totalLength,
+              center
+            };
+            
+            label = `⌒ Radius: R${radius.toFixed(2)} mm`;
+            console.log(`Arc detected: ${segmentCount} segments, radius: ${radius.toFixed(2)} mm, arc length: ${totalLength.toFixed(2)} mm`);
           }
 
           setLabelText(label);
