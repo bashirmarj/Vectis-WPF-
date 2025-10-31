@@ -229,8 +229,21 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
           const normalAngleDeg = normalAngle * (180 / Math.PI);
 
-          // Feature edge: sharp angle between adjacent faces (> 20 degrees)
-          const isFeatureEdge = normalAngleDeg > 20;
+          // Calculate screen-space edge length
+          const v1Screen = v1World.clone().project(camera);
+          const v2Screen = v2World.clone().project(camera);
+          const screenDx = (v2Screen.x - v1Screen.x) * window.innerWidth / 2;
+          const screenDy = (v2Screen.y - v1Screen.y) * window.innerHeight / 2;
+          const screenLength = Math.sqrt(screenDx * screenDx + screenDy * screenDy);
+
+          // Feature edge detection with screen-space awareness
+          // Only show edges if:
+          // 1. Sharp edge (>45°) - always show regardless of size
+          // 2. Medium edge (20-45°) AND long enough on screen (>5px)
+          // 3. Silhouette edge (detected separately below)
+          const isSharpEdge = normalAngleDeg > 45;
+          const isMediumEdge = normalAngleDeg > 20 && screenLength > 5;
+          const isFeatureEdge = isSharpEdge || isMediumEdge;
 
           // Silhouette edge: one face visible, one hidden (relaxed threshold)
           const isSilhouette = (dot1 > -0.1 && dot2 < 0.1) || (dot1 < 0.1 && dot2 > -0.1);
