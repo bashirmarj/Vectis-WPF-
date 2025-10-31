@@ -177,93 +177,12 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
       return map;
     }, [meshData.vertices, meshData.indices]);
 
-    // Pre-compute static feature edges for solid mode (calculated once with higher threshold)
-    const staticFeatureEdges = useMemo(() => {
-      if (!edgeMap) return [];
-      
-      const edges: number[] = [];
-      const FEATURE_ANGLE_THRESHOLD = 50; // Higher threshold - only genuine sharp edges
-
-      edgeMap.forEach((edgeData) => {
-        // Only process internal edges (2 adjacent faces)
-        if (edgeData.normals.length === 2) {
-          const n1 = edgeData.normals[0];
-          const n2 = edgeData.normals[1];
-          
-          // Calculate angle between normals
-          const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
-          const normalAngleDeg = normalAngle * (180 / Math.PI);
-          
-          // Only mark as feature edge if angle is significant (sharp edge)
-          if (normalAngleDeg > FEATURE_ANGLE_THRESHOLD) {
-            edges.push(
-              edgeData.v1.x, edgeData.v1.y, edgeData.v1.z,
-              edgeData.v2.x, edgeData.v2.y, edgeData.v2.z
-            );
-          }
-        }
-      });
-
-      return edges;
-    }, [edgeMap]);
-
-    // Dynamic edge rendering for wireframe mode only (silhouette + feature edges)
-    // Solid mode uses static feature edges computed once in useMemo
+    // Dynamic edge rendering for wireframe mode only
     useFrame(() => {
       if (!edgeMap || !meshRef.current) return;
       
-      // Skip dynamic edge calculation for solid mode - use static edges only
-      if (displayStyle === "solid") {
-        // Update static feature edges for solid mode
-        if (showEdges && dynamicEdgesRef.current) {
-          // Clear existing
-          while (dynamicEdgesRef.current.children.length > 0) {
-            const child = dynamicEdgesRef.current.children[0];
-            dynamicEdgesRef.current.remove(child);
-            if (child instanceof THREE.LineSegments) {
-              child.geometry.dispose();
-              (child.material as THREE.Material).dispose();
-            }
-          }
-
-          // Render static feature edges in world space
-          if (staticFeatureEdges.length > 0) {
-            const mesh = meshRef.current;
-            const worldEdges: number[] = [];
-            
-            // Transform static edges to world space
-            for (let i = 0; i < staticFeatureEdges.length; i += 6) {
-              const v1 = new THREE.Vector3(
-                staticFeatureEdges[i],
-                staticFeatureEdges[i + 1],
-                staticFeatureEdges[i + 2]
-              ).applyMatrix4(mesh.matrixWorld);
-              
-              const v2 = new THREE.Vector3(
-                staticFeatureEdges[i + 3],
-                staticFeatureEdges[i + 4],
-                staticFeatureEdges[i + 5]
-              ).applyMatrix4(mesh.matrixWorld);
-              
-              worldEdges.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
-            }
-
-            if (worldEdges.length > 0) {
-              const geo = new THREE.BufferGeometry();
-              geo.setAttribute("position", new THREE.Float32BufferAttribute(worldEdges, 3));
-              const mat = new THREE.LineBasicMaterial({
-                color: "#000000",
-                linewidth: 1.5,
-                toneMapped: false,
-                depthTest: true,
-                depthWrite: false,
-              });
-              dynamicEdgesRef.current.add(new THREE.LineSegments(geo, mat));
-            }
-          }
-        }
-        return;
-      }
+      // Only run dynamic silhouette calculation for wireframe mode
+      if (displayStyle !== "wireframe") return;
 
       const mesh = meshRef.current;
       const cameraWorldPos = new THREE.Vector3();
