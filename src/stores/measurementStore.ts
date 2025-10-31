@@ -47,6 +47,10 @@ export interface Measurement {
     arcCenter?: THREE.Vector3;
     edgeStart?: THREE.Vector3;
     edgeEnd?: THREE.Vector3;
+    cylindrical?: boolean;
+    radius?: number;
+    center?: THREE.Vector3;
+    axis?: THREE.Vector3;
   };
 }
 
