@@ -35,6 +35,17 @@ interface MeshData {
   triangle_count: number;
   face_types?: string[];
   feature_edges?: number[][][];
+  edge_classifications?: Array<{
+    id: number;
+    type: 'line' | 'circle' | 'arc';
+    start_point: [number, number, number];
+    end_point: [number, number, number];
+    diameter?: number;
+    radius?: number;
+    length?: number;
+    center?: [number, number, number];
+    segment_count: number;
+  }>;
 }
 
 export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewerProps) {
@@ -98,6 +109,12 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
             ? mesh.feature_edges
             : JSON.parse(mesh.feature_edges as string)
           : undefined;
+        
+        const edge_classifications = mesh.edge_classifications
+          ? Array.isArray(mesh.edge_classifications)
+            ? mesh.edge_classifications
+            : JSON.parse(mesh.edge_classifications as string)
+          : undefined;
 
         const loadedMeshData: MeshData = {
           vertices,
@@ -106,6 +123,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
           vertex_colors,
           triangle_count: indices.length / 3,
           feature_edges,
+          edge_classifications,
         };
 
         setMeshData(loadedMeshData);

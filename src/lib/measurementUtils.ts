@@ -6,8 +6,11 @@ export interface MeshData {
   indices: number[];
   normals: number[];
   vertex_colors?: string[];
+  vertex_face_ids?: number[];  // Map vertex index to face_id
+  face_classifications?: BackendFaceClassification[];  // Detailed face data
   triangle_count: number;
   feature_edges?: number[][][];
+  edge_classifications?: BackendEdgeClassification[];  // Backend ground truth
 }
 
 export interface SnapResult {
@@ -35,6 +38,43 @@ export interface EdgeClassification {
   radius?: number;
   center?: THREE.Vector3;
   angle?: number;
+}
+
+// Backend classification with ground truth from CAD geometry
+export interface BackendEdgeClassification {
+  id: number;
+  feature_id?: number;  // Unique ID for this geometric feature (optional for backwards compatibility)
+  type: "line" | "arc" | "circle";
+  start_point: [number, number, number];
+  end_point: [number, number, number];
+  length?: number;
+  radius?: number;
+  diameter?: number;
+  center?: [number, number, number];
+  segment_count: number;
+}
+
+// Backend face classification with ground truth  
+export interface BackendFaceClassification {
+  face_id: number;
+  type: "internal" | "external" | "through" | "planar";
+  center: [number, number, number];
+  normal: [number, number, number];
+  area: number;
+  surface_type: "cylinder" | "plane" | "other";
+  radius?: number;
+}
+
+export interface MeasurementValidation {
+  isValid: boolean;
+  confidence: number;  // 0-1 score
+  backendValue?: number;
+  frontendValue: number;
+  deviation?: number;  // Percentage difference
+  deviationAbs?: number;  // Absolute difference
+  warnings: string[];
+  backendType?: string;
+  segmentCountMatch?: boolean;
 }
 
 /**
