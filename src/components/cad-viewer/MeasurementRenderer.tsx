@@ -45,10 +45,10 @@ export const MeasurementRenderer: React.FC = () => {
           </mesh>
           <mesh position={p1}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
           <mesh position={p2}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
-          <Html position={midpoint} center distanceFactor={6}>
-            <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '8px 16px', borderRadius: '6px', fontSize: '16px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '140px', textAlign: 'center'}}>
-              <div style={{fontSize: '22px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
-              <div style={{fontSize: '12px', color: '#666', marginTop: '2px'}}>Arc Surface</div>
+          <Html position={midpoint} center distanceFactor={2}>
+            <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '12px 20px', borderRadius: '6px', fontSize: '20px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '180px', textAlign: 'center', transform: 'scale(1.3)'}}>
+              <div style={{fontSize: '32px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
+              <div style={{fontSize: '16px', color: '#666', marginTop: '4px'}}>Arc Surface</div>
             </div>
           </Html>
         </group>
@@ -59,9 +59,9 @@ export const MeasurementRenderer: React.FC = () => {
       <group key={m.id}>
         <mesh position={p1}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
         <mesh position={p2}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
-        <Html position={midpoint} center distanceFactor={6}>
-          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '8px 16px', borderRadius: '6px', fontSize: '16px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '140px', textAlign: 'center'}}>
-            <div style={{fontSize: '22px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
+        <Html position={midpoint} center distanceFactor={2}>
+          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '12px 20px', borderRadius: '6px', fontSize: '20px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '180px', textAlign: 'center', transform: 'scale(1.3)'}}>
+            <div style={{fontSize: '32px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
           </div>
         </Html>
       </group>
@@ -85,9 +85,9 @@ export const MeasurementRenderer: React.FC = () => {
       <group key={m.id}>
         {faceOverlay}
         <mesh position={point}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
-        <Html position={point} center distanceFactor={6}>
-          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '8px 16px', borderRadius: '6px', fontSize: '16px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '140px', textAlign: 'center'}}>
-            <div style={{fontSize: '22px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
+        <Html position={point} center distanceFactor={2}>
+          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '12px 20px', borderRadius: '6px', fontSize: '20px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '180px', textAlign: 'center', transform: 'scale(1.3)'}}>
+            <div style={{fontSize: '32px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
           </div>
         </Html>
       </group>
@@ -104,11 +104,11 @@ export const MeasurementRenderer: React.FC = () => {
       <group key={m.id}>
         <mesh position={p1}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
         <mesh position={p2}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
-        <Html position={midpoint} center distanceFactor={6}>
-          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '8px 16px', borderRadius: '6px', fontSize: '16px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '140px', textAlign: 'center'}}>
-            <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0066CC', marginBottom: '4px'}}>{m.label}</div>
+        <Html position={midpoint} center distanceFactor={2}>
+          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '12px 20px', borderRadius: '6px', fontSize: '20px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '180px', textAlign: 'center', transform: 'scale(1.3)'}}>
+            <div style={{fontSize: '36px', fontWeight: 'bold', color: '#0066CC', marginBottom: '6px'}}>{m.label}</div>
             {m.metadata?.deltaX !== undefined && (
-              <div style={{fontSize: '14px', color: '#666', lineHeight: '1.5'}}>
+              <div style={{fontSize: '16px', color: '#666', lineHeight: '1.5'}}>
                 ΔX: {m.metadata.deltaX.toFixed(2)} mm<br />
                 ΔY: {m.metadata.deltaY?.toFixed(2)} mm<br />
                 ΔZ: {m.metadata.deltaZ?.toFixed(2)} mm
@@ -125,9 +125,9 @@ export const MeasurementRenderer: React.FC = () => {
     return (
       <group key={m.id}>
         <mesh position={point}><sphereGeometry args={[1.5, 16, 16]} /><meshBasicMaterial color="#0066CC" /></mesh>
-        <Html position={point} center distanceFactor={6}>
-          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '8px 16px', borderRadius: '6px', fontSize: '16px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '140px', textAlign: 'center'}}>
-            <div style={{fontSize: '22px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
+        <Html position={point} center distanceFactor={2}>
+          <div style={{background: 'rgba(255, 255, 255, 0.95)', color: '#1a1a1a', padding: '12px 20px', borderRadius: '6px', fontSize: '20px', fontWeight: '600', border: '2px solid #0066CC', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', minWidth: '180px', textAlign: 'center', transform: 'scale(1.3)'}}>
+            <div style={{fontSize: '32px', fontWeight: 'bold', color: '#0066CC'}}>{m.label}</div>
           </div>
         </Html>
       </group>

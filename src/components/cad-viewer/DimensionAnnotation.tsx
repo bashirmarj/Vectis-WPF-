@@ -69,18 +69,23 @@ export const DimensionAnnotation: React.FC<DimensionAnnotationProps> = ({ measur
     // Fallback for non-edge-select measurements
     const position = measurement.points[0]?.position || new THREE.Vector3();
     return (
-      <Html position={position} center distanceFactor={10}>
+      <Html position={position} center distanceFactor={2}>
         <div
           style={{
-            background: 'rgba(0, 0, 0, 0.85)',
-            color: '#ffffff',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontWeight: 'bold',
+            background: 'rgba(255, 255, 255, 0.95)',
+            color: '#1a1a1a',
+            padding: '12px 20px',
+            borderRadius: '6px',
+            fontSize: '20px',
+            fontWeight: '600',
+            fontFamily: 'Arial, Helvetica, sans-serif',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
+            border: '2px solid #0066CC',
+            boxShadow: '0 3px 10px rgba(0, 0, 0, 0.2)',
+            minWidth: '180px',
+            textAlign: 'center',
+            transform: 'scale(1.3)'
           }}
         >
           {measurement.label}
@@ -135,25 +140,26 @@ export const DimensionAnnotation: React.FC<DimensionAnnotationProps> = ({ measur
       </mesh>
       
       {/* Dimension text label */}
-      <Html position={labelPosition} center distanceFactor={6}>
+      <Html position={labelPosition} center distanceFactor={2}>
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.95)',
             color: '#1a1a1a',
-            padding: '8px 16px',
+            padding: '12px 20px',
             borderRadius: '6px',
-            fontSize: '16px',
+            fontSize: '20px',
             fontWeight: '600',
             fontFamily: 'Arial, Helvetica, sans-serif',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
             border: '2px solid #0066CC',
             boxShadow: '0 3px 10px rgba(0, 0, 0, 0.2)',
-            minWidth: '140px',
+            minWidth: '180px',
             textAlign: 'center',
+            transform: 'scale(1.3)'
           }}
         >
-          <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0066CC'}}>{measurement.label}</div>
+          <div style={{fontSize: '36px', fontWeight: 'bold', color: '#0066CC'}}>{measurement.label}</div>
         </div>
       </Html>
     </>
