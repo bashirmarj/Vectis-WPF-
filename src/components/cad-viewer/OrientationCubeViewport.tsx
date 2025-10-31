@@ -258,7 +258,6 @@ export function OrientationCubeViewport({
                   );
                 }}
               >
-                <color attach="background" args={["#f8f9fa"]} />
                 <OrthographicCamera position={[0, 0, 10]} zoom={127} near={0.1} far={1000} makeDefault />
                 <CubeSyncWrapper mainCameraRef={mainCameraRef} controlsRef={controlsRef} onCubeClick={onCubeClick} />
               </Canvas>
