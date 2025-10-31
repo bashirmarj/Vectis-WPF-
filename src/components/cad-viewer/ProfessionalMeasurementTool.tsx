@@ -352,7 +352,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             return new THREE.Line(geometry, material);
           })()} />
 
-          <Html position={hoverInfo.position} center style={{ pointerEvents: 'none' }}>
+          <Html position={hoverInfo.position} center style={{ pointerEvents: 'none', transform: 'translateY(-40px)' }}>
             <div style={{
               color: "white",
               fontSize: "14px",
