@@ -497,9 +497,7 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
 def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     """
     Classify feature edges detected by extract_feature_edges.
-    Returns PRECISE classification metadata for each edge including ground truth measurements.
-    
-    This provides backend-validated measurements that the frontend can use for validation.
+    Returns classification metadata for each edge in the same order.
     """
     edge_classifications = []
     edge_count = 0
@@ -544,17 +542,7 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                 first_param = curve_adaptor.FirstParameter()
                 last_param = curve_adaptor.LastParameter()
                 
-                # Get start and end points
-                start_point = curve_adaptor.Value(first_param)
-                end_point = curve_adaptor.Value(last_param)
-                
-                # Base classification with precise geometry
-                classification = {
-                    "id": edge_count,
-                    "type": "line",
-                    "start_point": [start_point.X(), start_point.Y(), start_point.Z()],
-                    "end_point": [end_point.X(), end_point.Y(), end_point.Z()]
-                }
+                classification = {"id": edge_count, "type": "line"}
                 
                 if curve_type == GeomAbs_Circle:
                     circle = curve_adaptor.Circle()
@@ -564,31 +552,23 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                     # Check if full circle or arc
                     angular_extent = abs(last_param - first_param)
                     if abs(angular_extent - 2 * math.pi) < 0.01:
-                        # Full circle
                         classification["type"] = "circle"
                         classification["diameter"] = radius * 2
-                        classification["radius"] = radius
-                        classification["length"] = 2 * math.pi * radius  # Circumference
-                        classification["segment_count"] = 32  # Expected tessellation
                     else:
-                        # Arc
                         classification["type"] = "arc"
                         classification["radius"] = radius
-                        classification["length"] = radius * angular_extent  # Arc length
-                        classification["segment_count"] = max(3, int(angular_extent / (2 * math.pi) * 32))  # Proportional to angle
                     
                     classification["center"] = [center.X(), center.Y(), center.Z()]
                 
                 elif curve_type == GeomAbs_Line:
-                    # Straight line
+                    start_point = curve_adaptor.Value(first_param)
+                    end_point = curve_adaptor.Value(last_param)
                     length = start_point.Distance(end_point)
-                    classification["type"] = "line"
                     classification["length"] = length
-                    classification["segment_count"] = 2  # Lines only need endpoints
                 
                 else:
                     # For BSpline, Bezier - calculate approximate length
-                    num_samples = 20
+                    num_samples = 10
                     total_length = 0
                     prev_point = curve_adaptor.Value(first_param)
                     for i in range(1, num_samples + 1):
@@ -596,10 +576,7 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                         curr_point = curve_adaptor.Value(param)
                         total_length += prev_point.Distance(curr_point)
                         prev_point = curr_point
-                    
-                    classification["type"] = "arc"  # Treat splines as arcs
                     classification["length"] = total_length
-                    classification["segment_count"] = 20  # Default for complex curves
                 
                 edge_classifications.append(classification)
                 edge_count += 1
@@ -609,7 +586,7 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
         
         edge_explorer.Next()
     
-    logger.info(f"✅ Classified {len(edge_classifications)} edges with precise measurements")
+    logger.info(f"✅ Classified {len(edge_classifications)} edges")
     return edge_classifications
 
 
@@ -1184,7 +1161,6 @@ def analyze_cad():
                 'normals': mesh_data['normals'],
                 'vertex_colors': mesh_data['vertex_colors'],
                 'feature_edges': feature_edges,
-                'edge_classifications': edge_classifications,
                 'triangle_count': mesh_data['triangle_count'],
                 'face_classification_method': 'mesh_based_with_propagation',
                 'edge_extraction_method': 'smart_filtering_20deg'

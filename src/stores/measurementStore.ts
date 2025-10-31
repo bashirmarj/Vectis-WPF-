@@ -41,21 +41,9 @@ export interface Measurement {
     edgeEnd?: THREE.Vector3;
     cylindrical?: boolean;
     radius?: number;
-    center?: THREE.Vector3 | [number, number, number];
+    center?: THREE.Vector3;
     axis?: THREE.Vector3;
     faceVertices?: number[];
-    validation?: {
-      isValid: boolean;
-      confidence: number;
-      backendValue?: number;
-      frontendValue: number;
-      deviation?: number;
-      deviationAbs?: number;
-      warnings: string[];
-      backendType?: string;
-      segmentCountMatch?: boolean;
-    };
-    segmentCount?: number;
   };
 }
 

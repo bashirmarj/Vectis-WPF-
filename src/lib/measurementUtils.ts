@@ -37,31 +37,6 @@ export interface EdgeClassification {
   angle?: number;
 }
 
-// Backend classification with ground truth from CAD geometry
-export interface BackendEdgeClassification {
-  id: number;
-  type: "line" | "arc" | "circle";
-  start_point: [number, number, number];
-  end_point: [number, number, number];
-  length?: number;
-  radius?: number;
-  diameter?: number;
-  center?: [number, number, number];
-  segment_count: number;
-}
-
-export interface MeasurementValidation {
-  isValid: boolean;
-  confidence: number;  // 0-1 score
-  backendValue?: number;
-  frontendValue: number;
-  deviation?: number;  // Percentage difference
-  deviationAbs?: number;  // Absolute difference
-  warnings: string[];
-  backendType?: string;
-  segmentCountMatch?: boolean;
-}
-
 /**
  * Calculate distance between two points with high precision
  * @param p1 First point
