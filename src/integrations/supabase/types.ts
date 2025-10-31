@@ -17,6 +17,7 @@ export type Database = {
       cad_meshes: {
         Row: {
           created_at: string | null
+          edge_classifications: Json | null
           face_types: string[] | null
           feature_edges: Json | null
           file_hash: string
@@ -32,6 +33,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          edge_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
           file_hash: string
@@ -47,6 +49,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          edge_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
           file_hash?: string
@@ -740,10 +743,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_quote_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_quote_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

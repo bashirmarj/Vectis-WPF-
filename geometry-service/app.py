@@ -494,6 +494,102 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     return feature_edges
 
 
+def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
+    """
+    Classify feature edges detected by extract_feature_edges.
+    Returns classification metadata for each edge in the same order.
+    """
+    edge_classifications = []
+    edge_count = 0
+    angle_threshold_rad = math.radians(angle_threshold_degrees)
+    
+    # Build edge-to-faces map
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    
+    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+    
+    while edge_explorer.More() and edge_count < max_edges:
+        edge = topods.Edge(edge_explorer.Current())
+        
+        try:
+            curve_result = BRep_Tool.Curve(edge)
+            
+            if not curve_result or len(curve_result) < 3 or curve_result[0] is None:
+                edge_explorer.Next()
+                continue
+            
+            # Determine if this edge is significant (same logic as extract_feature_edges)
+            is_significant = False
+            
+            if edge_face_map.Contains(edge):
+                face_list = edge_face_map.FindFromKey(edge)
+                num_adjacent_faces = face_list.Size()
+                
+                if num_adjacent_faces == 1:
+                    is_significant = True
+                elif num_adjacent_faces == 2:
+                    face1 = topods.Face(face_list.First())
+                    face2 = topods.Face(face_list.Last())
+                    dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                    
+                    if dihedral_angle and dihedral_angle > angle_threshold_rad:
+                        is_significant = True
+            
+            if is_significant:
+                curve_adaptor = BRepAdaptor_Curve(edge)
+                curve_type = curve_adaptor.GetType()
+                first_param = curve_adaptor.FirstParameter()
+                last_param = curve_adaptor.LastParameter()
+                
+                classification = {"id": edge_count, "type": "line"}
+                
+                if curve_type == GeomAbs_Circle:
+                    circle = curve_adaptor.Circle()
+                    center = circle.Location()
+                    radius = circle.Radius()
+                    
+                    # Check if full circle or arc
+                    angular_extent = abs(last_param - first_param)
+                    if abs(angular_extent - 2 * math.pi) < 0.01:
+                        classification["type"] = "circle"
+                        classification["diameter"] = radius * 2
+                    else:
+                        classification["type"] = "arc"
+                        classification["radius"] = radius
+                    
+                    classification["center"] = [center.X(), center.Y(), center.Z()]
+                
+                elif curve_type == GeomAbs_Line:
+                    start_point = curve_adaptor.Value(first_param)
+                    end_point = curve_adaptor.Value(last_param)
+                    length = start_point.Distance(end_point)
+                    classification["length"] = length
+                
+                else:
+                    # For BSpline, Bezier - calculate approximate length
+                    num_samples = 10
+                    total_length = 0
+                    prev_point = curve_adaptor.Value(first_param)
+                    for i in range(1, num_samples + 1):
+                        param = first_param + (last_param - first_param) * i / num_samples
+                        curr_point = curve_adaptor.Value(param)
+                        total_length += prev_point.Distance(curr_point)
+                        prev_point = curr_point
+                    classification["length"] = total_length
+                
+                edge_classifications.append(classification)
+                edge_count += 1
+        
+        except Exception as e:
+            logger.debug(f"Error classifying edge: {e}")
+        
+        edge_explorer.Next()
+    
+    logger.info(f"✅ Classified {len(edge_classifications)} edges")
+    return edge_classifications
+
+
 def calculate_face_center(triangulation, transform):
     """Compute average center of a face"""
     try:
@@ -1005,7 +1101,10 @@ def analyze_cad():
         logger.info("📐 Extracting significant BREP edges...")
         # Using 20° threshold - industry standard for manufacturing CAD
         feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
+        logger.info("🏷️  Classifying feature edges...")
+        edge_classifications = classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         mesh_data["feature_edges"] = feature_edges
+        mesh_data["edge_classifications"] = edge_classifications
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
 
         is_cylindrical = len(manufacturing_features['holes']) > 0 or len(manufacturing_features['bosses']) > 0

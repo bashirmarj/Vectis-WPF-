@@ -7,6 +7,14 @@ import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils
 import { classifyFeatureEdge } from "@/lib/featureEdgeClassification";
 import { MeasurementRenderer } from "./MeasurementRenderer";
 
+interface EdgeClassification {
+  type: 'line' | 'circle' | 'arc';
+  diameter?: number;
+  radius?: number;
+  length?: number;
+  center?: [number, number, number];
+}
+
 interface MeshData {
   vertices: number[];
   indices: number[];
@@ -14,6 +22,7 @@ interface MeshData {
   vertex_colors?: string[];
   triangle_count: number;
   feature_edges?: number[][][];
+  edge_classifications?: EdgeClassification[];
 }
 
 interface ProfessionalMeasurementToolProps {
@@ -91,7 +100,21 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
 
         if (closestEdge) {
-          const classification = classifyFeatureEdge(closestEdge, edgeLines);
+          const edgeIndex = edgeLines.indexOf(closestEdge);
+          const backendClassification = meshData?.edge_classifications?.[edgeIndex];
+          
+          // Use backend classification if available, otherwise fallback to client-side
+          const classification = backendClassification 
+            ? {
+                type: backendClassification.type,
+                diameter: backendClassification.diameter,
+                radius: backendClassification.radius,
+                length: backendClassification.length,
+                center: backendClassification.center 
+                  ? new THREE.Vector3(...backendClassification.center) 
+                  : undefined
+              }
+            : classifyFeatureEdge(closestEdge, edgeLines);
 
           let label = "";
           if (classification.type === "circle") {
@@ -114,8 +137,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       }
     };
 
-    canvas.addEventListener("pointermove", handlePointerMove);
-    return () => canvas.removeEventListener("pointermove", handlePointerMove);
+    gl.domElement.addEventListener("pointermove", handlePointerMove);
+    return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
   }, [enabled, meshRef, edgeLines, camera, gl, raycaster]);
 
   // Handle click
@@ -129,24 +152,26 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         addMeasurement({
           id: generateMeasurementId(),
           type: "diameter",
-          points: [{ position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
+          points: [{ id: generateMeasurementId(), position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
           value: classification.diameter || 0,
           unit: "mm",
           label: `⊙ ${formatMeasurement(classification.diameter || 0, "mm")}`,
           color: "#0066CC",
           visible: true,
+          createdAt: new Date(),
           metadata: { edgeType: "circle", center: classification.center },
         });
       } else if (classification.type === "arc") {
         addMeasurement({
           id: generateMeasurementId(),
           type: "radius",
-          points: [{ position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
+          points: [{ id: generateMeasurementId(), position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }],
           value: classification.radius || 0,
           unit: "mm",
           label: `R ${formatMeasurement(classification.radius || 0, "mm")}`,
           color: "#0066CC",
           visible: true,
+          createdAt: new Date(),
           metadata: { edgeType: "arc", center: classification.center },
         });
       } else {
@@ -154,21 +179,22 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           id: generateMeasurementId(),
           type: "distance",
           points: [
-            { position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" },
-            { position: edge.end, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }
+            { id: generateMeasurementId(), position: edge.start, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" },
+            { id: generateMeasurementId(), position: edge.end, normal: new THREE.Vector3(0, 1, 0), surfaceType: "edge" }
           ],
           value: classification.length || 0,
           unit: "mm",
           label: `${formatMeasurement(classification.length || 0, "mm")}`,
           color: "#0066CC",
           visible: true,
+          createdAt: new Date(),
           metadata: { edgeType: "line" },
         });
       }
     };
 
-    canvas.addEventListener("click", handleClick);
-    return () => canvas.removeEventListener("click", handleClick);
+    gl.domElement.addEventListener("click", handleClick);
+    return () => gl.domElement.removeEventListener("click", handleClick);
   }, [enabled, hoverInfo, addMeasurement]);
 
   return (
