@@ -177,9 +177,12 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
       return map;
     }, [meshData.vertices, meshData.indices]);
 
-    // Dynamic edge rendering for BOTH solid and wireframe modes
+    // Dynamic edge rendering for wireframe mode only
     useFrame(() => {
       if (!edgeMap || !meshRef.current) return;
+      
+      // Only run dynamic silhouette calculation for wireframe mode
+      if (displayStyle !== "wireframe") return;
 
       const mesh = meshRef.current;
       const cameraWorldPos = new THREE.Vector3();
@@ -230,7 +233,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
           const normalAngleDeg = normalAngle * (180 / Math.PI);
 
           // Feature edge: sharp angle between adjacent faces (> 20 degrees)
-          const isFeatureEdge = normalAngleDeg > 50;
+          const isFeatureEdge = normalAngleDeg > 20;
 
           // Silhouette edge: one face visible, one hidden (relaxed threshold)
           const isSilhouette = (dot1 > -0.1 && dot2 < 0.1) || (dot1 < 0.1 && dot2 > -0.1);
@@ -244,33 +247,7 @@ export const MeshModel = forwardRef<THREE.Mesh, MeshModelProps>(
         }
       });
 
-      // Update visible edges (solid lines)
-      if (displayStyle === "solid" && showEdges && dynamicEdgesRef.current) {
-        // Clear existing
-        while (dynamicEdgesRef.current.children.length > 0) {
-          const child = dynamicEdgesRef.current.children[0];
-          dynamicEdgesRef.current.remove(child);
-          if (child instanceof THREE.LineSegments) {
-            child.geometry.dispose();
-            (child.material as THREE.Material).dispose();
-          }
-        }
-
-        if (visibleEdges.length > 0) {
-          const geo = new THREE.BufferGeometry();
-          geo.setAttribute("position", new THREE.Float32BufferAttribute(visibleEdges, 3));
-          const mat = new THREE.LineBasicMaterial({
-            color: "#000000",
-            linewidth: 1.5,
-            toneMapped: false,
-            depthTest: true,
-            depthWrite: false,
-          });
-          dynamicEdgesRef.current.add(new THREE.LineSegments(geo, mat));
-        }
-      }
-
-      // Update wireframe edges (visible + hidden)
+      // Update wireframe edges (visible + hidden) - dynamic silhouette detection
       if (displayStyle === "wireframe" && wireframeEdgesRef.current) {
         // Clear existing
         while (wireframeEdgesRef.current.children.length > 0) {
