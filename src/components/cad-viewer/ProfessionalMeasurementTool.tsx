@@ -132,8 +132,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       
       let group: ConnectedEdgeGroup;
       
-      if (isClosedLoop && segmentCount >= 16) {
-        // It's a circle
+      // Circle: closed loop with exactly 32 segments (backend tessellation)
+      if (isClosedLoop && segmentCount === 32) {
         const circumference = totalLength;
         const diameter = circumference / Math.PI;
         
@@ -156,8 +156,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           label: `⊙ Diameter: ø${diameter.toFixed(2)} mm`,
           classification: { type: "circle", diameter, radius: diameter / 2, center, length: circumference }
         };
-      } else if (segmentCount === 2) {
-        // It's a straight line
+      } 
+      // Line: exactly 2 segments (straight edge endpoints)
+      else if (segmentCount === 2) {
         group = {
           segments,
           count: segmentCount,
@@ -167,8 +168,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           label: `📏 Length: ${totalLength.toFixed(2)} mm`,
           classification: { type: "line", length: totalLength }
         };
-      } else {
-        // It's an arc
+      } 
+      // Arc: 3-31 segments (curved edges)
+      else if (segmentCount >= 3 && segmentCount <= 31) {
         const startPoint = segments[0].start;
         const endPoint = segments[segmentCount - 1].end;
         const chord = startPoint.distanceTo(endPoint);
@@ -195,6 +197,18 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           center,
           label: `⌒ Radius: R${radius.toFixed(2)} mm`,
           classification: { type: "arc", radius, length: totalLength, center }
+        };
+      } 
+      // Fallback for unexpected cases
+      else {
+        group = {
+          segments,
+          count: segmentCount,
+          isClosedLoop,
+          totalLength,
+          type: "line",
+          label: `📏 Length: ${totalLength.toFixed(2)} mm`,
+          classification: { type: "line", length: totalLength }
         };
       }
       
