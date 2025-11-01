@@ -38,19 +38,7 @@ export interface Measurement {
     center?: THREE.Vector3 | [number, number, number];
     axis?: THREE.Vector3;
     faceVertices?: number[];
-    validation?: {
-      isValid: boolean;
-      confidence: number;
-      backendValue?: number;
-      frontendValue: number;
-      deviation?: number;
-      deviationAbs?: number;
-      warnings: string[];
-      backendType?: string;
-      segmentCountMatch?: boolean;
-    };
-    segmentCount?: number;
-    backendMatch?: boolean;
+    backendMatch: boolean;
   };
 }
 
