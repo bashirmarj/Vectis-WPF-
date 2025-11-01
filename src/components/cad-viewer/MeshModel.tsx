@@ -358,15 +358,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </lineSegments>
         )}
 
-        {/* Dynamic silhouette edges for solid mode - ADDS CYLINDER BOUNDARIES */}
-        {displayStyle === "solid" && showEdges && (
-          <SilhouetteEdges 
-            geometry={geometry} 
-            mesh={meshRef.current}
-            staticFeatureEdges={featureEdgesGeometry}
-          />
-        )}
-
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
