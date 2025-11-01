@@ -18,7 +18,7 @@ function TriadPositioner({ mainCameraRef }: { mainCameraRef: React.RefObject<THR
 
     // Calculate orthographic frustum boundaries
     const left = -aspect / zoom;
-    const bottom = -10 / zoom;
+    const bottom = -1 / zoom;
 
     // Use FIXED offset from edges (not percentage)
     const fixedOffsetX = 0.003; // Fixed distance from left edge in camera units
