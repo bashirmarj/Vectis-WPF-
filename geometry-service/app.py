@@ -314,6 +314,45 @@ def get_face_normal_at_point(face, point):
         return None
 
 
+def is_cylinder_to_planar_edge(face1, face2):
+    """
+    Detect if an edge connects a cylindrical/conical face to a planar face.
+    These edges should always be included (cylinder height lines, cone base circles).
+    
+    Returns: True if one face is cylindrical/conical and the other is planar
+    """
+    try:
+        surf1 = BRep_Tool.Surface(face1)
+        surf2 = BRep_Tool.Surface(face2)
+        
+        # Get surface type names
+        type1 = surf1.DynamicType().Name()
+        type2 = surf2.DynamicType().Name()
+        
+        # Curved surface types that create important boundary edges
+        curved_types = {
+            'Geom_CylindricalSurface',
+            'Geom_ConicalSurface',
+            'Geom_SphericalSurface',
+            'Geom_ToroidalSurface'
+        }
+        
+        # Planar surface type
+        plane_type = 'Geom_Plane'
+        
+        # Check if one is curved and the other is planar
+        is_curved_to_plane = (
+            (type1 in curved_types and type2 == plane_type) or
+            (type2 in curved_types and type1 == plane_type)
+        )
+        
+        return is_curved_to_plane
+        
+    except Exception as e:
+        logger.debug(f"Error detecting cylinder-to-plane edge: {e}")
+        return False
+
+
 def calculate_dihedral_angle(edge, face1, face2):
     """
     Calculate the dihedral angle between two faces along their shared edge.
@@ -356,7 +395,7 @@ def calculate_dihedral_angle(edge, face1, face2):
         return None
 
 
-def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=12):
+def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     """
     UNIFIED single-pass edge extraction: tessellate once, classify, and tag segments.
     
@@ -435,21 +474,30 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         stats['boundary_edges'] += 1
                         
                     elif num_adjacent_faces == 2:
-                        # INTERIOR EDGE - check dihedral angle
+                        # INTERIOR EDGE - check geometry type first, then angle
                         face1 = topods.Face(face_list.First())
                         face2 = topods.Face(face_list.Last())
                         
-                        # Calculate dihedral angle between the two faces
-                        dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                        # Check if this is a special geometric edge (cylinder-to-plane, etc.)
+                        is_geometric_feature = is_cylinder_to_planar_edge(face1, face2)
                         
-                        if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
-                            # SHARP EDGE - angle exceeds threshold
+                        if is_geometric_feature:
+                            # GEOMETRIC FEATURE EDGE - always include
                             is_significant = True
-                            edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
+                            edge_type = "geometric_feature"
                             stats['sharp_edges'] += 1
                         else:
-                            # SMOOTH/TANGENT EDGE - skip (within fillet, blend, etc.)
-                            stats['smooth_edges_skipped'] += 1
+                            # Calculate dihedral angle for regular edges
+                            dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                            
+                            if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
+                                # SHARP EDGE - angle exceeds threshold
+                                is_significant = True
+                                edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
+                                stats['sharp_edges'] += 1
+                            else:
+                                # SMOOTH/TANGENT EDGE - skip (within fillet, blend, etc.)
+                                stats['smooth_edges_skipped'] += 1
                 else:
                     # Orphan edge - include it to be safe
                     is_significant = True
