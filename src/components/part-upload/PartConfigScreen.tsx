@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 import FeatureTree from "@/components/FeatureTree";
 import { RoutingEditor } from "./RoutingEditor";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface FileWithData {
   file: File;
@@ -67,6 +68,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
   isSubmitting,
 }) => {
   const [contactFormExpanded, setContactFormExpanded] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [contactInfo, setContactInfo] = useState({
     name: "",
     email: "",
@@ -111,15 +113,28 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen">
-        {/* Left Sidebar - 30% */}
-        <div className="w-[30%] bg-white border-r overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Back Button */}
-            <Button variant="ghost" onClick={onBack} className="w-full justify-start">
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Upload
-            </Button>
+      <ResizablePanelGroup direction="horizontal" className="h-screen">
+        {/* Collapsible Left Sidebar */}
+        {!isSidebarCollapsed && (
+          <>
+            <ResizablePanel defaultSize={30} minSize={20} maxSize={50} className="bg-white">
+              <div className="h-full overflow-y-auto">
+                <div className="p-6 space-y-6">
+                  {/* Header with collapse button */}
+                  <div className="flex items-center justify-between">
+                    <Button variant="ghost" onClick={onBack} className="flex-1 justify-start">
+                      <ChevronLeft className="w-4 h-4 mr-2" />
+                      Back to Upload
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsSidebarCollapsed(true)}
+                      title="Collapse sidebar"
+                    >
+                      <PanelLeftClose className="h-4 w-4" />
+                    </Button>
+                  </div>
 
             {/* File Selection */}
             <Card>
@@ -337,105 +352,127 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
               )}
             </Card>
 
-            {/* Submit Button */}
-            <Button onClick={handleSubmit} disabled={!isFormValid() || isSubmitting} className="w-full" size="lg">
-              {isSubmitting ? "Submitting..." : "Submit Quote Request"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Right Panel - 70% */}
-        <div className="flex-1 bg-white overflow-hidden">
-          <Tabs defaultValue="3d-model" className="h-full flex flex-col">
-            <div className="border-b px-6 pt-6">
-              <TabsList className="w-full">
-                <TabsTrigger value="3d-model" className="flex-1">
-                  3D Model
-                </TabsTrigger>
-                <TabsTrigger value="features" className="flex-1">
-                  Features
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {/* ✅ 3D Model Tab with improved debugging */}
-              <TabsContent value="3d-model" className="h-full m-0 p-6">
-                <div className="h-full min-h-[600px]">
-                  {selectedFile.meshId ? (
-                    <>
-                      {console.log("✅ Rendering CADViewer with meshId:", selectedFile.meshId)}
-                      <CADViewer
-                        meshId={selectedFile.meshId}
-                        fileName={selectedFile.file.name}
-                        onMeshLoaded={(meshData) => {
-                          console.log("✅ Mesh loaded successfully:", {
-                            triangles: meshData.triangle_count,
-                            hasColors: !!meshData.vertex_colors,
-                            colorCount: meshData.vertex_colors?.length,
-                          });
-                          if (!selectedFile.meshData) {
-                            onUpdateFile(selectedFileIndex, { meshData });
-                          }
-                        }}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      {console.log("⚠️ No meshId available:", {
-                        fileName: selectedFile.file.name,
-                        isAnalyzing: selectedFile.isAnalyzing,
-                        hasAnalysis: !!selectedFile.analysis,
-                      })}
-                      <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-                        <div className="text-muted-foreground">
-                          {selectedFile.isAnalyzing ? (
-                            <>
-                              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                              <p className="text-sm font-medium">Analyzing CAD file...</p>
-                              <p className="text-xs mt-2">Generating 3D mesh and extracting features</p>
-                              <p className="text-xs text-gray-400 mt-1">This may take 30-60 seconds</p>
-                            </>
-                          ) : (
-                            <>
-                              <div className="text-6xl mb-4">📦</div>
-                              <p className="text-sm font-medium">3D preview not yet available</p>
-                              <p className="text-xs mt-2 text-gray-500">{selectedFile.file.name}</p>
-                              <p className="text-xs mt-1 text-gray-400">
-                                {selectedFile.analysis
-                                  ? "Analysis complete but mesh data not loaded - check console logs"
-                                  : "The file is being processed in the background"}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  {/* Submit Button */}
+                  <Button onClick={handleSubmit} disabled={!isFormValid() || isSubmitting} className="w-full" size="lg">
+                    {isSubmitting ? "Submitting..." : "Submit Quote Request"}
+                  </Button>
                 </div>
-              </TabsContent>
+              </div>
+            </ResizablePanel>
+            
+            {/* Draggable resize handle */}
+            <ResizableHandle withHandle />
+          </>
+        )}
 
-              {/* Features Tab */}
-              <TabsContent value="features" className="m-0 p-6">
-                {selectedFile.analysis?.manufacturing_features || selectedFile.analysis?.feature_summary ? (
-                  <FeatureTree
-                    features={selectedFile.analysis?.manufacturing_features}
-                    featureSummary={selectedFile.analysis?.feature_summary}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-12">
-                    <div className="text-4xl mb-2">🔍</div>
-                    <p className="text-sm font-medium text-muted-foreground">No features detected yet</p>
-                    <p className="text-xs text-gray-400 max-w-md">
-                      Features will appear here after the CAD file analysis is complete
-                    </p>
+        {/* Right Panel - 3D Viewer (expands when sidebar collapsed) */}
+        <ResizablePanel defaultSize={70} className="bg-white">
+          <div className="h-full flex flex-col">
+            {/* Expand button when sidebar is collapsed */}
+            {isSidebarCollapsed && (
+              <div className="p-4 border-b">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="gap-2"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                  Show Configuration
+                </Button>
+              </div>
+            )}
+            <Tabs defaultValue="3d-model" className="h-full flex flex-col">
+              <div className="border-b px-6 pt-6">
+                <TabsList className="w-full">
+                  <TabsTrigger value="3d-model" className="flex-1">
+                    3D Model
+                  </TabsTrigger>
+                  <TabsTrigger value="features" className="flex-1">
+                    Features
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {/* ✅ 3D Model Tab with improved debugging */}
+                <TabsContent value="3d-model" className="h-full m-0 p-6">
+                  <div className="h-full min-h-[600px]">
+                    {selectedFile.meshId ? (
+                      <>
+                        {console.log("✅ Rendering CADViewer with meshId:", selectedFile.meshId)}
+                        <CADViewer
+                          meshId={selectedFile.meshId}
+                          fileName={selectedFile.file.name}
+                          onMeshLoaded={(meshData) => {
+                            console.log("✅ Mesh loaded successfully:", {
+                              triangles: meshData.triangle_count,
+                              hasColors: !!meshData.vertex_colors,
+                              colorCount: meshData.vertex_colors?.length,
+                            });
+                            if (!selectedFile.meshData) {
+                              onUpdateFile(selectedFileIndex, { meshData });
+                            }
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        {console.log("⚠️ No meshId available:", {
+                          fileName: selectedFile.file.name,
+                          isAnalyzing: selectedFile.isAnalyzing,
+                          hasAnalysis: !!selectedFile.analysis,
+                        })}
+                        <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                          <div className="text-muted-foreground">
+                            {selectedFile.isAnalyzing ? (
+                              <>
+                                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                                <p className="text-sm font-medium">Analyzing CAD file...</p>
+                                <p className="text-xs mt-2">Generating 3D mesh and extracting features</p>
+                                <p className="text-xs text-gray-400 mt-1">This may take 30-60 seconds</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-6xl mb-4">📦</div>
+                                <p className="text-sm font-medium">3D preview not yet available</p>
+                                <p className="text-xs mt-2 text-gray-500">{selectedFile.file.name}</p>
+                                <p className="text-xs mt-1 text-gray-400">
+                                  {selectedFile.analysis
+                                    ? "Analysis complete but mesh data not loaded - check console logs"
+                                    : "The file is being processed in the background"}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-      </div>
+                </TabsContent>
+
+                {/* Features Tab */}
+                <TabsContent value="features" className="m-0 p-6">
+                  {selectedFile.analysis?.manufacturing_features || selectedFile.analysis?.feature_summary ? (
+                    <FeatureTree
+                      features={selectedFile.analysis?.manufacturing_features}
+                      featureSummary={selectedFile.analysis?.feature_summary}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-12">
+                      <div className="text-4xl mb-2">🔍</div>
+                      <p className="text-sm font-medium text-muted-foreground">No features detected yet</p>
+                      <p className="text-xs text-gray-400 max-w-md">
+                        Features will appear here after the CAD file analysis is complete
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
