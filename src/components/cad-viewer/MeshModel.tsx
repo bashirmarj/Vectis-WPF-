@@ -240,11 +240,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
 
-    // All-edges geometry for wireframe mode
-    const allEdgesGeometry = useMemo(() => {
-      const geo = new THREE.EdgesGeometry(geometry, 20);
-      return geo;
-    }, [geometry]);
 
     // Section plane
     const clippingPlane = useMemo(() => {
@@ -322,9 +317,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </lineSegments>
         )}
 
-        {/* All edges for wireframe mode */}
+        {/* Feature edges for wireframe mode */}
         {displayStyle === "wireframe" && (
-          <lineSegments geometry={allEdgesGeometry}>
+          <lineSegments geometry={featureEdgesGeometry}>
             <lineBasicMaterial color="#000000" toneMapped={false} />
           </lineSegments>
         )}
