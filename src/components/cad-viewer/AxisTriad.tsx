@@ -10,15 +10,17 @@ interface AxisTriadProps {
 export function AxisTriad({ mainCameraRef }: AxisTriadProps) {
   const groupRef = useRef<THREE.Group>(null);
 
-  // Sync rotation with main camera
+  // Sync rotation with main camera (inverted to match orientation cube)
   useFrame(() => {
     if (mainCameraRef.current && groupRef.current) {
-      groupRef.current.quaternion.copy(mainCameraRef.current.quaternion);
+      // Use inverted quaternion to show part's coordinate system
+      const invertedQuaternion = mainCameraRef.current.quaternion.clone().invert();
+      groupRef.current.quaternion.copy(invertedQuaternion);
     }
   });
 
   // SolidWorks-style arrow proportions
-  const arrowLength = 1.2;
+  const arrowLength = 0.9; // 0.75x shorter for more compact visualization
   const shaftRadius = 0.03;
   const coneRadius = 0.1;
   const coneLength = 0.25;
