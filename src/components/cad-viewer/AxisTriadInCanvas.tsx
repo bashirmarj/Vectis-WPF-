@@ -12,7 +12,7 @@ export function AxisTriadInCanvas({ mainCameraRef }: AxisTriadInCanvasProps) {
       <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={45} />
 
       {/* Position in bottom-left corner of screen space */}
-      <group position={[-7.5, -6, 0]}>
+      <group position={[-7.5, -7.5, 0]}>
         <ambientLight intensity={0.8} />
         <AxisTriad mainCameraRef={mainCameraRef} />
       </group>
