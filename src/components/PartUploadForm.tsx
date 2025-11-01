@@ -44,8 +44,6 @@ export const PartUploadForm = () => {
   const [processes, setProcesses] = useState<string[]>([]);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [showDevTools, setShowDevTools] = useState(false);
   const { toast } = useToast();
 
   // Load materials & processes from Supabase
@@ -71,42 +69,6 @@ export const PartUploadForm = () => {
     fetchMaterials();
     fetchProcesses();
   }, []);
-
-  // Keyboard shortcut for dev tools
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "D") {
-        e.preventDefault();
-        setShowDevTools((prev) => !prev);
-        console.log("🛠️ Dev tools toggled");
-      }
-    };
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, []);
-
-  // Test backend connection via edge function
-  const testFlaskConnection = async () => {
-    setIsTestingConnection(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("analyze-cad", {
-        body: { test: true },
-      });
-      if (error) throw error;
-      toast({
-        title: "✅ Backend Connection Successful",
-        description: "Geometry service is ready",
-      });
-    } catch (error: any) {
-      toast({
-        title: "❌ Backend Connection Failed",
-        description: error.message || "Unable to reach backend",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTestingConnection(false);
-    }
-  };
 
   // ✅ FIXED: Analyze file using Supabase Edge Function
   const analyzeFile = async (fileWithQty: FileWithQuantity, index: number) => {
@@ -319,21 +281,6 @@ export const PartUploadForm = () => {
         onRemoveFile={handleRemoveFile}
         onContinue={handleContinue}
         isAnalyzing={isAnalyzing}
-        showDevTools={showDevTools}
-        onTestConnection={testFlaskConnection}
-        isTestingConnection={isTestingConnection}
-        onLogMeshData={() => {
-          console.log("📊 Current files state:");
-          files.forEach((f, i) => {
-            console.log(`File ${i}: ${f.file.name}`, {
-              hasMeshId: !!f.meshId,
-              meshId: f.meshId,
-              hasAnalysis: !!f.analysis,
-              hasMeshData: !!f.meshData,
-              isAnalyzing: f.isAnalyzing,
-            });
-          });
-        }}
       />
     );
   }

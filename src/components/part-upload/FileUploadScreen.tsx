@@ -9,10 +9,6 @@ interface FileUploadScreenProps {
   onRemoveFile: (index: number) => void;
   onContinue: () => void;
   isAnalyzing: boolean;
-  showDevTools?: boolean;
-  onTestConnection?: () => void;
-  isTestingConnection?: boolean;
-  onLogMeshData?: () => void;
 }
 
 export const FileUploadScreen = ({
@@ -20,11 +16,7 @@ export const FileUploadScreen = ({
   onFileSelect,
   onRemoveFile,
   onContinue,
-  isAnalyzing,
-  showDevTools,
-  onTestConnection,
-  isTestingConnection,
-  onLogMeshData
+  isAnalyzing
 }: FileUploadScreenProps) => {
   return (
     <div className="max-w-4xl mx-auto">
@@ -36,40 +28,6 @@ export const FileUploadScreen = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Developer Tools Section */}
-          {showDevTools && onTestConnection && (
-            <div className="mb-4 p-4 bg-muted/30 border-2 border-dashed border-muted-foreground/20 rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-mono text-muted-foreground">🛠️ Developer Tools</span>
-              </div>
-              <div className="space-x-2">
-                <Button
-                  onClick={onTestConnection}
-                  disabled={isTestingConnection}
-                  variant="outline"
-                >
-                  {isTestingConnection ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Testing...
-                    </>
-                  ) : (
-                    'Test Flask Connection'
-                  )}
-                </Button>
-                {onLogMeshData && (
-                  <Button
-                    onClick={onLogMeshData}
-                    disabled={files.length === 0}
-                    variant="outline"
-                  >
-                    Log Mesh Data
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* File Upload Area */}
           <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary/50 transition-colors">
             <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -155,11 +113,6 @@ export const FileUploadScreen = ({
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Dev Tools Hint */}
-          <div className="text-center text-xs text-muted-foreground mt-4">
-            Press <kbd className="px-2 py-1 bg-muted rounded font-mono">Ctrl+Shift+D</kbd> for developer tools
-          </div>
         </CardContent>
       </Card>
     </div>
