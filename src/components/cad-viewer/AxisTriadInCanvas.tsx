@@ -10,9 +10,9 @@ export function AxisTriadInCanvas({ mainCameraRef }: AxisTriadInCanvasProps) {
   return (
     <Hud renderPriority={1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={45} />
-      
+
       {/* Position in bottom-left corner of screen space */}
-      <group position={[-8, -5.5, 0]}>
+      <group position={[-6.6, -5.5, 0]}>
         <ambientLight intensity={0.8} />
         <AxisTriad mainCameraRef={mainCameraRef} />
       </group>
