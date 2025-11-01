@@ -2,6 +2,7 @@ import { useMemo, useEffect, useRef, forwardRef } from "react";
 import * as React from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
+import { SilhouetteEdges } from "./SilhouetteEdges";
 
 interface MeshData {
   vertices: number[];
@@ -20,6 +21,7 @@ interface MeshModelProps {
   showHiddenEdges?: boolean;
   displayStyle?: "solid" | "wireframe" | "translucent";
   topologyColors?: boolean;
+  useSilhouetteEdges?: boolean;
 }
 
 // Professional solid color for CAD rendering
@@ -50,6 +52,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       showHiddenEdges = true,
       displayStyle = "solid",
       topologyColors = true,
+      useSilhouetteEdges = false,
     },
     ref,
   ) => {
@@ -317,11 +320,15 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </lineSegments>
         )}
 
-        {/* Feature edges for wireframe mode */}
+        {/* Wireframe mode - use silhouette edges or feature edges */}
         {displayStyle === "wireframe" && (
-          <lineSegments geometry={featureEdgesGeometry}>
-            <lineBasicMaterial color="#000000" toneMapped={false} />
-          </lineSegments>
+          useSilhouetteEdges ? (
+            <SilhouetteEdges geometry={geometry} />
+          ) : (
+            <lineSegments geometry={featureEdgesGeometry}>
+              <lineBasicMaterial color="#000000" toneMapped={false} />
+            </lineSegments>
+          )
         )}
       </group>
     );

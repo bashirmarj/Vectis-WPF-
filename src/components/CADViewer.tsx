@@ -65,6 +65,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
   const [error, setError] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
   const [showEdges, setShowEdges] = useState(true);
+  const [useSilhouettes, setUseSilhouettes] = useState(false);
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
@@ -491,6 +492,8 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
               ssaoEnabled={ssaoEnabled}
               onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
               boundingBox={boundingBox}
+              useSilhouettes={useSilhouettes}
+              onToggleSilhouettes={() => setUseSilhouettes(!useSilhouettes)}
             />
 
             <Canvas
@@ -534,6 +537,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                   showEdges={showEdges}
                   sectionPlane={sectionPlane || "none"}
                   sectionPosition={sectionPosition}
+                  useSilhouetteEdges={useSilhouettes && displayMode === "wireframe"}
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />

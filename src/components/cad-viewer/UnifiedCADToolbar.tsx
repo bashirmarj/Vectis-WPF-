@@ -66,6 +66,10 @@ interface UnifiedCADToolbarProps {
     max: { x: number; y: number; z: number };
     center: { x: number; y: number; z: number };
   };
+
+  // Silhouette edges
+  useSilhouettes?: boolean;
+  onToggleSilhouettes?: () => void;
 }
 
 export function UnifiedCADToolbar({
@@ -91,6 +95,8 @@ export function UnifiedCADToolbar({
   ssaoEnabled,
   onToggleSSAO,
   boundingBox,
+  useSilhouettes = false,
+  onToggleSilhouettes,
 }: UnifiedCADToolbarProps) {
   const [showSectionPanel, setShowSectionPanel] = useState(false);
 
@@ -205,6 +211,12 @@ export function UnifiedCADToolbar({
                 <Layers className="mr-2 h-4 w-4" />
                 {showEdges ? "Hide" : "Show"} Edges
               </DropdownMenuItem>
+              {displayMode === "wireframe" && onToggleSilhouettes && (
+                <DropdownMenuItem onClick={onToggleSilhouettes}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {useSilhouettes ? "Static" : "Dynamic"} Edges
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
