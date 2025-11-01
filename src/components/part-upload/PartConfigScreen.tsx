@@ -402,6 +402,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                         <CADViewer
                           meshId={selectedFile.meshId}
                           fileName={selectedFile.file.name}
+                          isSidebarCollapsed={isSidebarCollapsed}
                           onMeshLoaded={(meshData) => {
                             console.log("✅ Mesh loaded successfully:", {
                               triangles: meshData.triangle_count,

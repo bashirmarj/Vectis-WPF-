@@ -25,6 +25,7 @@ interface CADViewerProps {
   meshId?: string;
   fileUrl?: string;
   fileName?: string;
+  isSidebarCollapsed?: boolean;
   onMeshLoaded?: (data: MeshData) => void;
 }
 
@@ -49,7 +50,7 @@ interface MeshData {
   }>;
 }
 
-export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewerProps) {
+export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [meshData, setMeshData] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -530,7 +531,7 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 <MeasurementRenderer />
 
                 {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
-                <AxisTriadInCanvas mainCameraRef={cameraRef} />
+                <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
 
                 <TrackballControls
                   ref={controlsRef}
