@@ -196,12 +196,8 @@ function computeSilhouetteEdges(
   edgeMap.forEach((edgeData) => {
     const { vertices, triangles } = edgeData;
 
-    // Boundary edges (only 1 triangle) are always silhouettes
+    // Boundary edges (only 1 triangle) - skip, already in staticFeatureEdges
     if (triangles.length === 1) {
-      silhouetteEdges.push(
-        vertices[0].x, vertices[0].y, vertices[0].z,
-        vertices[1].x, vertices[1].y, vertices[1].z
-      );
       return;
     }
 
