@@ -197,18 +197,18 @@ function computeSilhouetteEdges(
       // Check if it's a feature edge (sharp angle > 30°)
       const isFeatureEdge = edgeData.angle !== undefined && edgeData.angle > 30;
 
-      // Compute view direction from triangle centroid to camera
-      const viewDir1 = new THREE.Vector3()
-        .subVectors(cameraPos, tri1.centroid)
-        .normalize();
+      // Use edge midpoint for accurate silhouette detection
+      const edgeMidpoint = new THREE.Vector3()
+        .addVectors(vertices[0], vertices[1])
+        .multiplyScalar(0.5);
       
-      const viewDir2 = new THREE.Vector3()
-        .subVectors(cameraPos, tri2.centroid)
+      const viewDir = new THREE.Vector3()
+        .subVectors(cameraPos, edgeMidpoint)
         .normalize();
 
       // Check if faces are front or back facing
-      const isFrontFacing1 = tri1.normal.dot(viewDir1) > 0;
-      const isFrontFacing2 = tri2.normal.dot(viewDir2) > 0;
+      const isFrontFacing1 = tri1.normal.dot(viewDir) > 0;
+      const isFrontFacing2 = tri2.normal.dot(viewDir) > 0;
 
       // Silhouette edge: one front, one back
       const isSilhouetteEdge = isFrontFacing1 !== isFrontFacing2;
