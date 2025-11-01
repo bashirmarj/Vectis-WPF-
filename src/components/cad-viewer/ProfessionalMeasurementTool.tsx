@@ -338,17 +338,26 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           meshData?.edge_classifications,
         );
 
+        // ✅ CRITICAL FIX: Use backend diameter for label when available
+        const displayDiameter = backendEdge?.diameter || diameter;
+
         group = {
           segments,
           count: segmentCount,
           isClosedLoop,
           totalLength,
           type: "circle",
-          diameter,
-          radius: diameter / 2,
+          diameter: displayDiameter, // Use backend value if available
+          radius: displayDiameter / 2,
           center,
-          label: `⊙ Diameter: ø${diameter.toFixed(2)} mm`,
-          classification: { type: "circle", diameter, radius: diameter / 2, center, length: circumference },
+          label: `⊙ Diameter: ø${displayDiameter.toFixed(2)} mm`,
+          classification: {
+            type: "circle",
+            diameter: displayDiameter,
+            radius: displayDiameter / 2,
+            center,
+            length: circumference,
+          },
           backendClassification: backendEdge,
         };
       }
@@ -359,14 +368,17 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           meshData?.edge_classifications,
         );
 
+        // ✅ Use backend length for label when available
+        const displayLength = backendEdge?.length || totalLength;
+
         group = {
           segments,
           count: segmentCount,
           isClosedLoop,
           totalLength,
           type: "line",
-          label: `📏 Length: ${totalLength.toFixed(2)} mm`,
-          classification: { type: "line", length: totalLength },
+          label: `📏 Length: ${displayLength.toFixed(2)} mm`,
+          classification: { type: "line", length: displayLength },
           backendClassification: backendEdge,
         };
       }
@@ -390,16 +402,19 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           meshData?.edge_classifications,
         );
 
+        // ✅ CRITICAL FIX: Use backend radius for label when available
+        const displayRadius = backendEdge?.radius || radius;
+
         group = {
           segments,
           count: segmentCount,
           isClosedLoop,
           totalLength,
           type: "arc",
-          radius,
+          radius: displayRadius, // Use backend value if available
           center,
-          label: `⌒ Radius: R${radius.toFixed(2)} mm`,
-          classification: { type: "arc", radius, length: totalLength, center },
+          label: `⌒ Radius: R${displayRadius.toFixed(2)} mm`,
+          classification: { type: "arc", radius: displayRadius, length: totalLength, center },
           backendClassification: backendEdge,
         };
       }
@@ -513,8 +528,11 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       const backendClassification = edgeGroup?.backendClassification;
 
       if (classification.type === "circle") {
+        // ✅ CRITICAL FIX: Use backend ground truth diameter when available
+        const actualDiameter = backendClassification?.diameter || classification.diameter || 0;
+
         const validation = validateMeasurement(
-          classification.diameter || 0,
+          actualDiameter,
           edgeGroup?.count || 0,
           "diameter",
           backendClassification,
@@ -531,9 +549,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               surfaceType: "edge",
             },
           ],
-          value: classification.diameter || 0,
+          value: actualDiameter,
           unit: "mm",
-          label: `⊙ ${formatMeasurement(classification.diameter || 0, "mm")}`,
+          label: `⊙ ${formatMeasurement(actualDiameter, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
@@ -543,15 +561,15 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             validation,
             segmentCount: edgeGroup?.count,
             backendMatch: !!backendClassification,
+            backendDiameter: backendClassification?.diameter,
+            frontendDiameter: classification.diameter,
           },
         });
       } else if (classification.type === "arc") {
-        const validation = validateMeasurement(
-          classification.radius || 0,
-          edgeGroup?.count || 0,
-          "radius",
-          backendClassification,
-        );
+        // ✅ CRITICAL FIX: Use backend ground truth radius when available
+        const actualRadius = backendClassification?.radius || classification.radius || 0;
+
+        const validation = validateMeasurement(actualRadius, edgeGroup?.count || 0, "radius", backendClassification);
 
         addMeasurement({
           id: generateMeasurementId(),
@@ -564,9 +582,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               surfaceType: "edge",
             },
           ],
-          value: classification.radius || 0,
+          value: actualRadius,
           unit: "mm",
-          label: `R ${formatMeasurement(classification.radius || 0, "mm")}`,
+          label: `R ${formatMeasurement(actualRadius, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
@@ -576,15 +594,15 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             validation,
             segmentCount: edgeGroup?.count,
             backendMatch: !!backendClassification,
+            backendRadius: backendClassification?.radius,
+            frontendRadius: classification.radius,
           },
         });
       } else {
-        const validation = validateMeasurement(
-          classification.length || 0,
-          edgeGroup?.count || 0,
-          "length",
-          backendClassification,
-        );
+        // ✅ CRITICAL FIX: Use backend ground truth length when available
+        const actualLength = backendClassification?.length || classification.length || 0;
+
+        const validation = validateMeasurement(actualLength, edgeGroup?.count || 0, "length", backendClassification);
 
         addMeasurement({
           id: generateMeasurementId(),
@@ -603,9 +621,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               surfaceType: "edge",
             },
           ],
-          value: classification.length || 0,
+          value: actualLength,
           unit: "mm",
-          label: `📏 ${formatMeasurement(classification.length || 0, "mm")}`,
+          label: `📏 ${formatMeasurement(actualLength, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
@@ -614,6 +632,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             validation,
             segmentCount: edgeGroup?.count,
             backendMatch: !!backendClassification,
+            backendLength: backendClassification?.length,
+            frontendLength: classification.length,
           },
         });
       }
