@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { FileUploadScreen } from "./part-upload/FileUploadScreen";
 import PartConfigScreen from "./part-upload/PartConfigScreen";
 
@@ -45,6 +46,7 @@ export const PartUploadForm = () => {
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Load materials & processes from Supabase
   useEffect(() => {
@@ -160,6 +162,14 @@ export const PartUploadForm = () => {
       );
 
       console.log("✅ File updated with meshId:", meshId);
+
+      // Invalidate the mesh cache to force fresh data fetch
+      if (meshId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['cad_meshes', meshId] 
+        });
+        console.log(`🔄 Invalidated cache for mesh ID: ${meshId}`);
+      }
 
       toast({
         title: "✅ CAD Analysis Complete",
