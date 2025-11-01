@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -63,36 +63,48 @@ export function SilhouetteEdges({
     }
   });
 
+  // Create proper geometry with bounding sphere for dynamic silhouettes
+  const dynamicSilhouetteGeometry = useMemo(() => {
+    if (silhouettePositions.length === 0) return null;
+    
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(silhouettePositions, 3));
+    geo.computeBoundingSphere(); // CRITICAL: Needed for proper rendering
+    
+    return geo;
+  }, [silhouettePositions]);
+
+  // Debug logging for dynamic silhouette geometry
+  useEffect(() => {
+    if (dynamicSilhouetteGeometry) {
+      console.log("✅ Dynamic silhouette geometry created:");
+      console.log("  - Segments:", dynamicSilhouetteGeometry.attributes.position.count / 2);
+      console.log("  - Has bounding sphere:", !!dynamicSilhouetteGeometry.boundingSphere);
+    }
+  }, [dynamicSilhouetteGeometry]);
+
   return (
     <group>
       {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
-      <lineSegments geometry={staticFeatureEdges}>
+      <lineSegments geometry={staticFeatureEdges} frustumCulled={false}>
         <lineBasicMaterial 
           color="#000000" 
           toneMapped={false}
           polygonOffset={true}
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
+          polygonOffsetFactor={-2}
+          polygonOffsetUnits={-2}
         />
       </lineSegments>
       
       {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
-      {silhouettePositions.length > 0 && (
-        <lineSegments>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={silhouettePositions.length / 3}
-              array={silhouettePositions}
-              itemSize={3}
-            />
-          </bufferGeometry>
+      {dynamicSilhouetteGeometry && (
+        <lineSegments geometry={dynamicSilhouetteGeometry}>
           <lineBasicMaterial 
             color="#000000" 
             toneMapped={false}
             polygonOffset={true}
-            polygonOffsetFactor={-1}
-            polygonOffsetUnits={-1}
+            polygonOffsetFactor={-2}
+            polygonOffsetUnits={-2}
           />
         </lineSegments>
       )}
