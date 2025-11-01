@@ -36,6 +36,24 @@ export function SilhouetteEdges({
     return buildEdgeMap(geometry);
   }, [geometry]);
 
+  // Build a Set of all static feature edge keys for fast duplicate detection
+  const staticEdgeKeys = useMemo(() => {
+    const keys = new Set<string>();
+    const positions = staticFeatureEdges.attributes.position?.array as Float32Array;
+    
+    if (positions) {
+      // staticFeatureEdges is a LineSegments geometry (pairs of vertices)
+      for (let i = 0; i < positions.length; i += 6) {
+        const v1 = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+        const v2 = new THREE.Vector3(positions[i + 3], positions[i + 4], positions[i + 5]);
+        keys.add(makeEdgeKey(v1, v2));
+      }
+    }
+    
+    console.log("🔑 Static edge keys built:", keys.size, "edges");
+    return keys;
+  }, [staticFeatureEdges]);
+
   // Update silhouette edges when camera moves
   useFrame(() => {
     const currentPos = camera.position;
@@ -53,7 +71,7 @@ export function SilhouetteEdges({
         localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
       }
       
-      const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos);
+      const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
       console.log("🔄 Silhouette update:", silhouettes.length / 6, "segments");
       
       setSilhouettePositions(silhouettes);
@@ -215,12 +233,19 @@ function makeEdgeKey(v1: THREE.Vector3, v2: THREE.Vector3): string {
  */
 function computeSilhouetteEdges(
   edgeMap: Map<string, EdgeData>,
-  cameraPos: THREE.Vector3
+  cameraPos: THREE.Vector3,
+  staticEdgeKeys: Set<string>
 ): Float32Array {
   const silhouetteEdges: number[] = [];
 
   edgeMap.forEach((edgeData) => {
     const { vertices, triangles } = edgeData;
+
+    // Skip if this edge is already rendered by static feature edges
+    const edgeKey = makeEdgeKey(vertices[0], vertices[1]);
+    if (staticEdgeKeys.has(edgeKey)) {
+      return; // Already rendered - avoid duplicate
+    }
 
     // Boundary edges (only 1 triangle) - all boundaries in staticFeatureEdges
     if (triangles.length === 1) {
