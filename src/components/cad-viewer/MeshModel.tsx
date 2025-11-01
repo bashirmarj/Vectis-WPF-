@@ -242,7 +242,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     // All-edges geometry for wireframe mode
     const allEdgesGeometry = useMemo(() => {
-      const geo = new THREE.EdgesGeometry(geometry, 0);
+      const geo = new THREE.EdgesGeometry(geometry, 30);
       return geo;
     }, [geometry]);
 
