@@ -10,7 +10,7 @@ interface AxisTriadInCanvasProps {
 
 export function AxisTriadInCanvas({ mainCameraRef }: AxisTriadInCanvasProps) {
   return (
-    <div className="absolute bottom-4 left-4 w-20 h-20 pointer-events-none z-10">
+    <div className="absolute bottom-0 left-0 w-20 h-20 pointer-events-none z-10">
       <Canvas
         style={{ width: '100%', height: '100%' }}
         gl={{ alpha: true }}
