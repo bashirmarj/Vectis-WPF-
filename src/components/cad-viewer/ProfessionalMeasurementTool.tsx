@@ -144,20 +144,20 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         const point = intersects[0].point;
 
         let closestEdge: THREE.Line3 | null = null;
-        let minDist = 1.0; // Increased from 0.5 to 1.0 for better detection
+        let minDist = 1.5; // Increased from 1.0 to 1.5 for better detection
 
         edgeLines.forEach((edge) => {
           const closestPoint = new THREE.Vector3();
           edge.closestPointToPoint(point, true, closestPoint);
           const dist = point.distanceTo(closestPoint);
 
-          if (dist < minDist) {
+          if (dist <= minDist) { // Changed from < to <= for inclusive threshold
             minDist = dist;
             closestEdge = edge;
           }
         });
 
-        console.log("🎯 Closest edge distance:", minDist.toFixed(3), "threshold: 1.0");
+        console.log("🎯 Closest edge distance:", minDist.toFixed(3), "threshold: 1.5 (inclusive)");
 
         if (closestEdge) {
           console.log("✅ Edge detected, checking feature_id...");
