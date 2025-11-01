@@ -139,6 +139,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
+        geo.computeBoundingSphere(); // Critical: Prevents THREE.js frustum culling during rotation
         console.log(
           "✅ Using backend feature_edges:",
           meshData.feature_edges.length,

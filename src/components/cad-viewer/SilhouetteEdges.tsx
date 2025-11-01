@@ -36,6 +36,15 @@ export function SilhouetteEdges({
     return buildEdgeMap(geometry);
   }, [geometry]);
 
+  // Debug: Verify static edges on mount
+  useMemo(() => {
+    console.log("🎨 SilhouetteEdges initialized:");
+    console.log("  - Static edges:", staticFeatureEdges.attributes.position?.count / 2, "segments");
+    console.log("  - Has bounding sphere:", !!staticFeatureEdges.boundingSphere);
+    console.log("  - Edge map size:", edgeMap.size, "unique edges");
+    return null;
+  }, [staticFeatureEdges, edgeMap]);
+
   // Update silhouette edges when camera moves
   useFrame(() => {
     const currentPos = camera.position;
@@ -64,13 +73,18 @@ export function SilhouetteEdges({
   return (
     <group>
       {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
-      <lineSegments geometry={staticFeatureEdges}>
-        <lineBasicMaterial color="#000000" toneMapped={false} />
+      <lineSegments geometry={staticFeatureEdges} frustumCulled={false} renderOrder={1}>
+        <lineBasicMaterial 
+          color="#000000" 
+          toneMapped={false}
+          depthTest={false}
+          depthWrite={false}
+        />
       </lineSegments>
       
       {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
       {silhouettePositions.length > 0 && (
-        <lineSegments>
+        <lineSegments renderOrder={2}>
           <bufferGeometry>
             <bufferAttribute
               attach="attributes-position"
@@ -79,7 +93,12 @@ export function SilhouetteEdges({
               itemSize={3}
             />
           </bufferGeometry>
-          <lineBasicMaterial color="#000000" toneMapped={false} />
+          <lineBasicMaterial 
+            color="#000000" 
+            toneMapped={false}
+            depthTest={false}
+            depthWrite={false}
+          />
         </lineSegments>
       )}
     </group>
