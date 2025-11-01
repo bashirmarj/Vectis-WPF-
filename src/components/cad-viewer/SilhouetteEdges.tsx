@@ -15,12 +15,14 @@ interface SilhouetteEdgesProps {
   geometry: THREE.BufferGeometry;
   mesh?: THREE.Mesh | null;
   updateThreshold?: number;
+  staticFeatureEdges: THREE.BufferGeometry;
 }
 
 export function SilhouetteEdges({ 
   geometry,
   mesh,
-  updateThreshold = 0.1 
+  updateThreshold = 0.1,
+  staticFeatureEdges
 }: SilhouetteEdgesProps) {
   const { camera } = useThree();
   const lastCameraPos = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -59,23 +61,28 @@ export function SilhouetteEdges({
     }
   });
 
-  // Don't render if no edges
-  if (silhouettePositions.length === 0) {
-    return null;
-  }
-
   return (
-    <lineSegments>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={silhouettePositions.length / 3}
-          array={silhouettePositions}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <lineBasicMaterial color="#000000" toneMapped={false} />
-    </lineSegments>
+    <group>
+      {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
+      <lineSegments geometry={staticFeatureEdges}>
+        <lineBasicMaterial color="#000000" toneMapped={false} />
+      </lineSegments>
+      
+      {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
+      {silhouettePositions.length > 0 && (
+        <lineSegments>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              count={silhouettePositions.length / 3}
+              array={silhouettePositions}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <lineBasicMaterial color="#000000" toneMapped={false} />
+        </lineSegments>
+      )}
+    </group>
   );
 }
 
@@ -198,8 +205,13 @@ function computeSilhouetteEdges(
       return;
     }
 
-    // For interior edges (2 triangles), check silhouette only
+    // For interior edges (2 triangles), check silhouette only on SMOOTH surfaces
     if (triangles.length === 2) {
+      // Skip feature edges (sharp angles >= 30°) - already in staticFeatureEdges
+      if (edgeData.angle !== undefined && edgeData.angle >= 30) {
+        return;
+      }
+      
       const tri1 = triangles[0];
       const tri2 = triangles[1];
 
