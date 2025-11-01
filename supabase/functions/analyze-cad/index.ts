@@ -88,6 +88,8 @@ interface MeshData {
   vertex_colors?: string[];
   triangle_count: number;
   feature_edges?: number[][][];
+  edge_classifications?: any[]; // Backend ground truth edge data
+  tagged_feature_edges?: any[]; // Direct feature_id lookup
 }
 
 interface MachiningOperation {
@@ -697,10 +699,7 @@ async function analyzeSTEPViaService(
 // Caching disabled - every upload generates fresh analysis
 
 // Store mesh data in database - NO CACHING (always fresh)
-async function storeMeshData(
-  meshData: MeshData,
-  fileName: string,
-): Promise<string | undefined> {
+async function storeMeshData(meshData: MeshData, fileName: string): Promise<string | undefined> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -721,8 +720,8 @@ async function storeMeshData(
         vertex_colors: meshData.vertex_colors || [],
         triangle_count: meshData.triangle_count,
         feature_edges: Array.isArray(meshData.feature_edges) ? meshData.feature_edges : [],
-        edge_classifications: meshData.edge_classifications || [],
-        tagged_feature_edges: meshData.tagged_feature_edges || [],
+        edge_classifications: Array.isArray(meshData.edge_classifications) ? meshData.edge_classifications : [],
+        tagged_feature_edges: Array.isArray(meshData.tagged_feature_edges) ? meshData.tagged_feature_edges : [],
       })
       .select("id")
       .single();
