@@ -1,6 +1,8 @@
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import { AxisTriad } from "./AxisTriad";
 import * as THREE from "three";
+import { useThree } from "@react-three/fiber";
+import { useMemo } from "react";
 
 interface AxisTriadInCanvasProps {
   mainCameraRef: React.RefObject<THREE.PerspectiveCamera>;
@@ -8,16 +10,30 @@ interface AxisTriadInCanvasProps {
 }
 
 export function AxisTriadInCanvas({ mainCameraRef, isSidebarCollapsed = false }: AxisTriadInCanvasProps) {
-  // Base position when sidebar is expanded (30% sidebar, 70% canvas)
-  const baseX = -7.5;
-  const baseY = -9;
+  const { viewport } = useThree();
   
-  // When sidebar collapses, canvas width goes from 70% to 100%
-  // So we need to adjust X by factor of 100/70 = 10/7
-  const widthRatio = isSidebarCollapsed ? (10 / 7) : 1;
-  const adjustedX = baseX * widthRatio;
-  
-  const triadPosition: [number, number, number] = [adjustedX, baseY, 0];
+  const triadPosition = useMemo(() => {
+    const zoom = 45; // Must match OrthographicCamera zoom prop
+    const aspect = viewport.width / viewport.height;
+    
+    // Calculate orthographic frustum boundaries
+    const left = -aspect / zoom;
+    const right = aspect / zoom;
+    const top = 1 / zoom;
+    const bottom = -1 / zoom;
+    
+    // Position as percentage from edges
+    const offsetFromLeft = 0.08; // 8% from left edge
+    const offsetFromBottom = 0.10; // 10% from bottom edge
+    
+    const frustumWidth = right - left;
+    const frustumHeight = top - bottom;
+    
+    const x = left + (frustumWidth * offsetFromLeft);
+    const y = bottom + (frustumHeight * offsetFromBottom);
+    
+    return [x, y, 0] as [number, number, number];
+  }, [viewport.width, viewport.height]);
 
   return (
     <Hud renderPriority={1}>
