@@ -196,34 +196,11 @@ function computeSilhouetteEdges(
   edgeMap.forEach((edgeData) => {
     const { vertices, triangles } = edgeData;
 
-    // Boundary edges (only 1 triangle) - check if on smooth surface
+    // Boundary edges (only 1 triangle) - all boundaries in staticFeatureEdges
     if (triangles.length === 1) {
-      // Skip if this is a sharp feature edge (already in staticFeatureEdges)
-      if (edgeData.angle !== undefined && edgeData.angle >= 30) {
-        return;
-      }
-      
-      // For smooth boundary edges on curved surfaces:
-      // Show the edge when the adjacent face is front-facing (visible)
-      const tri = triangles[0];
-      const edgeMidpoint = new THREE.Vector3()
-        .addVectors(vertices[0], vertices[1])
-        .multiplyScalar(0.5);
-      
-      const viewDir = new THREE.Vector3()
-        .subVectors(cameraPos, edgeMidpoint)
-        .normalize();
-      
-      const dot = tri.normal.dot(viewDir);
-      const threshold = 0.01;
-      
-      // Show boundary edge if the face is front-facing (visible from camera)
-      if (dot > threshold) {
-        silhouetteEdges.push(
-          vertices[0].x, vertices[0].y, vertices[0].z,
-          vertices[1].x, vertices[1].y, vertices[1].z
-        );
-      }
+      // Skip all boundary edges - they're already rendered by staticFeatureEdges
+      // Note: We cannot distinguish sharp vs smooth boundaries without angle data
+      // (angle is only computed for edges with 2 adjacent triangles)
       return;
     }
 
