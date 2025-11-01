@@ -198,13 +198,10 @@ function computeSilhouetteEdges(
       return;
     }
 
-    // For interior edges (2 triangles), check both feature and silhouette
+    // For interior edges (2 triangles), check silhouette only
     if (triangles.length === 2) {
       const tri1 = triangles[0];
       const tri2 = triangles[1];
-
-      // Check if it's a feature edge (sharp angle > 45°)
-      const isFeatureEdge = edgeData.angle !== undefined && edgeData.angle > 45;
 
       // Use edge midpoint for accurate silhouette detection
       const edgeMidpoint = new THREE.Vector3()
@@ -215,15 +212,19 @@ function computeSilhouetteEdges(
         .subVectors(cameraPos, edgeMidpoint)
         .normalize();
 
-      // Check if faces are front or back facing
-      const isFrontFacing1 = tri1.normal.dot(viewDir) > 0;
-      const isFrontFacing2 = tri2.normal.dot(viewDir) > 0;
+      // Check if faces are front or back facing with smooth threshold
+      const dot1 = tri1.normal.dot(viewDir);
+      const dot2 = tri2.normal.dot(viewDir);
+      
+      const threshold = 0.01; // Small threshold to avoid flickering
+      const isFrontFacing1 = dot1 > threshold;
+      const isFrontFacing2 = dot2 > threshold;
 
-      // Silhouette edge: one front, one back
+      // Silhouette edge: one front, one back (view-dependent only)
       const isSilhouetteEdge = isFrontFacing1 !== isFrontFacing2;
 
-      // Show edge if EITHER feature OR silhouette
-      if (isFeatureEdge || isSilhouetteEdge) {
+      // ONLY show true silhouette edges (no feature edges)
+      if (isSilhouetteEdge) {
         silhouetteEdges.push(
           vertices[0].x, vertices[0].y, vertices[0].z,
           vertices[1].x, vertices[1].y, vertices[1].z
