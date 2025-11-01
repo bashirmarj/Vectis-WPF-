@@ -13,11 +13,13 @@ interface EdgeData {
 
 interface SilhouetteEdgesProps {
   geometry: THREE.BufferGeometry;
+  mesh?: THREE.Mesh | null;
   updateThreshold?: number;
 }
 
 export function SilhouetteEdges({ 
-  geometry, 
+  geometry,
+  mesh,
   updateThreshold = 0.1 
 }: SilhouetteEdgesProps) {
   const { camera } = useThree();
@@ -42,7 +44,14 @@ export function SilhouetteEdges({
     const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > 0.05; // ~3 degrees
 
     if (posChanged || rotChanged) {
-      const silhouettes = computeSilhouetteEdges(edgeMap, currentPos);
+      // Transform camera position to local space for accurate view direction
+      let localCameraPos = currentPos;
+      if (mesh) {
+        const worldToLocal = mesh.matrixWorld.clone().invert();
+        localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
+      }
+      
+      const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos);
       setSilhouettePositions(silhouettes);
       
       lastCameraPos.current.copy(currentPos);
@@ -194,8 +203,8 @@ function computeSilhouetteEdges(
       const tri1 = triangles[0];
       const tri2 = triangles[1];
 
-      // Check if it's a feature edge (sharp angle > 30°)
-      const isFeatureEdge = edgeData.angle !== undefined && edgeData.angle > 30;
+      // Check if it's a feature edge (sharp angle > 45°)
+      const isFeatureEdge = edgeData.angle !== undefined && edgeData.angle > 45;
 
       // Use edge midpoint for accurate silhouette detection
       const edgeMidpoint = new THREE.Vector3()

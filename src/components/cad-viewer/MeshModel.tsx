@@ -344,7 +344,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-            <SilhouetteEdges geometry={geometry} />
+            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} />
           ) : (
             <lineSegments geometry={wireframeEdgesGeometry}>
               <lineBasicMaterial color="#000000" toneMapped={false} />
