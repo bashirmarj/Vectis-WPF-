@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MeshModel, type MeshModelHandle } from "./cad-viewer/MeshModel";
 import { DimensionAnnotations } from "./cad-viewer/DimensionAnnotations";
 import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
-import { AxisTriadViewport } from "./cad-viewer/AxisTriadViewport";
+import { AxisTriadInCanvas } from "./cad-viewer/AxisTriadInCanvas";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasurementTool";
@@ -529,6 +529,9 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
                 {/* Measurement Renderer */}
                 <MeasurementRenderer />
 
+                {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
+                <AxisTriadInCanvas mainCameraRef={cameraRef} />
+
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
@@ -558,9 +561,6 @@ export function CADViewer({ meshId, fileUrl, fileName, onMeshLoaded }: CADViewer
               onRotateClockwise={() => handleRotateCamera("cw")}
               onRotateCounterClockwise={() => handleRotateCamera("ccw")}
             />
-
-            {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
-            <AxisTriadViewport mainCameraRef={cameraRef} />
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
