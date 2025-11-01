@@ -1260,7 +1260,7 @@ def analyze_cad():
         part_height_cm = (ymax - ymin) / 10
         part_depth_cm = (zmax - zmin) / 10
 
-        logger.info(f"✅ Analysis complete: {mesh_data['triangle_count']} triangles, {len(feature_edges)} edges")
+        logger.info(f"✅ Analysis complete: {mesh_data['triangle_count']} triangles, {len(mesh_data['feature_edges'])} edges")
 
         return jsonify({
             'exact_volume': exact_props['volume'],
