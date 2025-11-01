@@ -508,6 +508,13 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                             edge_type = "geometric_feature"
                             stats['geometric_features'] += 1
                             stats['sharp_edges'] += 1  # Also count as sharp for total
+                            
+                            # Log first few geometric features with curve type
+                            if stats['geometric_features'] <= 5:
+                                curve_adaptor_temp = BRepAdaptor_Curve(edge)
+                                curve_type_temp = curve_adaptor_temp.GetType()
+                                curve_name = "LINE" if curve_type_temp == GeomAbs_Line else "CIRCLE" if curve_type_temp == GeomAbs_Circle else "OTHER"
+                                logger.info(f"   🎯 Geometric feature #{stats['geometric_features']}: {curve_name} edge between cylinder/cone/sphere and plane")
                         else:
                             # Calculate dihedral angle for regular edges
                             dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
