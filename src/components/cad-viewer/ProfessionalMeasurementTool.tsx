@@ -6,7 +6,7 @@ import { useMeasurementStore } from "@/stores/measurementStore";
 import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { toast } from "@/hooks/use-toast";
-import { findEdgeByFeatureId, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
+import { findEdgeByFeatureId, getFeatureSegments, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
 
 interface EdgeClassification {
   type: "line" | "circle" | "arc";
@@ -80,6 +80,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     position: THREE.Vector3;
     classification: any;
     edge: THREE.Line3;
+    allSegments?: THREE.Line3[];
   } | null>(null);
   const [labelText, setLabelText] = useState<string>("");
 
@@ -152,6 +153,20 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           const taggedEdge = findEdgeByFeatureId(closestEdge, meshData?.tagged_edges);
 
           if (taggedEdge) {
+            // Get ALL segments belonging to this feature_id
+            const allFeatureSegments = getFeatureSegments(
+              taggedEdge.feature_id,
+              meshData?.tagged_edges
+            );
+            
+            // Convert to Line3 array for rendering
+            const allSegmentLines = allFeatureSegments.map(seg => 
+              new THREE.Line3(
+                new THREE.Vector3(...seg.start),
+                new THREE.Vector3(...seg.end)
+              )
+            );
+
             let label = "";
             if (taggedEdge.type === "circle" && taggedEdge.diameter) {
               label = `⊙ Diameter: ø${taggedEdge.diameter.toFixed(2)} mm`;
@@ -168,6 +183,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               position: point,
               classification: taggedEdge,
               edge: closestEdge,
+              allSegments: allSegmentLines,
             });
           } else {
             setHoverInfo(null);
@@ -296,29 +312,58 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     <>
       {hoverInfo && (
         <>
-          <primitive
-            object={(() => {
-              const geometry = new THREE.BufferGeometry();
-              const positions = new Float32Array([
-                hoverInfo.edge.start.x,
-                hoverInfo.edge.start.y,
-                hoverInfo.edge.start.z,
-                hoverInfo.edge.end.x,
-                hoverInfo.edge.end.y,
-                hoverInfo.edge.end.z,
-              ]);
-              geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+          {/* Highlight all segments of the feature */}
+          {hoverInfo.allSegments && hoverInfo.allSegments.length > 0 ? (
+            // Multiple segments (circle/arc) - render all
+            hoverInfo.allSegments.map((segment, idx) => (
+              <primitive
+                key={idx}
+                object={(() => {
+                  const geometry = new THREE.BufferGeometry();
+                  const positions = new Float32Array([
+                    segment.start.x, segment.start.y, segment.start.z,
+                    segment.end.x, segment.end.y, segment.end.z,
+                  ]);
+                  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
-              const material = new THREE.LineBasicMaterial({
-                color: 0xff8c00,
-                transparent: true,
-                opacity: 0.8,
-                depthTest: false,
-              });
+                  const material = new THREE.LineBasicMaterial({
+                    color: 0xff8c00,
+                    linewidth: 3,
+                    transparent: true,
+                    opacity: 0.9,
+                    depthTest: false,
+                  });
 
-              return new THREE.Line(geometry, material);
-            })()}
-          />
+                  return new THREE.Line(geometry, material);
+                })()}
+              />
+            ))
+          ) : (
+            // Single segment (line) - render normally
+            <primitive
+              object={(() => {
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array([
+                  hoverInfo.edge.start.x,
+                  hoverInfo.edge.start.y,
+                  hoverInfo.edge.start.z,
+                  hoverInfo.edge.end.x,
+                  hoverInfo.edge.end.y,
+                  hoverInfo.edge.end.z,
+                ]);
+                geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+                const material = new THREE.LineBasicMaterial({
+                  color: 0xff8c00,
+                  transparent: true,
+                  opacity: 0.8,
+                  depthTest: false,
+                });
+
+                return new THREE.Line(geometry, material);
+              })()}
+            />
+          )}
 
           <Html position={hoverInfo.position} center style={{ pointerEvents: "none", transform: "translateY(-40px)" }}>
             <div

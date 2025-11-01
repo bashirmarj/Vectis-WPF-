@@ -2,6 +2,9 @@ import { useMemo, useEffect, useRef, forwardRef } from "react";
 import * as React from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { SilhouetteEdges } from "./SilhouetteEdges";
 
 interface MeshData {
@@ -267,6 +270,44 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
 
+    // Convert feature edges to Line2 for continuous rendering
+    const line2Geometry = useMemo(() => {
+      if (!featureEdgesGeometry) return null;
+      
+      const positions = featureEdgesGeometry.attributes.position.array as Float32Array;
+      const lineGeo = new LineGeometry();
+      lineGeo.setPositions(Array.from(positions));
+      
+      return lineGeo;
+    }, [featureEdgesGeometry]);
+
+    // Line2 material with proper width and resolution
+    const line2Material = useMemo(() => {
+      return new LineMaterial({
+        color: 0x000000,
+        linewidth: 1.5, // in pixels
+        resolution: new THREE.Vector2(1920, 1080),
+        alphaToCoverage: true,
+        depthTest: true,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      });
+    }, []);
+
+    // Update resolution on window resize
+    useEffect(() => {
+      const handleResize = () => {
+        if (line2Material) {
+          line2Material.resolution.set(window.innerWidth, window.innerHeight);
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      handleResize(); // Set initial resolution
+      return () => window.removeEventListener('resize', handleResize);
+    }, [line2Material]);
+
     // For wireframe mode: Use EdgesGeometry to show ALL mesh edges (including cylinder longitudinal lines)
     const wireframeEdgesGeometry = useMemo(() => {
       // Three.js EdgesGeometry automatically extracts all edges with a threshold angle
@@ -345,17 +386,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           />
         </mesh>
 
-        {/* Pre-computed feature edges for solid mode - STATIC ONLY */}
-        {displayStyle === "solid" && showEdges && (
-          <lineSegments geometry={featureEdgesGeometry} frustumCulled={false}>
-            <lineBasicMaterial 
-              color="#000000" 
-              toneMapped={false}
-              polygonOffset={true}
-              polygonOffsetFactor={-2}
-              polygonOffsetUnits={-2}
-            />
-          </lineSegments>
+        {/* Pre-computed feature edges using Line2 for continuous rendering */}
+        {displayStyle === "solid" && showEdges && line2Geometry && (
+          <primitive 
+            object={new Line2(line2Geometry, line2Material)} 
+            frustumCulled={false}
+          />
         )}
 
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
