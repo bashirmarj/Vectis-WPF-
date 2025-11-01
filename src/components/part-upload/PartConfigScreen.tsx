@@ -395,7 +395,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                       Show Configuration
                     </Button>
                   )}
-                  <div className="h-full min-h-[600px]">
+                  <div className="h-[calc(100vh-200px)]">
                     {selectedFile.meshId ? (
                       <>
                         {console.log("✅ Rendering CADViewer with meshId:", selectedFile.meshId)}

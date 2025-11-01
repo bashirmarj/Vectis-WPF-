@@ -476,6 +476,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
             />
 
             <Canvas
+              style={{ width: '100%', height: '100%' }}
               shadows
               gl={{
                 antialias: true,
