@@ -563,6 +563,7 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                     circle = curve_adaptor.Circle()
                     center = circle.Location()
                     radius = circle.Radius()
+                    axis = circle.Axis()  # Get circle plane normal
                     
                     # Check if full circle or arc
                     angular_extent = abs(last_param - first_param)
@@ -579,8 +580,11 @@ def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                         classification["radius"] = radius
                         classification["length"] = radius * angular_extent  # Arc length
                         classification["segment_count"] = max(3, int(angular_extent / (2 * math.pi) * 32))  # Proportional to angle
+                        classification["start_angle"] = first_param  # Store angular range
+                        classification["end_angle"] = last_param
                     
                     classification["center"] = [center.X(), center.Y(), center.Z()]
+                    classification["normal"] = [axis.Direction().X(), axis.Direction().Y(), axis.Direction().Z()]  # Plane orientation
                 
                 elif curve_type == GeomAbs_Line:
                     # Straight line
@@ -633,7 +637,7 @@ def calculate_face_center(triangulation, transform):
 def tag_feature_edges_for_frontend(edge_classifications):
     """
     Tag edge segments with feature_id for direct frontend lookup.
-    Tessellates each classified edge into line segments and tags them.
+    Properly tessellates circles/arcs using their geometry, not linear interpolation.
     
     Args:
         edge_classifications: List of backend edge classifications with feature_id
@@ -641,6 +645,8 @@ def tag_feature_edges_for_frontend(edge_classifications):
     Returns:
         List of tagged edge segments: [{ feature_id, start, end, type, diameter, radius, length }, ...]
     """
+    import numpy as np
+    
     if not edge_classifications:
         return []
     
@@ -649,43 +655,113 @@ def tag_feature_edges_for_frontend(edge_classifications):
     for edge_cls in edge_classifications:
         feature_id = edge_cls.get('feature_id')
         edge_type = edge_cls.get('type')
+        segment_count = edge_cls.get('segment_count', 32)
         
-        # Tessellate edge into 32 segments (matches rendering)
-        start_pt = edge_cls.get('start_point', [0, 0, 0])
-        end_pt = edge_cls.get('end_point', [0, 0, 0])
+        if edge_type == 'circle' and 'center' in edge_cls and 'radius' in edge_cls and 'normal' in edge_cls:
+            # PROPER CIRCLE TESSELLATION
+            center = np.array(edge_cls['center'])
+            radius = edge_cls['radius']
+            normal = np.array(edge_cls['normal'])
+            
+            # Create orthonormal basis in circle plane
+            # Choose u vector perpendicular to normal
+            if abs(normal[2]) > 0.9:
+                u = np.array([1.0, 0.0, 0.0])
+            else:
+                u = np.array([0.0, 0.0, 1.0])
+            
+            # Gram-Schmidt orthogonalization
+            u = u - np.dot(u, normal) * normal
+            u = u / np.linalg.norm(u)
+            
+            # v = normal × u (right-hand rule)
+            v = np.cross(normal, u)
+            
+            # Generate segments around perimeter
+            for i in range(segment_count):
+                angle0 = (i / float(segment_count)) * 2 * math.pi
+                angle1 = ((i + 1) / float(segment_count)) * 2 * math.pi
+                
+                # Point on circle: center + radius * (cos(θ)u + sin(θ)v)
+                seg_start = center + radius * (math.cos(angle0) * u + math.sin(angle0) * v)
+                seg_end = center + radius * (math.cos(angle1) * u + math.sin(angle1) * v)
+                
+                tagged_edges.append({
+                    'feature_id': feature_id,
+                    'start': seg_start.tolist(),
+                    'end': seg_end.tolist(),
+                    'type': 'circle',
+                    'diameter': edge_cls.get('diameter'),
+                    'radius': radius,
+                    'length': edge_cls.get('length')
+                })
         
-        for i in range(32):
-            t0 = i / 32.0
-            t1 = (i + 1) / 32.0
+        elif edge_type == 'arc' and 'center' in edge_cls and 'radius' in edge_cls and 'normal' in edge_cls:
+            # PROPER ARC TESSELLATION
+            center = np.array(edge_cls['center'])
+            radius = edge_cls['radius']
+            normal = np.array(edge_cls['normal'])
+            start_angle = edge_cls.get('start_angle', 0)
+            end_angle = edge_cls.get('end_angle', 2 * math.pi)
             
-            seg_start = [
-                start_pt[0] + t0 * (end_pt[0] - start_pt[0]),
-                start_pt[1] + t0 * (end_pt[1] - start_pt[1]),
-                start_pt[2] + t0 * (end_pt[2] - start_pt[2])
-            ]
-            seg_end = [
-                start_pt[0] + t1 * (end_pt[0] - start_pt[0]),
-                start_pt[1] + t1 * (end_pt[1] - start_pt[1]),
-                start_pt[2] + t1 * (end_pt[2] - start_pt[2])
-            ]
+            # Create orthonormal basis (same as circle)
+            if abs(normal[2]) > 0.9:
+                u = np.array([1.0, 0.0, 0.0])
+            else:
+                u = np.array([0.0, 0.0, 1.0])
             
-            tagged_edge = {
-                'feature_id': feature_id,
-                'start': seg_start,
-                'end': seg_end,
-                'type': edge_type
-            }
+            u = u - np.dot(u, normal) * normal
+            u = u / np.linalg.norm(u)
+            v = np.cross(normal, u)
             
-            # Copy measurement data
-            if edge_cls.get('diameter'):
-                tagged_edge['diameter'] = edge_cls['diameter']
-            if edge_cls.get('radius'):
-                tagged_edge['radius'] = edge_cls['radius']
-            if edge_cls.get('length'):
-                tagged_edge['length'] = edge_cls['length']
+            # Generate segments along arc
+            angular_range = end_angle - start_angle
+            for i in range(segment_count):
+                angle0 = start_angle + (i / float(segment_count)) * angular_range
+                angle1 = start_angle + ((i + 1) / float(segment_count)) * angular_range
+                
+                seg_start = center + radius * (math.cos(angle0) * u + math.sin(angle0) * v)
+                seg_end = center + radius * (math.cos(angle1) * u + math.sin(angle1) * v)
+                
+                tagged_edges.append({
+                    'feature_id': feature_id,
+                    'start': seg_start.tolist(),
+                    'end': seg_end.tolist(),
+                    'type': 'arc',
+                    'radius': radius,
+                    'length': edge_cls.get('length')
+                })
+        
+        else:
+            # LINEAR INTERPOLATION (for lines and unknown types)
+            start_pt = np.array(edge_cls.get('start_point', [0, 0, 0]))
+            end_pt = np.array(edge_cls.get('end_point', [0, 0, 0]))
             
-            tagged_edges.append(tagged_edge)
+            for i in range(segment_count):
+                t0 = i / float(segment_count)
+                t1 = (i + 1) / float(segment_count)
+                
+                seg_start = start_pt + t0 * (end_pt - start_pt)
+                seg_end = start_pt + t1 * (end_pt - start_pt)
+                
+                tagged_edge = {
+                    'feature_id': feature_id,
+                    'start': seg_start.tolist(),
+                    'end': seg_end.tolist(),
+                    'type': edge_type
+                }
+                
+                # Copy measurement data
+                if edge_cls.get('diameter'):
+                    tagged_edge['diameter'] = edge_cls['diameter']
+                if edge_cls.get('radius'):
+                    tagged_edge['radius'] = edge_cls['radius']
+                if edge_cls.get('length'):
+                    tagged_edge['length'] = edge_cls['length']
+                
+                tagged_edges.append(tagged_edge)
     
+    logger.info(f"✅ Tagged {len(tagged_edges)} edge segments across {len(edge_classifications)} features")
     return tagged_edges
 
 
