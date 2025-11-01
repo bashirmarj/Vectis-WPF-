@@ -356,15 +356,16 @@ def calculate_dihedral_angle(edge, face1, face2):
         return None
 
 
-def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
+def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     """
-    Extract SIGNIFICANT feature edges from BREP geometry.
+    UNIFIED single-pass edge extraction: tessellate once, classify, and tag segments.
+    
+    This replaces the old three-step process (extract → classify → tag) with a single pass
+    that guarantees perfect matching between visual edges and measurement segments.
     
     Only extracts edges that are:
     1. Boundary edges (belong to only 1 face) - always significant
     2. Sharp edges (dihedral angle between faces > threshold)
-    
-    This matches professional CAD software behavior (SolidWorks, Fusion 360).
     
     Args:
         shape: OpenCascade shape
@@ -372,12 +373,20 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
         angle_threshold_degrees: Minimum dihedral angle to consider edge "sharp" (default: 20°)
     
     Returns:
-        List of polylines, where each polyline is a list of [x, y, z] points
+        {
+            "feature_edges": List of polylines for rendering (same as old extract_feature_edges),
+            "edge_classifications": List of metadata dicts (same as old classify_feature_edges),
+            "tagged_edges": List of tagged segments for measurement matching (same as old tag_feature_edges_for_frontend)
+        }
     """
-    logger.info(f"📐 Extracting significant BREP edges (angle threshold: {angle_threshold_degrees}°)...")
+    logger.info(f"📐 Extracting and classifying BREP edges (angle threshold: {angle_threshold_degrees}°)...")
     
     feature_edges = []
+    edge_classifications = []
+    tagged_edges = []
+    
     edge_count = 0
+    feature_id_counter = 0
     angle_threshold_rad = math.radians(angle_threshold_degrees)
     
     # Build edge-to-faces map using TopTools
@@ -446,14 +455,18 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                     is_significant = True
                     edge_type = "orphan"
                 
-                # Only extract significant edges
+                # Only process significant edges
                 if not is_significant:
                     edge_explorer.Next()
                     continue
                 
-                # Sample the curve to create a polyline
+                # Get curve adaptor for type detection
                 curve_adaptor = BRepAdaptor_Curve(edge)
                 curve_type = curve_adaptor.GetType()
+                
+                # Get start and end points
+                start_point = curve_adaptor.Value(first_param)
+                end_point = curve_adaptor.Value(last_param)
                 
                 # Adaptive sampling based on curve type
                 if curve_type == GeomAbs_Line:
@@ -465,15 +478,98 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
                 else:
                     num_samples = 20  # Default for other curve types
                 
+                # ===== TESSELLATE ONCE using OpenCascade curve.Value() =====
                 points = []
                 for i in range(num_samples + 1):
                     param = first_param + (last_param - first_param) * i / num_samples
                     point = curve.Value(param)
                     points.append([point.X(), point.Y(), point.Z()])
                 
-                if len(points) >= 2:
-                    feature_edges.append(points)
-                    edge_count += 1
+                if len(points) < 2:
+                    edge_explorer.Next()
+                    continue
+                
+                # ===== OUTPUT 1: Feature edges for rendering =====
+                feature_edges.append(points)
+                
+                # ===== OUTPUT 2: Edge classification metadata =====
+                classification = {
+                    "id": edge_count,
+                    "type": "line",
+                    "start_point": [start_point.X(), start_point.Y(), start_point.Z()],
+                    "end_point": [end_point.X(), end_point.Y(), end_point.Z()],
+                    "feature_id": feature_id_counter
+                }
+                
+                if curve_type == GeomAbs_Circle:
+                    circle = curve_adaptor.Circle()
+                    center = circle.Location()
+                    radius = circle.Radius()
+                    axis = circle.Axis()
+                    
+                    # Check if full circle or arc
+                    angular_extent = abs(last_param - first_param)
+                    if abs(angular_extent - 2 * math.pi) < 0.01:
+                        # Full circle
+                        classification["type"] = "circle"
+                        classification["diameter"] = radius * 2
+                        classification["radius"] = radius
+                        classification["length"] = 2 * math.pi * radius
+                        classification["segment_count"] = num_samples
+                    else:
+                        # Arc
+                        classification["type"] = "arc"
+                        classification["radius"] = radius
+                        classification["length"] = radius * angular_extent
+                        classification["segment_count"] = num_samples
+                        classification["start_angle"] = first_param
+                        classification["end_angle"] = last_param
+                    
+                    classification["center"] = [center.X(), center.Y(), center.Z()]
+                    classification["normal"] = [axis.Direction().X(), axis.Direction().Y(), axis.Direction().Z()]
+                
+                elif curve_type == GeomAbs_Line:
+                    length = start_point.Distance(end_point)
+                    classification["type"] = "line"
+                    classification["length"] = length
+                    classification["segment_count"] = num_samples
+                
+                else:
+                    # For BSpline, Bezier - calculate approximate length
+                    total_length = 0
+                    for i in range(len(points) - 1):
+                        p1 = np.array(points[i])
+                        p2 = np.array(points[i + 1])
+                        total_length += np.linalg.norm(p2 - p1)
+                    
+                    classification["type"] = "arc"
+                    classification["length"] = total_length
+                    classification["segment_count"] = num_samples
+                
+                edge_classifications.append(classification)
+                
+                # ===== OUTPUT 3: Tagged segments for measurement matching =====
+                # Convert polyline to consecutive segment pairs
+                for i in range(len(points) - 1):
+                    tagged_segment = {
+                        'feature_id': feature_id_counter,
+                        'start': points[i],
+                        'end': points[i + 1],
+                        'type': classification["type"]
+                    }
+                    
+                    # Copy measurement data
+                    if classification.get('diameter'):
+                        tagged_segment['diameter'] = classification['diameter']
+                    if classification.get('radius'):
+                        tagged_segment['radius'] = classification['radius']
+                    if classification.get('length'):
+                        tagged_segment['length'] = classification['length']
+                    
+                    tagged_edges.append(tagged_segment)
+                
+                edge_count += 1
+                feature_id_counter += 1
                     
             except Exception as e:
                 logger.debug(f"Error processing edge: {e}")
@@ -486,139 +582,42 @@ def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
         logger.info(f"   - Sharp edges: {stats['sharp_edges']}")
         logger.info(f"   - Smooth edges skipped: {stats['smooth_edges_skipped']}")
         logger.info(f"   - Total processed: {stats['total_processed']}")
+        logger.info(f"   - Tagged segments: {len(tagged_edges)}")
         
     except Exception as e:
         logger.error(f"Error extracting edges: {e}")
-        return []
     
-    return feature_edges
+    return {
+        "feature_edges": feature_edges,
+        "edge_classifications": edge_classifications,
+        "tagged_edges": tagged_edges
+    }
 
 
+# DEPRECATED: This function is no longer used.
+# Use extract_and_classify_feature_edges() instead for guaranteed matching.
 def classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
     """
-    Classify feature edges detected by extract_feature_edges.
-    Returns PRECISE classification metadata for each edge including ground truth measurements.
+    [DEPRECATED] Classify feature edges detected by extract_feature_edges.
     
-    This provides backend-validated measurements that the frontend can use for validation.
-    Assigns feature_id to group edges belonging to the same geometric feature.
+    This function is kept for backward compatibility but should not be used.
+    Use extract_and_classify_feature_edges() instead.
     """
-    edge_classifications = []
-    edge_count = 0
-    feature_id_counter = 0  # Track unique feature IDs
-    angle_threshold_rad = math.radians(angle_threshold_degrees)
+    logger.warning("⚠️  classify_feature_edges() is deprecated. Use extract_and_classify_feature_edges() instead.")
+    return []
+
+
+# DEPRECATED: This function is no longer used.
+# Use extract_and_classify_feature_edges() instead for guaranteed matching.
+def extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
+    """
+    [DEPRECATED] Extract SIGNIFICANT feature edges from BREP geometry.
     
-    # Build edge-to-faces map
-    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-    
-    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    
-    while edge_explorer.More() and edge_count < max_edges:
-        edge = topods.Edge(edge_explorer.Current())
-        
-        try:
-            curve_result = BRep_Tool.Curve(edge)
-            
-            if not curve_result or len(curve_result) < 3 or curve_result[0] is None:
-                edge_explorer.Next()
-                continue
-            
-            # Determine if this edge is significant (same logic as extract_feature_edges)
-            is_significant = False
-            
-            if edge_face_map.Contains(edge):
-                face_list = edge_face_map.FindFromKey(edge)
-                num_adjacent_faces = face_list.Size()
-                
-                if num_adjacent_faces == 1:
-                    is_significant = True
-                elif num_adjacent_faces == 2:
-                    face1 = topods.Face(face_list.First())
-                    face2 = topods.Face(face_list.Last())
-                    dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
-                    
-                    if dihedral_angle and dihedral_angle > angle_threshold_rad:
-                        is_significant = True
-            
-            if is_significant:
-                curve_adaptor = BRepAdaptor_Curve(edge)
-                curve_type = curve_adaptor.GetType()
-                first_param = curve_adaptor.FirstParameter()
-                last_param = curve_adaptor.LastParameter()
-                
-                # Get start and end points
-                start_point = curve_adaptor.Value(first_param)
-                end_point = curve_adaptor.Value(last_param)
-                
-                # Base classification with precise geometry
-                classification = {
-                    "id": edge_count,
-                    "type": "line",
-                    "start_point": [start_point.X(), start_point.Y(), start_point.Z()],
-                    "end_point": [end_point.X(), end_point.Y(), end_point.Z()],
-                    "feature_id": feature_id_counter  # Assign feature_id
-                }
-                
-                if curve_type == GeomAbs_Circle:
-                    circle = curve_adaptor.Circle()
-                    center = circle.Location()
-                    radius = circle.Radius()
-                    axis = circle.Axis()  # Get circle plane normal
-                    
-                    # Check if full circle or arc
-                    angular_extent = abs(last_param - first_param)
-                    if abs(angular_extent - 2 * math.pi) < 0.01:
-                        # Full circle - all segments share same feature_id
-                        classification["type"] = "circle"
-                        classification["diameter"] = radius * 2
-                        classification["radius"] = radius
-                        classification["length"] = 2 * math.pi * radius  # Circumference
-                        classification["segment_count"] = 32  # Expected tessellation
-                    else:
-                        # Arc
-                        classification["type"] = "arc"
-                        classification["radius"] = radius
-                        classification["length"] = radius * angular_extent  # Arc length
-                        classification["segment_count"] = max(3, int(angular_extent / (2 * math.pi) * 32))  # Proportional to angle
-                        classification["start_angle"] = first_param  # Store angular range
-                        classification["end_angle"] = last_param
-                    
-                    classification["center"] = [center.X(), center.Y(), center.Z()]
-                    classification["normal"] = [axis.Direction().X(), axis.Direction().Y(), axis.Direction().Z()]  # Plane orientation
-                
-                elif curve_type == GeomAbs_Line:
-                    # Straight line
-                    length = start_point.Distance(end_point)
-                    classification["type"] = "line"
-                    classification["length"] = length
-                    classification["segment_count"] = 2  # Lines only need endpoints
-                
-                else:
-                    # For BSpline, Bezier - calculate approximate length
-                    num_samples = 20
-                    total_length = 0
-                    prev_point = curve_adaptor.Value(first_param)
-                    for i in range(1, num_samples + 1):
-                        param = first_param + (last_param - first_param) * i / num_samples
-                        curr_point = curve_adaptor.Value(param)
-                        total_length += prev_point.Distance(curr_point)
-                        prev_point = curr_point
-                    
-                    classification["type"] = "arc"  # Treat splines as arcs
-                    classification["length"] = total_length
-                    classification["segment_count"] = 20  # Default for complex curves
-                
-                edge_classifications.append(classification)
-                edge_count += 1
-                feature_id_counter += 1  # Increment for next feature
-        
-        except Exception as e:
-            logger.debug(f"Error classifying edge: {e}")
-        
-        edge_explorer.Next()
-    
-    logger.info(f"✅ Classified {len(edge_classifications)} edges with precise measurements")
-    return edge_classifications
+    This function is kept for backward compatibility but should not be used.
+    Use extract_and_classify_feature_edges() instead.
+    """
+    logger.warning("⚠️  extract_feature_edges() is deprecated. Use extract_and_classify_feature_edges() instead.")
+    return []
 
 
 def calculate_face_center(triangulation, transform):
@@ -634,135 +633,17 @@ def calculate_face_center(triangulation, transform):
         return [0, 0, 0]
 
 
+# DEPRECATED: This function is no longer used. 
+# Use extract_and_classify_feature_edges() instead for guaranteed matching.
 def tag_feature_edges_for_frontend(edge_classifications):
     """
-    Tag edge segments with feature_id for direct frontend lookup.
-    Properly tessellates circles/arcs using their geometry, not linear interpolation.
+    [DEPRECATED] Tag edge segments with feature_id for direct frontend lookup.
     
-    Args:
-        edge_classifications: List of backend edge classifications with feature_id
-    
-    Returns:
-        List of tagged edge segments: [{ feature_id, start, end, type, diameter, radius, length }, ...]
+    This function is kept for backward compatibility but should not be used.
+    Use extract_and_classify_feature_edges() instead.
     """
-    import numpy as np
-    
-    if not edge_classifications:
-        return []
-    
-    tagged_edges = []
-    
-    for edge_cls in edge_classifications:
-        feature_id = edge_cls.get('feature_id')
-        edge_type = edge_cls.get('type')
-        segment_count = edge_cls.get('segment_count', 32)
-        
-        if edge_type == 'circle' and 'center' in edge_cls and 'radius' in edge_cls and 'normal' in edge_cls:
-            # PROPER CIRCLE TESSELLATION
-            center = np.array(edge_cls['center'])
-            radius = edge_cls['radius']
-            normal = np.array(edge_cls['normal'])
-            
-            # Create orthonormal basis in circle plane
-            # Choose u vector perpendicular to normal
-            if abs(normal[2]) > 0.9:
-                u = np.array([1.0, 0.0, 0.0])
-            else:
-                u = np.array([0.0, 0.0, 1.0])
-            
-            # Gram-Schmidt orthogonalization
-            u = u - np.dot(u, normal) * normal
-            u = u / np.linalg.norm(u)
-            
-            # v = normal × u (right-hand rule)
-            v = np.cross(normal, u)
-            
-            # Generate segments around perimeter
-            for i in range(segment_count):
-                angle0 = (i / float(segment_count)) * 2 * math.pi
-                angle1 = ((i + 1) / float(segment_count)) * 2 * math.pi
-                
-                # Point on circle: center + radius * (cos(θ)u + sin(θ)v)
-                seg_start = center + radius * (math.cos(angle0) * u + math.sin(angle0) * v)
-                seg_end = center + radius * (math.cos(angle1) * u + math.sin(angle1) * v)
-                
-                tagged_edges.append({
-                    'feature_id': feature_id,
-                    'start': seg_start.tolist(),
-                    'end': seg_end.tolist(),
-                    'type': 'circle',
-                    'diameter': edge_cls.get('diameter'),
-                    'radius': radius,
-                    'length': edge_cls.get('length')
-                })
-        
-        elif edge_type == 'arc' and 'center' in edge_cls and 'radius' in edge_cls and 'normal' in edge_cls:
-            # PROPER ARC TESSELLATION
-            center = np.array(edge_cls['center'])
-            radius = edge_cls['radius']
-            normal = np.array(edge_cls['normal'])
-            start_angle = edge_cls.get('start_angle', 0)
-            end_angle = edge_cls.get('end_angle', 2 * math.pi)
-            
-            # Create orthonormal basis (same as circle)
-            if abs(normal[2]) > 0.9:
-                u = np.array([1.0, 0.0, 0.0])
-            else:
-                u = np.array([0.0, 0.0, 1.0])
-            
-            u = u - np.dot(u, normal) * normal
-            u = u / np.linalg.norm(u)
-            v = np.cross(normal, u)
-            
-            # Generate segments along arc
-            angular_range = end_angle - start_angle
-            for i in range(segment_count):
-                angle0 = start_angle + (i / float(segment_count)) * angular_range
-                angle1 = start_angle + ((i + 1) / float(segment_count)) * angular_range
-                
-                seg_start = center + radius * (math.cos(angle0) * u + math.sin(angle0) * v)
-                seg_end = center + radius * (math.cos(angle1) * u + math.sin(angle1) * v)
-                
-                tagged_edges.append({
-                    'feature_id': feature_id,
-                    'start': seg_start.tolist(),
-                    'end': seg_end.tolist(),
-                    'type': 'arc',
-                    'radius': radius,
-                    'length': edge_cls.get('length')
-                })
-        
-        else:
-            # LINEAR INTERPOLATION (for lines and unknown types)
-            start_pt = np.array(edge_cls.get('start_point', [0, 0, 0]))
-            end_pt = np.array(edge_cls.get('end_point', [0, 0, 0]))
-            
-            for i in range(segment_count):
-                t0 = i / float(segment_count)
-                t1 = (i + 1) / float(segment_count)
-                
-                seg_start = start_pt + t0 * (end_pt - start_pt)
-                seg_end = start_pt + t1 * (end_pt - start_pt)
-                
-                tagged_edge = {
-                    'feature_id': feature_id,
-                    'start': seg_start.tolist(),
-                    'end': seg_end.tolist(),
-                    'type': edge_type
-                }
-                
-                # Copy measurement data
-                if edge_cls.get('diameter'):
-                    tagged_edge['diameter'] = edge_cls['diameter']
-                if edge_cls.get('radius'):
-                    tagged_edge['radius'] = edge_cls['radius']
-                if edge_cls.get('length'):
-                    tagged_edge['length'] = edge_cls['length']
-                
-                tagged_edges.append(tagged_edge)
-    
-    logger.info(f"✅ Tagged {len(tagged_edges)} edge segments across {len(edge_classifications)} features")
-    return tagged_edges
+    logger.warning("⚠️  tag_feature_edges_for_frontend() is deprecated. Use extract_and_classify_feature_edges() instead.")
+    return []
 
 
 def compute_smooth_vertex_normals(vertices, indices):
@@ -1339,19 +1220,13 @@ def analyze_cad():
         mesh_data["vertex_colors"] = vertex_colors
         mesh_data["face_classifications"] = face_classifications
         
-        logger.info("📐 Extracting significant BREP edges...")
-        # Using 20° threshold - industry standard for manufacturing CAD
-        feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
-        logger.info("🏷️  Classifying feature edges...")
-        edge_classifications = classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
+        logger.info("📐 Extracting and classifying BREP edges (UNIFIED SINGLE-PASS)...")
+        # NEW: Single-pass extraction with guaranteed matching
+        edge_result = extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         
-        # NEW: Generate tagged edges for frontend feature_id matching
-        logger.info("🔖 Tagging edge segments with feature IDs...")
-        tagged_edges = tag_feature_edges_for_frontend(edge_classifications)
-        
-        mesh_data["feature_edges"] = feature_edges
-        mesh_data["edge_classifications"] = edge_classifications
-        mesh_data["tagged_edges"] = tagged_edges
+        mesh_data["feature_edges"] = edge_result["feature_edges"]
+        mesh_data["edge_classifications"] = edge_result["edge_classifications"]
+        mesh_data["tagged_edges"] = edge_result["tagged_edges"]
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
 
         is_cylindrical = len(manufacturing_features['holes']) > 0 or len(manufacturing_features['bosses']) > 0
@@ -1409,9 +1284,9 @@ def analyze_cad():
                 'vertex_colors': mesh_data['vertex_colors'],
                 'vertex_face_ids': mesh_data['vertex_face_ids'],  # Map vertices to faces
                 'face_classifications': mesh_data['face_classifications'],  # Detailed face data
-                'feature_edges': feature_edges,
-                'edge_classifications': edge_classifications,
-                'tagged_feature_edges': tag_feature_edges_for_frontend(edge_classifications),  # NEW: Direct feature_id lookup
+                'feature_edges': mesh_data['feature_edges'],
+                'edge_classifications': mesh_data['edge_classifications'],
+                'tagged_feature_edges': mesh_data['tagged_edges'],  # Guaranteed to match feature_edges
                 'triangle_count': mesh_data['triangle_count'],
                 'face_classification_method': 'mesh_based_with_propagation',
                 'edge_extraction_method': 'smart_filtering_20deg'
