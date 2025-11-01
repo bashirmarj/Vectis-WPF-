@@ -88,9 +88,18 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   // Convert feature edges to Line3 array
   const edgeLines = React.useMemo(() => {
-    if (!featureEdgesGeometry) return [];
+    if (!featureEdgesGeometry) {
+      console.warn("⚠️ No featureEdgesGeometry provided for raycasting");
+      return [];
+    }
     const lines: THREE.Line3[] = [];
     const positions = featureEdgesGeometry.attributes.position;
+    
+    console.log("📐 Building edgeLines for raycasting:", {
+      segmentCount: positions.count / 2,
+      totalVertices: positions.count
+    });
+    
     for (let i = 0; i < positions.count; i += 2) {
       lines.push(
         new THREE.Line3(
@@ -135,7 +144,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         const point = intersects[0].point;
 
         let closestEdge: THREE.Line3 | null = null;
-        let minDist = 0.5;
+        let minDist = 1.0; // Increased from 0.5 to 1.0 for better detection
 
         edgeLines.forEach((edge) => {
           const closestPoint = new THREE.Vector3();
@@ -148,7 +157,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           }
         });
 
+        console.log("🎯 Closest edge distance:", minDist.toFixed(3), "threshold: 1.0");
+
         if (closestEdge) {
+          console.log("✅ Edge detected, checking feature_id...");
           // NEW: Use feature_id based matching
           const taggedEdge = findEdgeByFeatureId(closestEdge, meshData?.tagged_edges);
 
