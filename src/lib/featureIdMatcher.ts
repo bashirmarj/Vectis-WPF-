@@ -27,7 +27,7 @@ export function findEdgeByFeatureId(
 ): TaggedFeatureEdge | undefined {
   if (!taggedEdges || taggedEdges.length === 0) return undefined;
 
-  const threshold = 0.01; // Match tolerance for segment endpoints
+  const threshold = 0.5; // Increased from 0.01 to 0.5mm for Line2 geometry tolerance
 
   // Find tagged edge segment that matches clicked edge
   for (const tagged of taggedEdges) {
