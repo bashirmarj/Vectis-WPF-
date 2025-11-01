@@ -9,24 +9,9 @@ interface AxisTriadInCanvasProps {
 }
 
 export function AxisTriadInCanvas({ mainCameraRef }: AxisTriadInCanvasProps) {
-  const { viewport } = useThree();
-  
-  // Calculate position based on viewport aspect ratio to maintain corner position
-  const triadPosition = useMemo(() => {
-    const aspectRatio = viewport.width / viewport.height;
-    
-    // Original working position (bottom-left corner)
-    const baseX = -7.5;
-    const baseY = -6.75;
-    
-    // Reference aspect ratio for 70% panel width (typical expanded state)
-    const referenceAspectRatio = 1.3;
-    
-    // Adjust X position to maintain corner placement across different aspect ratios
-    const adjustedX = baseX * (aspectRatio / referenceAspectRatio);
-    
-    return [adjustedX, baseY, 0] as [number, number, number];
-  }, [viewport.width, viewport.height]);
+  // Fixed position in bottom-left corner (Hud uses screen-space coordinates)
+  // No adjustment needed - viewport only changes width, not height
+  const triadPosition: [number, number, number] = [-7.5, -6.75, 0];
 
   return (
     <Hud renderPriority={1}>
