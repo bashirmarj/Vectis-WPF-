@@ -721,6 +721,8 @@ async function storeMeshData(
         vertex_colors: meshData.vertex_colors || [],
         triangle_count: meshData.triangle_count,
         feature_edges: Array.isArray(meshData.feature_edges) ? meshData.feature_edges : [],
+        edge_classifications: meshData.edge_classifications || [],
+        tagged_feature_edges: meshData.tagged_feature_edges || [],
       })
       .select("id")
       .single();
