@@ -1,49 +1,24 @@
-import { Hud, OrthographicCamera } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
 import { AxisTriad } from "./AxisTriad";
+import { OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
-import { useThree } from "@react-three/fiber";
-import { useMemo } from "react";
 
 interface AxisTriadInCanvasProps {
   mainCameraRef: React.RefObject<THREE.PerspectiveCamera>;
   isSidebarCollapsed?: boolean;
 }
 
-function TriadPositioner({ mainCameraRef }: { mainCameraRef: React.RefObject<THREE.PerspectiveCamera> }) {
-  const { viewport } = useThree();
-
-  const triadPosition = useMemo(() => {
-    const zoom = 45; // Must match OrthographicCamera zoom prop
-    const aspect = viewport.width / viewport.height;
-
-    // Calculate orthographic frustum boundaries
-    const left = -aspect / zoom;
-    const bottom = -1 / zoom;
-
-    // Use FIXED offset from edges (not percentage)
-    // Small margin to prevent clipping while staying in corner
-    const fixedOffsetX = 0.002; // Small margin from left edge
-    const fixedOffsetY = 0.002; // Small margin from bottom edge
-
-    const x = left + fixedOffsetX;
-    const y = bottom + fixedOffsetY;
-
-    return [x, y, 0] as [number, number, number];
-  }, [viewport.width, viewport.height]);
-
+export function AxisTriadInCanvas({ mainCameraRef }: AxisTriadInCanvasProps) {
   return (
-    <group position={triadPosition}>
-      <ambientLight intensity={0.8} />
-      <AxisTriad mainCameraRef={mainCameraRef} />
-    </group>
-  );
-}
-
-export function AxisTriadInCanvas({ mainCameraRef, isSidebarCollapsed = false }: AxisTriadInCanvasProps) {
-  return (
-    <Hud renderPriority={1}>
-      <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={45} />
-      <TriadPositioner mainCameraRef={mainCameraRef} />
-    </Hud>
+    <div className="absolute bottom-4 left-4 w-20 h-20 pointer-events-none z-10">
+      <Canvas
+        style={{ width: '100%', height: '100%' }}
+        gl={{ alpha: true }}
+      >
+        <OrthographicCamera makeDefault position={[0, 0, 10]} zoom={20} />
+        <ambientLight intensity={0.8} />
+        <AxisTriad mainCameraRef={mainCameraRef} />
+      </Canvas>
+    </div>
   );
 }

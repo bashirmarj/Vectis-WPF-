@@ -531,9 +531,6 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                 {/* Measurement Renderer */}
                 <MeasurementRenderer />
 
-                {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
-                <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
-
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
@@ -550,6 +547,9 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                 />
               </Suspense>
             </Canvas>
+
+            {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
+            <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
 
             {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
             <OrientationCubeViewport
