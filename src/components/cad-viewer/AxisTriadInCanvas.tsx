@@ -11,22 +11,22 @@ interface AxisTriadInCanvasProps {
 
 function TriadPositioner({ mainCameraRef }: { mainCameraRef: React.RefObject<THREE.PerspectiveCamera> }) {
   const { viewport } = useThree();
-  
+
   const triadPosition = useMemo(() => {
     const zoom = 45; // Must match OrthographicCamera zoom prop
     const aspect = viewport.width / viewport.height;
-    
+
     // Calculate orthographic frustum boundaries
     const left = -aspect / zoom;
-    const bottom = -1 / zoom;
-    
+    const bottom = -10 / zoom;
+
     // Use FIXED offset from edges (not percentage)
     const fixedOffsetX = 0.003; // Fixed distance from left edge in camera units
     const fixedOffsetY = 0.003; // Fixed distance from bottom edge in camera units
-    
+
     const x = left + fixedOffsetX;
     const y = bottom + fixedOffsetY;
-    
+
     return [x, y, 0] as [number, number, number];
   }, [viewport.width, viewport.height]);
 
