@@ -118,8 +118,34 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       }
     }, [geometry, topologyColors, meshData]);
 
-    // Pre-compute feature edges ONCE at load time (angle-based only)
+    // Pre-compute feature edges ONCE at load time
     const featureEdgesGeometry = useMemo(() => {
+      // PRIORITY: Use backend feature_edges if available (guarantees match with tagged_edges)
+      if (meshData.feature_edges && meshData.feature_edges.length > 0) {
+        const featureEdgePositions: number[] = [];
+        
+        // Convert backend polylines to line segments
+        meshData.feature_edges.forEach((polyline) => {
+          for (let i = 0; i < polyline.length - 1; i++) {
+            const p1 = polyline[i];
+            const p2 = polyline[i + 1];
+            
+            featureEdgePositions.push(
+              p1[0], p1[1], p1[2],
+              p2[0], p2[1], p2[2]
+            );
+          }
+        });
+        
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
+        console.log("✅ Using backend feature_edges:", meshData.feature_edges.length, "polylines,", featureEdgePositions.length / 6, "segments");
+        return geo;
+      }
+      
+      // FALLBACK: Compute from mesh triangles (for STL files without BREP data)
+      console.warn("⚠️ Backend feature_edges not available, computing from mesh triangles");
+      
       const edgeMap = new Map<
         string,
         {
@@ -212,7 +238,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
       return geo;
-    }, [meshData.vertices, meshData.indices]);
+    }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
 
     // All-edges geometry for wireframe mode
     const allEdgesGeometry = useMemo(() => {
