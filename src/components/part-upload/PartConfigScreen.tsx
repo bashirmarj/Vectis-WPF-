@@ -366,20 +366,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         )}
 
         {/* Right Panel - 3D Viewer (expands when sidebar collapsed) */}
-        <ResizablePanel defaultSize={70} className="bg-white relative">
-          {/* Fixed expand button overlay when sidebar is collapsed */}
-          {isSidebarCollapsed && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="absolute top-4 left-4 z-50 gap-2 shadow-lg"
-            >
-              <PanelLeftOpen className="h-4 w-4" />
-              Show Configuration
-            </Button>
-          )}
-
+        <ResizablePanel defaultSize={70} className="bg-white">
           <div className="h-full flex flex-col">
             <Tabs defaultValue="3d-model" className="h-full flex flex-col">
               <div className="border-b px-6 pt-6">
@@ -395,7 +382,19 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
               <div className="flex-1 overflow-y-auto">
                 {/* ✅ 3D Model Tab with improved debugging */}
-                <TabsContent value="3d-model" className="h-full m-0 p-6">
+                <TabsContent value="3d-model" className="h-full m-0 p-6 relative">
+                  {/* Expand button when sidebar is collapsed - positioned inside viewport */}
+                  {isSidebarCollapsed && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSidebarCollapsed(false)}
+                      className="absolute top-2 left-2 z-50 gap-2 shadow-lg"
+                    >
+                      <PanelLeftOpen className="h-4 w-4" />
+                      Show Configuration
+                    </Button>
+                  )}
                   <div className="h-full min-h-[600px]">
                     {selectedFile.meshId ? (
                       <>
