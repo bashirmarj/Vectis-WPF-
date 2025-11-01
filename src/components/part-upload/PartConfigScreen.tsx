@@ -366,22 +366,21 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         )}
 
         {/* Right Panel - 3D Viewer (expands when sidebar collapsed) */}
-        <ResizablePanel defaultSize={70} className="bg-white">
+        <ResizablePanel defaultSize={70} className="bg-white relative">
+          {/* Fixed expand button overlay when sidebar is collapsed */}
+          {isSidebarCollapsed && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="absolute top-4 left-4 z-50 gap-2 shadow-lg"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+              Show Configuration
+            </Button>
+          )}
+
           <div className="h-full flex flex-col">
-            {/* Expand button when sidebar is collapsed */}
-            {isSidebarCollapsed && (
-              <div className="p-4 border-b">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsSidebarCollapsed(false)}
-                  className="gap-2"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                  Show Configuration
-                </Button>
-              </div>
-            )}
             <Tabs defaultValue="3d-model" className="h-full flex flex-col">
               <div className="border-b px-6 pt-6">
                 <TabsList className="w-full">
