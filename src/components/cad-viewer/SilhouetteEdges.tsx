@@ -244,6 +244,7 @@ function computeSilhouetteEdges(
     // Skip if this edge is already rendered by static feature edges
     const edgeKey = makeEdgeKey(vertices[0], vertices[1]);
     if (staticEdgeKeys.has(edgeKey)) {
+      console.log("⚡ Filtered duplicate edge:", edgeKey);
       return; // Already rendered - avoid duplicate
     }
 
