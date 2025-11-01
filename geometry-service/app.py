@@ -653,7 +653,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 if curve_type == GeomAbs_Line:
                     num_samples = 2  # Lines only need endpoints
                 elif curve_type == GeomAbs_Circle:
-                    num_samples = 32  # Circles need smooth representation
+                    num_samples = 64  # Professional CAD quality for smooth circular boundaries
                 elif curve_type in [GeomAbs_BSplineCurve, GeomAbs_BezierCurve]:
                     num_samples = 24  # Splines need moderate sampling
                 else:

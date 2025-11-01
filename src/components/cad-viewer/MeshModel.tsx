@@ -146,6 +146,16 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           featureEdgePositions.length / 6,
           "segments",
         );
+        
+        // Debug: Log circular boundary edges
+        console.log("🔍 Feature edge breakdown:");
+        meshData.feature_edges.forEach((polyline, idx) => {
+          const segmentCount = polyline.length - 1;
+          if (segmentCount > 20) {
+            console.log(`  Edge ${idx}: ${segmentCount} segments (likely circular boundary)`);
+          }
+        });
+        
         return geo;
       }
 
