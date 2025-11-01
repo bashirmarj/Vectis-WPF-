@@ -21,8 +21,10 @@ function TriadPositioner({ mainCameraRef }: { mainCameraRef: React.RefObject<THR
     const bottom = -1 / zoom;
 
     // Use FIXED offset from edges (not percentage)
-    const fixedOffsetX = 0.003; // Fixed distance from left edge in camera units
-    const fixedOffsetY = 0.003; // Fixed distance from bottom edge in camera units
+    // With zoom=45, frustum half-width ≈ aspect/45, half-height ≈ 1/45
+    // Offset by ~80-85% of half-frustum to get close to corner
+    const fixedOffsetX = 0.018; // ~80% of half-frustum width
+    const fixedOffsetY = 0.018; // ~80% of half-frustum height
 
     const x = left + fixedOffsetX;
     const y = bottom + fixedOffsetY;
