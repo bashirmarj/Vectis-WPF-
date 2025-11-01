@@ -126,29 +126,32 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       // PRIORITY: Use backend feature_edges if available (guarantees match with tagged_edges)
       if (meshData.feature_edges && meshData.feature_edges.length > 0) {
         const featureEdgePositions: number[] = [];
-        
+
         // Convert backend polylines to line segments
         meshData.feature_edges.forEach((polyline) => {
           for (let i = 0; i < polyline.length - 1; i++) {
             const p1 = polyline[i];
             const p2 = polyline[i + 1];
-            
-            featureEdgePositions.push(
-              p1[0], p1[1], p1[2],
-              p2[0], p2[1], p2[2]
-            );
+
+            featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
           }
         });
-        
+
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
-        console.log("✅ Using backend feature_edges:", meshData.feature_edges.length, "polylines,", featureEdgePositions.length / 6, "segments");
+        console.log(
+          "✅ Using backend feature_edges:",
+          meshData.feature_edges.length,
+          "polylines,",
+          featureEdgePositions.length / 6,
+          "segments",
+        );
         return geo;
       }
-      
+
       // FALLBACK: Compute from mesh triangles (for STL files without BREP data)
       console.warn("⚠️ Backend feature_edges not available, computing from mesh triangles");
-      
+
       const edgeMap = new Map<
         string,
         {
@@ -207,31 +210,41 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         });
       }
 
-      // Filter feature edges by angle threshold (45°)
+      // Filter feature edges by angle threshold (20° - lowered to catch cylindrical edges)
       const featureEdgePositions: number[] = [];
 
       edgeMap.forEach((edgeData) => {
         // Boundary edges (only 1 face) - always show
         if (edgeData.normals.length === 1) {
           featureEdgePositions.push(
-            edgeData.v1.x, edgeData.v1.y, edgeData.v1.z,
-            edgeData.v2.x, edgeData.v2.y, edgeData.v2.z
+            edgeData.v1.x,
+            edgeData.v1.y,
+            edgeData.v1.z,
+            edgeData.v2.x,
+            edgeData.v2.y,
+            edgeData.v2.z,
           );
           return;
         }
 
-        // Feature edges: angle between adjacent faces > 45°
+        // Feature edges: angle between adjacent faces > 20° (lowered from 45°)
+        // This catches more edges including cylindrical surface boundaries
         if (edgeData.normals.length === 2) {
           const n1 = edgeData.normals[0];
           const n2 = edgeData.normals[1];
           const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
           const normalAngleDeg = normalAngle * (180 / Math.PI);
 
-          // Sharp feature edge (>45°) - show it
-          if (normalAngleDeg > 45) {
+          // Sharp feature edge (>20°) - show it
+          // Lower threshold ensures cylindrical surface edges are visible
+          if (normalAngleDeg > 20) {
             featureEdgePositions.push(
-              edgeData.v1.x, edgeData.v1.y, edgeData.v1.z,
-              edgeData.v2.x, edgeData.v2.y, edgeData.v2.z
+              edgeData.v1.x,
+              edgeData.v1.y,
+              edgeData.v1.z,
+              edgeData.v2.x,
+              edgeData.v2.y,
+              edgeData.v2.z,
             );
           }
         }
@@ -242,7 +255,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
       return geo;
     }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
-
 
     // Section plane
     const clippingPlane = useMemo(() => {
@@ -321,15 +333,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         )}
 
         {/* Wireframe mode - use silhouette edges or feature edges */}
-        {displayStyle === "wireframe" && (
-          useSilhouetteEdges ? (
+        {displayStyle === "wireframe" &&
+          (useSilhouetteEdges ? (
             <SilhouetteEdges geometry={geometry} />
           ) : (
             <lineSegments geometry={featureEdgesGeometry}>
               <lineBasicMaterial color="#000000" toneMapped={false} />
             </lineSegments>
-          )
-        )}
+          ))}
       </group>
     );
   },
