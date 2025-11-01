@@ -6,6 +6,7 @@ import { useMeasurementStore } from "@/stores/measurementStore";
 import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { toast } from "@/hooks/use-toast";
+import { findEdgeByFeatureId, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
 
 interface EdgeClassification {
   type: "line" | "circle" | "arc";
@@ -56,6 +57,7 @@ interface MeshData {
   triangle_count: number;
   feature_edges?: number[][][];
   edge_classifications?: BackendEdgeClassification[];
+  tagged_edges?: TaggedFeatureEdge[];
 }
 
 interface ProfessionalMeasurementToolProps {
@@ -65,34 +67,7 @@ interface ProfessionalMeasurementToolProps {
   enabled: boolean;
 }
 
-/**
- * Find backend edge classification that matches clicked edge segment
- */
-function findMatchingBackendEdge(
-  clickedEdge: THREE.Line3,
-  backendEdges?: BackendEdgeClassification[],
-): BackendEdgeClassification | undefined {
-  if (!backendEdges || backendEdges.length === 0) return undefined;
-
-  const threshold = 0.1;
-
-  for (const backendEdge of backendEdges) {
-    const backendStart = new THREE.Vector3(...backendEdge.start_point);
-    const backendEnd = new THREE.Vector3(...backendEdge.end_point);
-
-    // Check if segments match (both orientations)
-    const startMatch = clickedEdge.start.distanceTo(backendStart) < threshold;
-    const endMatch = clickedEdge.end.distanceTo(backendEnd) < threshold;
-    const startMatchReverse = clickedEdge.start.distanceTo(backendEnd) < threshold;
-    const endMatchReverse = clickedEdge.end.distanceTo(backendStart) < threshold;
-
-    if ((startMatch && endMatch) || (startMatchReverse && endMatchReverse)) {
-      return backendEdge;
-    }
-  }
-
-  return undefined;
-}
+// Removed: Replaced by feature_id based matching from featureIdMatcher.ts
 
 export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolProps> = ({
   meshData,
@@ -126,36 +101,15 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     return lines;
   }, [featureEdgesGeometry]);
 
-  // Helper to determine edge type from segment count
-  const getEdgeType = (segmentCount: number): "line" | "circle" | "arc" => {
-    if (segmentCount === 32 || segmentCount >= 30) return "circle";
-    if (segmentCount === 2) return "line";
-    return "arc";
-  };
-
-  // Simple edge grouping for visual feedback only
-  const edgeGroupsCache = React.useMemo(() => {
-    if (edgeLines.length === 0) return new Map<THREE.Line3, ConnectedEdgeGroup>();
-
-    const cache = new Map<THREE.Line3, ConnectedEdgeGroup>();
-
-    edgeLines.forEach((edge) => {
-      const backendEdge = findMatchingBackendEdge(edge, meshData?.edge_classifications);
-      
-      const group: ConnectedEdgeGroup = {
-        segments: [edge],
-        count: 1,
-        type: backendEdge?.type || "line",
-        backendClassification: backendEdge,
-      };
-
-      cache.set(edge, group);
-    });
-
-    console.log("✅ Backend edge classifications found:", Array.from(cache.values()).filter((g) => g.backendClassification).length, "of", edgeLines.length);
-
-    return cache;
-  }, [edgeLines, meshData?.edge_classifications]);
+  // Log available tagged edges from backend
+  React.useEffect(() => {
+    if (meshData?.tagged_edges) {
+      console.log("✅ Tagged edges received from backend:", meshData.tagged_edges.length);
+      console.log("   - Circles:", meshData.tagged_edges.filter(e => e.type === "circle").length);
+      console.log("   - Arcs:", meshData.tagged_edges.filter(e => e.type === "arc").length);
+      console.log("   - Lines:", meshData.tagged_edges.filter(e => e.type === "line").length);
+    }
+  }, [meshData?.tagged_edges]);
 
   // Handle hover detection
   useEffect(() => {
@@ -194,17 +148,17 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
 
         if (closestEdge) {
-          const edgeGroup = edgeGroupsCache.get(closestEdge);
-          const backendEdge = edgeGroup?.backendClassification;
+          // NEW: Use feature_id based matching
+          const taggedEdge = findEdgeByFeatureId(closestEdge, meshData?.tagged_edges);
 
-          if (backendEdge) {
+          if (taggedEdge) {
             let label = "";
-            if (backendEdge.type === "circle" && backendEdge.diameter) {
-              label = `⊙ Diameter: ø${backendEdge.diameter.toFixed(2)} mm`;
-            } else if (backendEdge.type === "arc" && backendEdge.radius) {
-              label = `⌒ Radius: R${backendEdge.radius.toFixed(2)} mm`;
-            } else if (backendEdge.type === "line" && backendEdge.length) {
-              label = `📏 Length: ${backendEdge.length.toFixed(2)} mm`;
+            if (taggedEdge.type === "circle" && taggedEdge.diameter) {
+              label = `⊙ Diameter: ø${taggedEdge.diameter.toFixed(2)} mm`;
+            } else if (taggedEdge.type === "arc" && taggedEdge.radius) {
+              label = `⌒ Radius: R${taggedEdge.radius.toFixed(2)} mm`;
+            } else if (taggedEdge.type === "line" && taggedEdge.length) {
+              label = `📏 Length: ${taggedEdge.length.toFixed(2)} mm`;
             } else {
               label = "Feature detected";
             }
@@ -212,7 +166,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             setLabelText(label);
             setHoverInfo({
               position: point,
-              classification: { type: backendEdge.type },
+              classification: taggedEdge,
               edge: closestEdge,
             });
           } else {
@@ -231,27 +185,26 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     gl.domElement.addEventListener("pointermove", handlePointerMove);
     return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
-  }, [enabled, meshRef, edgeLines, edgeGroupsCache, camera, gl, raycaster]);
+  }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, camera, gl, raycaster]);
 
   // Handle click
   useEffect(() => {
     if (!enabled || !hoverInfo) return;
 
     const handleClick = () => {
-      const { edge } = hoverInfo;
-      const edgeGroup = edgeGroupsCache.get(edge);
-      const backendEdge = edgeGroup?.backendClassification;
+      const { edge, classification } = hoverInfo;
+      const taggedEdge = classification as TaggedFeatureEdge;
 
-      if (!backendEdge) {
+      if (!taggedEdge) {
         toast({
-          title: "Backend classification required",
-          description: "Unable to measure this feature without backend geometry data",
+          title: "No feature detected",
+          description: "Click on a circle, arc, or line edge to measure",
           variant: "destructive",
         });
         return;
       }
 
-      if (backendEdge.type === "circle" && backendEdge.diameter) {
+      if (taggedEdge.type === "circle" && taggedEdge.diameter) {
         addMeasurement({
           id: generateMeasurementId(),
           type: "edge-select",
@@ -263,19 +216,18 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               surfaceType: "edge",
             },
           ],
-          value: backendEdge.diameter,
+          value: taggedEdge.diameter,
           unit: "mm",
-          label: `⊙ ${formatMeasurement(backendEdge.diameter, "mm")}`,
+          label: `⊙ ${formatMeasurement(taggedEdge.diameter, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
           metadata: {
             edgeType: "circle",
-            center: backendEdge.center,
             backendMatch: true,
           },
         });
-      } else if (backendEdge.type === "arc" && backendEdge.radius) {
+      } else if (taggedEdge.type === "arc" && taggedEdge.radius) {
         addMeasurement({
           id: generateMeasurementId(),
           type: "edge-select",
@@ -287,19 +239,18 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               surfaceType: "edge",
             },
           ],
-          value: backendEdge.radius,
+          value: taggedEdge.radius,
           unit: "mm",
-          label: `R ${formatMeasurement(backendEdge.radius, "mm")}`,
+          label: `R ${formatMeasurement(taggedEdge.radius, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
           metadata: {
             edgeType: "arc",
-            center: backendEdge.center,
             backendMatch: true,
           },
         });
-      } else if (backendEdge.type === "line" && backendEdge.length) {
+      } else if (taggedEdge.type === "line" && taggedEdge.length) {
         addMeasurement({
           id: generateMeasurementId(),
           type: "edge-select",
@@ -317,9 +268,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               surfaceType: "edge",
             },
           ],
-          value: backendEdge.length,
+          value: taggedEdge.length,
           unit: "mm",
-          label: `📏 ${formatMeasurement(backendEdge.length, "mm")}`,
+          label: `📏 ${formatMeasurement(taggedEdge.length, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
@@ -330,7 +281,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         });
       } else {
         toast({
-          title: "Incomplete backend data",
+          title: "Incomplete feature data",
           description: "This feature doesn't have complete measurement data",
           variant: "destructive",
         });
@@ -339,7 +290,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     gl.domElement.addEventListener("click", handleClick);
     return () => gl.domElement.removeEventListener("click", handleClick);
-  }, [enabled, hoverInfo, addMeasurement, edgeGroupsCache, gl]);
+  }, [enabled, hoverInfo, addMeasurement, gl]);
 
   return (
     <>

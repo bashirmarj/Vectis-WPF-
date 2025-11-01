@@ -1268,8 +1268,14 @@ def analyze_cad():
         feature_edges = extract_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
         logger.info("🏷️  Classifying feature edges...")
         edge_classifications = classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
+        
+        # NEW: Generate tagged edges for frontend feature_id matching
+        logger.info("🔖 Tagging edge segments with feature IDs...")
+        tagged_edges = tag_feature_edges_for_frontend(edge_classifications)
+        
         mesh_data["feature_edges"] = feature_edges
         mesh_data["edge_classifications"] = edge_classifications
+        mesh_data["tagged_edges"] = tagged_edges
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
 
         is_cylindrical = len(manufacturing_features['holes']) > 0 or len(manufacturing_features['bosses']) > 0
