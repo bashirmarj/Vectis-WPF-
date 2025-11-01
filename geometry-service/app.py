@@ -399,7 +399,101 @@ def calculate_dihedral_angle(edge, face1, face2):
         return None
 
 
-def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
+def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
+    """
+    Extract UIso and VIso parametric curves from cylindrical, conical, 
+    spherical, and toroidal surfaces.
+    
+    UIso curves (U=constant): Lines running along cylinder height
+    VIso curves (V=constant): Circular cross-sections
+    
+    Args:
+        shape: TopoDS_Shape to analyze
+        num_u_lines: Number of UIso curves per surface (default 2, like CATIA)
+        num_v_lines: Number of VIso curves per surface (default 0)
+    
+    Returns:
+        List of tuples: [(start_point, end_point, curve_type), ...]
+    """
+    iso_curves = []
+    
+    try:
+        # Iterate over all faces
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        
+        while face_explorer.More():
+            face = topods.Face(face_explorer.Current())
+            
+            # Get surface adaptor
+            surf_adaptor = BRepAdaptor_Surface(face)
+            surf_type = surf_adaptor.GetType()
+            
+            # Only process curved surfaces (cylinder, cone, sphere, torus)
+            if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus]:
+                
+                # Get parametric bounds
+                u_min = surf_adaptor.FirstUParameter()
+                u_max = surf_adaptor.LastUParameter()
+                v_min = surf_adaptor.FirstVParameter()
+                v_max = surf_adaptor.LastVParameter()
+                
+                # Extract UIso curves (vertical lines on cylinders)
+                if num_u_lines > 0:
+                    for i in range(num_u_lines):
+                        # Distribute evenly around circumference
+                        u_value = u_min + (u_max - u_min) * i / num_u_lines
+                        
+                        # Get UIso curve at this U parameter
+                        uiso_curve = surf_adaptor.UIso(u_value)
+                        
+                        # Sample curve at V parameter bounds
+                        start_point = uiso_curve.Value(v_min)
+                        end_point = uiso_curve.Value(v_max)
+                        
+                        # Convert to tuple format
+                        iso_curves.append((
+                            (start_point.X(), start_point.Y(), start_point.Z()),
+                            (end_point.X(), end_point.Y(), end_point.Z()),
+                            "uiso"
+                        ))
+                
+                # Extract VIso curves (circular cross-sections)
+                if num_v_lines > 0:
+                    for i in range(1, num_v_lines + 1):
+                        # Distribute evenly along height
+                        v_value = v_min + (v_max - v_min) * i / (num_v_lines + 1)
+                        
+                        # Get VIso curve (circle) at this V parameter
+                        viso_curve = surf_adaptor.VIso(v_value)
+                        
+                        # Sample multiple points around the circle
+                        num_segments = 24  # 24 segments for smooth circle
+                        u_range = u_max - u_min
+                        
+                        for j in range(num_segments):
+                            u_start = u_min + u_range * j / num_segments
+                            u_end = u_min + u_range * (j + 1) / num_segments
+                            
+                            start_point = viso_curve.Value(u_start)
+                            end_point = viso_curve.Value(u_end)
+                            
+                            iso_curves.append((
+                                (start_point.X(), start_point.Y(), start_point.Z()),
+                                (end_point.X(), end_point.Y(), end_point.Z()),
+                                "viso"
+                            ))
+            
+            face_explorer.Next()
+        
+        logger.info(f"✅ Extracted {len(iso_curves)} isoparametric curves ({num_u_lines} UIso per surface)")
+        
+    except Exception as e:
+        logger.error(f"❌ Error extracting isoparametric curves: {e}")
+    
+    return iso_curves
+
+
+def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20, include_uiso=True, num_uiso_lines=2):
     """
     UNIFIED single-pass edge extraction: tessellate once, classify, and tag segments.
     
@@ -409,11 +503,14 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     Only extracts edges that are:
     1. Boundary edges (belong to only 1 face) - always significant
     2. Sharp edges (dihedral angle between faces > threshold)
+    3. UIso/VIso parametric curves (industry-standard cylinder height lines)
     
     Args:
         shape: OpenCascade shape
         max_edges: Maximum number of edges to extract
         angle_threshold_degrees: Minimum dihedral angle to consider edge "sharp" (default: 20°)
+        include_uiso: Whether to include UIso/VIso parametric curves (default: True)
+        num_uiso_lines: Number of UIso lines per curved surface (default: 2, CATIA standard)
     
     Returns:
         {
@@ -432,6 +529,12 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     feature_id_counter = 0
     angle_threshold_rad = math.radians(angle_threshold_degrees)
     
+    # Extract isoparametric curves for curved surfaces
+    iso_curves = []
+    if include_uiso:
+        iso_curves = extract_isoparametric_curves(shape, num_u_lines=num_uiso_lines)
+        logger.info(f"📐 Extracted {len(iso_curves)} UIso/VIso curves")
+    
     # Build edge-to-faces map using TopTools
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
@@ -444,7 +547,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             'sharp_edges': 0,
             'geometric_features': 0,  # NEW: Track cylinder-to-plane edges separately
             'smooth_edges_skipped': 0,
-            'total_processed': 0
+            'total_processed': 0,
+            'iso_curves': 0  # Track UIso/VIso parametric curves
         }
         
         debug_logged = 0  # Track how many edges we've logged for debugging
@@ -654,9 +758,41 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             
             edge_explorer.Next()
         
+        # Add isoparametric curves to the feature edges
+        for start, end, curve_type in iso_curves:
+            feature_edges.append([list(start), list(end)])
+            
+            # Add classification metadata
+            classification = {
+                "id": edge_count,
+                "type": "line" if curve_type == "uiso" else "circle_segment",
+                "start_point": list(start),
+                "end_point": list(end),
+                "feature_id": feature_id_counter,
+                "iso_type": curve_type
+            }
+            edge_classifications.append(classification)
+            
+            # Add tagged segment
+            tagged_segment = {
+                'feature_id': feature_id_counter,
+                'start': list(start),
+                'end': list(end),
+                'type': curve_type
+            }
+            tagged_edges.append(tagged_segment)
+            
+            stats['iso_curves'] += 1
+            edge_count += 1
+            feature_id_counter += 1
+        
+        # Update total edge count
+        stats['feature_edges_used'] = len(feature_edges)
+        
         logger.info(f"✅ Extracted {len(feature_edges)} significant edges:")
         logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
         logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
+        logger.info(f"   - ISO curves: {stats['iso_curves']}")
         logger.info(f"   - Smooth edges skipped: {stats['smooth_edges_skipped']}")
         logger.info(f"   - Total processed: {stats['total_processed']}")
         logger.info(f"   - Tagged segments: {len(tagged_edges)}")
@@ -1298,8 +1434,14 @@ def analyze_cad():
         mesh_data["face_classifications"] = face_classifications
         
         logger.info("📐 Extracting and classifying BREP edges (UNIFIED SINGLE-PASS)...")
-        # NEW: Single-pass extraction with guaranteed matching
-        edge_result = extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20)
+        # NEW: Single-pass extraction with guaranteed matching + UIso curves
+        edge_result = extract_and_classify_feature_edges(
+            shape, 
+            max_edges=500, 
+            angle_threshold_degrees=20,
+            include_uiso=True,  # Industry-standard cylinder height lines
+            num_uiso_lines=2    # CATIA standard (2 lines per curved surface)
+        )
         
         mesh_data["feature_edges"] = edge_result["feature_edges"]
         mesh_data["edge_classifications"] = edge_result["edge_classifications"]
