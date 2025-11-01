@@ -121,7 +121,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       }
     }, [geometry, topologyColors, meshData]);
 
-    // Pre-compute feature edges ONCE at load time
+    // Pre-compute feature edges ONCE at load time (for solid mode)
     const featureEdgesGeometry = useMemo(() => {
       // PRIORITY: Use backend feature_edges if available (guarantees match with tagged_edges)
       if (meshData.feature_edges && meshData.feature_edges.length > 0) {
@@ -256,6 +256,15 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
 
+    // For wireframe mode: Use EdgesGeometry to show ALL mesh edges (including cylinder longitudinal lines)
+    const wireframeEdgesGeometry = useMemo(() => {
+      // Three.js EdgesGeometry automatically extracts all edges with a threshold angle
+      // Using threshold of 1 degree will show nearly all edges including smooth surfaces
+      const edgesGeo = new THREE.EdgesGeometry(geometry, 1); // 1 degree threshold
+      console.log("✅ Generated wireframe edges:", edgesGeo.attributes.position.count / 2, "edges");
+      return edgesGeo;
+    }, [geometry]);
+
     // Section plane
     const clippingPlane = useMemo(() => {
       if (sectionPlane === "none") return undefined;
@@ -332,12 +341,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </lineSegments>
         )}
 
-        {/* Wireframe mode - use silhouette edges or feature edges */}
+        {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
             <SilhouetteEdges geometry={geometry} />
           ) : (
-            <lineSegments geometry={featureEdgesGeometry}>
+            <lineSegments geometry={wireframeEdgesGeometry}>
               <lineBasicMaterial color="#000000" toneMapped={false} />
             </lineSegments>
           ))}
