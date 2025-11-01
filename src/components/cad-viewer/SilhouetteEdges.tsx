@@ -36,15 +36,6 @@ export function SilhouetteEdges({
     return buildEdgeMap(geometry);
   }, [geometry]);
 
-  // Debug: Verify static edges on mount
-  useMemo(() => {
-    console.log("🎨 SilhouetteEdges initialized:");
-    console.log("  - Static edges:", staticFeatureEdges.attributes.position?.count / 2, "segments");
-    console.log("  - Has bounding sphere:", !!staticFeatureEdges.boundingSphere);
-    console.log("  - Edge map size:", edgeMap.size, "unique edges");
-    return null;
-  }, [staticFeatureEdges, edgeMap]);
-
   // Update silhouette edges when camera moves
   useFrame(() => {
     const currentPos = camera.position;
@@ -63,6 +54,8 @@ export function SilhouetteEdges({
       }
       
       const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos);
+      console.log("🔄 Silhouette update:", silhouettes.length / 6, "segments");
+      
       setSilhouettePositions(silhouettes);
       
       lastCameraPos.current.copy(currentPos);
@@ -73,18 +66,19 @@ export function SilhouetteEdges({
   return (
     <group>
       {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
-      <lineSegments geometry={staticFeatureEdges} frustumCulled={false} renderOrder={1}>
+      <lineSegments geometry={staticFeatureEdges}>
         <lineBasicMaterial 
           color="#000000" 
           toneMapped={false}
-          depthTest={false}
-          depthWrite={false}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
         />
       </lineSegments>
       
       {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
       {silhouettePositions.length > 0 && (
-        <lineSegments renderOrder={2}>
+        <lineSegments>
           <bufferGeometry>
             <bufferAttribute
               attach="attributes-position"
@@ -96,8 +90,9 @@ export function SilhouetteEdges({
           <lineBasicMaterial 
             color="#000000" 
             toneMapped={false}
-            depthTest={false}
-            depthWrite={false}
+            polygonOffset={true}
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
           />
         </lineSegments>
       )}
