@@ -8,6 +8,7 @@ interface EdgeData {
     normal: THREE.Vector3;
     centroid: THREE.Vector3;
   }>;
+  angle?: number; // Angle between faces (in degrees)
 }
 
 interface SilhouetteEdgesProps {
@@ -116,6 +117,17 @@ function buildEdgeMap(geometry: THREE.BufferGeometry): Map<string, EdgeData> {
     addEdgeToMap(edgeMap, v2, v0, triangleData);
   }
 
+  // Pre-compute angles for edges with 2 triangles (feature edge detection)
+  edgeMap.forEach((edgeData) => {
+    if (edgeData.triangles.length === 2) {
+      const tri1 = edgeData.triangles[0];
+      const tri2 = edgeData.triangles[1];
+      const dotProduct = Math.max(-1, Math.min(1, tri1.normal.dot(tri2.normal)));
+      const angle = Math.acos(dotProduct);
+      edgeData.angle = angle * (180 / Math.PI);
+    }
+  });
+
   return edgeMap;
 }
 
@@ -177,10 +189,13 @@ function computeSilhouetteEdges(
       return;
     }
 
-    // For interior edges (2 triangles), check if it's a silhouette
+    // For interior edges (2 triangles), check both feature and silhouette
     if (triangles.length === 2) {
       const tri1 = triangles[0];
       const tri2 = triangles[1];
+
+      // Check if it's a feature edge (sharp angle > 30°)
+      const isFeatureEdge = edgeData.angle !== undefined && edgeData.angle > 30;
 
       // Compute view direction from triangle centroid to camera
       const viewDir1 = new THREE.Vector3()
@@ -196,7 +211,10 @@ function computeSilhouetteEdges(
       const isFrontFacing2 = tri2.normal.dot(viewDir2) > 0;
 
       // Silhouette edge: one front, one back
-      if (isFrontFacing1 !== isFrontFacing2) {
+      const isSilhouetteEdge = isFrontFacing1 !== isFrontFacing2;
+
+      // Show edge if EITHER feature OR silhouette
+      if (isFeatureEdge || isSilhouetteEdge) {
         silhouetteEdges.push(
           vertices[0].x, vertices[0].y, vertices[0].z,
           vertices[1].x, vertices[1].y, vertices[1].z
