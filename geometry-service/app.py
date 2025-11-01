@@ -319,32 +319,36 @@ def is_cylinder_to_planar_edge(face1, face2):
     Detect if an edge connects a cylindrical/conical face to a planar face.
     These edges should always be included (cylinder height lines, cone base circles).
     
+    Uses GeomAbs surface type enums instead of string names for reliability.
+    
     Returns: True if one face is cylindrical/conical and the other is planar
     """
     try:
-        surf1 = BRep_Tool.Surface(face1)
-        surf2 = BRep_Tool.Surface(face2)
+        # Use BRepAdaptor instead of BRep_Tool for type detection
+        surf1 = BRepAdaptor_Surface(face1)
+        surf2 = BRepAdaptor_Surface(face2)
         
-        # Get surface type names
-        type1 = surf1.DynamicType().Name()
-        type2 = surf2.DynamicType().Name()
+        # Get surface types using GeomAbs enums (more reliable than string names)
+        type1 = surf1.GetType()
+        type2 = surf2.GetType()
         
         # Curved surface types that create important boundary edges
         curved_types = {
-            'Geom_CylindricalSurface',
-            'Geom_ConicalSurface',
-            'Geom_SphericalSurface',
-            'Geom_ToroidalSurface'
+            GeomAbs_Cylinder,    # Cylindrical surfaces
+            GeomAbs_Cone,        # Conical surfaces
+            GeomAbs_Sphere,      # Spherical surfaces
+            GeomAbs_Torus        # Toroidal surfaces
         }
-        
-        # Planar surface type
-        plane_type = 'Geom_Plane'
         
         # Check if one is curved and the other is planar
         is_curved_to_plane = (
-            (type1 in curved_types and type2 == plane_type) or
-            (type2 in curved_types and type1 == plane_type)
+            (type1 in curved_types and type2 == GeomAbs_Plane) or
+            (type2 in curved_types and type1 == GeomAbs_Plane)
         )
+        
+        # Debug logging for first few detections
+        if is_curved_to_plane:
+            logger.debug(f"🎯 GEOMETRIC FEATURE DETECTED: type1={type1}, type2={type2}")
         
         return is_curved_to_plane
         
@@ -438,9 +442,13 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         stats = {
             'boundary_edges': 0,
             'sharp_edges': 0,
+            'geometric_features': 0,  # NEW: Track cylinder-to-plane edges separately
             'smooth_edges_skipped': 0,
             'total_processed': 0
         }
+        
+        debug_logged = 0  # Track how many edges we've logged for debugging
+        max_debug_logs = 10  # Only log first 10 edges to avoid spam
         
         while edge_explorer.More() and edge_count < max_edges:
             edge = topods.Edge(edge_explorer.Current())
@@ -467,6 +475,11 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     face_list = edge_face_map.FindFromKey(edge)
                     num_adjacent_faces = face_list.Size()
                     
+                    # Debug logging for first few edges
+                    if debug_logged < max_debug_logs:
+                        logger.debug(f"🔍 Edge #{stats['total_processed']}: {num_adjacent_faces} adjacent faces")
+                        debug_logged += 1
+                    
                     if num_adjacent_faces == 1:
                         # BOUNDARY EDGE - always show (holes, external boundaries)
                         is_significant = True
@@ -481,11 +494,20 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         # Check if this is a special geometric edge (cylinder-to-plane, etc.)
                         is_geometric_feature = is_cylinder_to_planar_edge(face1, face2)
                         
+                        # Debug logging for first few edges with 2 faces
+                        if debug_logged < max_debug_logs:
+                            surf1 = BRepAdaptor_Surface(face1)
+                            surf2 = BRepAdaptor_Surface(face2)
+                            type1 = surf1.GetType()
+                            type2 = surf2.GetType()
+                            logger.debug(f"   Surface types: {type1} + {type2}, geometric_feature={is_geometric_feature}")
+                        
                         if is_geometric_feature:
                             # GEOMETRIC FEATURE EDGE - always include
                             is_significant = True
                             edge_type = "geometric_feature"
-                            stats['sharp_edges'] += 1
+                            stats['geometric_features'] += 1
+                            stats['sharp_edges'] += 1  # Also count as sharp for total
                         else:
                             # Calculate dihedral angle for regular edges
                             dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
@@ -627,7 +649,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         
         logger.info(f"✅ Extracted {len(feature_edges)} significant edges:")
         logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
-        logger.info(f"   - Sharp edges: {stats['sharp_edges']}")
+        logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
         logger.info(f"   - Smooth edges skipped: {stats['smooth_edges_skipped']}")
         logger.info(f"   - Total processed: {stats['total_processed']}")
         logger.info(f"   - Tagged segments: {len(tagged_edges)}")
