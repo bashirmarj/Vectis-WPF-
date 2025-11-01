@@ -345,7 +345,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           />
         </mesh>
 
-        {/* Pre-computed feature edges for solid mode */}
+        {/* Pre-computed feature edges for solid mode - STATIC ONLY */}
         {displayStyle === "solid" && showEdges && (
           <lineSegments geometry={featureEdgesGeometry} frustumCulled={false}>
             <lineBasicMaterial 
@@ -356,6 +356,15 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               polygonOffsetUnits={-2}
             />
           </lineSegments>
+        )}
+
+        {/* Dynamic silhouette edges for solid mode - ADDS CYLINDER BOUNDARIES */}
+        {displayStyle === "solid" && showEdges && (
+          <SilhouetteEdges 
+            geometry={geometry} 
+            mesh={meshRef.current}
+            staticFeatureEdges={featureEdgesGeometry}
+          />
         )}
 
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
