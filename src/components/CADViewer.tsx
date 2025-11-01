@@ -48,6 +48,15 @@ interface MeshData {
     center?: [number, number, number];
     segment_count: number;
   }>;
+  tagged_edges?: Array<{
+    feature_id: number;
+    start: [number, number, number];
+    end: [number, number, number];
+    type: 'line' | 'circle' | 'arc';
+    diameter?: number;
+    radius?: number;
+    length?: number;
+  }>;
 }
 
 export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
@@ -118,6 +127,14 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
             : JSON.parse(mesh.edge_classifications as string)
           : undefined;
 
+        const tagged_edges = mesh.tagged_feature_edges
+          ? Array.isArray(mesh.tagged_feature_edges)
+            ? mesh.tagged_feature_edges
+            : JSON.parse(mesh.tagged_feature_edges as string)
+          : undefined;
+
+        console.log("✅ Tagged edges received from backend:", tagged_edges?.length || 0);
+
         const loadedMeshData: MeshData = {
           vertices,
           indices,
@@ -126,6 +143,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
           triangle_count: indices.length / 3,
           feature_edges,
           edge_classifications,
+          tagged_edges,
         };
 
         setMeshData(loadedMeshData);
