@@ -211,12 +211,6 @@ export function UnifiedCADToolbar({
                 <Layers className="mr-2 h-4 w-4" />
                 {showEdges ? "Hide" : "Show"} Edges
               </DropdownMenuItem>
-              {displayMode === "wireframe" && onToggleSilhouettes && (
-                <DropdownMenuItem onClick={onToggleSilhouettes}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  {useSilhouettes ? "Static" : "Dynamic"} Edges
-                </DropdownMenuItem>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
