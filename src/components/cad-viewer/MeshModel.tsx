@@ -347,8 +347,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* Pre-computed feature edges for solid mode */}
         {displayStyle === "solid" && showEdges && (
-          <lineSegments geometry={featureEdgesGeometry}>
-            <lineBasicMaterial color="#000000" toneMapped={false} />
+          <lineSegments geometry={featureEdgesGeometry} frustumCulled={false}>
+            <lineBasicMaterial 
+              color="#000000" 
+              toneMapped={false}
+              polygonOffset={true}
+              polygonOffsetFactor={-2}
+              polygonOffsetUnits={-2}
+            />
           </lineSegments>
         )}
 
