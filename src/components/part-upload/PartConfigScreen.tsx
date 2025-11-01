@@ -393,7 +393,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                             variant="outline"
                             size="icon"
                             onClick={() => setIsSidebarCollapsed(false)}
-                            className="absolute top-0 left-0 z-50 shadow-lg m-2"
+                            className="absolute top-2 left-2 z-50 shadow-lg"
                           >
                             <PanelLeftOpen className="h-4 w-4" />
                           </Button>
