@@ -356,7 +356,7 @@ def calculate_dihedral_angle(edge, face1, face2):
         return None
 
 
-def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20):
+def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=12):
     """
     UNIFIED single-pass edge extraction: tessellate once, classify, and tag segments.
     
