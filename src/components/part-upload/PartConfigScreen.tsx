@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 import FeatureTree from "@/components/FeatureTree";
@@ -385,15 +386,23 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                 <TabsContent value="3d-model" className="h-full m-0 p-6 relative">
                   {/* Expand button when sidebar is collapsed - positioned inside viewport */}
                   {isSidebarCollapsed && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsSidebarCollapsed(false)}
-                      className="absolute top-0 left-0 z-50 gap-2 shadow-lg m-2"
-                    >
-                      <PanelLeftOpen className="h-4 w-4" />
-                      Show Configuration
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setIsSidebarCollapsed(false)}
+                            className="absolute top-0 left-0 z-50 shadow-lg m-2"
+                          >
+                            <PanelLeftOpen className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Show Configuration</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                   <div className="h-[calc(100vh-200px)]">
                     {selectedFile.meshId ? (
