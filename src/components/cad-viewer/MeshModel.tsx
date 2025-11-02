@@ -14,6 +14,13 @@ interface MeshData {
   vertex_colors?: string[];
   triangle_count: number;
   feature_edges?: number[][][];
+  tagged_edges?: Array<{
+    feature_id: number;
+    start: [number, number, number];
+    end: [number, number, number];
+    type: string;
+    iso_type?: string;
+  }>;
 }
 
 interface MeshModelProps {
@@ -126,11 +133,43 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     // Pre-compute feature edges ONCE at load time (for solid mode)
     const featureEdgesGeometry = useMemo(() => {
-      // PRIORITY: Use backend feature_edges if available (guarantees match with tagged_edges)
+      // PRIORITY: Use tagged_edges with iso_type filtering to remove UIso/VIso construction lines
+      if (meshData.tagged_edges && meshData.tagged_edges.length > 0) {
+        const featureEdgePositions: number[] = [];
+        let totalEdges = 0;
+        let filteredEdges = 0;
+
+        meshData.tagged_edges.forEach((edge) => {
+          totalEdges++;
+          
+          // FILTER: Skip UIso/VIso parametric surface curves (interior construction lines)
+          if (edge.iso_type === "UIso" || edge.iso_type === "VIso") {
+            return; // Skip this edge
+          }
+          
+          // Render all other edges (boundary, feature edges, fillets, etc.)
+          featureEdgePositions.push(
+            edge.start[0], edge.start[1], edge.start[2],
+            edge.end[0], edge.end[1], edge.end[2]
+          );
+          filteredEdges++;
+        });
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
+        geo.computeBoundingSphere();
+        console.log(
+          "✅ Using tagged_edges with iso_type filtering:",
+          `kept ${filteredEdges}/${totalEdges} edges (filtered out ${totalEdges - filteredEdges} UIso/VIso lines)`
+        );
+
+        return geo;
+      }
+
+      // FALLBACK: Use feature_edges if tagged_edges not available
       if (meshData.feature_edges && meshData.feature_edges.length > 0) {
         const featureEdgePositions: number[] = [];
 
-        // NO FILTERING - Render ALL backend feature edges
         meshData.feature_edges.forEach((polyline) => {
           for (let i = 0; i < polyline.length - 1; i++) {
             const p1 = polyline[i];
@@ -143,7 +182,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
         geo.computeBoundingSphere();
         console.log(
-          "✅ Rendering ALL backend feature_edges:",
+          "✅ Rendering backend feature_edges:",
           meshData.feature_edges.length,
           "polylines,",
           featureEdgePositions.length / 6,
