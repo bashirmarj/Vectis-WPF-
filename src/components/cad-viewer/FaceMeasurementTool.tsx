@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { createPortal } from 'react-dom';
 import * as THREE from 'three';
 import { FaceCrosshairMarker } from './measurements/FaceCrosshairMarker';
 import { FaceMeasurementPanel } from './measurements/FaceMeasurementPanel';
@@ -182,13 +182,14 @@ export function FaceMeasurementTool({
         />
       )}
 
-      {/* Measurement panel (DOM overlay) */}
-      <Html center>
+      {/* Measurement panel (DOM overlay) - rendered via portal */}
+      {createPortal(
         <FaceMeasurementPanel 
           markerCount={permanentMarkers.length}
           measurements={measurements}
-        />
-      </Html>
+        />,
+        document.body
+      )}
     </>
   );
 }
