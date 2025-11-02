@@ -335,13 +335,6 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         if (selectedFaces.length === 0) {
           setSelectedFaces([face]);
           
-          // Show visual feedback at face center
-          setHoverInfo({
-            position: new THREE.Vector3(...face.center),
-            classification: face as any,
-            edge: new THREE.Line3(),
-          });
-          
           toast({
             title: "First face selected",
             description: `${face.surface_type} - Click second face`,
@@ -596,23 +589,12 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       )}
 
       {/* Face highlighting for face-to-face mode */}
-      {hoverInfo && activeTool === "face-to-face" && hoverInfo.classification && 
-       'center' in hoverInfo.classification && Array.isArray(hoverInfo.classification.center) && (
-        <>
-          <mesh 
-            position={new THREE.Vector3(...hoverInfo.classification.center)}
-            geometry={faceHighlightGeometry}
-            material={faceHighlightMaterial}
-          />
-          
-          {selectedFaces.length > 0 && (
-            <mesh 
-              position={new THREE.Vector3(...selectedFaces[0].center)}
-              geometry={faceHighlightGeometry}
-              material={firstFaceMaterial}
-            />
-          )}
-        </>
+      {activeTool === "face-to-face" && selectedFaces.length > 0 && (
+        <mesh 
+          position={new THREE.Vector3(...selectedFaces[0].center)}
+          geometry={faceHighlightGeometry}
+          material={firstFaceMaterial}
+        />
       )}
 
       {/* Label display */}
