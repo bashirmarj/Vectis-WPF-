@@ -114,6 +114,26 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     return lines;
   }, [featureEdgesGeometry]);
 
+  // Reusable geometry for face highlighting (prevents WebGL context loss)
+  const faceHighlightGeometry = React.useMemo(() => new THREE.SphereGeometry(2, 16, 16), []);
+  const faceHighlightMaterial = React.useMemo(
+    () => new THREE.MeshBasicMaterial({ color: 0x00cc66, opacity: 0.7, transparent: true }),
+    []
+  );
+  const firstFaceMaterial = React.useMemo(
+    () => new THREE.MeshBasicMaterial({ color: 0x0066cc }),
+    []
+  );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      faceHighlightGeometry.dispose();
+      faceHighlightMaterial.dispose();
+      firstFaceMaterial.dispose();
+    };
+  }, [faceHighlightGeometry, faceHighlightMaterial, firstFaceMaterial]);
+
   // Log available tagged edges from backend
   React.useEffect(() => {
     if (meshData?.tagged_edges) {
@@ -515,16 +535,18 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       {hoverInfo && activeTool === "face-to-face" && hoverInfo.classification && 
        'center' in hoverInfo.classification && Array.isArray(hoverInfo.classification.center) && (
         <>
-          <mesh position={new THREE.Vector3(...hoverInfo.classification.center)}>
-            <sphereGeometry args={[2, 16, 16]} />
-            <meshBasicMaterial color="#00CC66" opacity={0.7} transparent />
-          </mesh>
+          <mesh 
+            position={new THREE.Vector3(...hoverInfo.classification.center)}
+            geometry={faceHighlightGeometry}
+            material={faceHighlightMaterial}
+          />
           
           {selectedFaces.length > 0 && (
-            <mesh position={new THREE.Vector3(...selectedFaces[0].center)}>
-              <sphereGeometry args={[2, 16, 16]} />
-              <meshBasicMaterial color="#0066CC" />
-            </mesh>
+            <mesh 
+              position={new THREE.Vector3(...selectedFaces[0].center)}
+              geometry={faceHighlightGeometry}
+              material={firstFaceMaterial}
+            />
           )}
         </>
       )}
