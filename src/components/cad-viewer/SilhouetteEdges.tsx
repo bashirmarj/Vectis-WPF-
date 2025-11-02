@@ -16,13 +16,15 @@ interface SilhouetteEdgesProps {
   mesh?: THREE.Mesh | null;
   updateThreshold?: number;
   staticFeatureEdges: THREE.BufferGeometry;
+  showHiddenEdges?: boolean;
 }
 
 export function SilhouetteEdges({ 
   geometry,
   mesh,
   updateThreshold = 0.1,
-  staticFeatureEdges
+  staticFeatureEdges,
+  showHiddenEdges = false
 }: SilhouetteEdgesProps) {
   const { camera } = useThree();
   const lastCameraPos = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -111,7 +113,7 @@ export function SilhouetteEdges({
           polygonOffset={true}
           polygonOffsetFactor={-2}
           polygonOffsetUnits={-2}
-          depthTest={true}
+          depthTest={!showHiddenEdges}
           depthWrite={false}
         />
       </lineSegments>
@@ -125,7 +127,7 @@ export function SilhouetteEdges({
             polygonOffset={true}
             polygonOffsetFactor={-2}
             polygonOffsetUnits={-2}
-            depthTest={true}
+            depthTest={!showHiddenEdges}
             depthWrite={false}
           />
         </lineSegments>

@@ -387,7 +387,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         </mesh>
 
         {/* Invisible depth-writing mesh for wireframe occlusion */}
-        {displayStyle === "wireframe" && (
+        {displayStyle === "wireframe" && !showEdges && (
           <mesh geometry={geometry}>
             <meshBasicMaterial
               colorWrite={false}
@@ -409,13 +409,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} />
+            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} showHiddenEdges={showEdges} />
           ) : (
             <lineSegments geometry={wireframeEdgesGeometry}>
               <lineBasicMaterial 
                 color="#000000" 
                 toneMapped={false}
-                depthTest={true}
+                depthTest={!showEdges}
                 depthWrite={false}
               />
             </lineSegments>
