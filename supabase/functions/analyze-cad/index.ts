@@ -90,6 +90,16 @@ interface MeshData {
   feature_edges?: number[][][];
   edge_classifications?: any[]; // Backend ground truth edge data
   tagged_feature_edges?: any[]; // Direct feature_id lookup
+  vertex_face_ids?: number[];
+  face_classifications?: Array<{
+    face_id: number;
+    type: "internal" | "external" | "through" | "planar";
+    center: [number, number, number];
+    normal: [number, number, number];
+    area: number;
+    surface_type: "cylinder" | "plane" | "other";
+    radius?: number;
+  }>;
 }
 
 interface MachiningOperation {
@@ -722,6 +732,8 @@ async function storeMeshData(meshData: MeshData, fileName: string): Promise<stri
         feature_edges: Array.isArray(meshData.feature_edges) ? meshData.feature_edges : [],
         edge_classifications: Array.isArray(meshData.edge_classifications) ? meshData.edge_classifications : [],
         tagged_feature_edges: Array.isArray(meshData.tagged_feature_edges) ? meshData.tagged_feature_edges : [],
+        vertex_face_ids: meshData.vertex_face_ids || [],
+        face_classifications: Array.isArray(meshData.face_classifications) ? meshData.face_classifications : [],
       })
       .select("id")
       .single();
