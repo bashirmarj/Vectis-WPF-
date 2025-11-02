@@ -34,6 +34,9 @@ export function FaceMeasurementTool({
   const [measurements, setMeasurements] = useState<MarkerValues | null>(null);
   const [connectingLine, setConnectingLine] = useState<THREE.Line | null>(null);
   
+  const clickStartPos = useRef<{ x: number; y: number } | null>(null);
+  const isRealClick = useRef(true);
+  
   const markerRadius = boundingSphere.radius / 20.0;
 
   // Handle pointer move (temp marker preview)
@@ -76,15 +79,39 @@ export function FaceMeasurementTool({
     };
   }, [enabled, meshRef, camera, raycaster, gl]);
 
-  // Handle click (add permanent marker)
+  // Handle click with drag detection (add permanent marker)
   useEffect(() => {
     if (!enabled || !meshRef) return;
 
     const canvas = gl.domElement;
+    const MAX_CLICK_DISTANCE = 3; // pixels
 
-    const handleClick = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
+    const handlePointerDown = (event: PointerEvent) => {
+      clickStartPos.current = { x: event.clientX, y: event.clientY };
+      isRealClick.current = true;
+    };
+
+    const handlePointerMoveForClick = (event: PointerEvent) => {
+      if (!clickStartPos.current) return;
       
+      const dx = event.clientX - clickStartPos.current.x;
+      const dy = event.clientY - clickStartPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance > MAX_CLICK_DISTANCE) {
+        isRealClick.current = false; // It's a drag, not a click
+      }
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (!isRealClick.current) {
+        // It was a drag, not a click - ignore
+        clickStartPos.current = null;
+        return;
+      }
+
+      // Only process if it's a real click (no drag)
+      const rect = canvas.getBoundingClientRect();
       const mouse = new THREE.Vector2(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1
@@ -94,7 +121,16 @@ export function FaceMeasurementTool({
       const intersects = raycaster.intersectObject(meshRef, false);
 
       if (intersects.length === 0) {
-        // Ignore clicks on empty space - don't reset
+        // Click on empty space - reset markers (like reference code)
+        permanentMarkersRef.current = [];
+        setPermanentMarkers([]);
+        setMeasurements(null);
+        onMeasurementsChange?.(null, 0);
+        if (connectingLine) {
+          scene.remove(connectingLine);
+          setConnectingLine(null);
+        }
+        clickStartPos.current = null;
         return;
       }
 
@@ -108,7 +144,7 @@ export function FaceMeasurementTool({
         setPermanentMarkers(newMarkers);
         onMeasurementsChange?.(null, 1);
       } else if (currentMarkers.length === 1) {
-        // Second marker - calculate measurements and draw line
+        // Second marker
         const newMarkers = [...currentMarkers, { intersection }];
         permanentMarkersRef.current = newMarkers;
         setPermanentMarkers(newMarkers);
@@ -120,7 +156,6 @@ export function FaceMeasurementTool({
         setMeasurements(values);
         onMeasurementsChange?.(values, 2);
 
-        // Create connecting line
         const geometry = new THREE.BufferGeometry().setFromPoints([
           currentMarkers[0].intersection.point,
           intersection.point,
@@ -134,13 +169,31 @@ export function FaceMeasurementTool({
         line.renderOrder = 999;
         scene.add(line);
         setConnectingLine(line);
+      } else {
+        // Already have 2 markers - click on empty space resets
+        permanentMarkersRef.current = [];
+        setPermanentMarkers([]);
+        setMeasurements(null);
+        onMeasurementsChange?.(null, 0);
+        if (connectingLine) {
+          scene.remove(connectingLine);
+          setConnectingLine(null);
+        }
       }
-      // If 2 markers already exist, do nothing (wait for reset button)
+
+      clickStartPos.current = null;
     };
 
-    canvas.addEventListener('click', handleClick);
-    return () => canvas.removeEventListener('click', handleClick);
-  }, [enabled, meshRef, camera, raycaster, scene, gl]);
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMoveForClick);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMoveForClick);
+      canvas.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [enabled, meshRef, camera, raycaster, scene, gl, onMeasurementsChange, connectingLine]);
 
   // Handle reset trigger
   useEffect(() => {
