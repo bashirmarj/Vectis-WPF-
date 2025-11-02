@@ -397,7 +397,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} />
           ) : (
             <lineSegments geometry={wireframeEdgesGeometry}>
-              <lineBasicMaterial color="#000000" toneMapped={false} />
+              <lineBasicMaterial 
+                color="#000000" 
+                toneMapped={false}
+                depthTest={true}
+                depthWrite={false}
+              />
             </lineSegments>
           ))}
       </group>

@@ -111,6 +111,8 @@ export function SilhouetteEdges({
           polygonOffset={true}
           polygonOffsetFactor={-2}
           polygonOffsetUnits={-2}
+          depthTest={true}
+          depthWrite={false}
         />
       </lineSegments>
       
@@ -123,6 +125,8 @@ export function SilhouetteEdges({
             polygonOffset={true}
             polygonOffsetFactor={-2}
             polygonOffsetUnits={-2}
+            depthTest={true}
+            depthWrite={false}
           />
         </lineSegments>
       )}
