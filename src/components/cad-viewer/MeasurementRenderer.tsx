@@ -7,10 +7,56 @@ import type { Measurement } from "@/stores/measurementStore";
 export const MeasurementRenderer: React.FC = () => {
   const { measurements } = useMeasurementStore();
 
+  const renderFaceToFaceMeasurement = (m: Measurement) => {
+    if (m.points.length < 2) return null;
+    
+    const p1 = m.points[0].position;
+    const p2 = m.points[1].position;
+    const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+    
+    const lineGeometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    
+    return (
+      <group key={m.id}>
+        <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: "#00CC66", linewidth: 2 }))} />
+        <mesh position={p1}>
+          <sphereGeometry args={[1.5, 16, 16]} />
+          <meshBasicMaterial color="#00CC66" />
+        </mesh>
+        <mesh position={p2}>
+          <sphereGeometry args={[1.5, 16, 16]} />
+          <meshBasicMaterial color="#00CC66" />
+        </mesh>
+        <Html position={midpoint} center distanceFactor={2}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            color: '#1a1a1a',
+            padding: '12px 20px',
+            borderRadius: '6px',
+            fontSize: '20px',
+            fontWeight: '600',
+            border: '2px solid #00CC66',
+            boxShadow: '0 3px 10px rgba(0,0,0,0.2)',
+            minWidth: '180px',
+            textAlign: 'center',
+            transform: 'scale(1.3)'
+          }}>
+            <div style={{fontSize: '32px', fontWeight: 'bold', color: '#00CC66'}}>
+              {m.label}
+            </div>
+          </div>
+        </Html>
+      </group>
+    );
+  };
+
   const renderMeasurement = (measurement: Measurement) => {
     if (!measurement.visible || measurement.points.length === 0) return null;
 
-    // All measurements are now edge-select type
+    if (measurement.type === "face-to-face") {
+      return renderFaceToFaceMeasurement(measurement);
+    }
+    
     return renderEdgeSelectMeasurement(measurement);
   };
 

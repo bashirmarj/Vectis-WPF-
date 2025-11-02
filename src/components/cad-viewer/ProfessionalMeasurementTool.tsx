@@ -7,6 +7,7 @@ import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { toast } from "@/hooks/use-toast";
 import { findEdgeByFeatureId, getFeatureSegments, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
+import { getFaceFromIntersection, calculateFaceToFaceDistance } from "@/lib/faceDetection";
 
 interface EdgeClassification {
   type: "line" | "circle" | "arc";
@@ -83,8 +84,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     allSegments?: THREE.Line3[];
   } | null>(null);
   const [labelText, setLabelText] = useState<string>("");
+  const [selectedFaces, setSelectedFaces] = useState<BackendFaceClassification[]>([]);
 
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
+  const activeTool = useMeasurementStore((state) => state.activeTool);
 
   // Convert feature edges to Line3 array
   const edgeLines = React.useMemo(() => {
@@ -142,6 +145,24 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
       if (intersects.length > 0) {
         const point = intersects[0].point;
+
+        // Face-to-face mode
+        if (activeTool === "face-to-face") {
+          const face = getFaceFromIntersection(intersects[0], meshData);
+          
+          if (face) {
+            setLabelText(`${face.surface_type.toUpperCase()} Face (${face.type})`);
+            setHoverInfo({
+              position: point,
+              classification: face as any,
+              edge: new THREE.Line3(),
+            });
+          } else {
+            setHoverInfo(null);
+            setLabelText("");
+          }
+          return;
+        }
 
         let closestEdge: THREE.Line3 | null = null;
         let minDist = 1.5; // Increased from 1.0 to 1.5 for better detection
@@ -220,6 +241,75 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     if (!enabled || !hoverInfo) return;
 
     const handleClick = () => {
+      // Face-to-face mode
+      if (activeTool === "face-to-face" && hoverInfo?.classification) {
+        const face = hoverInfo.classification as BackendFaceClassification;
+        
+        if (selectedFaces.length === 0) {
+          setSelectedFaces([face]);
+          toast({
+            title: "First face selected",
+            description: `${face.surface_type} - Click second face`,
+          });
+          return;
+        }
+        
+        if (selectedFaces.length === 1) {
+          const face1 = selectedFaces[0];
+          const face2 = face;
+          
+          const { distance, type, description } = calculateFaceToFaceDistance(face1, face2);
+          
+          addMeasurement({
+            id: generateMeasurementId(),
+            type: "face-to-face",
+            points: [
+              {
+                id: generateMeasurementId(),
+                position: new THREE.Vector3(...face1.center),
+                normal: new THREE.Vector3(...face1.normal),
+                surfaceType: "face",
+              },
+              {
+                id: generateMeasurementId(),
+                position: new THREE.Vector3(...face2.center),
+                normal: new THREE.Vector3(...face2.normal),
+                surfaceType: "face",
+              },
+            ],
+            value: distance,
+            unit: "mm",
+            label: `${formatMeasurement(distance, "mm")} (${description})`,
+            color: "#00CC66",
+            visible: true,
+            createdAt: new Date(),
+            metadata: {
+              face1Id: face1.face_id,
+              face2Id: face2.face_id,
+              distanceType: type as "plane-to-plane" | "cylinder-to-cylinder" | "plane-to-cylinder" | "point-to-point",
+              backendMatch: true,
+            },
+          });
+          
+          setSelectedFaces([]);
+          toast({
+            title: "Measurement created",
+            description: `${description}: ${formatMeasurement(distance, "mm")}`,
+          });
+          return;
+        }
+      }
+
+      // Edge-select mode
+      if (!hoverInfo) {
+        toast({
+          title: "No feature detected",
+          description: "Hover over an edge or face to measure",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { edge, classification } = hoverInfo;
       const taggedEdge = classification as TaggedFeatureEdge;
 
@@ -318,11 +408,11 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     gl.domElement.addEventListener("click", handleClick);
     return () => gl.domElement.removeEventListener("click", handleClick);
-  }, [enabled, hoverInfo, addMeasurement, gl]);
+  }, [enabled, hoverInfo, addMeasurement, gl, activeTool, selectedFaces]);
 
   return (
     <>
-      {hoverInfo && (
+      {hoverInfo && activeTool === "edge-select" && (
         <>
           {/* Highlight all segments of the feature */}
           {hoverInfo.allSegments && hoverInfo.allSegments.length > 0 ? (
@@ -376,22 +466,42 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               })()}
             />
           )}
-
-          <Html position={hoverInfo.position} center style={{ pointerEvents: "none", transform: "translateY(-40px)" }}>
-            <div
-              style={{
-                color: "white",
-                fontSize: "14px",
-                fontWeight: "600",
-                whiteSpace: "nowrap",
-                textShadow: "1px 1px 2px black, -1px -1px 2px black",
-                userSelect: "none",
-              }}
-            >
-              {labelText}
-            </div>
-          </Html>
         </>
+      )}
+
+      {/* Face highlighting for face-to-face mode */}
+      {hoverInfo && activeTool === "face-to-face" && (
+        <>
+          <mesh position={new THREE.Vector3(...(hoverInfo.classification as BackendFaceClassification).center)}>
+            <sphereGeometry args={[2, 16, 16]} />
+            <meshBasicMaterial color="#00CC66" opacity={0.7} transparent />
+          </mesh>
+          
+          {selectedFaces.length > 0 && (
+            <mesh position={new THREE.Vector3(...selectedFaces[0].center)}>
+              <sphereGeometry args={[2, 16, 16]} />
+              <meshBasicMaterial color="#0066CC" />
+            </mesh>
+          )}
+        </>
+      )}
+
+      {/* Label display */}
+      {hoverInfo && labelText && (
+        <Html position={hoverInfo.position} center style={{ pointerEvents: "none", transform: "translateY(-40px)" }}>
+          <div
+            style={{
+              color: "white",
+              fontSize: "14px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+              textShadow: "1px 1px 2px black, -1px -1px 2px black",
+              userSelect: "none",
+            }}
+          >
+            {labelText}
+          </div>
+        </Html>
       )}
 
       <MeasurementRenderer />

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import * as THREE from "three";
 
-export type MeasurementType = "edge-select"; // Smart Edge Select: Auto-detect line/arc/circle
+export type MeasurementType = "edge-select" | "face-to-face"; // Smart Edge Select: Auto-detect line/arc/circle | Face-to-face distance
 
 export type SnapType = "vertex" | "edge" | "midpoint" | "center" | "intersection" | "face";
 
@@ -39,6 +39,16 @@ export interface Measurement {
     axis?: THREE.Vector3;
     faceVertices?: number[];
     backendMatch: boolean;
+    // Face-to-face metadata
+    faceId?: number;
+    faceType?: "internal" | "external" | "through" | "planar";
+    surfaceType?: "cylinder" | "plane" | "other";
+    faceCenter?: [number, number, number];
+    faceNormal?: [number, number, number];
+    faceRadius?: number;
+    face1Id?: number;
+    face2Id?: number;
+    distanceType?: "plane-to-plane" | "cylinder-to-cylinder" | "plane-to-cylinder" | "point-to-point";
   };
 }
 
