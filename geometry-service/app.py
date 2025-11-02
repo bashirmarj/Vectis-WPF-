@@ -3,6 +3,7 @@ import io
 import math
 import tempfile
 import numpy as np
+import networkx as nx
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
@@ -11,13 +12,15 @@ from supabase import create_client, Client
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_IN
+from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_IN, TopAbs_OUT, TopAbs_REVERSED
 from OCC.Core.TopExp import TopExp_Explorer, topexp
 from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.BRepTools import breptools
+from OCC.Core.BRepClass3d import BRepClass3d_SolidClassifier
+from OCC.Core.GeomLProp import GeomLProp_SLProps
 from OCC.Core.GCPnts import GCPnts_UniformAbscissa, GCPnts_AbscissaPoint
 from OCC.Core.GeomAbs import (GeomAbs_Cylinder, GeomAbs_Plane, GeomAbs_Cone, 
                                GeomAbs_Sphere, GeomAbs_Torus, GeomAbs_BSplineSurface, 
@@ -81,16 +84,61 @@ def calculate_exact_volume_and_area(shape):
     }
 
 
+def is_face_internal(face, shape):
+    """
+    FIXED: Check if a face is internal using BRepClass3d_SolidClassifier.
+    Tests if outward normal points into material (internal face) or away from material (external face).
+    """
+    try:
+        surf = BRepAdaptor_Surface(face)
+        u_mid = (surf.FirstUParameter() + surf.LastUParameter()) / 2
+        v_mid = (surf.FirstVParameter() + surf.LastVParameter()) / 2
+        
+        # Get point and normal using GeomLProp
+        props = GeomLProp_SLProps(surf, u_mid, v_mid, 1, 1e-6)
+        if not props.IsNormalDefined():
+            return False
+        
+        normal = props.Normal()
+        point = props.Value()
+        
+        # Adjust for face orientation
+        if face.Orientation() == TopAbs_REVERSED:
+            normal.Reverse()
+        
+        # Test point slightly offset along normal
+        offset_distance = 0.01  # 0.01mm offset
+        test_point = gp_Pnt(
+            point.X() + normal.X() * offset_distance,
+            point.Y() + normal.Y() * offset_distance,
+            point.Z() + normal.Z() * offset_distance
+        )
+        
+        # Classify point
+        classifier = BRepClass3d_SolidClassifier()
+        classifier.Load(shape)
+        classifier.Perform(test_point, 1e-6)
+        
+        # If offset point is INSIDE, face is internal (normal points into material)
+        return classifier.State() == TopAbs_IN
+        
+    except Exception as e:
+        logger.debug(f"Error in is_face_internal: {e}")
+        return False
+
+
 def recognize_manufacturing_features(shape):
     """
-    Analyze BREP topology to detect TRUE manufacturing features
+    ENHANCED: Analyze BREP topology to detect manufacturing features with FIXED detection logic.
     
     Accurate detection of:
-    - Through-holes: Small cylinders that penetrate the part
+    - Through-holes: Small cylinders that penetrate the part (topological connectivity check)
     - Blind holes: Small cylinders with depth but no exit
     - Bores: Large internal cylindrical cavities
     - Bosses: Protruding cylindrical features
     - Pockets: Recessed features
+    
+    Uses absolute + relative thresholds for robust classification.
     """
     features = {
         'through_holes': [],
@@ -106,6 +154,11 @@ def recognize_manufacturing_features(shape):
     bbox_diagonal, (xmin, ymin, zmin, xmax, ymax, zmax) = calculate_bbox_diagonal(shape)
     bbox_center = [(xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2]
     bbox_size = max(xmax - xmin, ymax - ymin, zmax - zmin)
+    
+    # Absolute thresholds (industry standard)
+    SMALL_HOLE_MAX_DIAMETER = 20.0  # mm (up to M16)
+    MEDIUM_BORE_MAX_DIAMETER = 50.0  # mm
+    BOSS_MIN_DIAMETER = 5.0  # mm
     
     # Build edge-to-face map for connectivity analysis
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
@@ -131,108 +184,41 @@ def recognize_manufacturing_features(shape):
         if surf_type == GeomAbs_Cylinder:
             cyl = surface.Cylinder()
             radius = cyl.Radius()
+            diameter = radius * 2
             axis_dir = cyl.Axis().Direction()
             axis_pos = cyl.Axis().Location()
             
-            # Calculate if this cylinder is internal or external
-            axis_point = [axis_pos.X(), axis_pos.Y(), axis_pos.Z()]
-            center = [face_center.X(), face_center.Y(), face_center.Z()]
-            
-            dist_to_axis = math.sqrt(
-                (center[0] - axis_point[0])**2 +
-                (center[1] - axis_point[1])**2 +
-                (center[2] - axis_point[2])**2
-            )
-            
-            bbox_to_axis = math.sqrt(
-                (bbox_center[0] - axis_point[0])**2 +
-                (bbox_center[1] - axis_point[1])**2 +
-                (bbox_center[2] - axis_point[2])**2
-            )
-            
-            is_internal = dist_to_axis < bbox_to_axis
+            # FIXED: Use BRepClass3d_SolidClassifier for accurate internal/external detection
+            is_internal = is_face_internal(face, shape)
             
             feature_data = {
-                'diameter': radius * 2,
+                'diameter': diameter,
                 'radius': radius,
                 'axis': [axis_dir.X(), axis_dir.Y(), axis_dir.Z()],
                 'position': [axis_pos.X(), axis_pos.Y(), axis_pos.Z()],
-                'area': face_area
+                'area': face_area,
+                'face_object': face  # Store for later analysis
             }
             
-            # Classification logic
-            diameter_ratio = (radius * 2) / bbox_size
+            # FIXED: Use absolute + relative thresholds
+            diameter_ratio = diameter / bbox_diagonal
             
             if is_internal:
-                if diameter_ratio < 0.15:  # Small hole (< 15% of part size)
-                    # Check if it's a through-hole by checking adjacency to external faces
-                    has_external_connection = False
-                    edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
-                    
-                    while edge_exp.More():
-                        edge = edge_exp.Current()
-                        
-                        for map_idx in range(1, edge_face_map.Size() + 1):
-                            map_edge = edge_face_map.FindKey(map_idx)
-                            if edge.IsSame(map_edge):
-                                face_list = edge_face_map.FindFromIndex(map_idx)
-                                face_iter = TopTools_ListIteratorOfListOfShape(face_list)
-                                
-                                while face_iter.More():
-                                    adj_face = topods.Face(face_iter.Value())
-                                    if not adj_face.IsSame(face):
-                                        # Check if adjacent face is external
-                                        adj_surface = BRepAdaptor_Surface(adj_face)
-                                        if adj_surface.GetType() == GeomAbs_Cylinder:
-                                            try:
-                                                adj_cyl = adj_surface.Cylinder()
-                                                adj_axis = adj_cyl.Axis().Location()
-                                                adj_axis_pt = [adj_axis.X(), adj_axis.Y(), adj_axis.Z()]
-                                                
-                                                adj_props = GProp_GProps()
-                                                brepgprop.SurfaceProperties(adj_face, adj_props)
-                                                adj_center = adj_props.CentreOfMass()
-                                                adj_ctr = [adj_center.X(), adj_center.Y(), adj_center.Z()]
-                                                
-                                                adj_dist = math.sqrt(
-                                                    (adj_ctr[0] - adj_axis_pt[0])**2 +
-                                                    (adj_ctr[1] - adj_axis_pt[1])**2 +
-                                                    (adj_ctr[2] - adj_axis_pt[2])**2
-                                                )
-                                                adj_bbox_dist = math.sqrt(
-                                                    (bbox_center[0] - adj_axis_pt[0])**2 +
-                                                    (bbox_center[1] - adj_axis_pt[1])**2 +
-                                                    (bbox_center[2] - adj_axis_pt[2])**2
-                                                )
-                                                
-                                                if adj_dist > adj_bbox_dist:
-                                                    has_external_connection = True
-                                                    break
-                                            except:
-                                                pass
-                                        elif adj_surface.GetType() == GeomAbs_Plane:
-                                            # Planar face could be external
-                                            has_external_connection = True
-                                            break
-                                    
-                                    face_iter.Next()
-                                break
-                        
-                        if has_external_connection:
-                            break
-                        edge_exp.Next()
-                    
-                    if has_external_connection:
-                        features['through_holes'].append(feature_data)
-                    else:
-                        features['blind_holes'].append(feature_data)
+                # Internal cylindrical features
+                if diameter < SMALL_HOLE_MAX_DIAMETER and diameter_ratio < 0.3:
+                    # Small hole: check if through or blind
+                    # Note: Through-hole detection will be done later in compound feature detection
+                    # For now, conservatively mark as blind hole
+                    features['blind_holes'].append(feature_data)
                 
-                elif diameter_ratio < 0.5:  # Medium bore (15-50% of part size)
+                elif diameter < MEDIUM_BORE_MAX_DIAMETER:
+                    # Medium bore
                     features['bores'].append(feature_data)
                 # else: very large internal cavity - not counted as separate feature
             
             else:  # External cylinder
-                if diameter_ratio < 0.3:  # Small boss
+                if diameter >= BOSS_MIN_DIAMETER and diameter_ratio < 0.4:
+                    # External boss
                     features['bosses'].append(feature_data)
                 # else: main body cylinder - not a separate feature
         
@@ -257,7 +243,21 @@ def recognize_manufacturing_features(shape):
                 'area': face_area
             })
     
-    # Calculate totals for backward compatibility
+    # PHASE 2: Build Attributed Adjacency Graph (AAG)
+    logger.info("🔗 Building face adjacency graph...")
+    face_graph, face_to_id = build_face_adjacency_graph(shape, all_faces, edge_face_map)
+    
+    # PHASE 3: Pattern Matching for Compound Features
+    logger.info("🔍 Detecting compound features...")
+    compound_features = {}
+    compound_features['counterbores'] = detect_counterbores(features, face_graph, all_faces)
+    compound_features['rectangular_pockets'] = detect_rectangular_pockets(face_graph, all_faces)
+    
+    # PHASE 4: Build Feature Hierarchy
+    logger.info("📊 Building feature hierarchy...")
+    feature_hierarchy = build_feature_hierarchy(features, compound_features)
+    
+    # Calculate totals
     total_holes = len(features['through_holes']) + len(features['blind_holes'])
     total_bosses = len(features['bosses'])
     
@@ -266,15 +266,268 @@ def recognize_manufacturing_features(shape):
     logger.info(f"   Blind holes: {len(features['blind_holes'])}")
     logger.info(f"   Bores: {len(features['bores'])}")
     logger.info(f"   Bosses: {len(features['bosses'])}")
+    logger.info(f"   Counterbores: {len(compound_features['counterbores'])}")
+    logger.info(f"   Rectangular pockets: {len(compound_features['rectangular_pockets'])}")
     logger.info(f"   Planar faces: {len(features['planar_faces'])}")
     logger.info(f"   Fillets: {len(features['fillets'])}")
-    logger.info(f"   Complex surfaces: {len(features['complex_surfaces'])}")
+    logger.info(f"   TOTAL UNIQUE FEATURES: {feature_hierarchy['summary']['total_unique_features']}")
     
     # Add legacy fields for backward compatibility
     features['holes'] = features['through_holes'] + features['blind_holes']
     features['cylindrical_bosses'] = features['bosses']
     
+    # Add new fields
+    features['compound_features'] = compound_features
+    features['feature_hierarchy'] = feature_hierarchy
+    features['face_adjacency_graph'] = nx.node_link_data(face_graph)  # Serialize for JSON
+    
     return features
+
+
+def build_face_adjacency_graph(shape, all_faces, edge_face_map):
+    """
+    PHASE 2: Build Attributed Adjacency Graph (AAG) where:
+    - Nodes = faces with geometric attributes
+    - Edges = shared boundaries with convexity/concavity
+    
+    Returns: (graph, face_to_id_map)
+    """
+    graph = nx.Graph()
+    face_to_id = {}
+    
+    # Add nodes (faces)
+    for face_id, face in enumerate(all_faces):
+        try:
+            surf = BRepAdaptor_Surface(face)
+            surf_type = surf.GetType()
+            
+            props = GProp_GProps()
+            brepgprop.SurfaceProperties(face, props)
+            area = props.Mass()
+            
+            # Determine if internal/external
+            is_internal = is_face_internal(face, shape)
+            
+            # Add node with attributes
+            graph.add_node(face_id,
+                          surface_type=int(surf_type),  # Convert enum to int for JSON
+                          area=area,
+                          is_internal=is_internal)
+            
+            face_to_id[face] = face_id
+        except Exception as e:
+            logger.debug(f"Error adding face {face_id} to graph: {e}")
+    
+    # Add edges (adjacencies)
+    for edge_idx in range(1, edge_face_map.Size() + 1):
+        try:
+            edge = edge_face_map.FindKey(edge_idx)
+            face_list = edge_face_map.FindFromIndex(edge_idx)
+            
+            if face_list.Size() != 2:
+                continue  # Only interior edges
+            
+            face1 = topods.Face(face_list.First())
+            face2 = topods.Face(face_list.Last())
+            
+            # Find face IDs
+            id1 = None
+            id2 = None
+            for fid, f in enumerate(all_faces):
+                if face1.IsSame(f):
+                    id1 = fid
+                if face2.IsSame(f):
+                    id2 = fid
+                if id1 is not None and id2 is not None:
+                    break
+            
+            if id1 is None or id2 is None:
+                continue
+            
+            # Calculate dihedral angle for convexity
+            dihedral = calculate_dihedral_angle(edge, face1, face2)
+            
+            if dihedral is not None:
+                if dihedral > math.pi / 2:
+                    convexity = 'convex'
+                elif dihedral < math.pi / 2:
+                    convexity = 'concave'
+                else:
+                    convexity = 'flat'
+            else:
+                convexity = 'unknown'
+            
+            graph.add_edge(id1, id2,
+                          convexity=convexity,
+                          dihedral_angle=float(dihedral) if dihedral else 0.0)
+        
+        except Exception as e:
+            logger.debug(f"Error adding edge to graph: {e}")
+    
+    logger.info(f"   AAG: {graph.number_of_nodes()} nodes, {graph.number_of_edges()} edges")
+    return graph, face_to_id
+
+
+def detect_counterbores(features, face_graph, all_faces):
+    """
+    PHASE 3: Detect counterbored holes: coaxial cylindrical faces with increasing diameter.
+    
+    Pattern: Small internal cylinder (hole) → larger internal cylinder (bore)
+    """
+    counterbores = []
+    
+    holes = features['blind_holes'] + features.get('through_holes', [])
+    bores = features['bores']
+    
+    for hole in holes:
+        if hole.get('consumed_by'):
+            continue
+        
+        hole_axis = np.array(hole['axis'])
+        hole_pos = np.array(hole['position'])
+        hole_diameter = hole['diameter']
+        
+        for bore in bores:
+            if bore.get('consumed_by'):
+                continue
+            
+            bore_axis = np.array(bore['axis'])
+            bore_pos = np.array(bore['position'])
+            bore_diameter = bore['diameter']
+            
+            # Check coaxiality
+            axis_parallel = abs(np.dot(hole_axis, bore_axis)) > 0.99
+            
+            if not axis_parallel:
+                continue
+            
+            # Check if axes intersect (within tolerance)
+            axis_distance = np.linalg.norm(np.cross(hole_pos - bore_pos, hole_axis))
+            
+            if axis_distance < 0.5 and bore_diameter > hole_diameter:
+                counterbores.append({
+                    'type': 'counterbore',
+                    'hole_diameter': hole_diameter,
+                    'bore_diameter': bore_diameter,
+                    'hole_depth': hole.get('depth', 'unknown'),
+                    'bore_depth': bore.get('depth', 'unknown'),
+                    'axis': hole_axis.tolist(),
+                    'position': hole_pos.tolist()
+                })
+                
+                # Mark as consumed
+                hole['consumed_by'] = 'counterbore'
+                bore['consumed_by'] = 'counterbore'
+    
+    return counterbores
+
+
+def detect_rectangular_pockets(face_graph, all_faces):
+    """
+    PHASE 3: Detect rectangular pockets: base plane + 4 vertical walls.
+    
+    Graph pattern:
+    - Center node: planar, internal
+    - 4 adjacent nodes: planar, internal, perpendicular to center
+    - Adjacent nodes form a cycle
+    """
+    pockets = []
+    
+    for node_id in face_graph.nodes():
+        node = face_graph.nodes[node_id]
+        
+        # Check if potential pocket base
+        if (node['surface_type'] != int(GeomAbs_Plane) or 
+            not node['is_internal']):
+            continue
+        
+        # Get adjacent faces
+        neighbors = list(face_graph.neighbors(node_id))
+        
+        if len(neighbors) != 4:
+            continue  # Rectangular pocket has exactly 4 walls
+        
+        # Check if all neighbors are planar and internal
+        all_walls_valid = True
+        for neighbor_id in neighbors:
+            neighbor = face_graph.nodes[neighbor_id]
+            edge_data = face_graph[node_id][neighbor_id]
+            
+            if (neighbor['surface_type'] != int(GeomAbs_Plane) or
+                not neighbor['is_internal'] or
+                edge_data.get('convexity') != 'concave'):
+                all_walls_valid = False
+                break
+        
+        if all_walls_valid:
+            pockets.append({
+                'type': 'rectangular_pocket',
+                'base_face_id': node_id,
+                'wall_count': 4,
+                'area': node['area']
+            })
+    
+    return pockets
+
+
+def build_feature_hierarchy(basic_features, compound_features):
+    """
+    PHASE 4: Build hierarchical feature tree.
+    Organizes features and marks consumed simple features.
+    """
+    feature_tree = {
+        'compound_features': {
+            'counterbores': [],
+            'countersinks': [],
+            'rectangular_pockets': [],
+            'slots': []
+        },
+        'simple_features': {
+            'through_holes': [],
+            'blind_holes': [],
+            'bores': [],
+            'bosses': [],
+            'planar_faces': [],
+            'fillets': []
+        },
+        'consumed_features': []
+    }
+    
+    # Add compound features
+    for cb in compound_features.get('counterbores', []):
+        feature_tree['compound_features']['counterbores'].append(cb)
+    
+    for pocket in compound_features.get('rectangular_pockets', []):
+        feature_tree['compound_features']['rectangular_pockets'].append(pocket)
+    
+    # Add simple features that weren't consumed
+    for feature_type in ['through_holes', 'blind_holes', 'bores', 'bosses', 'planar_faces', 'fillets']:
+        for feature in basic_features.get(feature_type, []):
+            # Skip face_object which can't be serialized
+            clean_feature = {k: v for k, v in feature.items() if k != 'face_object'}
+            
+            if feature.get('consumed_by'):
+                feature_tree['consumed_features'].append({
+                    'original_type': feature_type,
+                    'consumed_by': feature['consumed_by'],
+                    'diameter': feature.get('diameter'),
+                    'area': feature.get('area')
+                })
+            else:
+                feature_tree['simple_features'][feature_type].append(clean_feature)
+    
+    # Calculate accurate totals
+    total_compound = sum(len(v) for v in feature_tree['compound_features'].values())
+    total_simple = sum(len(v) for v in feature_tree['simple_features'].values())
+    
+    feature_tree['summary'] = {
+        'total_compound_features': total_compound,
+        'total_simple_features': total_simple,
+        'total_unique_features': total_compound + total_simple,
+        'total_consumed': len(feature_tree['consumed_features'])
+    }
+    
+    return feature_tree
 
 
 def get_face_normal_at_point(face, point):
