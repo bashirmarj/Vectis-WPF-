@@ -126,7 +126,14 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   // Handle hover detection
   useEffect(() => {
-    if (!enabled || !meshRef || edgeLines.length === 0) {
+    if (!enabled || !meshRef) {
+      setHoverInfo(null);
+      setLabelText("");
+      return;
+    }
+
+    // Only check edgeLines for edge-select mode
+    if (activeTool === "edge-select" && edgeLines.length === 0) {
       setHoverInfo(null);
       setLabelText("");
       return;
@@ -148,7 +155,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
         // Face-to-face mode
         if (activeTool === "face-to-face") {
+          console.log("🔷 Face-to-face mode: detecting face...");
           const face = getFaceFromIntersection(intersects[0], meshData);
+          console.log("🔷 Face detected:", face ? `${face.surface_type} (face_id: ${face.face_id})` : "none");
           
           if (face) {
             setLabelText(`${face.surface_type.toUpperCase()} Face (${face.type})`);
@@ -234,7 +243,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     gl.domElement.addEventListener("pointermove", handlePointerMove);
     return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
-  }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, camera, gl, raycaster]);
+  }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, activeTool, camera, gl, raycaster]);
 
   // Handle click
   useEffect(() => {
