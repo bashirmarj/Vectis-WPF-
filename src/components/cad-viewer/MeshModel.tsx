@@ -386,6 +386,18 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           />
         </mesh>
 
+        {/* Invisible depth-writing mesh for wireframe occlusion */}
+        {displayStyle === "wireframe" && (
+          <mesh geometry={geometry}>
+            <meshBasicMaterial
+              colorWrite={false}
+              depthWrite={true}
+              depthTest={true}
+              transparent={false}
+            />
+          </mesh>
+        )}
+
         {/* Pre-computed feature edges using Line2 for continuous rendering */}
         {displayStyle === "solid" && showEdges && line2Geometry && (
           <primitive object={new Line2(line2Geometry, line2Material)} frustumCulled={false} />
