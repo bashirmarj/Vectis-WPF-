@@ -1,5 +1,5 @@
 import React from "react";
-import { Html } from "@react-three/drei";
+import { Html, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import type { Measurement } from "@/stores/measurementStore";
@@ -13,31 +13,16 @@ export const MeasurementRenderer: React.FC = () => {
     const p1 = m.points[0].position;
     const p2 = m.points[1].position;
     
-    // Use useMemo to compute midpoint only when positions change
-    const midpoint = React.useMemo(
-      () => new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5),
-      [p1, p2]
-    );
-    
     return (
       <group key={m.id}>
-        {/* Declarative line using BufferGeometry */}
-        <line>
-          <bufferGeometry attach="geometry">
-            <bufferAttribute
-              attach="attributes-position"
-              count={2}
-              array={new Float32Array([
-                p1.x, p1.y, p1.z,
-                p2.x, p2.y, p2.z
-              ])}
-              itemSize={3}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial attach="material" color="#00CC66" linewidth={2} />
-        </line>
+        {/* Simple line using drei's Line component */}
+        <Line
+          points={[p1, p2]}
+          color="#00CC66"
+          lineWidth={2}
+        />
         
-        {/* Declarative spheres at endpoints */}
+        {/* Spheres at face centers */}
         <mesh position={p1}>
           <sphereGeometry args={[1.5, 16, 16]} />
           <meshBasicMaterial color="#00CC66" />
@@ -47,8 +32,8 @@ export const MeasurementRenderer: React.FC = () => {
           <meshBasicMaterial color="#00CC66" />
         </mesh>
         
-        {/* Label at midpoint */}
-        <Html position={midpoint} center distanceFactor={2}>
+        {/* Label at p1 - no midpoint calculation */}
+        <Html position={p1} center distanceFactor={2}>
           <div style={{
             background: 'rgba(255, 255, 255, 0.95)',
             color: '#1a1a1a',
