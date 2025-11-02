@@ -1,10 +1,10 @@
-import React, { memo } from "react";
+import React from "react";
 import { Html, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import type { Measurement } from "@/stores/measurementStore";
 
-const MeasurementRendererComponent: React.FC = () => {
+export const MeasurementRenderer: React.FC = () => {
   const { measurements } = useMeasurementStore();
 
   const renderFaceToFaceMeasurement = (m: Measurement) => {
@@ -180,6 +180,3 @@ const MeasurementRendererComponent: React.FC = () => {
 
   return <>{measurements.map((measurement) => <React.Fragment key={measurement.id}>{renderMeasurement(measurement)}</React.Fragment>)}</>;
 };
-
-export const MeasurementRenderer = memo(MeasurementRendererComponent);
-MeasurementRenderer.displayName = "MeasurementRenderer";
