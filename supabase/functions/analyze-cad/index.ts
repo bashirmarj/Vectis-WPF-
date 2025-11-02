@@ -718,6 +718,26 @@ async function analyzeSTEPViaService(
       routing_reasoning: data.routing_reasoning,
       machining_summary: data.machining_summary,
       estimated_total_cost_usd: data.estimated_total_cost_usd,
+      // ✅ Forward manufacturing features from geometry service
+      manufacturing_features: data.manufacturing_features || {
+        through_holes: [],
+        blind_holes: [],
+        bores: [],
+        bosses: [],
+        planar_faces: [],
+        fillets: [],
+      },
+      // ✅ Forward feature summary from geometry service
+      feature_summary: data.feature_summary || {
+        through_holes: 0,
+        blind_holes: 0,
+        bores: 0,
+        bosses: 0,
+        total_holes: 0,
+        fillets: 0,
+        planar_faces: 0,
+        complexity_score: data.complexity_score || 5,
+      },
     };
   } catch (error) {
     console.error("Error calling geometry service:", error);
