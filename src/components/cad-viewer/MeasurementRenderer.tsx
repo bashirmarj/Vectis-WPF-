@@ -12,13 +12,32 @@ export const MeasurementRenderer: React.FC = () => {
     
     const p1 = m.points[0].position;
     const p2 = m.points[1].position;
-    const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
     
-    const lineGeometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    // Use useMemo to compute midpoint only when positions change
+    const midpoint = React.useMemo(
+      () => new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5),
+      [p1, p2]
+    );
     
     return (
       <group key={m.id}>
-        <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: "#00CC66", linewidth: 2 }))} />
+        {/* Declarative line using BufferGeometry */}
+        <line>
+          <bufferGeometry attach="geometry">
+            <bufferAttribute
+              attach="attributes-position"
+              count={2}
+              array={new Float32Array([
+                p1.x, p1.y, p1.z,
+                p2.x, p2.y, p2.z
+              ])}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <lineBasicMaterial attach="material" color="#00CC66" linewidth={2} />
+        </line>
+        
+        {/* Declarative spheres at endpoints */}
         <mesh position={p1}>
           <sphereGeometry args={[1.5, 16, 16]} />
           <meshBasicMaterial color="#00CC66" />
@@ -27,6 +46,8 @@ export const MeasurementRenderer: React.FC = () => {
           <sphereGeometry args={[1.5, 16, 16]} />
           <meshBasicMaterial color="#00CC66" />
         </mesh>
+        
+        {/* Label at midpoint */}
         <Html position={midpoint} center distanceFactor={2}>
           <div style={{
             background: 'rgba(255, 255, 255, 0.95)',
