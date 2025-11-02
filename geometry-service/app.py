@@ -656,7 +656,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         iso_curves = extract_isoparametric_curves(
             shape, 
             num_u_lines=num_uiso_lines,
-            num_v_lines=2
+            num_v_lines=0  # Disable VIso curves to reduce memory usage (industry standard)
         )
     
     # Build edge-to-faces map using TopTools
@@ -714,6 +714,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         is_significant = True
                         edge_type = "boundary"
                         stats['boundary_edges'] += 1
+                        # Skip further checks - boundary edges are always significant
                         
                     elif num_adjacent_faces == 2:
                         # INTERIOR EDGE - check geometry, orientation, then angle
