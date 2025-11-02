@@ -149,7 +149,7 @@ export function FaceMeasurementTool({
       scene.remove(connectingLine);
       setConnectingLine(null);
     }
-  }, [resetTrigger, connectingLine, scene, onMeasurementsChange]);
+  }, [resetTrigger, connectingLine, scene]);
 
   // Cleanup on disable
   useEffect(() => {
@@ -163,7 +163,7 @@ export function FaceMeasurementTool({
         setConnectingLine(null);
       }
     }
-  }, [enabled, connectingLine, scene, onMeasurementsChange]);
+  }, [enabled, connectingLine, scene]);
 
   if (!enabled) return null;
 
