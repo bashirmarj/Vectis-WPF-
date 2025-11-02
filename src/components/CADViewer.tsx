@@ -88,6 +88,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
   const [faceMeasurements, setFaceMeasurements] = useState<MarkerValues | null>(null);
   const [faceMarkerCount, setFaceMarkerCount] = useState(0);
+  const [faceResetTrigger, setFaceResetTrigger] = useState(0);
   
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
@@ -458,6 +459,11 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
     [], // ✅ CRITICAL FIX: Empty array - refs don't need dependencies
   );
 
+  // Handle new face measurement
+  const handleNewFaceMeasurement = useCallback(() => {
+    setFaceResetTrigger(prev => prev + 1);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -605,6 +611,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                     setFaceMeasurements(measurements);
                     setFaceMarkerCount(count);
                   }}
+                  resetTrigger={faceResetTrigger}
                 />
 
                 {/* Measurement Renderer */}
@@ -648,6 +655,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
               <FaceMeasurementPanel 
                 markerCount={faceMarkerCount}
                 measurements={faceMeasurements}
+                onNewMeasurement={handleNewFaceMeasurement}
               />
             )}
 

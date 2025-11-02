@@ -16,13 +16,15 @@ interface FaceMeasurementToolProps {
     radius: number;
   };
   onMeasurementsChange?: (measurements: MarkerValues | null, markerCount: number) => void;
+  resetTrigger?: number;
 }
 
 export function FaceMeasurementTool({ 
   enabled, 
   meshRef,
   boundingSphere,
-  onMeasurementsChange
+  onMeasurementsChange,
+  resetTrigger
 }: FaceMeasurementToolProps) {
   const { camera, raycaster, gl, scene } = useThree();
   
@@ -91,14 +93,7 @@ export function FaceMeasurementTool({
       const intersects = raycaster.intersectObject(meshRef, false);
 
       if (intersects.length === 0) {
-        // Click on empty space - clear all
-        setPermanentMarkers([]);
-        setMeasurements(null);
-        onMeasurementsChange?.(null, 0);
-        if (connectingLine) {
-          scene.remove(connectingLine);
-          setConnectingLine(null);
-        }
+        // Ignore clicks on empty space - don't reset
         return;
       }
 
@@ -134,21 +129,27 @@ export function FaceMeasurementTool({
         line.renderOrder = 999;
         scene.add(line);
         setConnectingLine(line);
-      } else {
-        // Third click - clear all (reset)
-        setPermanentMarkers([]);
-        setMeasurements(null);
-        onMeasurementsChange?.(null, 0);
-        if (connectingLine) {
-          scene.remove(connectingLine);
-          setConnectingLine(null);
-        }
       }
     };
 
     canvas.addEventListener('click', handleClick);
     return () => canvas.removeEventListener('click', handleClick);
   }, [enabled, meshRef, camera, raycaster, permanentMarkers, connectingLine, scene, gl]);
+
+  // Handle reset trigger
+  useEffect(() => {
+    if (resetTrigger === undefined) return;
+    
+    // Clear everything
+    setPermanentMarkers([]);
+    setMeasurements(null);
+    setTempMarker(null);
+    onMeasurementsChange?.(null, 0);
+    if (connectingLine) {
+      scene.remove(connectingLine);
+      setConnectingLine(null);
+    }
+  }, [resetTrigger, connectingLine, scene, onMeasurementsChange]);
 
   // Cleanup on disable
   useEffect(() => {
@@ -162,7 +163,7 @@ export function FaceMeasurementTool({
         setConnectingLine(null);
       }
     }
-  }, [enabled, connectingLine, scene]);
+  }, [enabled, connectingLine, scene, onMeasurementsChange]);
 
   if (!enabled) return null;
 
