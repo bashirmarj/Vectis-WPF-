@@ -84,6 +84,18 @@ def calculate_exact_volume_and_area(shape):
     }
 
 
+def get_face_by_index(shape, target_idx):
+    """Retrieve face by index from shape"""
+    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+    current_idx = 0
+    while face_explorer.More():
+        if current_idx == target_idx:
+            return topods.Face(face_explorer.Current())
+        current_idx += 1
+        face_explorer.Next()
+    return None
+
+
 def is_face_internal(face, shape):
     """
     FIXED: Check if a face is internal using BRepClass3d_SolidClassifier.
@@ -197,7 +209,7 @@ def recognize_manufacturing_features(shape):
                 'axis': [axis_dir.X(), axis_dir.Y(), axis_dir.Z()],
                 'position': [axis_pos.X(), axis_pos.Y(), axis_pos.Z()],
                 'area': face_area,
-                'face_object': face  # Store for later analysis
+                'face_idx': face_idx  # Store face index for later retrieval
             }
             
             # FIXED: Use absolute + relative thresholds
@@ -1498,13 +1510,13 @@ def tessellate_shape(shape):
             face_data.append({
                 'face_idx': face_idx,
                 'face_id': face_idx,  # Unique face identifier
+                'face_idx': face_idx,  # Store face index for retrieval
                 'surf_type': surf_type,
                 'center': center,
                 'start_vertex': face_start_vertex,
                 'vertex_count': len(face_vertices),
                 'start_index': face_start_index,
-                'triangle_count': (len(indices) - face_start_index) // 3,
-                'face_object': face
+                'triangle_count': (len(indices) - face_start_index) // 3
             })
             
             face_explorer.Next()
@@ -1590,9 +1602,9 @@ def classify_mesh_faces(mesh_data, shape):
         center = face_info['center']
         start_vertex = face_info['start_vertex']
         vertex_count_face = face_info['vertex_count']
-        face_object = face_info['face_object']
+        face_object = get_face_by_index(shape, face_idx)
         
-        if surf_type != GeomAbs_Cylinder:
+        if surf_type != GeomAbs_Cylinder or face_object is None:
             continue  # Skip non-cylindrical for now
         
         try:
@@ -1715,7 +1727,9 @@ def classify_mesh_faces(mesh_data, shape):
                 continue
             
             surf_type = face_info['surf_type']
-            face_object = face_info['face_object']
+            face_object = get_face_by_index(shape, face_idx)
+            if face_object is None:
+                continue
             start_vertex = face_info['start_vertex']
             vertex_count_face = face_info['vertex_count']
             
@@ -1794,11 +1808,13 @@ def classify_mesh_faces(mesh_data, shape):
     for face_info in face_data:
         face_id = face_info['face_id']
         face_type = face_classifications.get(face_id, "external")
-        face_object = face_info['face_object']
+        face_object = get_face_by_index(shape, face_info['face_idx'])
         surf_type = face_info['surf_type']
         center = face_info['center']
         
         # Calculate face normal
+        if face_object is None:
+            continue
         try:
             surface = BRepAdaptor_Surface(face_object)
             u_mid = (surface.FirstUParameter() + surface.LastUParameter()) / 2
