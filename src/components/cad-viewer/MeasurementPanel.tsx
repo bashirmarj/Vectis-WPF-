@@ -20,7 +20,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 
 /**
@@ -42,9 +42,46 @@ export function MeasurementPanel() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showList, setShowList] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 20, y: 96 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // ✅ CRITICAL FIX: Only show panel when measurement tool is active OR measurements exist
   const shouldShowPanel = activeTool !== null || measurements.length > 0;
+
+  // Drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.drag-handle')) {
+      setIsDragging(true);
+      setDragOffset({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
 
   // Export measurements to CSV
   const exportToCSV = () => {
@@ -76,7 +113,10 @@ export function MeasurementPanel() {
   // Minimized view - just a button (TOP-LEFT)
   if (isMinimized) {
     return (
-      <div className="absolute top-24 left-5 z-30">
+      <div 
+        className="absolute z-30"
+        style={{ left: `${position.x}px`, top: `${position.y}px` }}
+      >
         <Button variant="default" size="sm" onClick={() => setIsMinimized(false)} className="shadow-lg">
           <Ruler className="w-4 h-4 mr-2" />
           Measurements ({measurements.length})
@@ -86,11 +126,29 @@ export function MeasurementPanel() {
   }
 
   return (
-    <div className="absolute top-24 left-5 z-30 w-60 bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200">
+    <div 
+      className="absolute z-30 w-60 bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200"
+      style={{ 
+        left: `${position.x}px`, 
+        top: `${position.y}px`,
+        cursor: isDragging ? 'grabbing' : 'default'
+      }}
+      onMouseDown={handleMouseDown}
+    >
       {/* Header */}
-      <div className="p-3 border-b border-gray-200">
+      <div className="p-3 border-b border-gray-200 drag-handle cursor-grab active:cursor-grabbing">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-0.5">
+              <div className="flex gap-0.5">
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+              </div>
+              <div className="flex gap-0.5">
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+              </div>
+            </div>
             <Ruler className="w-4 h-4 text-gray-600" />
             <h3 className="text-xs font-semibold text-gray-900">Measurements</h3>
             <Badge variant="secondary" className="text-xs h-5">

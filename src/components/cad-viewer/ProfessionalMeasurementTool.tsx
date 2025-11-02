@@ -246,7 +246,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           ],
           value: taggedEdge.diameter,
           unit: "mm",
-          label: `⊙ ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+          label: `Ø ${formatMeasurement(taggedEdge.diameter, "mm")}`,
           color: "#0066CC",
           visible: true,
           createdAt: new Date(),
