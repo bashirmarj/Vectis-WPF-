@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { getFaceWorldNormal } from '@/lib/faceMeasurementUtils';
 
@@ -14,6 +14,45 @@ export function FaceCrosshairMarker({
   visible = true 
 }: FaceCrosshairMarkerProps) {
   const groupRef = useRef<THREE.Group>(null);
+
+  // Create geometries once
+  const circleGeometry = useMemo(() => {
+    const points = new THREE.EllipseCurve(
+      0, 0,           // center x, y
+      radius, radius, // x radius, y radius
+      0, 2 * Math.PI, // start angle, end angle
+      false,          // clockwise
+      0               // rotation
+    ).getPoints(50);
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    return geometry;
+  }, [radius]);
+
+  const horizontalGeometry = useMemo(() => {
+    const points = [
+      new THREE.Vector3(-radius, 0, 0),
+      new THREE.Vector3(radius, 0, 0)
+    ];
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }, [radius]);
+
+  const verticalGeometry = useMemo(() => {
+    const points = [
+      new THREE.Vector3(0, -radius, 0),
+      new THREE.Vector3(0, radius, 0)
+    ];
+    return new THREE.BufferGeometry().setFromPoints(points);
+  }, [radius]);
+
+  const material = useMemo(() => {
+    return new THREE.LineBasicMaterial({
+      color: 0x263238,
+      depthTest: false,
+      depthWrite: false,
+      transparent: false
+    });
+  }, []);
 
   useEffect(() => {
     if (!groupRef.current) return;
@@ -33,68 +72,13 @@ export function FaceCrosshairMarker({
   return (
     <group ref={groupRef} visible={visible}>
       {/* Circle */}
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={51}
-            array={new Float32Array(
-              new THREE.EllipseCurve(
-                0, 0,           // center x, y
-                radius, radius, // x radius, y radius
-                0, 2 * Math.PI, // start angle, end angle
-                false,          // clockwise
-                0               // rotation
-              )
-                .getPoints(50)
-                .flatMap(p => [p.x, p.y, 0])
-            )}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial 
-          color="#263238" 
-          depthTest={false} 
-          depthWrite={false}
-          transparent={false}
-        />
-      </line>
-
+      <primitive object={new THREE.Line(circleGeometry, material)} />
+      
       {/* Horizontal crosshair */}
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([-radius, 0, 0, radius, 0, 0])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial 
-          color="#263238" 
-          depthTest={false} 
-          depthWrite={false}
-          transparent={false}
-        />
-      </line>
-
+      <primitive object={new THREE.Line(horizontalGeometry, material)} />
+      
       {/* Vertical crosshair */}
-      <line>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={2}
-            array={new Float32Array([0, -radius, 0, 0, radius, 0])}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial 
-          color="#263238" 
-          depthTest={false} 
-          depthWrite={false}
-          transparent={false}
-        />
-      </line>
+      <primitive object={new THREE.Line(verticalGeometry, material)} />
     </group>
   );
 }
