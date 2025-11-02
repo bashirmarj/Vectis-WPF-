@@ -82,11 +82,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
 
-  // Selective subscriptions to prevent unnecessary re-renders
-  const activeTool = useMeasurementStore((state) => state.activeTool);
-  const setActiveTool = useMeasurementStore((state) => state.setActiveTool);
-  const clearAllMeasurements = useMeasurementStore((state) => state.clearAllMeasurements);
-  const measurements = useMeasurementStore((state) => state.measurements);
+  const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);
@@ -585,9 +581,10 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
 
                 {/* Professional Measurement Tool */}
                 <ProfessionalMeasurementTool 
-                  enabled={!!activeTool}
-                  meshRef={meshRef.current?.mesh || null}
-                  boundingSphere={new THREE.Sphere(boundingBox.center, Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2)}
+                  meshData={meshData} 
+                  meshRef={meshRef.current?.mesh || null} 
+                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                  enabled={!!activeTool} 
                 />
 
                 {/* Measurement Renderer */}
