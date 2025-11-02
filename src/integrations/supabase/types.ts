@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string | null
           edge_classifications: Json | null
+          face_classifications: Json | null
           face_types: string[] | null
           feature_edges: Json | null
           file_hash: string
@@ -30,11 +31,13 @@ export type Database = {
           tagged_feature_edges: Json | null
           triangle_count: number
           vertex_colors: string[] | null
+          vertex_face_ids: Json | null
           vertices: number[]
         }
         Insert: {
           created_at?: string | null
           edge_classifications?: Json | null
+          face_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
           file_hash: string
@@ -47,11 +50,13 @@ export type Database = {
           tagged_feature_edges?: Json | null
           triangle_count: number
           vertex_colors?: string[] | null
+          vertex_face_ids?: Json | null
           vertices: number[]
         }
         Update: {
           created_at?: string | null
           edge_classifications?: Json | null
+          face_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
           file_hash?: string
@@ -64,6 +69,7 @@ export type Database = {
           tagged_feature_edges?: Json | null
           triangle_count?: number
           vertex_colors?: string[] | null
+          vertex_face_ids?: Json | null
           vertices?: number[]
         }
         Relationships: [
@@ -106,6 +112,139 @@ export type Database = {
           submitted_at?: string | null
         }
         Relationships: []
+      }
+      feature_validations: {
+        Row: {
+          confidence_scores: Json | null
+          created_at: string
+          detected_features: Json
+          file_hash: string
+          file_name: string
+          ground_truth_id: string | null
+          id: string
+          line_item_id: string | null
+          metrics: Json | null
+          model_type: string
+          model_version: string
+          notes: string | null
+          quotation_id: string | null
+          validated_at: string | null
+          validated_by: string | null
+          validation_status: string
+        }
+        Insert: {
+          confidence_scores?: Json | null
+          created_at?: string
+          detected_features?: Json
+          file_hash: string
+          file_name: string
+          ground_truth_id?: string | null
+          id?: string
+          line_item_id?: string | null
+          metrics?: Json | null
+          model_type?: string
+          model_version?: string
+          notes?: string | null
+          quotation_id?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_status?: string
+        }
+        Update: {
+          confidence_scores?: Json | null
+          created_at?: string
+          detected_features?: Json
+          file_hash?: string
+          file_name?: string
+          ground_truth_id?: string | null
+          id?: string
+          line_item_id?: string | null
+          metrics?: Json | null
+          model_type?: string
+          model_version?: string
+          notes?: string | null
+          quotation_id?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_validations_ground_truth_id_fkey"
+            columns: ["ground_truth_id"]
+            isOneToOne: false
+            referencedRelation: "ground_truth_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_validations_line_item_id_fkey"
+            columns: ["line_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_validations_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_validations_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ground_truth_features: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          feature_summary: Json
+          features: Json
+          file_hash: string
+          file_name: string
+          id: string
+          notes: string | null
+          source: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          feature_summary?: Json
+          features?: Json
+          file_hash: string
+          file_name: string
+          id?: string
+          notes?: string | null
+          source?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          feature_summary?: Json
+          features?: Json
+          file_hash?: string
+          file_name?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ground_truth_features_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manufacturing_processes: {
         Row: {
@@ -345,6 +484,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      model_performance: {
+        Row: {
+          average_inference_time_ms: number | null
+          confusion_matrix: Json | null
+          dataset_name: string
+          evaluated_at: string
+          feature_type_metrics: Json | null
+          id: string
+          model_type: string
+          model_version: string
+          notes: string | null
+          overall_accuracy: number | null
+          total_files: number
+          trained_at: string | null
+        }
+        Insert: {
+          average_inference_time_ms?: number | null
+          confusion_matrix?: Json | null
+          dataset_name: string
+          evaluated_at?: string
+          feature_type_metrics?: Json | null
+          id?: string
+          model_type: string
+          model_version: string
+          notes?: string | null
+          overall_accuracy?: number | null
+          total_files?: number
+          trained_at?: string | null
+        }
+        Update: {
+          average_inference_time_ms?: number | null
+          confusion_matrix?: Json | null
+          dataset_name?: string
+          evaluated_at?: string
+          feature_type_metrics?: Json | null
+          id?: string
+          model_type?: string
+          model_version?: string
+          notes?: string | null
+          overall_accuracy?: number | null
+          total_files?: number
+          trained_at?: string | null
+        }
+        Relationships: []
       }
       part_features: {
         Row: {
