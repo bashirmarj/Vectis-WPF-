@@ -585,10 +585,9 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
 
                 {/* Professional Measurement Tool */}
                 <ProfessionalMeasurementTool 
-                  meshData={meshData} 
-                  meshRef={meshRef.current?.mesh || null} 
-                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                  enabled={!!activeTool} 
+                  enabled={!!activeTool}
+                  meshRef={meshRef.current?.mesh || null}
+                  boundingSphere={new THREE.Sphere(boundingBox.center, Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2)}
                 />
 
                 {/* Measurement Renderer */}
