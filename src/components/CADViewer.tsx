@@ -57,6 +57,16 @@ interface MeshData {
     radius?: number;
     length?: number;
   }>;
+  vertex_face_ids?: number[];
+  face_classifications?: Array<{
+    face_id: number;
+    type: "internal" | "external" | "through" | "planar";
+    center: [number, number, number];
+    normal: [number, number, number];
+    area: number;
+    surface_type: "cylinder" | "plane" | "other";
+    radius?: number;
+  }>;
 }
 
 export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
@@ -137,6 +147,22 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
 
         console.log("✅ Tagged edges received from backend:", tagged_edges?.length || 0);
 
+        const meshAny = mesh as any;
+        const vertex_face_ids = meshAny.vertex_face_ids
+          ? Array.isArray(meshAny.vertex_face_ids)
+            ? meshAny.vertex_face_ids
+            : JSON.parse(meshAny.vertex_face_ids as string)
+          : undefined;
+
+        const face_classifications = meshAny.face_classifications
+          ? Array.isArray(meshAny.face_classifications)
+            ? meshAny.face_classifications
+            : JSON.parse(meshAny.face_classifications as string)
+          : undefined;
+
+        console.log("✅ Face classifications loaded:", face_classifications?.length || 0);
+        console.log("✅ Vertex face IDs loaded:", vertex_face_ids?.length || 0);
+
         const loadedMeshData: MeshData = {
           vertices,
           indices,
@@ -146,6 +172,8 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
           feature_edges,
           edge_classifications,
           tagged_edges,
+          vertex_face_ids,
+          face_classifications,
         };
 
         setMeshData(loadedMeshData);
