@@ -64,7 +64,8 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
   const [meshData, setMeshData] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
-  const [showEdges, setShowEdges] = useState(true);
+  const [showSolidEdges, setShowSolidEdges] = useState(true);
+  const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
   
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
@@ -432,7 +433,11 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
           handleSetView("isometric");
           break;
         case "e":
-          setShowEdges((prev) => !prev);
+          if (displayMode === "wireframe") {
+            setShowWireframeHiddenEdges((prev) => !prev);
+          } else {
+            setShowSolidEdges((prev) => !prev);
+          }
           break;
         case "m":
           setActiveTool(activeTool ? null : "edge-select");
@@ -477,8 +482,14 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
               onFitView={() => handleSetView("isometric")}
               displayMode={displayMode}
               onDisplayModeChange={setDisplayMode}
-              showEdges={showEdges}
-              onToggleEdges={() => setShowEdges((prev) => !prev)}
+              showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
+              onToggleEdges={() => {
+                if (displayMode === "wireframe") {
+                  setShowWireframeHiddenEdges((prev) => !prev);
+                } else {
+                  setShowSolidEdges((prev) => !prev);
+                }
+              }}
               measurementMode={activeTool}
               onMeasurementModeChange={setActiveTool}
               measurementCount={measurements.length}
@@ -532,7 +543,8 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                   ref={meshRef}
                   meshData={meshData}
                   displayStyle={displayMode}
-                  showEdges={showEdges}
+                  showEdges={showSolidEdges}
+                  showHiddenEdges={showWireframeHiddenEdges}
                   sectionPlane={sectionPlane || "none"}
                   sectionPosition={sectionPosition}
                   useSilhouetteEdges={displayMode === "wireframe"}

@@ -20,8 +20,8 @@ interface MeshModelProps {
   meshData: MeshData;
   sectionPlane: "none" | "xy" | "xz" | "yz";
   sectionPosition: number;
-  showEdges: boolean;
-  showHiddenEdges?: boolean;
+  showEdges: boolean;              // For solid mode feature edges
+  showHiddenEdges?: boolean;       // For wireframe mode occlusion control
   displayStyle?: "solid" | "wireframe" | "translucent";
   topologyColors?: boolean;
   useSilhouetteEdges?: boolean;
@@ -52,9 +52,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       sectionPlane,
       sectionPosition,
       showEdges,
-      showHiddenEdges = true,
+      showHiddenEdges = false,
       displayStyle = "solid",
-      topologyColors = true,
+      topologyColors = false,
       useSilhouetteEdges = false,
     },
     ref,
@@ -387,7 +387,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         </mesh>
 
         {/* Invisible depth-writing mesh for wireframe occlusion */}
-        {displayStyle === "wireframe" && !showEdges && (
+        {displayStyle === "wireframe" && !showHiddenEdges && (
           <mesh geometry={geometry}>
             <meshBasicMaterial
               colorWrite={false}
@@ -409,13 +409,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} showHiddenEdges={showEdges} />
+            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} showHiddenEdges={showHiddenEdges} />
           ) : (
             <lineSegments geometry={wireframeEdgesGeometry}>
               <lineBasicMaterial 
                 color="#000000" 
                 toneMapped={false}
-                depthTest={!showEdges}
+                depthTest={!showHiddenEdges}
                 depthWrite={false}
               />
             </lineSegments>

@@ -209,7 +209,10 @@ export function UnifiedCADToolbar({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onToggleEdges}>
                 <Layers className="mr-2 h-4 w-4" />
-                {showEdges ? "Hide" : "Show"} Edges
+                {displayMode === "wireframe" 
+                  ? (showEdges ? "Hide Hidden" : "Show Hidden")
+                  : (showEdges ? "Hide" : "Show")
+                } Edges
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
