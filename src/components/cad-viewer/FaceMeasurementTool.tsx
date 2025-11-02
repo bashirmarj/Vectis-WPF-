@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { FaceCrosshairMarker } from './measurements/FaceCrosshairMarker';
@@ -28,6 +28,7 @@ export function FaceMeasurementTool({
 }: FaceMeasurementToolProps) {
   const { camera, raycaster, gl, scene } = useThree();
   
+  const permanentMarkersRef = useRef<MarkerData[]>([]);
   const [permanentMarkers, setPermanentMarkers] = useState<MarkerData[]>([]);
   const [tempMarker, setTempMarker] = useState<MarkerData | null>(null);
   const [measurements, setMeasurements] = useState<MarkerValues | null>(null);
@@ -43,7 +44,7 @@ export function FaceMeasurementTool({
 
     const handlePointerMove = (event: PointerEvent) => {
       // Only show temp marker if we haven't placed 2 markers yet
-      if (permanentMarkers.length >= 2) {
+      if (permanentMarkersRef.current.length >= 2) {
         setTempMarker(null);
         canvas.style.cursor = 'default';
         return;
@@ -73,7 +74,7 @@ export function FaceMeasurementTool({
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.style.cursor = 'default';
     };
-  }, [enabled, meshRef, camera, raycaster, gl, permanentMarkers.length]);
+  }, [enabled, meshRef, camera, raycaster, gl]);
 
   // Handle click (add permanent marker)
   useEffect(() => {
@@ -98,18 +99,22 @@ export function FaceMeasurementTool({
       }
 
       const intersection = intersects[0];
+      const currentMarkers = permanentMarkersRef.current;
 
-      if (permanentMarkers.length === 0) {
+      if (currentMarkers.length === 0) {
         // First marker
-        setPermanentMarkers([{ intersection }]);
+        const newMarkers = [{ intersection }];
+        permanentMarkersRef.current = newMarkers;
+        setPermanentMarkers(newMarkers);
         onMeasurementsChange?.(null, 1);
-      } else if (permanentMarkers.length === 1) {
+      } else if (currentMarkers.length === 1) {
         // Second marker - calculate measurements and draw line
-        const newMarkers = [...permanentMarkers, { intersection }];
+        const newMarkers = [...currentMarkers, { intersection }];
+        permanentMarkersRef.current = newMarkers;
         setPermanentMarkers(newMarkers);
 
         const values = calculateMarkerValues(
-          permanentMarkers[0].intersection,
+          currentMarkers[0].intersection,
           intersection
         );
         setMeasurements(values);
@@ -117,7 +122,7 @@ export function FaceMeasurementTool({
 
         // Create connecting line
         const geometry = new THREE.BufferGeometry().setFromPoints([
-          permanentMarkers[0].intersection.point,
+          currentMarkers[0].intersection.point,
           intersection.point,
         ]);
         const material = new THREE.LineBasicMaterial({
@@ -130,17 +135,19 @@ export function FaceMeasurementTool({
         scene.add(line);
         setConnectingLine(line);
       }
+      // If 2 markers already exist, do nothing (wait for reset button)
     };
 
     canvas.addEventListener('click', handleClick);
     return () => canvas.removeEventListener('click', handleClick);
-  }, [enabled, meshRef, camera, raycaster, permanentMarkers, scene, gl]);
+  }, [enabled, meshRef, camera, raycaster, scene, gl]);
 
   // Handle reset trigger
   useEffect(() => {
     if (resetTrigger === undefined) return;
     
     // Clear everything
+    permanentMarkersRef.current = [];
     setPermanentMarkers([]);
     setMeasurements(null);
     setTempMarker(null);
@@ -154,6 +161,7 @@ export function FaceMeasurementTool({
   // Cleanup on disable
   useEffect(() => {
     if (!enabled) {
+      permanentMarkersRef.current = [];
       setPermanentMarkers([]);
       setTempMarker(null);
       setMeasurements(null);
