@@ -134,7 +134,7 @@ export function FaceMeasurementTool({
 
     canvas.addEventListener('click', handleClick);
     return () => canvas.removeEventListener('click', handleClick);
-  }, [enabled, meshRef, camera, raycaster, permanentMarkers, connectingLine, scene, gl]);
+  }, [enabled, meshRef, camera, raycaster, permanentMarkers, scene, gl]);
 
   // Handle reset trigger
   useEffect(() => {
