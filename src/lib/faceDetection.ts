@@ -43,12 +43,6 @@ export function getFaceFromIntersection(
   }
   intersectionNormal.normalize();
 
-  console.log("🔍 Intersection data:", {
-    point: intersectionPoint.toArray(),
-    normal: intersectionNormal.toArray(),
-    faceIndex: intersection.faceIndex,
-  });
-
   // Find the best matching face by comparing geometry
   let bestMatch: BackendFaceClassification | null = null;
   let bestScore = Infinity;
@@ -57,22 +51,9 @@ export function getFaceFromIntersection(
     const faceCenter = new THREE.Vector3(...face.center);
     const faceNormal = new THREE.Vector3(...face.normal);
 
-    // Calculate distance from intersection point to face center
     const distanceToCenter = intersectionPoint.distanceTo(faceCenter);
-
-    // Calculate normal alignment (dot product)
-    // 1.0 = perfect alignment, 0.0 = perpendicular, -1.0 = opposite
     const normalAlignment = Math.abs(intersectionNormal.dot(faceNormal));
-
-    // Combined score: prioritize normal alignment, then distance
-    // Lower score is better
     const score = distanceToCenter * (2.0 - normalAlignment);
-
-    console.log(`  Face ${face.face_id} (${face.surface_type}):`, {
-      distanceToCenter: distanceToCenter.toFixed(3),
-      normalAlignment: normalAlignment.toFixed(3),
-      score: score.toFixed(3),
-    });
 
     if (score < bestScore) {
       bestScore = score;
@@ -80,12 +61,9 @@ export function getFaceFromIntersection(
     }
   }
 
+  // Only log the final result
   if (bestMatch) {
-    console.log("✅ Best match:", {
-      face_id: bestMatch.face_id,
-      surface_type: bestMatch.surface_type,
-      score: bestScore.toFixed(3),
-    });
+    console.log(`✅ Face matched: ${bestMatch.face_id} (${bestMatch.surface_type}), score: ${bestScore.toFixed(3)}`);
   } else {
     console.warn("❌ No matching face found");
   }

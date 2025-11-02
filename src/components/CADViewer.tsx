@@ -160,25 +160,9 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
             : JSON.parse(meshAny.face_classifications as string)
           : undefined;
 
-        console.log("✅ Face classifications loaded:", face_classifications?.length || 0);
-        console.log("✅ Vertex face IDs loaded:", vertex_face_ids?.length || 0);
-
-        // Validate face data consistency
-        if (vertex_face_ids && face_classifications) {
-          const availableFaceIds = face_classifications.map((f: any) => f.face_id);
-          const missingFaceIds = Array.from(new Set(vertex_face_ids))
-            .filter(id => !availableFaceIds.includes(id));
-          
-          if (missingFaceIds.length > 0) {
-            console.warn("⚠️ Face ID mismatch detected:", {
-              vertexFaceIdCount: vertex_face_ids.length,
-              uniqueFaceIds: new Set(vertex_face_ids).size,
-              classificationsCount: face_classifications.length,
-              missingFaceIds: missingFaceIds.slice(0, 10), // Show first 10
-            });
-          } else {
-            console.log("✅ Face data validation passed");
-          }
+        // Log face data loading once
+        if (face_classifications) {
+          console.log(`✅ Loaded ${face_classifications.length} face classifications`);
         }
 
         const loadedMeshData: MeshData = {
@@ -561,21 +545,20 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                 powerPreference: "high-performance",
               }}
               onCreated={({ gl }) => {
-                gl.domElement.addEventListener(
-                  "webglcontextlost",
-                  (e) => {
-                    e.preventDefault();
-                    console.warn("WebGL context lost");
-                  },
-                  false,
-                );
-                gl.domElement.addEventListener(
-                  "webglcontextrestored",
-                  () => {
-                    console.log("WebGL context restored");
-                  },
-                  false,
-                );
+                const handleContextLost = (e: Event) => {
+                  e.preventDefault();
+                  console.warn("⚠️ WebGL context lost - preventing default");
+                  setTimeout(() => {
+                    gl?.forceContextRestore?.();
+                  }, 100);
+                };
+
+                const handleContextRestored = () => {
+                  console.log("✅ WebGL context restored");
+                };
+
+                gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
+                gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
               }}
             >
               <color attach="background" args={["#f8f9fa"]} />
