@@ -126,17 +126,79 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     // Pre-compute feature edges ONCE at load time (for solid mode)
     const featureEdgesGeometry = useMemo(() => {
+      // Helper function to calculate angle between two vectors (in degrees)
+      const calculateAngle = (v1: number[], v2: number[]): number => {
+        // Normalize vectors
+        const len1 = Math.sqrt(v1[0]**2 + v1[1]**2 + v1[2]**2);
+        const len2 = Math.sqrt(v2[0]**2 + v2[1]**2 + v2[2]**2);
+        
+        if (len1 === 0 || len2 === 0) return 0;
+        
+        const n1 = [v1[0]/len1, v1[1]/len1, v1[2]/len1];
+        const n2 = [v2[0]/len2, v2[1]/len2, v2[2]/len2];
+        
+        // Dot product
+        const dot = n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2];
+        
+        // Clamp to avoid numerical errors with acos
+        const clampedDot = Math.max(-1, Math.min(1, dot));
+        
+        // Return angle in degrees
+        return Math.acos(clampedDot) * (180 / Math.PI);
+      };
+
       // PRIORITY: Use backend feature_edges if available (guarantees match with tagged_edges)
       if (meshData.feature_edges && meshData.feature_edges.length > 0) {
         const featureEdgePositions: number[] = [];
+        let totalSegments = 0;
+        let filteredSegments = 0;
 
-        // Convert backend polylines to line segments
+        // Process each polyline with angle-based filtering
         meshData.feature_edges.forEach((polyline) => {
+          if (polyline.length < 2) return;
+          
+          totalSegments += polyline.length - 1;
+          
+          // For polylines with only 1 segment, always include it
+          if (polyline.length === 2) {
+            const p1 = polyline[0];
+            const p2 = polyline[1];
+            featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+            filteredSegments++;
+            return;
+          }
+          
+          // For longer polylines, use angle-based filtering
           for (let i = 0; i < polyline.length - 1; i++) {
             const p1 = polyline[i];
             const p2 = polyline[i + 1];
-
-            featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+            
+            // Always include first and last segments (boundary endpoints)
+            if (i === 0 || i === polyline.length - 2) {
+              featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+              filteredSegments++;
+              continue;
+            }
+            
+            // For middle segments, check angle with next segment
+            const p3 = polyline[i + 2];
+            
+            // Current edge vector
+            const edge1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+            
+            // Next edge vector
+            const edge2 = [p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]];
+            
+            // Calculate angle between edges
+            const angle = calculateAngle(edge1, edge2);
+            
+            // Threshold: 10 degrees - only show edges with significant angle change
+            const angleThreshold = 10;
+            
+            if (angle > angleThreshold) {
+              featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+              filteredSegments++;
+            }
           }
         });
 
@@ -144,21 +206,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
         geo.computeBoundingSphere(); // Critical: Prevents THREE.js frustum culling during rotation
         console.log(
-          "✅ Using backend feature_edges:",
+          "✅ Using backend feature_edges with angle-based filtering:",
           meshData.feature_edges.length,
           "polylines,",
-          featureEdgePositions.length / 6,
-          "segments",
+          `kept ${filteredSegments}/${totalSegments} segments (${((filteredSegments/totalSegments)*100).toFixed(1)}%)`
         );
-
-        // Debug: Log circular boundary edges
-        console.log("🔍 Feature edge breakdown:");
-        meshData.feature_edges.forEach((polyline, idx) => {
-          const segmentCount = polyline.length - 1;
-          if (segmentCount > 20) {
-            console.log(`  Edge ${idx}: ${segmentCount} segments (likely circular boundary)`);
-          }
-        });
 
         return geo;
       }
