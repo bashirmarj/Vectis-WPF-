@@ -367,10 +367,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* Show edges in solid mode using clean edge geometry */}
-        {displayStyle === "solid" && showEdges && (
+        {/* Show only backend feature edges in solid mode (no tessellation lines) */}
+        {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
           <lineSegments 
-            geometry={cleanEdgesGeometry}
+            geometry={featureEdgesGeometry}
             frustumCulled={false}
           >
             <lineBasicMaterial 
