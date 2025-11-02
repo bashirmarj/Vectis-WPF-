@@ -19,6 +19,7 @@ import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasurementTool";
 import { MeasurementRenderer } from "./cad-viewer/MeasurementRenderer";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
+import { FaceMeasurementTool } from "./cad-viewer/FaceMeasurementTool";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
@@ -579,12 +580,22 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* Professional Measurement Tool */}
+                {/* Professional Measurement Tool (Edge & Face-to-Face) */}
                 <ProfessionalMeasurementTool 
                   meshData={meshData} 
                   meshRef={meshRef.current?.mesh || null} 
                   featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                  enabled={!!activeTool} 
+                  enabled={activeTool === 'edge-select' || activeTool === 'face-to-face'} 
+                />
+
+                {/* Face Measurement Tool (Reference Implementation) */}
+                <FaceMeasurementTool 
+                  enabled={activeTool === 'measure'}
+                  meshRef={meshRef.current?.mesh || null}
+                  boundingSphere={{
+                    center: boundingBox.center,
+                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2
+                  }}
                 />
 
                 {/* Measurement Renderer */}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import * as THREE from "three";
 
-export type MeasurementType = "edge-select" | "face-to-face"; // Smart Edge Select: Auto-detect line/arc/circle | Face-to-face distance
+export type MeasurementType = "edge-select" | "face-to-face" | "measure"; // Smart Edge Select: Auto-detect line/arc/circle | Face-to-face distance | Face measurement (reference implementation)
 
 export type SnapType = "vertex" | "edge" | "midpoint" | "center" | "intersection" | "face";
 

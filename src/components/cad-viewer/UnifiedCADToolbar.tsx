@@ -43,9 +43,9 @@ interface UnifiedCADToolbarProps {
   showEdges: boolean;
   onToggleEdges: () => void;
 
-  // Measurement - Smart Edge Select and Face-to-Face
-  measurementMode: "edge-select" | "face-to-face" | null;
-  onMeasurementModeChange: (mode: "edge-select" | "face-to-face" | null) => void;
+  // Measurement - Smart Edge Select, Face-to-Face, and Face Measurement
+  measurementMode: "edge-select" | "face-to-face" | "measure" | null;
+  onMeasurementModeChange: (mode: "edge-select" | "face-to-face" | "measure" | null) => void;
   measurementCount?: number;
   onClearMeasurements?: () => void;
 
