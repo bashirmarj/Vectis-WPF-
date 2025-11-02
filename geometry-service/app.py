@@ -666,14 +666,15 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     try:
         edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
         
-        stats = {
-            'boundary_edges': 0,
-            'sharp_edges': 0,
-            'geometric_features': 0,
-            'smooth_edges_skipped': 0,
-            'internal_edges_skipped': 0,
-            'total_processed': 0
-        }
+    stats = {
+        'boundary_edges': 0,
+        'sharp_edges': 0,
+        'geometric_features': 0,
+        'smooth_edges_skipped': 0,
+        'internal_edges_skipped': 0,
+        'total_processed': 0,
+        'iso_curves': 0
+    }
         
         debug_logged = 0  # Track how many edges we've logged for debugging
         max_debug_logs = 10  # Only log first 10 edges to avoid spam
