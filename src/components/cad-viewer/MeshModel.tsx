@@ -137,14 +137,21 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       if (meshData.tagged_edges && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
         let totalEdges = 0;
-        let filteredEdges = 0;
+        let uisoCount = 0;
+        let visoCount = 0;
 
         meshData.tagged_edges.forEach((edge) => {
           totalEdges++;
           
           // FILTER: Skip UIso/VIso parametric surface curves (interior construction lines)
-          if (edge.iso_type === "UIso" || edge.iso_type === "VIso") {
-            return; // Skip this edge
+          // Backend sends lowercase: "uiso" and "viso"
+          if (edge.iso_type === "uiso") {
+            uisoCount++;
+            return;
+          }
+          if (edge.iso_type === "viso") {
+            visoCount++;
+            return;
           }
           
           // Render all other edges (boundary, feature edges, fillets, etc.)
@@ -152,15 +159,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             edge.start[0], edge.start[1], edge.start[2],
             edge.end[0], edge.end[1], edge.end[2]
           );
-          filteredEdges++;
         });
 
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
         geo.computeBoundingSphere();
         console.log(
-          "✅ Using tagged_edges with iso_type filtering:",
-          `kept ${filteredEdges}/${totalEdges} edges (filtered out ${totalEdges - filteredEdges} UIso/VIso lines)`
+          `✅ Tagged edges filtering: kept ${featureEdgePositions.length / 6}/${totalEdges} edges | Filtered: ${uisoCount} UIso + ${visoCount} VIso construction lines`
         );
 
         return geo;
