@@ -424,13 +424,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {/* Wireframe mode - use clean edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-            <SilhouetteEdges 
-              geometry={geometry} 
-              mesh={meshRef.current} 
-              staticFeatureEdges={featureEdgesGeometry} 
-              showHiddenEdges={showHiddenEdges}
-              controlsRef={controlsRef}
-            />
+              <SilhouetteEdges 
+                geometry={geometry} 
+                mesh={meshRef.current} 
+                staticFeatureEdges={featureEdgesGeometry} 
+                showHiddenEdges={showHiddenEdges}
+                controlsRef={controlsRef}
+                displayMode={displayStyle}
+              />
           ) : (
             <lineSegments 
               geometry={cleanEdgesGeometry}

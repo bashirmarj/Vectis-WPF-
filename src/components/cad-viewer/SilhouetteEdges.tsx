@@ -18,6 +18,7 @@ interface SilhouetteEdgesProps {
   staticFeatureEdges: THREE.BufferGeometry;
   showHiddenEdges?: boolean;
   controlsRef?: React.RefObject<any>;
+  displayMode?: "solid" | "wireframe" | "translucent";
 }
 
 export function SilhouetteEdges({ 
@@ -26,7 +27,8 @@ export function SilhouetteEdges({
   updateThreshold = 0.5,
   staticFeatureEdges,
   showHiddenEdges = false,
-  controlsRef
+  controlsRef,
+  displayMode = "solid"
 }: SilhouetteEdgesProps) {
   const { camera } = useThree();
   const lastCameraPos = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -43,6 +45,26 @@ export function SilhouetteEdges({
     quat: THREE.Quaternion;
     silhouettes: Float32Array;
   }>>([]);
+
+  // Mode-aware performance configuration
+  const performanceConfig = useMemo(() => {
+    if (displayMode === "wireframe") {
+      return {
+        frameSkip: 1,           // Update every frame
+        positionThreshold: 0.2, // More sensitive
+        rotationThreshold: 0.03, // ~2 degrees
+        pauseOnDrag: false      // Keep updating
+      };
+    }
+    
+    // Solid mode (default)
+    return {
+      frameSkip: 3,            // Update every 3 frames
+      positionThreshold: 0.5,  // Less sensitive
+      rotationThreshold: 0.1,  // ~6 degrees
+      pauseOnDrag: true        // Pause for smooth dragging
+    };
+  }, [displayMode]);
 
   // Build edge-to-triangle adjacency map (computed once)
   const edgeMap = useMemo(() => {
@@ -122,23 +144,23 @@ export function SilhouetteEdges({
 
   // Update silhouette edges when camera moves (optimized)
   useFrame(() => {
-    // Skip if actively dragging
-    if (isDragging.current) {
+    // Skip if actively dragging (only in solid mode)
+    if (isDragging.current && performanceConfig.pauseOnDrag) {
       return;
     }
 
-    // Frame skipping: only update every 3 frames
+    // Frame skipping: based on mode
     frameCount.current++;
-    if (frameCount.current % 3 !== 0) {
+    if (frameCount.current % performanceConfig.frameSkip !== 0) {
       return;
     }
 
     const currentPos = camera.position;
     const currentQuat = camera.quaternion;
 
-    // Check if camera moved or rotated significantly
-    const posChanged = currentPos.distanceTo(lastCameraPos.current) > updateThreshold;
-    const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > 0.1; // ~6 degrees (was 0.05)
+    // Check if camera moved or rotated (mode-aware thresholds)
+    const posChanged = currentPos.distanceTo(lastCameraPos.current) > performanceConfig.positionThreshold;
+    const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > performanceConfig.rotationThreshold;
 
     if (posChanged || rotChanged) {
       // Check cache first
