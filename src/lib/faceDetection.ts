@@ -23,17 +23,55 @@ export function getFaceFromIntersection(
   meshData: MeshData | null
 ): BackendFaceClassification | null {
   if (!meshData?.vertex_face_ids || !meshData.face_classifications) {
+    console.warn("❌ No face data available:", {
+      hasVertexFaceIds: !!meshData?.vertex_face_ids,
+      hasFaceClassifications: !!meshData?.face_classifications,
+      vertexFaceIdsLength: meshData?.vertex_face_ids?.length,
+      faceClassificationsLength: meshData?.face_classifications?.length,
+    });
     return null;
   }
 
   const faceIndex = intersection.faceIndex;
-  if (faceIndex === undefined) return null;
+  if (faceIndex === undefined) {
+    console.warn("❌ No faceIndex in intersection");
+    return null;
+  }
 
   // Each face has 3 vertices (triangle), get face_id from first vertex
   const vertexIndex = faceIndex * 3;
+  
+  // Check if vertexIndex is within bounds
+  if (vertexIndex >= meshData.vertex_face_ids.length) {
+    console.warn("❌ Vertex index out of bounds:", {
+      faceIndex,
+      vertexIndex,
+      maxIndex: meshData.vertex_face_ids.length - 1,
+    });
+    return null;
+  }
+  
   const faceId = meshData.vertex_face_ids[vertexIndex];
+  
+  console.log("🔍 Face lookup:", {
+    faceIndex,
+    vertexIndex,
+    faceId,
+    availableFaceIds: meshData.face_classifications.map(f => f.face_id),
+  });
 
-  return meshData.face_classifications.find(f => f.face_id === faceId) || null;
+  const face = meshData.face_classifications.find(f => f.face_id === faceId);
+  
+  if (!face) {
+    console.warn("❌ Face not found in classifications:", {
+      lookingFor: faceId,
+      available: meshData.face_classifications.map(f => f.face_id),
+    });
+  } else {
+    console.log("✅ Face found:", face.face_id, face.surface_type);
+  }
+  
+  return face || null;
 }
 
 /**

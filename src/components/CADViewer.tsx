@@ -163,6 +163,24 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
         console.log("✅ Face classifications loaded:", face_classifications?.length || 0);
         console.log("✅ Vertex face IDs loaded:", vertex_face_ids?.length || 0);
 
+        // Validate face data consistency
+        if (vertex_face_ids && face_classifications) {
+          const availableFaceIds = face_classifications.map((f: any) => f.face_id);
+          const missingFaceIds = Array.from(new Set(vertex_face_ids))
+            .filter(id => !availableFaceIds.includes(id));
+          
+          if (missingFaceIds.length > 0) {
+            console.warn("⚠️ Face ID mismatch detected:", {
+              vertexFaceIdCount: vertex_face_ids.length,
+              uniqueFaceIds: new Set(vertex_face_ids).size,
+              classificationsCount: face_classifications.length,
+              missingFaceIds: missingFaceIds.slice(0, 10), // Show first 10
+            });
+          } else {
+            console.log("✅ Face data validation passed");
+          }
+        }
+
         const loadedMeshData: MeshData = {
           vertices,
           indices,

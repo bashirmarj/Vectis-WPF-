@@ -314,9 +314,16 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         const face = getFaceFromIntersection(intersects[0], meshData);
         
         if (!face) {
+          console.error("❌ Face detection failed:", {
+            meshDataExists: !!meshData,
+            hasVertexFaceIds: !!meshData?.vertex_face_ids,
+            hasFaceClassifications: !!meshData?.face_classifications,
+            intersectionFaceIndex: intersects[0].faceIndex,
+          });
+          
           toast({
-            title: "No face data",
-            description: "Unable to identify face",
+            title: "Face detection failed",
+            description: "This surface has no classification data. Try another surface.",
             variant: "destructive",
           });
           return;
