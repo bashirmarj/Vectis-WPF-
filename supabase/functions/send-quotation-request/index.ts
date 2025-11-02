@@ -273,18 +273,106 @@ const handler = async (req: Request): Promise<Response> => {
 
           console.log(`Preliminary quote generated for ${file.name}: $${quoteData.unit_price}`);
 
-          // Save detected features to part_features table if available
-          if (analysisData.feature_tree) {
-            const features = analysisData.feature_tree.oriented_sections.flatMap((section: any) => 
-              section.features.map((feature: any) => ({
+          // Save detected features using NEW manufacturing_features format
+          if (analysisData.manufacturing_features || analysisData.feature_summary) {
+            const features: any[] = [];
+            const mfg = analysisData.manufacturing_features || {};
+            
+            // Process through-holes
+            if (mfg.through_holes?.length > 0) {
+              mfg.through_holes.forEach((hole: any, idx: number) => {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: 'through_hole',
+                  orientation: null,
+                  parameters: { ...hole, index: idx }
+                });
+              });
+            }
+            
+            // Process blind-holes
+            if (mfg.blind_holes?.length > 0) {
+              mfg.blind_holes.forEach((hole: any, idx: number) => {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: 'blind_hole',
+                  orientation: null,
+                  parameters: { ...hole, index: idx }
+                });
+              });
+            }
+            
+            // Process bores
+            if (mfg.bores?.length > 0) {
+              mfg.bores.forEach((bore: any, idx: number) => {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: 'bore',
+                  orientation: null,
+                  parameters: { ...bore, index: idx }
+                });
+              });
+            }
+            
+            // Process bosses
+            if (mfg.bosses?.length > 0) {
+              mfg.bosses.forEach((boss: any, idx: number) => {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: 'boss',
+                  orientation: null,
+                  parameters: { ...boss, index: idx }
+                });
+              });
+            }
+            
+            // Process planar faces
+            if (mfg.planar_faces?.length > 0) {
+              mfg.planar_faces.forEach((face: any, idx: number) => {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: 'planar_face',
+                  orientation: null,
+                  parameters: { ...face, index: idx }
+                });
+              });
+            }
+            
+            // Process fillets
+            if (mfg.fillets?.length > 0) {
+              mfg.fillets.forEach((fillet: any, idx: number) => {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: 'fillet',
+                  orientation: null,
+                  parameters: { ...fillet, index: idx }
+                });
+              });
+            }
+            
+            // Also save the summary for quick access
+            if (analysisData.feature_summary) {
+              features.push({
                 quotation_id: submission.id,
                 line_item_id: lineItem.id,
                 file_name: file.name,
-                feature_type: feature.type,
-                orientation: section.orientation,
-                parameters: feature
-              }))
-            );
+                feature_type: 'summary',
+                orientation: null,
+                parameters: analysisData.feature_summary
+              });
+            }
             
             if (features.length > 0) {
               const { error: featuresError } = await supabase

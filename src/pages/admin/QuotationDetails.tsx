@@ -154,20 +154,39 @@ const QuotationDetails = () => {
             .eq('line_item_id', item.id);
           
           if (features && features.length > 0) {
-            // Reconstruct feature tree from database
-            const orientationMap = new Map();
+            // Reconstruct NEW format: manufacturing_features + feature_summary
+            const manufacturing_features: any = {
+              through_holes: [],
+              blind_holes: [],
+              bores: [],
+              bosses: [],
+              planar_faces: [],
+              fillets: []
+            };
+            
+            let feature_summary: any = null;
+            
             features.forEach(feature => {
-              const arr = orientationMap.get(feature.orientation) || [];
-              arr.push(feature.parameters);
-              orientationMap.set(feature.orientation, arr);
+              if (feature.feature_type === 'summary') {
+                feature_summary = feature.parameters;
+              } else if (feature.feature_type === 'through_hole') {
+                manufacturing_features.through_holes.push(feature.parameters);
+              } else if (feature.feature_type === 'blind_hole') {
+                manufacturing_features.blind_holes.push(feature.parameters);
+              } else if (feature.feature_type === 'bore') {
+                manufacturing_features.bores.push(feature.parameters);
+              } else if (feature.feature_type === 'boss') {
+                manufacturing_features.bosses.push(feature.parameters);
+              } else if (feature.feature_type === 'planar_face') {
+                manufacturing_features.planar_faces.push(feature.parameters);
+              } else if (feature.feature_type === 'fillet') {
+                manufacturing_features.fillets.push(feature.parameters);
+              }
             });
             
             const featureTree = {
-              common_dimensions: [], // Could be extracted from parameters if needed
-              oriented_sections: Array.from(orientationMap.entries()).map(([orientation, features]) => ({
-                orientation,
-                features
-              }))
+              manufacturing_features,
+              feature_summary
             };
             
             featureTreesMap.set(item.id, featureTree);
