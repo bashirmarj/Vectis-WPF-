@@ -2,9 +2,9 @@ import { useMemo, useEffect, useRef, forwardRef } from "react";
 import * as React from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
-import { Line2 } from 'three/examples/jsm/lines/Line2.js';
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+import { Line2 } from "three/examples/jsm/lines/Line2.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { SilhouetteEdges } from "./SilhouetteEdges";
 
 interface MeshData {
@@ -150,7 +150,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           featureEdgePositions.length / 6,
           "segments",
         );
-        
+
         // Debug: Log circular boundary edges
         console.log("🔍 Feature edge breakdown:");
         meshData.feature_edges.forEach((polyline, idx) => {
@@ -159,7 +159,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             console.log(`  Edge ${idx}: ${segmentCount} segments (likely circular boundary)`);
           }
         });
-        
+
         return geo;
       }
 
@@ -273,11 +273,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     // Convert feature edges to Line2 for continuous rendering
     const line2Geometry = useMemo(() => {
       if (!featureEdgesGeometry) return null;
-      
+
       const positions = featureEdgesGeometry.attributes.position.array as Float32Array;
       const lineGeo = new LineGeometry();
       lineGeo.setPositions(Array.from(positions));
-      
+
       return lineGeo;
     }, [featureEdgesGeometry]);
 
@@ -302,10 +302,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           line2Material.resolution.set(window.innerWidth, window.innerHeight);
         }
       };
-      
-      window.addEventListener('resize', handleResize);
+
+      window.addEventListener("resize", handleResize);
       handleResize(); // Set initial resolution
-      return () => window.removeEventListener('resize', handleResize);
+      return () => window.removeEventListener("resize", handleResize);
     }, [line2Material]);
 
     // For wireframe mode: Use EdgesGeometry to show ALL mesh edges (including cylinder longitudinal lines)
@@ -388,20 +388,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* Pre-computed feature edges using Line2 for continuous rendering */}
         {displayStyle === "solid" && showEdges && line2Geometry && (
-          <primitive 
-            object={new Line2(line2Geometry, line2Material)} 
-            frustumCulled={false}
-          />
+          <primitive object={new Line2(line2Geometry, line2Material)} frustumCulled={false} />
         )}
 
         {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-            <SilhouetteEdges 
-              geometry={geometry} 
-              mesh={meshRef.current}
-              staticFeatureEdges={featureEdgesGeometry}
-            />
+            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} />
           ) : (
             <lineSegments geometry={wireframeEdgesGeometry}>
               <lineBasicMaterial color="#000000" toneMapped={false} />
