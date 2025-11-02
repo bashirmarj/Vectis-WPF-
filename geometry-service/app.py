@@ -1593,6 +1593,15 @@ def classify_mesh_faces(mesh_data, shape):
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
     
+    # Build face lookup map for quick face_idx -> face_object conversion
+    face_lookup = {}  # Maps face_idx -> actual TopoDS_Face
+    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+    idx = 0
+    while face_explorer.More():
+        face_lookup[idx] = topods.Face(face_explorer.Current())
+        idx += 1
+        face_explorer.Next()
+    
     logger.info("🔍 STEP 1: Classifying cylindrical faces...")
     
     # STEP 1: Classify all CYLINDRICAL faces first
@@ -1650,7 +1659,8 @@ def classify_mesh_faces(mesh_data, shape):
                                     adj_face = topods.Face(face_iter.Value())
                                     
                                     for other_info in face_data:
-                                        if adj_face.IsSame(other_info['face_object']):
+                                        other_face = face_lookup.get(other_info['face_idx'])
+                                        if other_face and adj_face.IsSame(other_face):
                                             # Check if neighbor is external
                                             if other_info['surf_type'] != GeomAbs_Cylinder:
                                                 break
@@ -1755,7 +1765,8 @@ def classify_mesh_faces(mesh_data, shape):
                             
                             # Find this adjacent face in our data
                             for other_info in face_data:
-                                if adj_face.IsSame(other_info['face_object']):
+                                other_face = face_lookup.get(other_info['face_idx'])
+                                if other_face and adj_face.IsSame(other_face):
                                     other_idx = other_info['face_idx']
                                     if other_idx != face_idx and other_idx in face_classifications:
                                         neighbor_types.append(face_classifications[other_idx])
