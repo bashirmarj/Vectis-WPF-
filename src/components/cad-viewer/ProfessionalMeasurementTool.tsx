@@ -470,9 +470,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       )}
 
       {/* Face highlighting for face-to-face mode */}
-      {hoverInfo && activeTool === "face-to-face" && (
+      {hoverInfo && activeTool === "face-to-face" && hoverInfo.classification && 
+       'center' in hoverInfo.classification && Array.isArray(hoverInfo.classification.center) && (
         <>
-          <mesh position={new THREE.Vector3(...(hoverInfo.classification as BackendFaceClassification).center)}>
+          <mesh position={new THREE.Vector3(...hoverInfo.classification.center)}>
             <sphereGeometry args={[2, 16, 16]} />
             <meshBasicMaterial color="#00CC66" opacity={0.7} transparent />
           </mesh>
