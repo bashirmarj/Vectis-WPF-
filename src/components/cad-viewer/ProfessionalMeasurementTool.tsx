@@ -168,6 +168,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     if (!enabled || !meshRef) {
       setHoverInfo(null);
       setLabelText("");
+      gl.domElement.style.cursor = "default";
       return;
     }
 
@@ -175,6 +176,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     if (activeTool === "edge-select" && edgeLines.length === 0) {
       setHoverInfo(null);
       setLabelText("");
+      gl.domElement.style.cursor = "default";
       return;
     }
 
@@ -198,11 +200,13 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             start: firstClickPoint.position,
             end: point.clone()
           });
+          gl.domElement.style.cursor = "crosshair";
           return;
         }
         
         // Skip edge hover detection in face-to-face mode when not drawing
         if (activeTool === "face-to-face") {
+          gl.domElement.style.cursor = "crosshair";
           return;
         }
 
@@ -260,22 +264,29 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
               edge: closestEdge,
               allSegments: allSegmentLines,
             });
+            gl.domElement.style.cursor = "crosshair";
           } else {
             setHoverInfo(null);
             setLabelText("");
+            gl.domElement.style.cursor = "default";
           }
         } else {
           setHoverInfo(null);
           setLabelText("");
+          gl.domElement.style.cursor = "default";
         }
       } else {
         setHoverInfo(null);
         setLabelText("");
+        gl.domElement.style.cursor = "default";
       }
     };
 
     gl.domElement.addEventListener("pointermove", handlePointerMove);
-    return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
+    return () => {
+      gl.domElement.removeEventListener("pointermove", handlePointerMove);
+      gl.domElement.style.cursor = "default";
+    };
   }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, activeTool, isDrawingMeasurement, firstClickPoint, camera, gl, raycaster]);
 
   // Handle click
