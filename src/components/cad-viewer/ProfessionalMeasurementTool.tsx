@@ -91,6 +91,14 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const activeTool = useMeasurementStore((state) => state.activeTool);
 
+  // Memoize the first face center position to avoid creating new Vector3 on every render
+  const firstFacePosition = React.useMemo(() => {
+    if (selectedFaces.length > 0) {
+      return new THREE.Vector3(...selectedFaces[0].center);
+    }
+    return new THREE.Vector3(0, 0, 0);
+  }, [selectedFaces]);
+
   // Convert feature edges to Line3 array
   const edgeLines = React.useMemo(() => {
     if (!featureEdgesGeometry) {
@@ -600,7 +608,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       {/* Face highlighting for face-to-face mode */}
       {activeTool === "face-to-face" && selectedFaces.length > 0 && (
         <mesh 
-          position={new THREE.Vector3(...selectedFaces[0].center)}
+          position={firstFacePosition}
           geometry={faceHighlightGeometry}
           material={firstFaceMaterial}
         />
