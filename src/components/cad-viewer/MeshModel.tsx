@@ -414,7 +414,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           (useSilhouetteEdges ? (
             <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} showHiddenEdges={showHiddenEdges} />
           ) : (
-            <lineSegments geometry={wireframeEdgesGeometry}>
+            <lineSegments 
+              geometry={wireframeEdgesGeometry}
+              key={`wireframe-edges-${showHiddenEdges}`}
+            >
               <lineBasicMaterial 
                 color="#000000" 
                 toneMapped={false}

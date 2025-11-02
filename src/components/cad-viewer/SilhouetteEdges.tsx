@@ -106,7 +106,11 @@ export function SilhouetteEdges({
   return (
     <group>
       {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
-      <lineSegments geometry={staticFeatureEdges} frustumCulled={false}>
+      <lineSegments 
+        geometry={staticFeatureEdges} 
+        frustumCulled={false}
+        key={`static-edges-${showHiddenEdges}`}
+      >
         <lineBasicMaterial 
           color="#000000" 
           toneMapped={false}
@@ -120,7 +124,10 @@ export function SilhouetteEdges({
       
       {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
       {dynamicSilhouetteGeometry && (
-        <lineSegments geometry={dynamicSilhouetteGeometry}>
+        <lineSegments 
+          geometry={dynamicSilhouetteGeometry}
+          key={`dynamic-edges-${showHiddenEdges}`}
+        >
           <lineBasicMaterial 
             color="#000000" 
             toneMapped={false}
