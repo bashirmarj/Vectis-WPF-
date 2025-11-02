@@ -254,6 +254,38 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
   useEffect(() => {
     if (!enabled) return;
 
+    // Drag detection to prevent clicks during rotation
+    const dragThreshold = 5; // pixels
+    let dragStartPos: { x: number; y: number } | null = null;
+    let isDragging = false;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      dragStartPos = { x: event.clientX, y: event.clientY };
+      isDragging = false;
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (dragStartPos) {
+        const dx = event.clientX - dragStartPos.x;
+        const dy = event.clientY - dragStartPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > dragThreshold) {
+          isDragging = true;
+        }
+      }
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      // Only trigger measurement if not dragging
+      if (!isDragging && dragStartPos) {
+        handleClick(event as any);
+      }
+      
+      dragStartPos = null;
+      isDragging = false;
+    };
+
     const handleClick = (event: PointerEvent) => {
       // Face-to-face mode - detect face on CLICK only
       if (activeTool === "face-to-face") {
@@ -362,11 +394,29 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         }
       }
 
-      // Edge-select mode
+      // Edge-select mode - verify click is on the mesh
+      if (!meshRef) return;
+
+      const canvas = gl.domElement;
+      const rect = canvas.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(meshRef, false);
+
+      // Silent return if click is outside the part
+      if (intersects.length === 0) {
+        return;
+      }
+
+      // Click is on part, but no edge detected
       if (!hoverInfo) {
         toast({
-          title: "No feature detected",
-          description: "Hover over an edge or face to measure",
+          title: "No edge detected",
+          description: "Hover over an edge feature first",
           variant: "destructive",
         });
         return;
@@ -468,8 +518,15 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       }
     };
 
-    gl.domElement.addEventListener("click", handleClick);
-    return () => gl.domElement.removeEventListener("click", handleClick);
+    gl.domElement.addEventListener("mousedown", handleMouseDown);
+    gl.domElement.addEventListener("mousemove", handleMouseMove);
+    gl.domElement.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      gl.domElement.removeEventListener("mousedown", handleMouseDown);
+      gl.domElement.removeEventListener("mousemove", handleMouseMove);
+      gl.domElement.removeEventListener("mouseup", handleMouseUp);
+    };
   }, [enabled, hoverInfo, addMeasurement, gl, activeTool, selectedFaces, meshRef, meshData, camera, raycaster]);
 
   return (
