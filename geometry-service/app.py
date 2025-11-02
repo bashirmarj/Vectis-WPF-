@@ -184,7 +184,7 @@ def recognize_manufacturing_features(shape):
         face_explorer.Next()
     
     # Analyze each face
-    for face in all_faces:
+    for face_idx, face in enumerate(all_faces):
         surface = BRepAdaptor_Surface(face)
         surf_type = surface.GetType()
         
