@@ -419,6 +419,9 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
     from OCC.Core.GeomAdaptor import GeomAdaptor_Curve
     
     iso_curves = []
+    surface_count = 0
+    uiso_count = 0
+    viso_count = 0
     
     try:
         face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
@@ -426,81 +429,189 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
         while face_explorer.More():
             face = topods.Face(face_explorer.Current())
             
-            # Get surface adaptor for type checking
-            surf_adaptor = BRepAdaptor_Surface(face)
-            surf_type = surf_adaptor.GetType()
+            try:
+                # Get surface adaptor for type checking
+                surf_adaptor = BRepAdaptor_Surface(face)
+                surf_type = surf_adaptor.GetType()
+                
+                # Only process curved surfaces
+                if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus]:
+                    surface_count += 1
+                    logger.debug(f"Processing curved surface #{surface_count}: {surf_type}")
+                    
+                    # Get the underlying Geom_Surface
+                    geom_surface = BRep_Tool.Surface(face)
+                    
+                    # Get parametric bounds from adaptor
+                    u_min = surf_adaptor.FirstUParameter()
+                    u_max = surf_adaptor.LastUParameter()
+                    v_min = surf_adaptor.FirstVParameter()
+                    v_max = surf_adaptor.LastVParameter()
+                    
+                    logger.debug(f"  Parametric bounds: U=[{u_min}, {u_max}], V=[{v_min}, {v_max}]")
+                    
+                    # Validate bounds (cylinders often have infinite U range)
+                    u_valid = math.isfinite(u_min) and math.isfinite(u_max) and u_max > u_min
+                    v_valid = math.isfinite(v_min) and math.isfinite(v_max) and v_max > v_min
+                    
+                    # Handle periodic surfaces (cylinders: U wraps around)
+                    if not u_valid:
+                        logger.debug(f"  U bounds invalid/infinite - using [0, 2π] for periodic surface")
+                        u_min = 0.0
+                        u_max = 2.0 * math.pi
+                        u_valid = True
+                    
+                    if not v_valid:
+                        logger.warning(f"  V bounds invalid - skipping surface")
+                        face_explorer.Next()
+                        continue
+                    
+                    # Extract UIso curves (vertical lines on cylinders)
+                    if num_u_lines > 0 and u_valid:
+                        for i in range(num_u_lines):
+                            try:
+                                u_value = u_min + (u_max - u_min) * i / num_u_lines
+                                
+                                # Create UIso curve using Geom_Surface
+                                uiso_geom_curve = geom_surface.UIso(u_value)
+                                
+                                # Wrap in adaptor for evaluation
+                                uiso_adaptor = GeomAdaptor_Curve(uiso_geom_curve)
+                                
+                                # Sample at V bounds
+                                start_point = uiso_adaptor.Value(v_min)
+                                end_point = uiso_adaptor.Value(v_max)
+                                
+                                iso_curves.append((
+                                    (start_point.X(), start_point.Y(), start_point.Z()),
+                                    (end_point.X(), end_point.Y(), end_point.Z()),
+                                    "uiso"
+                                ))
+                                uiso_count += 1
+                                logger.debug(f"  ✓ Extracted UIso curve #{uiso_count} at U={u_value:.4f}")
+                                
+                            except Exception as e:
+                                logger.warning(f"  ✗ Failed to extract UIso curve at U={u_value:.4f}: {e}")
+                    
+                    # Extract VIso curves (circular cross-sections)
+                    if num_v_lines > 0 and v_valid and u_valid:
+                        for i in range(1, num_v_lines + 1):
+                            try:
+                                v_value = v_min + (v_max - v_min) * i / (num_v_lines + 1)
+                                
+                                # Create VIso curve using Geom_Surface
+                                viso_geom_curve = geom_surface.VIso(v_value)
+                                
+                                # Wrap in adaptor
+                                viso_adaptor = GeomAdaptor_Curve(viso_geom_curve)
+                                
+                                # Sample multiple points around the circle
+                                num_segments = 64  # Match geometric feature quality
+                                u_range = u_max - u_min
+                                
+                                for j in range(num_segments):
+                                    u_start = u_min + u_range * j / num_segments
+                                    u_end = u_min + u_range * (j + 1) / num_segments
+                                    
+                                    start_point = viso_adaptor.Value(u_start)
+                                    end_point = viso_adaptor.Value(u_end)
+                                    
+                                    iso_curves.append((
+                                        (start_point.X(), start_point.Y(), start_point.Z()),
+                                        (end_point.X(), end_point.Y(), end_point.Z()),
+                                        "viso"
+                                    ))
+                                
+                                viso_count += 1
+                                logger.debug(f"  ✓ Extracted VIso curve #{viso_count} at V={v_value:.4f} ({num_segments} segments)")
+                                
+                            except Exception as e:
+                                logger.warning(f"  ✗ Failed to extract VIso curve at V={v_value:.4f}: {e}")
             
-            # Only process curved surfaces
-            if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus]:
-                
-                # Get the underlying Geom_Surface
-                geom_surface = BRep_Tool.Surface(face)
-                
-                # Get parametric bounds from adaptor
-                u_min = surf_adaptor.FirstUParameter()
-                u_max = surf_adaptor.LastUParameter()
-                v_min = surf_adaptor.FirstVParameter()
-                v_max = surf_adaptor.LastVParameter()
-                
-                # Extract UIso curves (vertical lines on cylinders)
-                if num_u_lines > 0:
-                    for i in range(num_u_lines):
-                        u_value = u_min + (u_max - u_min) * i / num_u_lines
-                        
-                        # Create UIso curve using Geom_Surface
-                        uiso_geom_curve = geom_surface.UIso(u_value)
-                        
-                        # Wrap in adaptor for evaluation
-                        uiso_adaptor = GeomAdaptor_Curve(uiso_geom_curve)
-                        
-                        # Sample at V bounds
-                        start_point = uiso_adaptor.Value(v_min)
-                        end_point = uiso_adaptor.Value(v_max)
-                        
-                        iso_curves.append((
-                            (start_point.X(), start_point.Y(), start_point.Z()),
-                            (end_point.X(), end_point.Y(), end_point.Z()),
-                            "uiso"
-                        ))
-                
-                # Extract VIso curves (circular cross-sections)
-                if num_v_lines > 0:
-                    for i in range(1, num_v_lines + 1):
-                        v_value = v_min + (v_max - v_min) * i / (num_v_lines + 1)
-                        
-                        # Create VIso curve using Geom_Surface
-                        viso_geom_curve = geom_surface.VIso(v_value)
-                        
-                        # Wrap in adaptor
-                        viso_adaptor = GeomAdaptor_Curve(viso_geom_curve)
-                        
-                        # Sample multiple points around the circle
-                        num_segments = 64  # Match geometric feature quality
-                        u_range = u_max - u_min
-                        
-                        for j in range(num_segments):
-                            u_start = u_min + u_range * j / num_segments
-                            u_end = u_min + u_range * (j + 1) / num_segments
-                            
-                            start_point = viso_adaptor.Value(u_start)
-                            end_point = viso_adaptor.Value(u_end)
-                            
-                            iso_curves.append((
-                                (start_point.X(), start_point.Y(), start_point.Z()),
-                                (end_point.X(), end_point.Y(), end_point.Z()),
-                                "viso"
-                            ))
+            except Exception as e:
+                logger.debug(f"Error processing face: {e}")
             
             face_explorer.Next()
         
-        logger.info(f"✅ Extracted {len(iso_curves)} isoparametric curves")
+        logger.info(f"✅ ISO curve extraction: {surface_count} surfaces → {uiso_count} UIso + {viso_count} VIso = {len(iso_curves)} total curves")
         
     except Exception as e:
-        logger.error(f"❌ Error extracting isoparametric curves: {e}")
+        logger.error(f"❌ Fatal error in ISO curve extraction: {e}")
         import traceback
         logger.error(traceback.format_exc())
     
     return iso_curves
+
+
+def is_external_facing_edge(edge, face1, face2, shape):
+    """
+    Determine if an edge has at least one external-facing adjacent face.
+    Uses surface normal direction to check orientation.
+    
+    Args:
+        edge: TopoDS_Edge to analyze
+        face1: First adjacent TopoDS_Face
+        face2: Second adjacent TopoDS_Face
+        shape: The parent TopoDS_Shape (solid)
+    
+    Returns:
+        bool: True if at least one face is external-facing
+    """
+    from OCC.Core.BRepClass3d import BRepClass3d_SolidClassifier
+    
+    try:
+        for face in [face1, face2]:
+            # Get surface adaptor
+            surf = BRepAdaptor_Surface(face)
+            
+            # Get parametric center
+            u_min = surf.FirstUParameter()
+            u_max = surf.LastUParameter()
+            v_min = surf.FirstVParameter()
+            v_max = surf.LastVParameter()
+            
+            # Validate bounds
+            if not (math.isfinite(u_min) and math.isfinite(u_max) and 
+                    math.isfinite(v_min) and math.isfinite(v_max)):
+                continue
+            
+            u_mid = (u_min + u_max) / 2.0
+            v_mid = (v_min + v_max) / 2.0
+            
+            # Get point and normal at center
+            props = GeomLProp_SLProps(surf, u_mid, v_mid, 1, 1e-6)
+            
+            if not props.IsNormalDefined():
+                continue
+            
+            normal = props.Normal()
+            point = props.Value()
+            
+            # Adjust normal based on face orientation
+            if face.Orientation() == TopAbs_REVERSED:
+                normal.Reverse()
+            
+            # Cast ray from point along normal
+            test_point = gp_Pnt(
+                point.X() + normal.X() * 0.1,
+                point.Y() + normal.Y() * 0.1,
+                point.Z() + normal.Z() * 0.1
+            )
+            
+            # Classify point
+            classifier = BRepClass3d_SolidClassifier()
+            classifier.Load(shape)
+            classifier.Perform(test_point, 1e-6)
+            
+            # If point is outside, face is external
+            if classifier.State() == TopAbs_OUT:
+                return True
+        
+        return False
+        
+    except Exception as e:
+        logger.debug(f"Error checking edge orientation: {e}")
+        return True  # Default to external on error
 
 
 def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20, include_uiso=True, num_uiso_lines=2):
@@ -542,8 +653,11 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     # Extract isoparametric curves for curved surfaces
     iso_curves = []
     if include_uiso:
-        iso_curves = extract_isoparametric_curves(shape, num_u_lines=num_uiso_lines)
-        logger.info(f"📐 Extracted {len(iso_curves)} UIso/VIso curves")
+        iso_curves = extract_isoparametric_curves(
+            shape, 
+            num_u_lines=num_uiso_lines,
+            num_v_lines=2
+        )
     
     # Build edge-to-faces map using TopTools
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
@@ -555,10 +669,10 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         stats = {
             'boundary_edges': 0,
             'sharp_edges': 0,
-            'geometric_features': 0,  # NEW: Track cylinder-to-plane edges separately
+            'geometric_features': 0,
             'smooth_edges_skipped': 0,
-            'total_processed': 0,
-            'iso_curves': 0  # Track UIso/VIso parametric curves
+            'internal_edges_skipped': 0,
+            'total_processed': 0
         }
         
         debug_logged = 0  # Track how many edges we've logged for debugging
@@ -601,46 +715,44 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         stats['boundary_edges'] += 1
                         
                     elif num_adjacent_faces == 2:
-                        # INTERIOR EDGE - check geometry type first, then angle
+                        # INTERIOR EDGE - check geometry, orientation, then angle
                         face1 = topods.Face(face_list.First())
                         face2 = topods.Face(face_list.Last())
                         
                         # Check if this is a special geometric edge (cylinder-to-plane, etc.)
                         is_geometric_feature = is_cylinder_to_planar_edge(face1, face2)
                         
-                        # Debug logging for first few edges with 2 faces
-                        if debug_logged < max_debug_logs:
-                            surf1 = BRepAdaptor_Surface(face1)
-                            surf2 = BRepAdaptor_Surface(face2)
-                            type1 = surf1.GetType()
-                            type2 = surf2.GetType()
-                            logger.debug(f"   Surface types: {type1} + {type2}, geometric_feature={is_geometric_feature}")
-                        
                         if is_geometric_feature:
                             # GEOMETRIC FEATURE EDGE - always include
                             is_significant = True
                             edge_type = "geometric_feature"
                             stats['geometric_features'] += 1
-                            stats['sharp_edges'] += 1  # Also count as sharp for total
+                            stats['sharp_edges'] += 1
                             
-                            # Log first few geometric features with curve type
                             if stats['geometric_features'] <= 5:
                                 curve_adaptor_temp = BRepAdaptor_Curve(edge)
                                 curve_type_temp = curve_adaptor_temp.GetType()
                                 curve_name = "LINE" if curve_type_temp == GeomAbs_Line else "CIRCLE" if curve_type_temp == GeomAbs_Circle else "OTHER"
                                 logger.info(f"   🎯 Geometric feature #{stats['geometric_features']}: {curve_name} edge between cylinder/cone/sphere and plane")
                         else:
-                            # Calculate dihedral angle for regular edges
-                            dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                            # Check if at least one face is external
+                            has_external_face = is_external_facing_edge(edge, face1, face2, shape)
                             
-                            if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
-                                # SHARP EDGE - angle exceeds threshold
-                                is_significant = True
-                                edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
-                                stats['sharp_edges'] += 1
+                            if has_external_face:
+                                # Calculate dihedral angle only for edges adjacent to external faces
+                                dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                                
+                                if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
+                                    # SHARP EDGE on external surface
+                                    is_significant = True
+                                    edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
+                                    stats['sharp_edges'] += 1
+                                else:
+                                    # SMOOTH EDGE on external surface
+                                    stats['smooth_edges_skipped'] += 1
                             else:
-                                # SMOOTH/TANGENT EDGE - skip (within fillet, blend, etc.)
-                                stats['smooth_edges_skipped'] += 1
+                                # INTERNAL EDGE (both faces are internal) - skip
+                                stats['internal_edges_skipped'] += 1
                 else:
                     # Orphan edge - include it to be safe
                     is_significant = True
