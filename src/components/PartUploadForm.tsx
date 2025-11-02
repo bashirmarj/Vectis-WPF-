@@ -98,6 +98,8 @@ export const PartUploadForm = () => {
 
       console.log("✅ Edge function response:", result);
       console.log("📊 Available keys in response:", Object.keys(result));
+      console.log("🏭 Manufacturing features:", result.manufacturing_features);
+      console.log("📋 Feature summary:", result.feature_summary);
 
       // ✅ CRITICAL FIX: Extract meshId from response
       const meshId = result.mesh_id || result.meshId;

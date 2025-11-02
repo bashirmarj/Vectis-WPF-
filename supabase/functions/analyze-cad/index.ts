@@ -130,6 +130,25 @@ interface AnalysisResult {
   routing_reasoning?: string[];
   machining_summary?: MachiningOperation[];
   estimated_total_cost_usd?: number;
+  // Manufacturing features for frontend display
+  manufacturing_features?: {
+    through_holes?: any[];
+    blind_holes?: any[];
+    bores?: any[];
+    bosses?: any[];
+    planar_faces?: any[];
+    fillets?: any[];
+  };
+  feature_summary?: {
+    through_holes?: number;
+    blind_holes?: number;
+    bores?: number;
+    bosses?: number;
+    total_holes?: number;
+    fillets?: number;
+    planar_faces?: number;
+    complexity_score?: number;
+  };
 }
 
 interface Vector3 {
@@ -1207,6 +1226,26 @@ const handler = async (req: Request): Promise<Response> => {
         detected_features: analysis.detected_features,
         recommended_processes: analysis.recommended_processes,
         mesh_data: analysis.mesh_data,
+        // ✅ Explicitly include manufacturing features for frontend display
+        manufacturing_features: analysis.manufacturing_features || {
+          through_holes: [],
+          blind_holes: [],
+          bores: [],
+          bosses: [],
+          planar_faces: [],
+          fillets: [],
+        },
+        // ✅ Explicitly include feature summary for frontend display
+        feature_summary: analysis.feature_summary || {
+          through_holes: 0,
+          blind_holes: 0,
+          bores: 0,
+          bosses: 0,
+          total_holes: 0,
+          fillets: 0,
+          planar_faces: 0,
+          complexity_score: analysis.complexity_score || 5,
+        },
       }),
       {
         status: 200,

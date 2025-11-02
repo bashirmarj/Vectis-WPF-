@@ -80,6 +80,13 @@ export function PartDetailCustomer({
     (file.analysis.manufacturing_features || file.analysis.feature_tree || file.analysis.detected_features);
   const hasQuote = !!file.quote;
 
+  console.log("🔍 Checking for features:", {
+    hasAnalysis,
+    manufacturing_features: file.analysis?.manufacturing_features,
+    feature_summary: file.analysis?.feature_summary,
+    hasFeatures,
+  });
+
   // Calculate feature count from either old or new structure
   const featureCount = hasFeatures
     ? file.analysis.feature_tree?.oriented_sections?.reduce((sum, s) => sum + s.features.length, 0) ||
