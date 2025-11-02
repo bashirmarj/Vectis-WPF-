@@ -758,45 +758,90 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             
             edge_explorer.Next()
         
-        # Add isoparametric curves to the feature edges
+        # Process ISO curves through the same pipeline as BREP edges
         for start, end, curve_type in iso_curves:
-            feature_edges.append([list(start), list(end)])
-            
-            # Add classification metadata
-            classification = {
-                "id": edge_count,
-                "type": "line" if curve_type == "uiso" else "circle_segment",
-                "start_point": list(start),
-                "end_point": list(end),
-                "feature_id": feature_id_counter,
-                "iso_type": curve_type
-            }
-            edge_classifications.append(classification)
-            
-            # Add tagged segment with normalized type
-            # ✅ FIX: Convert uiso/viso to standard types that frontend expects
-            normalized_type = "line" if curve_type == "uiso" else "arc"
-            
-            tagged_segment = {
-                'feature_id': feature_id_counter,
-                'start': list(start),
-                'end': list(end),
-                'type': normalized_type,  # Use "line" or "arc", not "uiso"/"viso"
-                'iso_type': curve_type  # Preserve original type for debugging
-            }
-            
-            # Add length for line edges
-            if normalized_type == "line":
+            try:
+                # Determine curve type for adaptive sampling
+                if curve_type == "uiso":
+                    # UIso = straight line on cylinder
+                    num_samples = 2
+                    classification_type = "line"
+                elif curve_type == "viso":
+                    # VIso = circular cross-section
+                    num_samples = 64  # Same quality as geometric circles
+                    classification_type = "arc"
+                else:
+                    num_samples = 20
+                    classification_type = "line"
+                
+                # ===== TESSELLATE using same logic as BREP edges =====
                 start_vec = np.array(start)
                 end_vec = np.array(end)
+                points = []
+                
+                for i in range(num_samples + 1):
+                    t = i / num_samples
+                    point = start_vec + t * (end_vec - start_vec)
+                    points.append(point.tolist())
+                
+                if len(points) < 2:
+                    continue
+                
+                # ===== OUTPUT 1: Feature edges for rendering =====
+                feature_edges.append(points)
+                
+                # ===== OUTPUT 2: Edge classification metadata =====
+                classification = {
+                    "id": edge_count,
+                    "type": classification_type,
+                    "start_point": list(start),
+                    "end_point": list(end),
+                    "feature_id": feature_id_counter,
+                    "iso_type": curve_type,
+                    "segment_count": num_samples
+                }
+                
+                # Calculate length
                 length = np.linalg.norm(end_vec - start_vec)
-                tagged_segment['length'] = length
-            
-            tagged_edges.append(tagged_segment)
-            
-            stats['iso_curves'] += 1
-            edge_count += 1
-            feature_id_counter += 1
+                classification["length"] = length
+                
+                # For VIso circles, add radius/diameter if available
+                if curve_type == "viso":
+                    # Approximate radius from arc length and segment count
+                    estimated_radius = length * num_samples / (2 * math.pi)
+                    classification["radius"] = estimated_radius
+                    classification["diameter"] = estimated_radius * 2
+                
+                edge_classifications.append(classification)
+                
+                # ===== OUTPUT 3: Tagged segments for measurement matching =====
+                # Use SAME logic as BREP edges (lines 732-750)
+                for i in range(len(points) - 1):
+                    tagged_segment = {
+                        'feature_id': feature_id_counter,
+                        'start': points[i],
+                        'end': points[i + 1],
+                        'type': classification_type,
+                        'iso_type': curve_type
+                    }
+                    
+                    # Copy measurement data
+                    if classification.get('diameter'):
+                        tagged_segment['diameter'] = classification['diameter']
+                    if classification.get('radius'):
+                        tagged_segment['radius'] = classification['radius']
+                    if classification.get('length'):
+                        tagged_segment['length'] = classification['length']
+                    
+                    tagged_edges.append(tagged_segment)
+                
+                stats['iso_curves'] += 1
+                edge_count += 1
+                feature_id_counter += 1
+                
+            except Exception as e:
+                logger.debug(f"Error processing ISO curve: {e}")
+                pass
         
         # Update total edge count
         stats['feature_edges_used'] = len(feature_edges)
