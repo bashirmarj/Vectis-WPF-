@@ -16,62 +16,81 @@ interface MeshData {
 }
 
 /**
- * Get face classification from raycast intersection
+ * Get face classification from raycast intersection using geometric matching
+ * This is more robust than triangle index matching
  */
 export function getFaceFromIntersection(
   intersection: THREE.Intersection,
   meshData: MeshData | null
 ): BackendFaceClassification | null {
-  if (!meshData?.vertex_face_ids || !meshData.face_classifications) {
-    console.warn("❌ No face data available:", {
-      hasVertexFaceIds: !!meshData?.vertex_face_ids,
-      hasFaceClassifications: !!meshData?.face_classifications,
-      vertexFaceIdsLength: meshData?.vertex_face_ids?.length,
-      faceClassificationsLength: meshData?.face_classifications?.length,
-    });
+  if (!meshData?.face_classifications) {
+    console.warn("❌ No face classifications available");
     return null;
   }
 
-  const faceIndex = intersection.faceIndex;
-  if (faceIndex === undefined) {
-    console.warn("❌ No faceIndex in intersection");
+  if (!intersection.face || !intersection.point) {
+    console.warn("❌ Invalid intersection data");
     return null;
   }
 
-  // Each face has 3 vertices (triangle), get face_id from first vertex
-  const vertexIndex = faceIndex * 3;
+  // Get intersection point and normal (in world space)
+  const intersectionPoint = intersection.point.clone();
+  const intersectionNormal = intersection.face.normal.clone();
   
-  // Check if vertexIndex is within bounds
-  if (vertexIndex >= meshData.vertex_face_ids.length) {
-    console.warn("❌ Vertex index out of bounds:", {
-      faceIndex,
-      vertexIndex,
-      maxIndex: meshData.vertex_face_ids.length - 1,
-    });
-    return null;
+  // If the mesh has a transform, apply it to the normal
+  if (intersection.object) {
+    intersectionNormal.transformDirection(intersection.object.matrixWorld);
   }
-  
-  const faceId = meshData.vertex_face_ids[vertexIndex];
-  
-  console.log("🔍 Face lookup:", {
-    faceIndex,
-    vertexIndex,
-    faceId,
-    availableFaceIds: meshData.face_classifications.map(f => f.face_id),
+  intersectionNormal.normalize();
+
+  console.log("🔍 Intersection data:", {
+    point: intersectionPoint.toArray(),
+    normal: intersectionNormal.toArray(),
+    faceIndex: intersection.faceIndex,
   });
 
-  const face = meshData.face_classifications.find(f => f.face_id === faceId);
-  
-  if (!face) {
-    console.warn("❌ Face not found in classifications:", {
-      lookingFor: faceId,
-      available: meshData.face_classifications.map(f => f.face_id),
+  // Find the best matching face by comparing geometry
+  let bestMatch: BackendFaceClassification | null = null;
+  let bestScore = Infinity;
+
+  for (const face of meshData.face_classifications) {
+    const faceCenter = new THREE.Vector3(...face.center);
+    const faceNormal = new THREE.Vector3(...face.normal);
+
+    // Calculate distance from intersection point to face center
+    const distanceToCenter = intersectionPoint.distanceTo(faceCenter);
+
+    // Calculate normal alignment (dot product)
+    // 1.0 = perfect alignment, 0.0 = perpendicular, -1.0 = opposite
+    const normalAlignment = Math.abs(intersectionNormal.dot(faceNormal));
+
+    // Combined score: prioritize normal alignment, then distance
+    // Lower score is better
+    const score = distanceToCenter * (2.0 - normalAlignment);
+
+    console.log(`  Face ${face.face_id} (${face.surface_type}):`, {
+      distanceToCenter: distanceToCenter.toFixed(3),
+      normalAlignment: normalAlignment.toFixed(3),
+      score: score.toFixed(3),
+    });
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestMatch = face;
+    }
+  }
+
+  if (bestMatch) {
+    console.log("✅ Best match:", {
+      face_id: bestMatch.face_id,
+      surface_type: bestMatch.surface_type,
+      score: bestScore.toFixed(3),
     });
   } else {
-    console.log("✅ Face found:", face.face_id, face.surface_type);
+    console.warn("❌ No matching face found");
   }
-  
-  return face || null;
+
+  return bestMatch;
 }
 
 /**
