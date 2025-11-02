@@ -270,50 +270,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
 
-    // Convert feature edges to Line2 for continuous rendering
-    const line2Geometry = useMemo(() => {
-      if (!featureEdgesGeometry) return null;
 
-      const positions = featureEdgesGeometry.attributes.position.array as Float32Array;
-      const lineGeo = new LineGeometry();
-      lineGeo.setPositions(Array.from(positions));
-
-      return lineGeo;
-    }, [featureEdgesGeometry]);
-
-    // Line2 material with proper width and resolution
-    const line2Material = useMemo(() => {
-      return new LineMaterial({
-        color: 0x000000,
-        linewidth: 1.5, // in pixels
-        resolution: new THREE.Vector2(1920, 1080),
-        alphaToCoverage: true,
-        depthTest: true,
-        polygonOffset: true,
-        polygonOffsetFactor: -2,
-        polygonOffsetUnits: -2,
-      });
-    }, []);
-
-    // Update resolution on window resize
-    useEffect(() => {
-      const handleResize = () => {
-        if (line2Material) {
-          line2Material.resolution.set(window.innerWidth, window.innerHeight);
-        }
-      };
-
-      window.addEventListener("resize", handleResize);
-      handleResize(); // Set initial resolution
-      return () => window.removeEventListener("resize", handleResize);
-    }, [line2Material]);
-
-    // For wireframe mode: Use EdgesGeometry to show ALL mesh edges (including cylinder longitudinal lines)
-    const wireframeEdgesGeometry = useMemo(() => {
+    // Clean edge geometry for both solid and wireframe modes
+    const cleanEdgesGeometry = useMemo(() => {
       // Three.js EdgesGeometry automatically extracts all edges with a threshold angle
       // Using threshold of 1 degree will show nearly all edges including smooth surfaces
       const edgesGeo = new THREE.EdgesGeometry(geometry, 1); // 1 degree threshold
-      console.log("✅ Generated wireframe edges:", edgesGeo.attributes.position.count / 2, "edges");
+      console.log("✅ Generated clean edges:", edgesGeo.attributes.position.count / 2, "edges");
       return edgesGeo;
     }, [geometry]);
 
@@ -404,18 +367,31 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* Pre-computed feature edges using Line2 for continuous rendering */}
-        {displayStyle === "solid" && showEdges && line2Geometry && (
-          <primitive object={new Line2(line2Geometry, line2Material)} frustumCulled={false} />
+        {/* Show edges in solid mode using clean edge geometry */}
+        {displayStyle === "solid" && showEdges && (
+          <lineSegments 
+            geometry={cleanEdgesGeometry}
+            frustumCulled={false}
+          >
+            <lineBasicMaterial 
+              color="#000000" 
+              toneMapped={false}
+              polygonOffset={true}
+              polygonOffsetFactor={-2}
+              polygonOffsetUnits={-2}
+              depthTest={true}
+              depthWrite={false}
+            />
+          </lineSegments>
         )}
 
-        {/* Wireframe mode - use dedicated wireframe edges that show ALL mesh structure */}
+        {/* Wireframe mode - use clean edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
             <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} showHiddenEdges={showHiddenEdges} />
           ) : (
             <lineSegments 
-              geometry={wireframeEdgesGeometry}
+              geometry={cleanEdgesGeometry}
               key={`wireframe-edges-${showHiddenEdges}`}
             >
               <lineBasicMaterial 
