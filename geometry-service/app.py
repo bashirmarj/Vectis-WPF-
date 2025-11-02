@@ -399,7 +399,7 @@ def calculate_dihedral_angle(edge, face1, face2):
         return None
 
 
-def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
+def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0, total_surface_area=None):
     """
     Extract UIso and VIso parametric curves from cylindrical, conical, 
     spherical, and toroidal surfaces using Geom_Surface API.
@@ -437,7 +437,35 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
                 # Only process curved surfaces
                 if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus]:
                     surface_count += 1
-                    logger.debug(f"Processing curved surface #{surface_count}: {surf_type}")
+                    
+                    # Calculate this face's surface area for dynamic filtering
+                    from OCC.Core.GProp import GProp_GProps
+                    from OCC.Core.BRepGProp import brepgprop
+                    
+                    props = GProp_GProps()
+                    brepgprop.SurfaceProperties(face, props)
+                    face_area = props.Mass()  # In mm²
+                    
+                    # Dynamic threshold: Skip surfaces smaller than 0.5% of total surface area
+                    # This automatically scales to part size:
+                    # - Small part (1,000mm²): threshold = 5mm² (shows M2+ holes)
+                    # - Medium part (30,000mm²): threshold = 150mm² (shows M8+ holes)  
+                    # - Large part (500,000mm²): threshold = 2,500mm² (major cylinders only)
+                    if total_surface_area is not None:
+                        MIN_ISO_SURFACE_PERCENTAGE = 0.5  # 0.5% of total surface area
+                        min_iso_area = total_surface_area * (MIN_ISO_SURFACE_PERCENTAGE / 100.0)
+                    else:
+                        # Fallback to fixed threshold if total area not provided
+                        min_iso_area = 100.0  # mm²
+                    
+                    if face_area < min_iso_area:
+                        percentage = (face_area / total_surface_area * 100) if total_surface_area else 0
+                        logger.debug(f"  ⊘ Skipping small surface #{surface_count} (area={face_area:.2f}mm², {percentage:.2f}% of total)")
+                        face_explorer.Next()
+                        continue
+                    
+                    percentage = (face_area / total_surface_area * 100) if total_surface_area else 0
+                    logger.debug(f"  ✓ Processing large surface #{surface_count}: {surf_type} (area={face_area:.2f}mm², {percentage:.2f}% of total)")
                     
                     # Get the underlying Geom_Surface
                     geom_surface = BRep_Tool.Surface(face)
@@ -614,7 +642,7 @@ def is_external_facing_edge(edge, face1, face2, shape):
         return True  # Default to external on error
 
 
-def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20, include_uiso=True, num_uiso_lines=2):
+def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20, include_uiso=True, num_uiso_lines=2, total_surface_area=None):
     """
     UNIFIED single-pass edge extraction: tessellate once, classify, and tag segments.
     
@@ -656,7 +684,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         iso_curves = extract_isoparametric_curves(
             shape, 
             num_u_lines=num_uiso_lines,
-            num_v_lines=0  # Disable VIso curves to reduce memory usage (industry standard)
+            num_v_lines=0,  # Disable VIso curves to reduce memory usage (industry standard)
+            total_surface_area=total_surface_area  # Pass for dynamic filtering
         )
     
     # Build edge-to-faces map using TopTools
@@ -1621,7 +1650,8 @@ def analyze_cad():
             max_edges=500, 
             angle_threshold_degrees=20,
             include_uiso=True,  # Industry-standard cylinder height lines
-            num_uiso_lines=2    # CATIA standard (2 lines per curved surface)
+            num_uiso_lines=2,   # CATIA standard (2 lines per curved surface)
+            total_surface_area=exact_props['surface_area']  # Dynamic ISO threshold based on part size
         )
         
         mesh_data["feature_edges"] = edge_result["feature_edges"]
