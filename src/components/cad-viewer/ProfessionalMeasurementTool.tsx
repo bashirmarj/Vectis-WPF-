@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useThree } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { useMeasurementStore, BackendFaceClassification } from "@/stores/measurementStore";
 import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
@@ -85,19 +85,19 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
   } | null>(null);
   const [labelText, setLabelText] = useState<string>("");
   
-  const selectedFaces = useMeasurementStore((state) => state.selectedFaces);
-  const setSelectedFaces = useMeasurementStore((state) => state.setSelectedFaces);
-  const clearSelectedFaces = useMeasurementStore((state) => state.clearSelectedFaces);
+  // Local state for face-to-face measurement (no store updates until finalized)
+  const [isDrawingMeasurement, setIsDrawingMeasurement] = useState(false);
+  const [firstClickPoint, setFirstClickPoint] = useState<{
+    position: THREE.Vector3;
+    faceData: BackendFaceClassification;
+  } | null>(null);
+  const [previewLine, setPreviewLine] = useState<{
+    start: THREE.Vector3;
+    end: THREE.Vector3;
+  } | null>(null);
+  
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const activeTool = useMeasurementStore((state) => state.activeTool);
-
-  // Memoize the first face center position (already Vector3 from store)
-  const firstFacePosition = React.useMemo(() => {
-    if (selectedFaces.length > 0) {
-      return selectedFaces[0].center;  // Already a Vector3!
-    }
-    return new THREE.Vector3(0, 0, 0);
-  }, [selectedFaces]);
 
   // Convert feature edges to Line3 array
   const edgeLines = React.useMemo(() => {
@@ -144,12 +144,14 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     };
   }, [faceHighlightGeometry, faceHighlightMaterial, firstFaceMaterial]);
 
-  // Clear selected faces when switching away from face-to-face mode
+  // Clear local measurement state when switching away from face-to-face mode
   useEffect(() => {
     if (activeTool !== "face-to-face") {
-      clearSelectedFaces();
+      setIsDrawingMeasurement(false);
+      setFirstClickPoint(null);
+      setPreviewLine(null);
     }
-  }, [activeTool, clearSelectedFaces]);
+  }, [activeTool]);
 
   // Log available tagged edges from backend
   React.useEffect(() => {
@@ -190,7 +192,16 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       if (intersects.length > 0) {
         const point = intersects[0].point;
 
-        // Face-to-face mode - skip hover detection, only detect on click
+        // Face-to-face mode - update preview line if drawing
+        if (activeTool === "face-to-face" && isDrawingMeasurement && firstClickPoint) {
+          setPreviewLine({
+            start: firstClickPoint.position,
+            end: point.clone()
+          });
+          return;
+        }
+        
+        // Skip edge hover detection in face-to-face mode when not drawing
         if (activeTool === "face-to-face") {
           return;
         }
@@ -265,7 +276,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     gl.domElement.addEventListener("pointermove", handlePointerMove);
     return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
-  }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, activeTool, camera, gl, raycaster]);
+  }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, activeTool, isDrawingMeasurement, firstClickPoint, camera, gl, raycaster]);
 
   // Handle click
   useEffect(() => {
@@ -355,21 +366,29 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
         console.log("✅ Face clicked:", face.face_id, face.surface_type);
 
-        // First face selection
-        if (selectedFaces.length === 0) {
-          setSelectedFaces([face]);
+        // First click - start drawing (LOCAL STATE ONLY)
+        if (!isDrawingMeasurement) {
+          setFirstClickPoint({
+            position: face.center,
+            faceData: face
+          });
+          setIsDrawingMeasurement(true);
+          setPreviewLine({
+            start: face.center,
+            end: face.center.clone()
+          });
           
           toast({
             title: "First face selected",
             description: `${face.surface_type} - Click second face`,
           });
-          console.log("✅ First face selected:", face.face_id);
+          console.log("✅ First face selected (local state):", face.face_id);
           return;
         }
         
-        // Second face selection
-        if (selectedFaces.length === 1) {
-          const face1 = selectedFaces[0];
+        // Second click - finalize measurement (SINGLE STORE UPDATE)
+        if (isDrawingMeasurement && firstClickPoint) {
+          const face1 = firstClickPoint.faceData;
           const face2 = face;
           
           const { distance, type, description } = calculateFaceToFaceDistance(face1, face2);
@@ -377,20 +396,20 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           addMeasurement({
             id: generateMeasurementId(),
             type: "face-to-face",
-          points: [
-            {
-              id: generateMeasurementId(),
-              position: face1.center,  // Already Vector3
-              normal: face1.normal,    // Already Vector3
-              surfaceType: "face",
-            },
-            {
-              id: generateMeasurementId(),
-              position: face2.center,  // Already Vector3
-              normal: face2.normal,    // Already Vector3
-              surfaceType: "face",
-            },
-          ],
+            points: [
+              {
+                id: generateMeasurementId(),
+                position: face1.center,
+                normal: face1.normal,
+                surfaceType: "face",
+              },
+              {
+                id: generateMeasurementId(),
+                position: face2.center,
+                normal: face2.normal,
+                surfaceType: "face",
+              },
+            ],
             value: distance,
             unit: "mm",
             label: `${formatMeasurement(distance, "mm")} (${description})`,
@@ -405,8 +424,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             },
           });
           
-          clearSelectedFaces();
-          setHoverInfo(null); // Clear visual feedback
+          // Clear local state
+          setFirstClickPoint(null);
+          setIsDrawingMeasurement(false);
+          setPreviewLine(null);
           
           toast({
             title: "Measurement created",
@@ -551,7 +572,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       gl.domElement.removeEventListener("mousemove", handleMouseMove);
       gl.domElement.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [enabled, hoverInfo, addMeasurement, gl, activeTool, selectedFaces, meshRef, meshData, camera, raycaster]);
+  }, [enabled, hoverInfo, addMeasurement, gl, activeTool, isDrawingMeasurement, firstClickPoint, meshRef, meshData, camera, raycaster]);
 
   return (
     <>
@@ -612,13 +633,40 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         </>
       )}
 
-      {/* Face highlighting for face-to-face mode */}
-      {activeTool === "face-to-face" && selectedFaces.length > 0 && (
-        <mesh 
-          position={firstFacePosition}
-          geometry={faceHighlightGeometry}
-          material={firstFaceMaterial}
-        />
+      {/* Live preview for face-to-face measurement */}
+      {activeTool === "face-to-face" && isDrawingMeasurement && previewLine && (
+        <group>
+          {/* Dashed preview line */}
+          <Line
+            points={[previewLine.start, previewLine.end]}
+            color="#FFA500"
+            lineWidth={2}
+            dashed
+            dashSize={2}
+            gapSize={1}
+          />
+          
+          {/* First point sphere */}
+          <mesh position={previewLine.start}>
+            <sphereGeometry args={[1.5, 16, 16]} />
+            <meshBasicMaterial color="#FFA500" opacity={0.8} transparent />
+          </mesh>
+          
+          {/* Live distance label */}
+          <Html position={previewLine.start} center distanceFactor={2}>
+            <div style={{
+              background: 'rgba(255, 165, 0, 0.9)',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              fontSize: '16px',
+              fontWeight: '600',
+              pointerEvents: 'none',
+            }}>
+              {previewLine.start.distanceTo(previewLine.end).toFixed(2)} mm
+            </div>
+          </Html>
+        </group>
       )}
 
       {/* Label display */}

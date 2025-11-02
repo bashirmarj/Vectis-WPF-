@@ -82,7 +82,11 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
 
-  const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
+  // Selective subscriptions to prevent unnecessary re-renders
+  const activeTool = useMeasurementStore((state) => state.activeTool);
+  const setActiveTool = useMeasurementStore((state) => state.setActiveTool);
+  const clearAllMeasurements = useMeasurementStore((state) => state.clearAllMeasurements);
+  const measurements = useMeasurementStore((state) => state.measurements);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);

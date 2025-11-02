@@ -72,7 +72,6 @@ interface MeasurementStore {
   measurements: Measurement[];
   activeTool: MeasurementType | null;
   tempPoints: MeasurementPoint[];
-  selectedFaces: BackendFaceClassification[];
   snapEnabled: boolean;
   snapDistance: number;
   activeSnapTypes: SnapType[];
@@ -96,8 +95,6 @@ interface MeasurementStore {
   setActiveSnapTypes: (types: SnapType[]) => void;
   toggleSnapType: (type: SnapType) => void;
   setHoverPoint: (point: MeasurementPoint | null) => void;
-  setSelectedFaces: (faces: BackendFaceClassification[]) => void;
-  clearSelectedFaces: () => void;
 
   // Command pattern methods
   executeCommand: (command: MeasurementCommand) => void;
@@ -111,7 +108,6 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
   measurements: [],
   activeTool: null,
   tempPoints: [],
-  selectedFaces: [],
   snapEnabled: true,
   snapDistance: 2,
   activeSnapTypes: ["vertex", "edge", "midpoint", "center"],
@@ -206,10 +202,6 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
     }),
 
   setHoverPoint: (point) => set({ hoverPoint: point }),
-
-  setSelectedFaces: (faces) => set({ selectedFaces: faces }),
-
-  clearSelectedFaces: () => set({ selectedFaces: [] }),
 
   executeCommand: (command) => {
     command.execute();
