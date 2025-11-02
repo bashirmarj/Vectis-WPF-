@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, Search, Settings } from 'lucide-react';
+import { Loader2, Eye, Search, Settings, Upload } from 'lucide-react';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 
 interface QuotationSubmission {
@@ -132,10 +132,16 @@ const Admin = () => {
                 <CardTitle>Admin Dashboard</CardTitle>
                 <CardDescription>View all quotation requests</CardDescription>
               </div>
-              <Button onClick={() => navigate('/admin/pricing-settings')} variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
-                Pricing Settings
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => navigate('/admin/dataset-upload')} variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Dataset
+                </Button>
+                <Button onClick={() => navigate('/admin/pricing-settings')} variant="outline">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Pricing Settings
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
