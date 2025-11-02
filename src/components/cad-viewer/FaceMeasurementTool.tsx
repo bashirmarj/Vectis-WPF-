@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useThree } from '@react-three/fiber';
-import { createPortal } from 'react-dom';
 import * as THREE from 'three';
 import { FaceCrosshairMarker } from './measurements/FaceCrosshairMarker';
-import { FaceMeasurementPanel } from './measurements/FaceMeasurementPanel';
 import { calculateMarkerValues, type MarkerValues } from '@/lib/faceMeasurementUtils';
 
 interface MarkerData {
@@ -17,12 +15,14 @@ interface FaceMeasurementToolProps {
     center: THREE.Vector3;
     radius: number;
   };
+  onMeasurementsChange?: (measurements: MarkerValues | null, markerCount: number) => void;
 }
 
 export function FaceMeasurementTool({ 
   enabled, 
   meshRef,
-  boundingSphere 
+  boundingSphere,
+  onMeasurementsChange
 }: FaceMeasurementToolProps) {
   const { camera, raycaster, gl, scene } = useThree();
   
@@ -94,6 +94,7 @@ export function FaceMeasurementTool({
         // Click on empty space - clear all
         setPermanentMarkers([]);
         setMeasurements(null);
+        onMeasurementsChange?.(null, 0);
         if (connectingLine) {
           scene.remove(connectingLine);
           setConnectingLine(null);
@@ -106,6 +107,7 @@ export function FaceMeasurementTool({
       if (permanentMarkers.length === 0) {
         // First marker
         setPermanentMarkers([{ intersection }]);
+        onMeasurementsChange?.(null, 1);
       } else if (permanentMarkers.length === 1) {
         // Second marker - calculate measurements and draw line
         const newMarkers = [...permanentMarkers, { intersection }];
@@ -116,6 +118,7 @@ export function FaceMeasurementTool({
           intersection
         );
         setMeasurements(values);
+        onMeasurementsChange?.(values, 2);
 
         // Create connecting line
         const geometry = new THREE.BufferGeometry().setFromPoints([
@@ -135,6 +138,7 @@ export function FaceMeasurementTool({
         // Third click - clear all (reset)
         setPermanentMarkers([]);
         setMeasurements(null);
+        onMeasurementsChange?.(null, 0);
         if (connectingLine) {
           scene.remove(connectingLine);
           setConnectingLine(null);
@@ -152,6 +156,7 @@ export function FaceMeasurementTool({
       setPermanentMarkers([]);
       setTempMarker(null);
       setMeasurements(null);
+      onMeasurementsChange?.(null, 0);
       if (connectingLine) {
         scene.remove(connectingLine);
         setConnectingLine(null);
@@ -180,15 +185,6 @@ export function FaceMeasurementTool({
           radius={markerRadius}
           visible={true}
         />
-      )}
-
-      {/* Measurement panel (DOM overlay) - rendered via portal */}
-      {createPortal(
-        <FaceMeasurementPanel 
-          markerCount={permanentMarkers.length}
-          measurements={measurements}
-        />,
-        document.body
       )}
     </>
   );

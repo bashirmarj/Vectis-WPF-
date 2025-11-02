@@ -20,6 +20,8 @@ import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasuremen
 import { MeasurementRenderer } from "./cad-viewer/MeasurementRenderer";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { FaceMeasurementTool } from "./cad-viewer/FaceMeasurementTool";
+import { FaceMeasurementPanel } from "./cad-viewer/measurements/FaceMeasurementPanel";
+import { type MarkerValues } from "@/lib/faceMeasurementUtils";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
@@ -84,6 +86,9 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
   const [sectionPosition, setSectionPosition] = useState(0);
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
+  const [faceMeasurements, setFaceMeasurements] = useState<MarkerValues | null>(null);
+  const [faceMarkerCount, setFaceMarkerCount] = useState(0);
+  
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);
@@ -596,6 +601,10 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                     center: boundingBox.center,
                     radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2
                   }}
+                  onMeasurementsChange={(measurements, count) => {
+                    setFaceMeasurements(measurements);
+                    setFaceMarkerCount(count);
+                  }}
                 />
 
                 {/* Measurement Renderer */}
@@ -633,6 +642,14 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
               onRotateClockwise={() => handleRotateCamera("cw")}
               onRotateCounterClockwise={() => handleRotateCamera("ccw")}
             />
+
+            {/* ✅ Face Measurement Panel (outside Canvas) */}
+            {activeTool === 'measure' && (
+              <FaceMeasurementPanel 
+                markerCount={faceMarkerCount}
+                measurements={faceMeasurements}
+              />
+            )}
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
