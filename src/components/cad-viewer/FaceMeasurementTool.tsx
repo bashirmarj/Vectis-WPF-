@@ -144,7 +144,7 @@ export function FaceMeasurementTool({
 
   // Handle reset trigger
   useEffect(() => {
-    if (resetTrigger === undefined) return;
+    if (resetTrigger === undefined || resetTrigger === 0) return;
     
     // Clear everything
     permanentMarkersRef.current = [];
@@ -156,7 +156,7 @@ export function FaceMeasurementTool({
       scene.remove(connectingLine);
       setConnectingLine(null);
     }
-  }, [resetTrigger, connectingLine, scene]);
+  }, [resetTrigger, scene]);
 
   // Cleanup on disable
   useEffect(() => {
@@ -171,7 +171,7 @@ export function FaceMeasurementTool({
         setConnectingLine(null);
       }
     }
-  }, [enabled, connectingLine, scene]);
+  }, [enabled, scene, onMeasurementsChange]);
 
   if (!enabled) return null;
 
