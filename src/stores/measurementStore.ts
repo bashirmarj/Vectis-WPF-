@@ -5,6 +5,16 @@ export type MeasurementType = "edge-select" | "face-to-face"; // Smart Edge Sele
 
 export type SnapType = "vertex" | "edge" | "midpoint" | "center" | "intersection" | "face";
 
+export interface BackendFaceClassification {
+  face_id: number;
+  type: "internal" | "external" | "through" | "planar";
+  center: [number, number, number];
+  normal: [number, number, number];
+  area: number;
+  surface_type: "cylinder" | "plane" | "other";
+  radius?: number;
+}
+
 export interface MeasurementPoint {
   id: string;
   position: THREE.Vector3;
@@ -62,6 +72,7 @@ interface MeasurementStore {
   measurements: Measurement[];
   activeTool: MeasurementType | null;
   tempPoints: MeasurementPoint[];
+  selectedFaces: BackendFaceClassification[];
   snapEnabled: boolean;
   snapDistance: number;
   activeSnapTypes: SnapType[];
@@ -85,6 +96,8 @@ interface MeasurementStore {
   setActiveSnapTypes: (types: SnapType[]) => void;
   toggleSnapType: (type: SnapType) => void;
   setHoverPoint: (point: MeasurementPoint | null) => void;
+  setSelectedFaces: (faces: BackendFaceClassification[]) => void;
+  clearSelectedFaces: () => void;
 
   // Command pattern methods
   executeCommand: (command: MeasurementCommand) => void;
@@ -98,6 +111,7 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
   measurements: [],
   activeTool: null,
   tempPoints: [],
+  selectedFaces: [],
   snapEnabled: true,
   snapDistance: 2,
   activeSnapTypes: ["vertex", "edge", "midpoint", "center"],
@@ -192,6 +206,10 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
     }),
 
   setHoverPoint: (point) => set({ hoverPoint: point }),
+
+  setSelectedFaces: (faces) => set({ selectedFaces: faces }),
+
+  clearSelectedFaces: () => set({ selectedFaces: [] }),
 
   executeCommand: (command) => {
     command.execute();

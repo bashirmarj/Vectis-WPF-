@@ -84,8 +84,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
     allSegments?: THREE.Line3[];
   } | null>(null);
   const [labelText, setLabelText] = useState<string>("");
-  const [selectedFaces, setSelectedFaces] = useState<BackendFaceClassification[]>([]);
-
+  
+  const selectedFaces = useMeasurementStore((state) => state.selectedFaces);
+  const setSelectedFaces = useMeasurementStore((state) => state.setSelectedFaces);
+  const clearSelectedFaces = useMeasurementStore((state) => state.clearSelectedFaces);
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const activeTool = useMeasurementStore((state) => state.activeTool);
 
@@ -133,6 +135,13 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       firstFaceMaterial.dispose();
     };
   }, [faceHighlightGeometry, faceHighlightMaterial, firstFaceMaterial]);
+
+  // Clear selected faces when switching away from face-to-face mode
+  useEffect(() => {
+    if (activeTool !== "face-to-face") {
+      clearSelectedFaces();
+    }
+  }, [activeTool, clearSelectedFaces]);
 
   // Log available tagged edges from backend
   React.useEffect(() => {
@@ -381,7 +390,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
             },
           });
           
-          setSelectedFaces([]);
+          clearSelectedFaces();
           setHoverInfo(null); // Clear visual feedback
           
           toast({

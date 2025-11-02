@@ -547,14 +547,11 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
               onCreated={({ gl }) => {
                 const handleContextLost = (e: Event) => {
                   e.preventDefault();
-                  console.warn("⚠️ WebGL context lost - preventing default");
-                  setTimeout(() => {
-                    gl?.forceContextRestore?.();
-                  }, 100);
+                  console.warn("⚠️ WebGL context lost - browser will auto-recover");
                 };
 
                 const handleContextRestored = () => {
-                  console.log("✅ WebGL context restored");
+                  console.log("✅ WebGL context restored automatically");
                 };
 
                 gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
