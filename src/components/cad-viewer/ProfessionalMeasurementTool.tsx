@@ -153,23 +153,8 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
       if (intersects.length > 0) {
         const point = intersects[0].point;
 
-        // Face-to-face mode
+        // Face-to-face mode - skip hover detection, only detect on click
         if (activeTool === "face-to-face") {
-          console.log("🔷 Face-to-face mode: detecting face...");
-          const face = getFaceFromIntersection(intersects[0], meshData);
-          console.log("🔷 Face detected:", face ? `${face.surface_type} (face_id: ${face.face_id})` : "none");
-          
-          if (face) {
-            setLabelText(`${face.surface_type.toUpperCase()} Face (${face.type})`);
-            setHoverInfo({
-              position: point,
-              classification: face as any,
-              edge: new THREE.Line3(),
-            });
-          } else {
-            setHoverInfo(null);
-            setLabelText("");
-          }
           return;
         }
 
@@ -247,22 +232,66 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
   // Handle click
   useEffect(() => {
-    if (!enabled || !hoverInfo) return;
+    if (!enabled) return;
 
-    const handleClick = () => {
-      // Face-to-face mode
-      if (activeTool === "face-to-face" && hoverInfo?.classification) {
-        const face = hoverInfo.classification as BackendFaceClassification;
+    const handleClick = (event: PointerEvent) => {
+      // Face-to-face mode - detect face on CLICK only
+      if (activeTool === "face-to-face") {
+        if (!meshRef) return;
+
+        const canvas = gl.domElement;
+        const rect = canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1,
+        );
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObject(meshRef, false);
+
+        if (intersects.length === 0) {
+          toast({
+            title: "No face detected",
+            description: "Click on a surface",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Detect face from intersection
+        const face = getFaceFromIntersection(intersects[0], meshData);
         
+        if (!face) {
+          toast({
+            title: "No face data",
+            description: "Unable to identify face",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        console.log("✅ Face clicked:", face.face_id, face.surface_type);
+
+        // First face selection
         if (selectedFaces.length === 0) {
           setSelectedFaces([face]);
+          
+          // Show visual feedback at face center
+          setHoverInfo({
+            position: new THREE.Vector3(...face.center),
+            classification: face as any,
+            edge: new THREE.Line3(),
+          });
+          
           toast({
             title: "First face selected",
             description: `${face.surface_type} - Click second face`,
           });
+          console.log("✅ First face selected:", face.face_id);
           return;
         }
         
+        // Second face selection
         if (selectedFaces.length === 1) {
           const face1 = selectedFaces[0];
           const face2 = face;
@@ -301,10 +330,14 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           });
           
           setSelectedFaces([]);
+          setHoverInfo(null); // Clear visual feedback
+          
           toast({
             title: "Measurement created",
             description: `${description}: ${formatMeasurement(distance, "mm")}`,
           });
+          
+          console.log("✅ Measurement created between faces", face1.face_id, "and", face2.face_id);
           return;
         }
       }
@@ -417,7 +450,7 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
 
     gl.domElement.addEventListener("click", handleClick);
     return () => gl.domElement.removeEventListener("click", handleClick);
-  }, [enabled, hoverInfo, addMeasurement, gl, activeTool, selectedFaces]);
+  }, [enabled, hoverInfo, addMeasurement, gl, activeTool, selectedFaces, meshRef, meshData, camera, raycaster]);
 
   return (
     <>
