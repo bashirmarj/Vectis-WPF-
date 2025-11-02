@@ -402,36 +402,41 @@ def calculate_dihedral_angle(edge, face1, face2):
 def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
     """
     Extract UIso and VIso parametric curves from cylindrical, conical, 
-    spherical, and toroidal surfaces.
+    spherical, and toroidal surfaces using Geom_Surface API.
     
     UIso curves (U=constant): Lines running along cylinder height
     VIso curves (V=constant): Circular cross-sections
     
     Args:
         shape: TopoDS_Shape to analyze
-        num_u_lines: Number of UIso curves per surface (default 2, like CATIA)
+        num_u_lines: Number of UIso curves per surface (default 2)
         num_v_lines: Number of VIso curves per surface (default 0)
     
     Returns:
         List of tuples: [(start_point, end_point, curve_type), ...]
     """
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.GeomAdaptor import GeomAdaptor_Curve
+    
     iso_curves = []
     
     try:
-        # Iterate over all faces
         face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
         
         while face_explorer.More():
             face = topods.Face(face_explorer.Current())
             
-            # Get surface adaptor
+            # Get surface adaptor for type checking
             surf_adaptor = BRepAdaptor_Surface(face)
             surf_type = surf_adaptor.GetType()
             
-            # Only process curved surfaces (cylinder, cone, sphere, torus)
+            # Only process curved surfaces
             if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus]:
                 
-                # Get parametric bounds
+                # Get the underlying Geom_Surface
+                geom_surface = BRep_Tool.Surface(face)
+                
+                # Get parametric bounds from adaptor
                 u_min = surf_adaptor.FirstUParameter()
                 u_max = surf_adaptor.LastUParameter()
                 v_min = surf_adaptor.FirstVParameter()
@@ -440,17 +445,18 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
                 # Extract UIso curves (vertical lines on cylinders)
                 if num_u_lines > 0:
                     for i in range(num_u_lines):
-                        # Distribute evenly around circumference
                         u_value = u_min + (u_max - u_min) * i / num_u_lines
                         
-                        # Get UIso curve at this U parameter
-                        uiso_curve = surf_adaptor.UIso(u_value)
+                        # Create UIso curve using Geom_Surface
+                        uiso_geom_curve = geom_surface.UIso(u_value)
                         
-                        # Sample curve at V parameter bounds
-                        start_point = uiso_curve.Value(v_min)
-                        end_point = uiso_curve.Value(v_max)
+                        # Wrap in adaptor for evaluation
+                        uiso_adaptor = GeomAdaptor_Curve(uiso_geom_curve)
                         
-                        # Convert to tuple format
+                        # Sample at V bounds
+                        start_point = uiso_adaptor.Value(v_min)
+                        end_point = uiso_adaptor.Value(v_max)
+                        
                         iso_curves.append((
                             (start_point.X(), start_point.Y(), start_point.Z()),
                             (end_point.X(), end_point.Y(), end_point.Z()),
@@ -460,22 +466,24 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
                 # Extract VIso curves (circular cross-sections)
                 if num_v_lines > 0:
                     for i in range(1, num_v_lines + 1):
-                        # Distribute evenly along height
                         v_value = v_min + (v_max - v_min) * i / (num_v_lines + 1)
                         
-                        # Get VIso curve (circle) at this V parameter
-                        viso_curve = surf_adaptor.VIso(v_value)
+                        # Create VIso curve using Geom_Surface
+                        viso_geom_curve = geom_surface.VIso(v_value)
+                        
+                        # Wrap in adaptor
+                        viso_adaptor = GeomAdaptor_Curve(viso_geom_curve)
                         
                         # Sample multiple points around the circle
-                        num_segments = 24  # 24 segments for smooth circle
+                        num_segments = 64  # Match geometric feature quality
                         u_range = u_max - u_min
                         
                         for j in range(num_segments):
                             u_start = u_min + u_range * j / num_segments
                             u_end = u_min + u_range * (j + 1) / num_segments
                             
-                            start_point = viso_curve.Value(u_start)
-                            end_point = viso_curve.Value(u_end)
+                            start_point = viso_adaptor.Value(u_start)
+                            end_point = viso_adaptor.Value(u_end)
                             
                             iso_curves.append((
                                 (start_point.X(), start_point.Y(), start_point.Z()),
@@ -485,10 +493,12 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0):
             
             face_explorer.Next()
         
-        logger.info(f"✅ Extracted {len(iso_curves)} isoparametric curves ({num_u_lines} UIso per surface)")
+        logger.info(f"✅ Extracted {len(iso_curves)} isoparametric curves")
         
     except Exception as e:
         logger.error(f"❌ Error extracting isoparametric curves: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
     
     return iso_curves
 
