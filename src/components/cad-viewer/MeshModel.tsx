@@ -394,6 +394,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               depthWrite={true}
               depthTest={true}
               transparent={false}
+              polygonOffset={true}
+              polygonOffsetFactor={1}
+              polygonOffsetUnits={1}
             />
           </mesh>
         )}
