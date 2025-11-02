@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-interface BackendFaceClassification {
+interface BackendFaceClassificationRaw {
   face_id: number;
   type: "internal" | "external" | "through" | "planar";
   center: [number, number, number];
@@ -12,7 +12,7 @@ interface BackendFaceClassification {
 
 interface MeshData {
   vertex_face_ids?: number[];
-  face_classifications?: BackendFaceClassification[];
+  face_classifications?: BackendFaceClassificationRaw[];
 }
 
 /**
@@ -22,7 +22,7 @@ interface MeshData {
 export function getFaceFromIntersection(
   intersection: THREE.Intersection,
   meshData: MeshData | null
-): BackendFaceClassification | null {
+): BackendFaceClassificationRaw | null {
   if (!meshData?.face_classifications) {
     console.warn("❌ No face classifications available");
     return null;
@@ -44,7 +44,7 @@ export function getFaceFromIntersection(
   intersectionNormal.normalize();
 
   // Find the best matching face by comparing geometry
-  let bestMatch: BackendFaceClassification | null = null;
+  let bestMatch: BackendFaceClassificationRaw | null = null;
   let bestScore = Infinity;
 
   for (const face of meshData.face_classifications) {
@@ -73,15 +73,16 @@ export function getFaceFromIntersection(
 
 /**
  * Calculate distance between two faces based on their surface types
+ * Now accepts Vector3 objects directly from the store
  */
 export function calculateFaceToFaceDistance(
-  face1: BackendFaceClassification,
-  face2: BackendFaceClassification
+  face1: { center: THREE.Vector3; normal: THREE.Vector3; surface_type: string; radius?: number },
+  face2: { center: THREE.Vector3; normal: THREE.Vector3; surface_type: string; radius?: number }
 ): { distance: number; type: string; description: string } {
-  const center1 = new THREE.Vector3(...face1.center);
-  const center2 = new THREE.Vector3(...face2.center);
-  const normal1 = new THREE.Vector3(...face1.normal);
-  const normal2 = new THREE.Vector3(...face2.normal);
+  const center1 = face1.center;
+  const center2 = face2.center;
+  const normal1 = face1.normal;
+  const normal2 = face2.normal;
 
   // Case 1: Plane to Plane (Parallel)
   if (face1.surface_type === "plane" && face2.surface_type === "plane") {
@@ -126,9 +127,9 @@ export function calculateFaceToFaceDistance(
   ) {
     const planeFace = face1.surface_type === "plane" ? face1 : face2;
     const cylinderFace = face1.surface_type === "cylinder" ? face1 : face2;
-    const planeCenter = new THREE.Vector3(...planeFace.center);
-    const planeNormal = new THREE.Vector3(...planeFace.normal);
-    const cylinderCenter = new THREE.Vector3(...cylinderFace.center);
+    const planeCenter = planeFace.center;
+    const planeNormal = planeFace.normal;
+    const cylinderCenter = cylinderFace.center;
 
     // Distance from cylinder center to plane
     const centerVector = new THREE.Vector3().subVectors(cylinderCenter, planeCenter);

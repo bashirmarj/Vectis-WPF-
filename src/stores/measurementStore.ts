@@ -8,8 +8,8 @@ export type SnapType = "vertex" | "edge" | "midpoint" | "center" | "intersection
 export interface BackendFaceClassification {
   face_id: number;
   type: "internal" | "external" | "through" | "planar";
-  center: [number, number, number];
-  normal: [number, number, number];
+  center: THREE.Vector3;
+  normal: THREE.Vector3;
   area: number;
   surface_type: "cylinder" | "plane" | "other";
   radius?: number;

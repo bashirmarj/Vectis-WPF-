@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { useMeasurementStore } from "@/stores/measurementStore";
+import { useMeasurementStore, BackendFaceClassification } from "@/stores/measurementStore";
 import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { toast } from "@/hooks/use-toast";
@@ -31,7 +31,7 @@ interface BackendEdgeClassification {
   segment_count: number;
 }
 
-interface BackendFaceClassification {
+interface BackendFaceClassificationRaw {
   face_id: number;
   type: "internal" | "external" | "through" | "planar";
   center: [number, number, number];
@@ -54,7 +54,7 @@ interface MeshData {
   normals: number[];
   vertex_colors?: string[];
   vertex_face_ids?: number[];
-  face_classifications?: BackendFaceClassification[];
+  face_classifications?: BackendFaceClassificationRaw[];
   triangle_count: number;
   feature_edges?: number[][][];
   edge_classifications?: BackendEdgeClassification[];
@@ -91,10 +91,10 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const activeTool = useMeasurementStore((state) => state.activeTool);
 
-  // Memoize the first face center position to avoid creating new Vector3 on every render
+  // Memoize the first face center position (already Vector3 from store)
   const firstFacePosition = React.useMemo(() => {
     if (selectedFaces.length > 0) {
-      return new THREE.Vector3(...selectedFaces[0].center);
+      return selectedFaces[0].center;  // Already a Vector3!
     }
     return new THREE.Vector3(0, 0, 0);
   }, [selectedFaces]);
@@ -328,9 +328,9 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
         }
 
         // Detect face from intersection
-        const face = getFaceFromIntersection(intersects[0], meshData);
+        const faceData = getFaceFromIntersection(intersects[0], meshData);
         
-        if (!face) {
+        if (!faceData) {
           console.error("❌ Face detection failed:", {
             meshDataExists: !!meshData,
             hasVertexFaceIds: !!meshData?.vertex_face_ids,
@@ -345,6 +345,13 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           });
           return;
         }
+
+        // Convert arrays to Vector3 ONCE before storing
+        const face: BackendFaceClassification = {
+          ...faceData,
+          center: new THREE.Vector3(...faceData.center),
+          normal: new THREE.Vector3(...faceData.normal),
+        };
 
         console.log("✅ Face clicked:", face.face_id, face.surface_type);
 
@@ -370,20 +377,20 @@ export const ProfessionalMeasurementTool: React.FC<ProfessionalMeasurementToolPr
           addMeasurement({
             id: generateMeasurementId(),
             type: "face-to-face",
-            points: [
-              {
-                id: generateMeasurementId(),
-                position: new THREE.Vector3(...face1.center),
-                normal: new THREE.Vector3(...face1.normal),
-                surfaceType: "face",
-              },
-              {
-                id: generateMeasurementId(),
-                position: new THREE.Vector3(...face2.center),
-                normal: new THREE.Vector3(...face2.normal),
-                surfaceType: "face",
-              },
-            ],
+          points: [
+            {
+              id: generateMeasurementId(),
+              position: face1.center,  // Already Vector3
+              normal: face1.normal,    // Already Vector3
+              surfaceType: "face",
+            },
+            {
+              id: generateMeasurementId(),
+              position: face2.center,  // Already Vector3
+              normal: face2.normal,    // Already Vector3
+              surfaceType: "face",
+            },
+          ],
             value: distance,
             unit: "mm",
             label: `${formatMeasurement(distance, "mm")} (${description})`,
