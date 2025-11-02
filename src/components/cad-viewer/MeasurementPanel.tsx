@@ -153,7 +153,7 @@ export function MeasurementPanel() {
 
           {/* Measurements List */}
           {showList && measurements.length > 0 && (
-            <ScrollArea className="max-h-64">
+            <ScrollArea className="h-64">
               <div className="p-2 space-y-1.5">
                 {measurements.map((measurement, index) => (
                   <div
