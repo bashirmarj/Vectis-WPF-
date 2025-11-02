@@ -762,7 +762,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         for start, end, curve_type in iso_curves:
             feature_edges.append([list(start), list(end)])
             
-            # Add classification metadata (for visualization only)
+            # Add classification metadata
             classification = {
                 "id": edge_count,
                 "type": "line" if curve_type == "uiso" else "circle_segment",
@@ -773,8 +773,26 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             }
             edge_classifications.append(classification)
             
-            # DO NOT add UIso/VIso to tagged_edges - they are not measurable features
-            # UIso/VIso curves are only for visualization, not measurement
+            # Add tagged segment with normalized type
+            # ✅ FIX: Convert uiso/viso to standard types that frontend expects
+            normalized_type = "line" if curve_type == "uiso" else "arc"
+            
+            tagged_segment = {
+                'feature_id': feature_id_counter,
+                'start': list(start),
+                'end': list(end),
+                'type': normalized_type,  # Use "line" or "arc", not "uiso"/"viso"
+                'iso_type': curve_type  # Preserve original type for debugging
+            }
+            
+            # Add length for line edges
+            if normalized_type == "line":
+                start_vec = np.array(start)
+                end_vec = np.array(end)
+                length = np.linalg.norm(end_vec - start_vec)
+                tagged_segment['length'] = length
+            
+            tagged_edges.append(tagged_segment)
             
             stats['iso_curves'] += 1
             edge_count += 1
