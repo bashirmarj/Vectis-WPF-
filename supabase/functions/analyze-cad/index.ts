@@ -475,6 +475,34 @@ function detectRequiredProcesses(features: DetectedFeatures, complexity: number)
   return processes.length > 0 ? processes : ["VMC Machining"];
 }
 
+// Deduplicate bosses with similar dimensions
+function deduplicateBosses(bosses: any[]): any[] {
+  if (!bosses || bosses.length === 0) return [];
+  
+  const TOLERANCE = 0.1; // mm tolerance for dimension matching
+  const uniqueBosses: any[] = [];
+  
+  for (const boss of bosses) {
+    // Skip bosses that are too small (likely construction geometry)
+    if (boss.diameter_mm < 2 || boss.length_mm < 1) continue;
+    
+    // Check if we already have a boss with similar dimensions
+    const duplicate = uniqueBosses.find(existing => 
+      Math.abs(existing.diameter_mm - boss.diameter_mm) < TOLERANCE &&
+      Math.abs(existing.length_mm - boss.length_mm) < TOLERANCE
+    );
+    
+    if (!duplicate) {
+      uniqueBosses.push({ ...boss, count: 1 });
+    } else {
+      duplicate.count = (duplicate.count || 1) + 1;
+    }
+  }
+  
+  console.log(`🔧 Boss deduplication: ${bosses.length} → ${uniqueBosses.length} unique bosses`);
+  return uniqueBosses;
+}
+
 // Test Flask backend connectivity
 async function testFlaskConnection(): Promise<{ success: boolean; error?: string; latency?: number }> {
   const GEOMETRY_SERVICE_URL = Deno.env.get("GEOMETRY_SERVICE_URL");
@@ -718,24 +746,24 @@ async function analyzeSTEPViaService(
       routing_reasoning: data.routing_reasoning,
       machining_summary: data.machining_summary,
       estimated_total_cost_usd: data.estimated_total_cost_usd,
-      // ✅ Forward manufacturing features from geometry service
-      manufacturing_features: data.manufacturing_features || {
-        through_holes: [],
-        blind_holes: [],
-        bores: [],
-        bosses: [],
-        planar_faces: [],
-        fillets: [],
+      // ✅ Forward manufacturing features from geometry service with deduplication
+      manufacturing_features: {
+        through_holes: data.manufacturing_features?.through_holes || [],
+        blind_holes: data.manufacturing_features?.blind_holes || [],
+        bores: data.manufacturing_features?.bores || [],
+        bosses: deduplicateBosses(data.manufacturing_features?.bosses || []),
+        planar_faces: data.manufacturing_features?.planar_faces || [],
+        fillets: data.manufacturing_features?.fillets || [],
       },
-      // ✅ Forward feature summary from geometry service
-      feature_summary: data.feature_summary || {
-        through_holes: 0,
-        blind_holes: 0,
-        bores: 0,
-        bosses: 0,
-        total_holes: 0,
-        fillets: 0,
-        planar_faces: 0,
+      // ✅ Forward feature summary from geometry service with deduplicated boss count
+      feature_summary: {
+        through_holes: data.feature_summary?.through_holes || 0,
+        blind_holes: data.feature_summary?.blind_holes || 0,
+        bores: data.feature_summary?.bores || 0,
+        bosses: deduplicateBosses(data.manufacturing_features?.bosses || []).length,
+        total_holes: data.feature_summary?.total_holes || 0,
+        fillets: data.feature_summary?.fillets || 0,
+        planar_faces: data.feature_summary?.planar_faces || 0,
         complexity_score: data.complexity_score || 5,
       },
     };
