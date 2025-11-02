@@ -880,6 +880,129 @@ export type Database = {
         }
         Relationships: []
       }
+      training_datasets: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          download_progress: number | null
+          download_status: string | null
+          file_format: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          num_classes: number | null
+          num_files: number | null
+          source_url: string | null
+          storage_path: string | null
+          total_size_bytes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          download_progress?: number | null
+          download_status?: string | null
+          file_format?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          num_classes?: number | null
+          num_files?: number | null
+          source_url?: string | null
+          storage_path?: string | null
+          total_size_bytes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          download_progress?: number | null
+          download_status?: string | null
+          file_format?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          num_classes?: number | null
+          num_files?: number | null
+          source_url?: string | null
+          storage_path?: string | null
+          total_size_bytes?: number | null
+        }
+        Relationships: []
+      }
+      training_jobs: {
+        Row: {
+          batch_size: number | null
+          best_val_accuracy: number | null
+          best_val_iou: number | null
+          created_at: string | null
+          dataset_name: string
+          dataset_path: string | null
+          epochs: number | null
+          error_message: string | null
+          final_train_loss: number | null
+          id: string
+          learning_rate: number | null
+          logs: Json | null
+          metadata: Json | null
+          model_path: string | null
+          model_version: string | null
+          started_by: string | null
+          status: string
+          test_samples: number | null
+          train_samples: number | null
+          training_time_seconds: number | null
+          updated_at: string | null
+          val_samples: number | null
+        }
+        Insert: {
+          batch_size?: number | null
+          best_val_accuracy?: number | null
+          best_val_iou?: number | null
+          created_at?: string | null
+          dataset_name: string
+          dataset_path?: string | null
+          epochs?: number | null
+          error_message?: string | null
+          final_train_loss?: number | null
+          id?: string
+          learning_rate?: number | null
+          logs?: Json | null
+          metadata?: Json | null
+          model_path?: string | null
+          model_version?: string | null
+          started_by?: string | null
+          status?: string
+          test_samples?: number | null
+          train_samples?: number | null
+          training_time_seconds?: number | null
+          updated_at?: string | null
+          val_samples?: number | null
+        }
+        Update: {
+          batch_size?: number | null
+          best_val_accuracy?: number | null
+          best_val_iou?: number | null
+          created_at?: string | null
+          dataset_name?: string
+          dataset_path?: string | null
+          epochs?: number | null
+          error_message?: string | null
+          final_train_loss?: number | null
+          id?: string
+          learning_rate?: number | null
+          logs?: Json | null
+          metadata?: Json | null
+          model_path?: string | null
+          model_version?: string | null
+          started_by?: string | null
+          status?: string
+          test_samples?: number | null
+          train_samples?: number | null
+          training_time_seconds?: number | null
+          updated_at?: string | null
+          val_samples?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

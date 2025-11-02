@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.calculate-preliminary-quote]
 verify_jwt = false
+
+[functions.setup-training-dataset]
+verify_jwt = true
+
+[functions.start-training]
+verify_jwt = true
+
+[functions.get-training-status]
+verify_jwt = true
