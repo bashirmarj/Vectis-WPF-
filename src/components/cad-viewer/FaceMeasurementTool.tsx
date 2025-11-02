@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { FaceCrosshairMarker } from './measurements/FaceCrosshairMarker';
@@ -30,16 +30,22 @@ export function FaceMeasurementTool({
   const [measurements, setMeasurements] = useState<MarkerValues | null>(null);
   const [connectingLine, setConnectingLine] = useState<THREE.Line | null>(null);
   
-  const canvasRef = useRef<HTMLCanvasElement>(gl.domElement);
   const markerRadius = boundingSphere.radius / 20.0;
 
   // Handle pointer move (temp marker preview)
   useEffect(() => {
     if (!enabled || !meshRef) return;
 
-    const canvas = canvasRef.current;
+    const canvas = gl.domElement;
 
     const handlePointerMove = (event: PointerEvent) => {
+      // Only show temp marker if we haven't placed 2 markers yet
+      if (permanentMarkers.length >= 2) {
+        setTempMarker(null);
+        canvas.style.cursor = 'default';
+        return;
+      }
+
       const rect = canvas.getBoundingClientRect();
       
       const mouse = new THREE.Vector2(
@@ -64,13 +70,13 @@ export function FaceMeasurementTool({
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.style.cursor = 'default';
     };
-  }, [enabled, meshRef, camera, raycaster, gl]);
+  }, [enabled, meshRef, camera, raycaster, gl, permanentMarkers.length]);
 
   // Handle click (add permanent marker)
   useEffect(() => {
     if (!enabled || !meshRef) return;
 
-    const canvas = canvasRef.current;
+    const canvas = gl.domElement;
 
     const handleClick = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -118,8 +124,10 @@ export function FaceMeasurementTool({
         const material = new THREE.LineBasicMaterial({
           color: 0x263238,
           depthTest: false,
+          depthWrite: false,
         });
         const line = new THREE.Line(geometry, material);
+        line.renderOrder = 999;
         scene.add(line);
         setConnectingLine(line);
       } else {
@@ -164,7 +172,7 @@ export function FaceMeasurementTool({
         />
       ))}
 
-      {/* Temp marker (preview) */}
+      {/* Temp marker (preview) - only show if less than 2 markers */}
       {tempMarker && permanentMarkers.length < 2 && (
         <FaceCrosshairMarker
           intersection={tempMarker.intersection}

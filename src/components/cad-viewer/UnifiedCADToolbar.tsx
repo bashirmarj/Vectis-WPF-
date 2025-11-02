@@ -257,6 +257,24 @@ export function UnifiedCADToolbar({
             )}
           </Button>
 
+          <Button
+            variant={measurementMode === "measure" ? "default" : "ghost"}
+            size="sm"
+            className="h-9 w-9 p-0 relative"
+            title="Face Measurement (Point-to-point with angle)"
+            onClick={() => onMeasurementModeChange(measurementMode === "measure" ? null : "measure")}
+          >
+            <Circle className="h-4 w-4" />
+            {measurementMode === "measure" && measurementCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+              >
+                {measurementCount}
+              </Badge>
+            )}
+          </Button>
+
           <Separator orientation="vertical" className="h-6" />
 
           {/* Section Plane Tool */}

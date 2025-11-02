@@ -1,8 +1,13 @@
 import * as THREE from 'three';
 
-// Constants from reference (geometry.js)
+// Constants from reference (geometry.js) - EXACT VALUES
 export const BigEps = 0.0001;
 export const RadDeg = 57.29577951308232;
+
+// Helper function for epsilon comparison
+export function isEqualEps(a: number, b: number, eps: number = BigEps): boolean {
+  return Math.abs(a - b) < eps;
+}
 
 // Port from reference: GetFaceWorldNormal
 export function getFaceWorldNormal(intersection: THREE.Intersection): THREE.Vector3 {

@@ -18,13 +18,16 @@ export function FaceCrosshairMarker({
   useEffect(() => {
     if (!groupRef.current) return;
 
-    // Get face normal
+    // Get face normal in world space
     const faceNormal = getFaceWorldNormal(intersection);
 
-    // Update marker position and orientation
-    groupRef.current.position.set(0, 0, 0);
-    groupRef.current.lookAt(faceNormal);
+    // Position marker at intersection point first
     groupRef.current.position.copy(intersection.point);
+    
+    // Align marker to face normal using lookAt
+    // Create a target point in the direction of the normal
+    const targetPoint = intersection.point.clone().add(faceNormal);
+    groupRef.current.lookAt(targetPoint);
   }, [intersection, radius]);
 
   return (
@@ -53,6 +56,7 @@ export function FaceCrosshairMarker({
           color="#263238" 
           depthTest={false} 
           depthWrite={false}
+          transparent={false}
         />
       </line>
 
@@ -70,6 +74,7 @@ export function FaceCrosshairMarker({
           color="#263238" 
           depthTest={false} 
           depthWrite={false}
+          transparent={false}
         />
       </line>
 
@@ -87,6 +92,7 @@ export function FaceCrosshairMarker({
           color="#263238" 
           depthTest={false} 
           depthWrite={false}
+          transparent={false}
         />
       </line>
     </group>
