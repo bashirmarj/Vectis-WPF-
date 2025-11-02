@@ -539,16 +539,17 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
               <Suspense fallback={null}>
                 <ProfessionalLighting intensity={1.0} enableShadows={shadowsEnabled} shadowQuality="high" />
 
-                <MeshModel
-                  ref={meshRef}
-                  meshData={meshData}
-                  displayStyle={displayMode}
-                  showEdges={showSolidEdges}
-                  showHiddenEdges={showWireframeHiddenEdges}
-                  sectionPlane={sectionPlane || "none"}
-                  sectionPosition={sectionPosition}
-                  useSilhouetteEdges={displayMode === "wireframe"}
-                />
+              <MeshModel
+                ref={meshRef}
+                meshData={meshData}
+                displayStyle={displayMode}
+                showEdges={showSolidEdges}
+                showHiddenEdges={showWireframeHiddenEdges}
+                sectionPlane={sectionPlane || "none"}
+                sectionPosition={sectionPosition}
+                useSilhouetteEdges={displayMode === "wireframe"}
+                controlsRef={controlsRef}
+              />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 

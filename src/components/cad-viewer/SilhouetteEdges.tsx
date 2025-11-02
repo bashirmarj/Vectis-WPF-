@@ -17,14 +17,16 @@ interface SilhouetteEdgesProps {
   updateThreshold?: number;
   staticFeatureEdges: THREE.BufferGeometry;
   showHiddenEdges?: boolean;
+  controlsRef?: React.RefObject<any>;
 }
 
 export function SilhouetteEdges({ 
   geometry,
   mesh,
-  updateThreshold = 0.1,
+  updateThreshold = 0.5,
   staticFeatureEdges,
-  showHiddenEdges = false
+  showHiddenEdges = false,
+  controlsRef
 }: SilhouetteEdgesProps) {
   const { camera } = useThree();
   const lastCameraPos = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -32,6 +34,15 @@ export function SilhouetteEdges({
   const [silhouettePositions, setSilhouettePositions] = useState<Float32Array>(
     new Float32Array(0)
   );
+  
+  // Performance optimizations
+  const frameCount = useRef(0);
+  const isDragging = useRef(false);
+  const cameraCache = useRef<Array<{
+    pos: THREE.Vector3;
+    quat: THREE.Quaternion;
+    silhouettes: Float32Array;
+  }>>([]);
 
   // Build edge-to-triangle adjacency map (computed once)
   const edgeMap = useMemo(() => {
@@ -52,31 +63,105 @@ export function SilhouetteEdges({
       }
     }
     
-    console.log("🔑 Static edge keys built:", keys.size, "edges");
+  console.log("🔑 Static edge keys built:", keys.size, "edges");
     return keys;
   }, [staticFeatureEdges]);
 
-  // Update silhouette edges when camera moves
+  // Helper: Check cache for similar camera position
+  const getCachedSilhouettes = (pos: THREE.Vector3, quat: THREE.Quaternion): Float32Array | null => {
+    const CACHE_THRESHOLD = 0.01;
+    
+    for (const cached of cameraCache.current) {
+      if (pos.distanceTo(cached.pos) < CACHE_THRESHOLD && 
+          quat.angleTo(cached.quat) < 0.01) {
+        console.log("💾 Using cached silhouettes");
+        return cached.silhouettes;
+      }
+    }
+    return null;
+  };
+
+  // Helper: Add to cache
+  const addToCache = (pos: THREE.Vector3, quat: THREE.Quaternion, silhouettes: Float32Array) => {
+    cameraCache.current.push({
+      pos: pos.clone(),
+      quat: quat.clone(),
+      silhouettes
+    });
+    
+    if (cameraCache.current.length > 5) {
+      cameraCache.current.shift();
+    }
+  };
+
+  // Listen to controls drag events
+  useEffect(() => {
+    if (controlsRef?.current) {
+      const controls = controlsRef.current;
+      
+      const handleStart = () => {
+        isDragging.current = true;
+        console.log("🖱️ Drag started - pausing silhouette updates");
+      };
+      
+      const handleEnd = () => {
+        isDragging.current = false;
+        console.log("🖱️ Drag ended - resuming silhouette updates");
+        frameCount.current = 0; // Force immediate update
+      };
+      
+      controls.addEventListener('start', handleStart);
+      controls.addEventListener('end', handleEnd);
+      
+      return () => {
+        controls.removeEventListener('start', handleStart);
+        controls.removeEventListener('end', handleEnd);
+      };
+    }
+  }, [controlsRef]);
+
+  // Update silhouette edges when camera moves (optimized)
   useFrame(() => {
+    // Skip if actively dragging
+    if (isDragging.current) {
+      return;
+    }
+
+    // Frame skipping: only update every 3 frames
+    frameCount.current++;
+    if (frameCount.current % 3 !== 0) {
+      return;
+    }
+
     const currentPos = camera.position;
     const currentQuat = camera.quaternion;
 
     // Check if camera moved or rotated significantly
     const posChanged = currentPos.distanceTo(lastCameraPos.current) > updateThreshold;
-    const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > 0.05; // ~3 degrees
+    const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > 0.1; // ~6 degrees (was 0.05)
 
     if (posChanged || rotChanged) {
-      // Transform camera position to local space for accurate view direction
-      let localCameraPos = currentPos;
-      if (mesh) {
-        const worldToLocal = mesh.matrixWorld.clone().invert();
-        localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
+      // Check cache first
+      const cached = getCachedSilhouettes(currentPos, currentQuat);
+      
+      if (cached) {
+        setSilhouettePositions(cached);
+      } else {
+        // Transform camera position to local space for accurate view direction
+        let localCameraPos = currentPos;
+        if (mesh) {
+          const worldToLocal = mesh.matrixWorld.clone().invert();
+          localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
+        }
+        
+        const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
+        console.log("🔄 Silhouette update:", silhouettes.length / 6, "segments");
+        
+        setSilhouettePositions(silhouettes);
+        
+        // Add to cache
+        addToCache(currentPos, currentQuat, silhouettes);
       }
-      
-      const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
-      console.log("🔄 Silhouette update:", silhouettes.length / 6, "segments");
-      
-      setSilhouettePositions(silhouettes);
       
       lastCameraPos.current.copy(currentPos);
       lastCameraQuat.current.copy(currentQuat);

@@ -32,6 +32,7 @@ interface MeshModelProps {
   displayStyle?: "solid" | "wireframe" | "translucent";
   topologyColors?: boolean;
   useSilhouetteEdges?: boolean;
+  controlsRef?: React.RefObject<any>;
 }
 
 // Professional solid color for CAD rendering
@@ -63,6 +64,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       displayStyle = "solid",
       topologyColors = false,
       useSilhouetteEdges = false,
+      controlsRef,
     },
     ref,
   ) => {
@@ -422,7 +424,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {/* Wireframe mode - use clean edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-            <SilhouetteEdges geometry={geometry} mesh={meshRef.current} staticFeatureEdges={featureEdgesGeometry} showHiddenEdges={showHiddenEdges} />
+            <SilhouetteEdges 
+              geometry={geometry} 
+              mesh={meshRef.current} 
+              staticFeatureEdges={featureEdgesGeometry} 
+              showHiddenEdges={showHiddenEdges}
+              controlsRef={controlsRef}
+            />
           ) : (
             <lineSegments 
               geometry={cleanEdgesGeometry}
