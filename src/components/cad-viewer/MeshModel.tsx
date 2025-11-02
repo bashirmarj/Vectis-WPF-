@@ -388,7 +388,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* Invisible depth-writing mesh for wireframe occlusion */}
         {displayStyle === "wireframe" && !showHiddenEdges && (
-          <mesh geometry={geometry}>
+          <mesh 
+            geometry={geometry}
+            key={`depth-mesh-${showHiddenEdges}`}
+          >
             <meshBasicMaterial
               colorWrite={false}
               depthWrite={true}
