@@ -464,6 +464,12 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
     setFaceResetTrigger(prev => prev + 1);
   }, []);
 
+  // Handle face measurements change (stable reference)
+  const handleFaceMeasurementsChange = useCallback((measurements: MarkerValues | null, count: number) => {
+    setFaceMeasurements(measurements);
+    setFaceMarkerCount(count);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -607,10 +613,7 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
                     center: boundingBox.center,
                     radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2
                   }}
-                  onMeasurementsChange={(measurements, count) => {
-                    setFaceMeasurements(measurements);
-                    setFaceMarkerCount(count);
-                  }}
+                  onMeasurementsChange={handleFaceMeasurementsChange}
                   resetTrigger={faceResetTrigger}
                 />
 
