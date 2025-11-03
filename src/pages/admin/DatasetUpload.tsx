@@ -25,6 +25,10 @@ const DatasetUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentFile, setCurrentFile] = useState<string>('');
+  const [batchSize, setBatchSize] = useState<number>(100);
+  const [failedUploads, setFailedUploads] = useState<{file: File, error: string}[]>([]);
+  const [uploadSpeed, setUploadSpeed] = useState<number>(0);
+  const [startTime, setStartTime] = useState<number>(0);
 
   // Check if user has admin role
   useEffect(() => {
@@ -79,6 +83,48 @@ const DatasetUpload = () => {
     }
   };
 
+  const uploadInBatches = async (files: File[], folder: string, batchSize: number, totalFiles: number, uploadedSoFar: number) => {
+    const failed: {file: File, error: string}[] = [];
+    let uploadedCount = uploadedSoFar;
+
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize);
+      const batchNum = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(files.length / batchSize);
+      
+      setCurrentFile(`Processing ${folder} batch ${batchNum}/${totalBatches} (${batch.length} files)`);
+
+      const results = await Promise.allSettled(
+        batch.map(file => 
+          supabase.storage
+            .from('training-datasets')
+            .upload(`MFCAD/${folder}/${file.name}`, file, { upsert: true })
+            .then(result => ({ file, result }))
+        )
+      );
+
+      // Track failures and successes
+      results.forEach((result, idx) => {
+        if (result.status === 'rejected') {
+          failed.push({ file: batch[idx], error: result.reason?.message || 'Unknown error' });
+        } else if (result.value.result.error) {
+          failed.push({ file: result.value.file, error: result.value.result.error.message });
+        }
+      });
+
+      uploadedCount += batch.length;
+      const overallProgress = (uploadedCount / totalFiles) * 100;
+      setUploadProgress(overallProgress);
+
+      // Calculate upload speed
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      const speed = uploadedCount / elapsedSeconds;
+      setUploadSpeed(speed);
+    }
+
+    return { failed, uploadedCount };
+  };
+
   const uploadFiles = async () => {
     console.log('Upload button clicked');
     console.log('User:', user?.id);
@@ -110,52 +156,30 @@ const DatasetUpload = () => {
     setUploading(true);
     setUploadProgress(0);
     setCurrentFile('');
+    setFailedUploads([]);
+    setUploadSpeed(0);
+    setStartTime(Date.now());
 
     try {
       const totalFiles = graphFiles.length + labelFiles.length + (splitFile ? 1 : 0);
-      let uploadedCount = 0;
+      const allFailed: {file: File, error: string}[] = [];
+      let totalUploaded = 0;
 
-      // Upload graph files
-      for (const file of graphFiles) {
-        setCurrentFile(`Uploading graph: ${file.name}`);
-        console.log(`Uploading graph file: ${file.name}`);
-        
-        const filePath = `MFCAD/graph/${file.name}`;
-        const { error } = await supabase.storage
-          .from('training-datasets')
-          .upload(filePath, file, { upsert: true });
-
-        if (error) {
-          console.error(`Error uploading ${file.name}:`, error);
-          throw error;
-        }
-        
-        console.log(`Successfully uploaded: ${file.name}`);
-        uploadedCount++;
-        setUploadProgress((uploadedCount / totalFiles) * 100);
+      // Upload graph files in batches
+      if (graphFiles.length > 0) {
+        const { failed, uploadedCount } = await uploadInBatches(graphFiles, 'graph', batchSize, totalFiles, totalUploaded);
+        allFailed.push(...failed);
+        totalUploaded = uploadedCount;
       }
 
-      // Upload label files
-      for (const file of labelFiles) {
-        setCurrentFile(`Uploading label: ${file.name}`);
-        console.log(`Uploading label file: ${file.name}`);
-        
-        const filePath = `MFCAD/labels/${file.name}`;
-        const { error } = await supabase.storage
-          .from('training-datasets')
-          .upload(filePath, file, { upsert: true });
-
-        if (error) {
-          console.error(`Error uploading ${file.name}:`, error);
-          throw error;
-        }
-        
-        console.log(`Successfully uploaded: ${file.name}`);
-        uploadedCount++;
-        setUploadProgress((uploadedCount / totalFiles) * 100);
+      // Upload label files in batches
+      if (labelFiles.length > 0) {
+        const { failed, uploadedCount } = await uploadInBatches(labelFiles, 'labels', batchSize, totalFiles, totalUploaded);
+        allFailed.push(...failed);
+        totalUploaded = uploadedCount;
       }
 
-      // Upload split file
+      // Upload split file (single file, no batching needed)
       if (splitFile) {
         setCurrentFile(`Uploading split: ${splitFile.name}`);
         console.log(`Uploading split file: ${splitFile.name}`);
@@ -167,13 +191,14 @@ const DatasetUpload = () => {
 
         if (error) {
           console.error(`Error uploading ${splitFile.name}:`, error);
-          throw error;
+          allFailed.push({ file: splitFile, error: error.message });
         }
         
-        console.log(`Successfully uploaded: ${splitFile.name}`);
-        uploadedCount++;
-        setUploadProgress((uploadedCount / totalFiles) * 100);
+        totalUploaded++;
+        setUploadProgress(100);
       }
+
+      setFailedUploads(allFailed);
 
       // Update dataset status
       await supabase
@@ -185,14 +210,25 @@ const DatasetUpload = () => {
         })
         .eq('name', 'MFCAD');
 
-      toast({
-        title: "Upload Complete",
-        description: `Successfully uploaded ${totalFiles} files to training-datasets bucket.`,
-      });
+      const successCount = totalFiles - allFailed.length;
+      const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-      setGraphFiles([]);
-      setLabelFiles([]);
-      setSplitFile(null);
+      if (allFailed.length === 0) {
+        toast({
+          title: "Upload Complete",
+          description: `Successfully uploaded ${successCount} files in ${elapsedTime}s (${Math.round(uploadSpeed)} files/sec)`,
+        });
+        setGraphFiles([]);
+        setLabelFiles([]);
+        setSplitFile(null);
+      } else {
+        toast({
+          title: "Upload Completed with Errors",
+          description: `${successCount} succeeded, ${allFailed.length} failed. Check console for details.`,
+          variant: "destructive",
+        });
+        console.error('Failed uploads:', allFailed);
+      }
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -202,7 +238,6 @@ const DatasetUpload = () => {
       });
     } finally {
       setUploading(false);
-      setUploadProgress(0);
       setCurrentFile('');
     }
   };
@@ -259,6 +294,29 @@ const DatasetUpload = () => {
                   </AlertDescription>
                 </Alert>
               )}
+
+              {/* Batch Size Control */}
+              {user && isAdmin && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Concurrent Uploads: {batchSize}
+                  </label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="500"
+                    step="10"
+                    value={batchSize}
+                    onChange={(e) => setBatchSize(Number(e.target.value))}
+                    disabled={uploading}
+                    className="w-full accent-primary"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Higher values = faster uploads (50-200 recommended for small files)
+                  </p>
+                </div>
+              )}
+
               {/* Graph Files (.bin) */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Graph Files (.bin)</label>
@@ -337,11 +395,28 @@ const DatasetUpload = () => {
               </div>
 
               {uploading && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Progress value={uploadProgress} />
-                  <p className="text-sm text-muted-foreground text-center">
-                    {currentFile || `Uploading... ${Math.round(uploadProgress)}%`}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-center">
+                      {currentFile || 'Uploading...'}
+                    </p>
+                    <p className="text-xs text-muted-foreground text-center">
+                      {uploadProgress.toFixed(1)}% complete
+                      {uploadSpeed > 0 && ` • ${Math.round(uploadSpeed)} files/sec`}
+                      {uploadSpeed > 0 && uploadProgress > 0 && (() => {
+                        const totalFiles = graphFiles.length + labelFiles.length + (splitFile ? 1 : 0);
+                        const remaining = totalFiles * (1 - uploadProgress / 100);
+                        const timeRemaining = remaining / uploadSpeed;
+                        return ` • ~${Math.ceil(timeRemaining)}s remaining`;
+                      })()}
+                    </p>
+                  </div>
+                  {failedUploads.length > 0 && (
+                    <p className="text-xs text-destructive text-center">
+                      {failedUploads.length} upload(s) failed
+                    </p>
+                  )}
                 </div>
               )}
 
