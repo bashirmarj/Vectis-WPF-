@@ -59,7 +59,7 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
         .from('training_jobs')
         .insert({
           dataset_name: datasetName,
-          status: 'pending_local',
+          status: 'pending',
           epochs,
           batch_size: batchSize,
           learning_rate: learningRate,
