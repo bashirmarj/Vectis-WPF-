@@ -10,11 +10,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +39,34 @@ const Navigation = () => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setCheckingRole(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .single();
+
+        setIsAdmin(!error && !!data);
+      } catch (error) {
+        setIsAdmin(false);
+      } finally {
+        setCheckingRole(false);
+      }
+    };
+
+    checkAdminRole();
+  }, [user]);
   const navItems = [{
     name: "Home",
     path: "/"
@@ -146,9 +178,14 @@ const Navigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/admin')}>
-                    Admin Dashboard
-                  </DropdownMenuItem>
+                  {!checkingRole && isAdmin && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
@@ -188,17 +225,19 @@ const Navigation = () => {
                   </Button>
                   {user ? (
                     <>
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        onClick={() => {
-                          setIsOpen(false);
-                          navigate('/admin');
-                        }}
-                      >
-                        <User className="mr-2 h-4 w-4" />
-                        Admin Dashboard
-                      </Button>
+                      {!checkingRole && isAdmin && (
+                        <Button 
+                          variant="outline" 
+                          className="w-full" 
+                          onClick={() => {
+                            setIsOpen(false);
+                            navigate('/admin');
+                          }}
+                        >
+                          <User className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         className="w-full" 
