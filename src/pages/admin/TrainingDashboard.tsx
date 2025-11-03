@@ -81,8 +81,9 @@ export default function TrainingDashboard() {
       <Navigation />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="mb-6 space-y-4">
+          {/* Top Row: Back button + Action buttons */}
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               onClick={() => navigate('/admin')}
@@ -91,28 +92,30 @@ export default function TrainingDashboard() {
               <ArrowLeft className="h-4 w-4" />
               Back to Admin
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold">ML Training Dashboard</h1>
-              <p className="text-muted-foreground">Manage and monitor UV-Net training jobs</p>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+              <Button
+                onClick={() => setShowStartDialog(true)}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Start Training
+              </Button>
             </div>
           </div>
           
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              className="gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
-            <Button
-              onClick={() => setShowStartDialog(true)}
-              className="gap-2"
-            >
-              <Play className="h-4 w-4" />
-              Start Training
-            </Button>
+          {/* Bottom Row: Title + Description */}
+          <div>
+            <h1 className="text-3xl font-bold">ML Training Dashboard</h1>
+            <p className="text-muted-foreground">Manage and monitor UV-Net training jobs</p>
           </div>
         </div>
 
