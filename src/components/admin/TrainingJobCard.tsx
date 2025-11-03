@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Download, Terminal, XCircle } from "lucide-react";
+import { Download, Terminal, XCircle, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,7 +34,9 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
   const { toast } = useToast();
   const [showLogs, setShowLogs] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -124,7 +126,35 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
     }
   };
 
+  const handleDeleteJob = async () => {
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-training', {
+        body: { job_id: job.id }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Job deleted",
+        description: "Training job has been deleted successfully",
+      });
+      
+      setShowDeleteDialog(false);
+      onRefresh();
+    } catch (error) {
+      toast({
+        title: "Failed to delete",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const canCancel = ['pending', 'pending_local', 'running'].includes(job.status);
+  const canDelete = ['completed', 'failed', 'cancelled'].includes(job.status);
 
   const progress = job.logs && job.logs.length > 0
     ? Math.min(100, (job.logs.length / (job.epochs || 100)) * 100)
@@ -156,6 +186,17 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
               >
                 <XCircle className="h-4 w-4" />
                 Cancel
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
               </Button>
             )}
             {job.logs && job.logs.length > 0 && (
@@ -297,6 +338,29 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isCancelling ? "Cancelling..." : "Yes, cancel training"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Training Job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the training job for "{job.dataset_name}"? 
+              This will permanently remove all job data and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteJob}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Yes, delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
