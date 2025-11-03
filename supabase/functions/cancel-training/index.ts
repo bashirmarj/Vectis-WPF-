@@ -11,12 +11,22 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Get Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No Authorization header found');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No auth header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     )
@@ -24,12 +34,23 @@ Deno.serve(async (req) => {
     // Check authentication
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     
-    if (authError || !user) {
+    if (authError) {
+      console.error('Auth error:', authError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized - Auth failed', details: authError.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    if (!user) {
+      console.error('No user found');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No user' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log('User authenticated:', user.id);
 
     // Check if user is admin
     const { data: roles, error: roleError } = await supabaseClient
@@ -40,11 +61,14 @@ Deno.serve(async (req) => {
       .single()
 
     if (roleError || !roles) {
+      console.error('Role check failed:', roleError);
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Admin access verified');
 
     const { job_id } = await req.json()
 
@@ -55,6 +79,8 @@ Deno.serve(async (req) => {
       )
     }
 
+    console.log('Attempting to cancel job:', job_id);
+
     // Get current job status
     const { data: job, error: fetchError } = await supabaseClient
       .from('training_jobs')
@@ -63,11 +89,14 @@ Deno.serve(async (req) => {
       .single()
 
     if (fetchError || !job) {
+      console.error('Job fetch error:', fetchError);
       return new Response(
         JSON.stringify({ error: 'Training job not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Current job status:', job.status);
 
     // Check if job can be cancelled
     const cancellableStatuses = ['pending', 'pending_local', 'running']
@@ -119,3 +148,4 @@ Deno.serve(async (req) => {
     )
   }
 })
+
