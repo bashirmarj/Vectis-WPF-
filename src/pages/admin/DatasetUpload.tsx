@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,19 +7,57 @@ import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { Upload, FileIcon, Loader2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const DatasetUpload = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
   
   const [graphFiles, setGraphFiles] = useState<File[]>([]);
   const [labelFiles, setLabelFiles] = useState<File[]>([]);
   const [splitFile, setSplitFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentFile, setCurrentFile] = useState<string>('');
+
+  // Check if user has admin role
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setCheckingRole(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error checking role:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(!!data);
+        }
+      } catch (error) {
+        console.error('Error checking admin role:', error);
+        setIsAdmin(false);
+      } finally {
+        setCheckingRole(false);
+      }
+    };
+
+    checkAdminRole();
+  }, [user]);
 
   const handleGraphFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -42,10 +80,36 @@ const DatasetUpload = () => {
   };
 
   const uploadFiles = async () => {
-    if (!user) return;
+    console.log('Upload button clicked');
+    console.log('User:', user?.id);
+    console.log('Is Admin:', isAdmin);
+    console.log('Files selected:', { 
+      graphFiles: graphFiles.length, 
+      labelFiles: labelFiles.length, 
+      splitFile: splitFile?.name 
+    });
+
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to upload files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isAdmin) {
+      toast({
+        title: "Admin Access Required",
+        description: "You must have admin privileges to upload datasets.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
+    setCurrentFile('');
 
     try {
       const totalFiles = graphFiles.length + labelFiles.length + (splitFile ? 1 : 0);
@@ -53,36 +117,60 @@ const DatasetUpload = () => {
 
       // Upload graph files
       for (const file of graphFiles) {
+        setCurrentFile(`Uploading graph: ${file.name}`);
+        console.log(`Uploading graph file: ${file.name}`);
+        
         const filePath = `MFCAD/graph/${file.name}`;
         const { error } = await supabase.storage
           .from('training-datasets')
           .upload(filePath, file, { upsert: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          throw error;
+        }
+        
+        console.log(`Successfully uploaded: ${file.name}`);
         uploadedCount++;
         setUploadProgress((uploadedCount / totalFiles) * 100);
       }
 
       // Upload label files
       for (const file of labelFiles) {
+        setCurrentFile(`Uploading label: ${file.name}`);
+        console.log(`Uploading label file: ${file.name}`);
+        
         const filePath = `MFCAD/labels/${file.name}`;
         const { error } = await supabase.storage
           .from('training-datasets')
           .upload(filePath, file, { upsert: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error(`Error uploading ${file.name}:`, error);
+          throw error;
+        }
+        
+        console.log(`Successfully uploaded: ${file.name}`);
         uploadedCount++;
         setUploadProgress((uploadedCount / totalFiles) * 100);
       }
 
       // Upload split file
       if (splitFile) {
+        setCurrentFile(`Uploading split: ${splitFile.name}`);
+        console.log(`Uploading split file: ${splitFile.name}`);
+        
         const filePath = `MFCAD/split/${splitFile.name}`;
         const { error } = await supabase.storage
           .from('training-datasets')
           .upload(filePath, splitFile, { upsert: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error(`Error uploading ${splitFile.name}:`, error);
+          throw error;
+        }
+        
+        console.log(`Successfully uploaded: ${splitFile.name}`);
         uploadedCount++;
         setUploadProgress((uploadedCount / totalFiles) * 100);
       }
@@ -106,14 +194,16 @@ const DatasetUpload = () => {
       setLabelFiles([]);
       setSplitFile(null);
     } catch (error: any) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
-        description: error.message,
+        description: error.message || "An unknown error occurred during upload.",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
       setUploadProgress(0);
+      setCurrentFile('');
     }
   };
 
@@ -139,6 +229,36 @@ const DatasetUpload = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Auth Status */}
+              {authLoading || checkingRole ? (
+                <Alert>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <AlertDescription>
+                    Checking authentication...
+                  </AlertDescription>
+                </Alert>
+              ) : !user ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You must be logged in to upload datasets. Please <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/auth')}>sign in</Button>.
+                  </AlertDescription>
+                </Alert>
+              ) : !isAdmin ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Admin privileges required. Current user: {user.email}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Authenticated as admin: {user.email}
+                  </AlertDescription>
+                </Alert>
+              )}
               {/* Graph Files (.bin) */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Graph Files (.bin)</label>
@@ -220,14 +340,14 @@ const DatasetUpload = () => {
                 <div className="space-y-2">
                   <Progress value={uploadProgress} />
                   <p className="text-sm text-muted-foreground text-center">
-                    Uploading... {Math.round(uploadProgress)}%
+                    {currentFile || `Uploading... ${Math.round(uploadProgress)}%`}
                   </p>
                 </div>
               )}
 
               <Button
                 onClick={uploadFiles}
-                disabled={uploading || (graphFiles.length === 0 && labelFiles.length === 0 && !splitFile)}
+                disabled={uploading || !user || !isAdmin || (graphFiles.length === 0 && labelFiles.length === 0 && !splitFile)}
                 className="w-full"
               >
                 {uploading ? (
