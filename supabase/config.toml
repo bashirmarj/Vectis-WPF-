@@ -1,5 +1,8 @@
 project_id = "inqabwlmvrvqsdrgskju"
 
+[functions.get-training-credentials]
+verify_jwt = true
+
 [functions.send-quotation-request]
 verify_jwt = false
 
