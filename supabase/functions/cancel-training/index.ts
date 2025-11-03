@@ -11,57 +11,38 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('No Authorization header found');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - No auth header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    console.log('Cancel training function called');
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: authHeader },
+          headers: { Authorization: req.headers.get('Authorization')! },
         },
       }
     )
 
-    // Check authentication
+    // When verify_jwt = true, Supabase validates the JWT automatically
+    // We just need to get the user from the validated token
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     
-    if (authError) {
+    if (authError || !user) {
       console.error('Auth error:', authError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - Auth failed', details: authError.message }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    if (!user) {
-      console.error('No user found');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - No user' }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     console.log('User authenticated:', user.id);
 
-    // Check if user is admin
-    const { data: roles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single()
+    // Check if user is admin using the has_role function
+    const { data: hasAdminRole, error: roleError } = await supabaseClient
+      .rpc('has_role', { _user_id: user.id, _role: 'admin' })
 
-    if (roleError || !roles) {
-      console.error('Role check failed:', roleError);
+    if (roleError || !hasAdminRole) {
+      console.error('Role check failed:', roleError, 'hasAdminRole:', hasAdminRole);
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
