@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Terminal, AlertCircle } from "lucide-react";
@@ -21,12 +22,42 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
   const [loading, setLoading] = useState(false);
   const [credentials, setCredentials] = useState<any>(null);
   const [trainingCommand, setTrainingCommand] = useState("");
+  const [datasets, setDatasets] = useState<any[]>([]);
   
   // Training parameters
-  const [datasetName, setDatasetName] = useState("MFCAD");
+  const [datasetId, setDatasetId] = useState("");
   const [epochs, setEpochs] = useState(100);
   const [batchSize, setBatchSize] = useState(8);
   const [learningRate, setLearningRate] = useState(0.001);
+
+  useEffect(() => {
+    if (open) {
+      fetchDatasets();
+    }
+  }, [open]);
+
+  const fetchDatasets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('training_datasets')
+        .select('id, name, download_status, num_files')
+        .eq('download_status', 'ready')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setDatasets(data || []);
+      if (data && data.length > 0 && !datasetId) {
+        setDatasetId(data[0].id);
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to fetch datasets",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchCredentials = async () => {
     setLoading(true);
@@ -52,13 +83,26 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
   };
 
   const generateTrainingCommand = async () => {
+    if (!datasetId) {
+      toast({
+        title: "No dataset selected",
+        description: "Please select a dataset first",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      // Get dataset name for display
+      const selectedDataset = datasets.find(d => d.id === datasetId);
+      
       // Create a training job record
       const { data: jobData, error: jobError } = await supabase
         .from('training_jobs')
         .insert({
-          dataset_name: datasetName,
+          dataset_id: datasetId,
+          dataset_name: selectedDataset?.name || 'Unknown',
           status: 'pending',
           epochs,
           batch_size: batchSize,
@@ -69,7 +113,7 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
 
       if (jobError) throw jobError;
 
-      const command = `python training/train_local.py --dataset_name "${datasetName}" --batch_size ${batchSize} --epochs ${epochs} --learning_rate ${learningRate} --job_id ${jobData.id}`;
+      const command = `python training/train_local.py --dataset_id ${datasetId} --batch_size ${batchSize} --epochs ${epochs} --learning_rate ${learningRate} --job_id ${jobData.id}`;
       
       setTrainingCommand(command);
       onSuccess();
@@ -199,12 +243,19 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="dataset">Dataset Name</Label>
-                    <Input
-                      id="dataset"
-                      value={datasetName}
-                      onChange={(e) => setDatasetName(e.target.value)}
-                    />
+                    <Label htmlFor="dataset">Dataset</Label>
+                    <Select value={datasetId} onValueChange={setDatasetId}>
+                      <SelectTrigger id="dataset">
+                        <SelectValue placeholder="Select a dataset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {datasets.map((dataset) => (
+                          <SelectItem key={dataset.id} value={dataset.id}>
+                            {dataset.name} ({dataset.num_files || 0} files)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">

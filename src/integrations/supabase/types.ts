@@ -934,6 +934,7 @@ export type Database = {
           best_val_accuracy: number | null
           best_val_iou: number | null
           created_at: string | null
+          dataset_id: string | null
           dataset_name: string
           dataset_path: string | null
           epochs: number | null
@@ -958,6 +959,7 @@ export type Database = {
           best_val_accuracy?: number | null
           best_val_iou?: number | null
           created_at?: string | null
+          dataset_id?: string | null
           dataset_name: string
           dataset_path?: string | null
           epochs?: number | null
@@ -982,6 +984,7 @@ export type Database = {
           best_val_accuracy?: number | null
           best_val_iou?: number | null
           created_at?: string | null
+          dataset_id?: string | null
           dataset_name?: string
           dataset_path?: string | null
           epochs?: number | null
@@ -1001,7 +1004,15 @@ export type Database = {
           updated_at?: string | null
           val_samples?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "training_jobs_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "training_datasets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
