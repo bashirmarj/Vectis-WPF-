@@ -798,6 +798,8 @@ async function analyzeSTEPViaService(
         planar_faces: data.feature_summary?.planar_faces || 0,
         complexity_score: data.complexity_score || 5,
       },
+      // ✅ Forward ML-based feature predictions from geometry service
+      ml_features: data.ml_features,
     };
   } catch (error) {
     console.error("Error calling geometry service:", error);

@@ -38,6 +38,7 @@ interface LineItem {
 interface FeatureTree {
   manufacturing_features?: any;
   feature_summary?: any;
+  ml_features?: any;
   // Support old format for backward compatibility
   oriented_sections?: any[];
   common_dimensions?: any;
@@ -112,6 +113,7 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
               features={featureTree?.manufacturing_features}
               featureSummary={featureTree?.feature_summary}
               featureTree={featureTree || undefined}
+              mlFeatures={featureTree?.ml_features}
             />
           </TabsContent>
 

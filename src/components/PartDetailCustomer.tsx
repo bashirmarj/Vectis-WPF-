@@ -39,6 +39,7 @@ interface PartDetailCustomerProps {
         }>;
       };
       feature_summary?: any;
+      ml_features?: any;
       recommended_routings?: string[];
       routing_reasoning?: string[];
       machining_summary?: Array<{
@@ -201,10 +202,11 @@ export function PartDetailCustomer({
                   )}
 
                   {hasFeatures ? (
-                    <FeatureTree
-                      features={file.analysis?.manufacturing_features || file.analysis?.detected_features}
-                      featureSummary={file.analysis?.feature_summary || file.analysis?.feature_tree}
-                    />
+                  <FeatureTree
+                    features={file.analysis?.manufacturing_features || file.analysis?.detected_features}
+                    featureSummary={file.analysis?.feature_summary || file.analysis?.feature_tree}
+                    mlFeatures={file.analysis?.ml_features}
+                  />
                   ) : (
                     <Card className="border-dashed">
                       <CardContent className="pt-6 text-center">
