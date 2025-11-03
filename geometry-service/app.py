@@ -7,15 +7,7 @@ import networkx as nx
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
-
-# === ML Inference ===
-try:
-    from ml_inference import predict_features
-    ML_AVAILABLE = True
-    logger.info("✅ ML inference module loaded")
-except ImportError as e:
-    ML_AVAILABLE = False
-    logger.warning(f"⚠️ ML inference not available: {e}")
+import logging
 
 # === OCC imports ===
 from OCC.Core.STEPControl import STEPControl_Reader
@@ -41,8 +33,6 @@ from OCC.Core.BRepGProp import brepgprop, BRepGProp_Face
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.gp import gp_Vec, gp_Pnt, gp_Dir
 
-import logging
-
 # === CONFIG ===
 app = Flask(__name__)
 CORS(app)
@@ -53,6 +43,15 @@ logger = logging.getLogger("app")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# === ML Inference ===
+try:
+    from ml_inference import predict_features
+    ML_AVAILABLE = True
+    logger.info("✅ ML inference module loaded")
+except ImportError as e:
+    ML_AVAILABLE = False
+    logger.warning(f"⚠️ ML inference not available: {e}")
 
 # --------------------------------------------------
 # === Geometry Utilities ===
