@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileIcon, Loader2, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileIcon, Loader2, ArrowLeft, AlertCircle, CheckCircle, Pause, Play } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -25,10 +25,14 @@ const DatasetUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentFile, setCurrentFile] = useState<string>('');
-  const [batchSize, setBatchSize] = useState<number>(100);
-  const [failedUploads, setFailedUploads] = useState<{file: File, error: string}[]>([]);
+  const [batchSize, setBatchSize] = useState<number>(8);
+  const [failedUploads, setFailedUploads] = useState<{file: File, error: string, attempts?: number}[]>([]);
   const [uploadSpeed, setUploadSpeed] = useState<number>(0);
   const [startTime, setStartTime] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentBatch, setCurrentBatch] = useState<number>(0);
+  const [totalBatches, setTotalBatches] = useState<number>(0);
+  const [fileType, setFileType] = useState<string>('');
 
   // Check if user has admin role
   useEffect(() => {
@@ -83,32 +87,66 @@ const DatasetUpload = () => {
     }
   };
 
+  // Upload single file with retry logic
+  const uploadWithRetry = async (file: File, folder: string, maxRetries = 3): Promise<{file: File, success: boolean, error?: string, attempts: number}> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const { error } = await supabase.storage
+          .from('training-datasets')
+          .upload(`MFCAD/${folder}/${file.name}`, file, { upsert: true });
+        
+        if (error) {
+          if (attempt === maxRetries) {
+            return { file, success: false, error: error.message, attempts: attempt };
+          }
+          // Exponential backoff: 500ms, 1s, 2s
+          await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+          continue;
+        }
+        
+        return { file, success: true, attempts: attempt };
+      } catch (error: any) {
+        if (attempt === maxRetries) {
+          return { file, success: false, error: error.message || 'Network error', attempts: attempt };
+        }
+        // Exponential backoff
+        await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+      }
+    }
+    return { file, success: false, error: 'Max retries exceeded', attempts: maxRetries };
+  };
+
   const uploadInBatches = async (files: File[], folder: string, batchSize: number, totalFiles: number, uploadedSoFar: number) => {
-    const failed: {file: File, error: string}[] = [];
+    const failed: {file: File, error: string, attempts?: number}[] = [];
     let uploadedCount = uploadedSoFar;
+    const totalBatchCount = Math.ceil(files.length / batchSize);
 
     for (let i = 0; i < files.length; i += batchSize) {
+      // Check if paused
+      while (isPaused) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+
       const batch = files.slice(i, i + batchSize);
       const batchNum = Math.floor(i / batchSize) + 1;
-      const totalBatches = Math.ceil(files.length / batchSize);
       
-      setCurrentFile(`Processing ${folder} batch ${batchNum}/${totalBatches} (${batch.length} files)`);
+      setCurrentBatch(batchNum);
+      setTotalBatches(totalBatchCount);
+      setFileType(folder);
+      setCurrentFile(`Batch ${batchNum}/${totalBatchCount}: ${folder} (${batch.length} files)`);
 
-      const results = await Promise.allSettled(
-        batch.map(file => 
-          supabase.storage
-            .from('training-datasets')
-            .upload(`MFCAD/${folder}/${file.name}`, file, { upsert: true })
-            .then(result => ({ file, result }))
-        )
+      const results = await Promise.all(
+        batch.map(file => uploadWithRetry(file, folder))
       );
 
-      // Track failures and successes
-      results.forEach((result, idx) => {
-        if (result.status === 'rejected') {
-          failed.push({ file: batch[idx], error: result.reason?.message || 'Unknown error' });
-        } else if (result.value.result.error) {
-          failed.push({ file: result.value.file, error: result.value.result.error.message });
+      // Track failures
+      results.forEach(result => {
+        if (!result.success) {
+          failed.push({ 
+            file: result.file, 
+            error: result.error || 'Unknown error',
+            attempts: result.attempts 
+          });
         }
       });
 
@@ -120,6 +158,14 @@ const DatasetUpload = () => {
       const elapsedSeconds = (Date.now() - startTime) / 1000;
       const speed = uploadedCount / elapsedSeconds;
       setUploadSpeed(speed);
+
+      // Update failed uploads in real-time
+      setFailedUploads(failed);
+
+      // Add delay between batches to prevent rate limiting
+      if (i + batchSize < files.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
     }
 
     return { failed, uploadedCount };
@@ -159,6 +205,10 @@ const DatasetUpload = () => {
     setFailedUploads([]);
     setUploadSpeed(0);
     setStartTime(Date.now());
+    setIsPaused(false);
+    setCurrentBatch(0);
+    setTotalBatches(0);
+    setFileType('');
 
     try {
       const totalFiles = graphFiles.length + labelFiles.length + (splitFile ? 1 : 0);
@@ -303,16 +353,16 @@ const DatasetUpload = () => {
                   </label>
                   <input
                     type="range"
-                    min="10"
-                    max="500"
-                    step="10"
+                    min="1"
+                    max="50"
+                    step="1"
                     value={batchSize}
                     onChange={(e) => setBatchSize(Number(e.target.value))}
                     disabled={uploading}
                     className="w-full accent-primary"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Higher values = faster uploads (50-200 recommended for small files)
+                    Recommended: 5-10 for stability. Higher values may cause network errors.
                   </p>
                 </div>
               )}
@@ -397,26 +447,55 @@ const DatasetUpload = () => {
               {uploading && (
                 <div className="space-y-3">
                   <Progress value={uploadProgress} />
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <p className="text-sm font-medium text-center">
-                      {currentFile || 'Uploading...'}
+                      {isPaused ? '⏸️ Paused' : currentFile || 'Uploading...'}
                     </p>
-                    <p className="text-xs text-muted-foreground text-center">
-                      {uploadProgress.toFixed(1)}% complete
-                      {uploadSpeed > 0 && ` • ${Math.round(uploadSpeed)} files/sec`}
-                      {uploadSpeed > 0 && uploadProgress > 0 && (() => {
-                        const totalFiles = graphFiles.length + labelFiles.length + (splitFile ? 1 : 0);
-                        const remaining = totalFiles * (1 - uploadProgress / 100);
-                        const timeRemaining = remaining / uploadSpeed;
-                        return ` • ~${Math.ceil(timeRemaining)}s remaining`;
-                      })()}
-                    </p>
+                    <div className="text-xs text-muted-foreground text-center space-y-1">
+                      <div>{uploadProgress.toFixed(1)}% complete</div>
+                      {uploadSpeed > 0 && (
+                        <>
+                          <div>Speed: {uploadSpeed.toFixed(1)} files/sec</div>
+                          <div>
+                            Elapsed: {Math.floor((Date.now() - startTime) / 1000)}s
+                            {uploadProgress > 0 && (() => {
+                              const totalFiles = graphFiles.length + labelFiles.length + (splitFile ? 1 : 0);
+                              const remaining = totalFiles * (1 - uploadProgress / 100);
+                              const timeRemaining = remaining / uploadSpeed;
+                              return ` • Remaining: ~${Math.floor(timeRemaining / 60)}m ${Math.floor(timeRemaining % 60)}s`;
+                            })()}
+                          </div>
+                        </>
+                      )}
+                      {fileType && <div>Current: {fileType} files</div>}
+                      {totalBatches > 0 && <div>Batch: {currentBatch}/{totalBatches}</div>}
+                    </div>
                   </div>
                   {failedUploads.length > 0 && (
-                    <p className="text-xs text-destructive text-center">
-                      {failedUploads.length} upload(s) failed
-                    </p>
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        {failedUploads.length} upload(s) failed (will retry automatically)
+                      </AlertDescription>
+                    </Alert>
                   )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsPaused(!isPaused)}
+                    className="w-full"
+                  >
+                    {isPaused ? (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Resume Upload
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="mr-2 h-4 w-4" />
+                        Pause Upload
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
 
