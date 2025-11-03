@@ -14,6 +14,7 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isResetMode, setIsResetMode] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const [isInRecoveryFlow, setIsInRecoveryFlow] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -26,18 +27,16 @@ const Auth = () => {
 
   // Redirect if already logged in (but NOT during password recovery)
   useEffect(() => {
-    const hash = window.location.hash;
-    const isRecoveryMode = hash && hash.includes('type=recovery');
-    
-    if (user && !isRecoveryMode) {
+    if (user && !isInRecoveryFlow) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, isInRecoveryFlow]);
 
   // Check for password recovery in URL hash
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
+      setIsInRecoveryFlow(true);
       setIsUpdateMode(true);
       setIsResetMode(false);
     }
@@ -178,6 +177,7 @@ const Auth = () => {
         // Clear URL hash and reset form
         window.location.hash = '';
         setIsUpdateMode(false);
+        setIsInRecoveryFlow(false);
         setNewPassword('');
         setConfirmPassword('');
         setIsLogin(true);
