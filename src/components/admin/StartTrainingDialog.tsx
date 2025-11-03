@@ -41,7 +41,7 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
       const { data, error } = await supabase
         .from('training_datasets')
         .select('id, name, download_status, num_files')
-        .eq('download_status', 'ready')
+        .eq('download_status', 'completed')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
