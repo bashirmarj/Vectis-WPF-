@@ -24,9 +24,12 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if already logged in
+  // Redirect if already logged in (but NOT during password recovery)
   useEffect(() => {
-    if (user) {
+    const hash = window.location.hash;
+    const isRecoveryMode = hash && hash.includes('type=recovery');
+    
+    if (user && !isRecoveryMode) {
       navigate('/');
     }
   }, [user, navigate]);
@@ -172,10 +175,12 @@ const Auth = () => {
           title: 'Success',
           description: 'Password updated successfully! You can now login.',
         });
+        // Clear URL hash and reset form
+        window.location.hash = '';
         setIsUpdateMode(false);
         setNewPassword('');
         setConfirmPassword('');
-        window.location.hash = '';
+        setIsLogin(true);
       }
     } catch (error: any) {
       toast({
