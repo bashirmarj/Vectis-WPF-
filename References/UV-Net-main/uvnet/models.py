@@ -309,7 +309,7 @@ class Segmentation(pl.LightningModule):
         self.train_accuracy(preds, labels)
         return loss
 
-    def training_epoch_end(self, outs):
+    def on_train_epoch_end(self):
         self.log("train_iou", self.train_iou.compute())
         self.log("train_accuracy", self.train_accuracy.compute())
 
@@ -326,7 +326,7 @@ class Segmentation(pl.LightningModule):
         self.val_accuracy(preds, labels)
         return loss
 
-    def validation_epoch_end(self, outs):
+    def on_validation_epoch_end(self):
         self.log("val_iou", self.val_iou.compute())
         self.log("val_accuracy", self.val_accuracy.compute())
 
@@ -342,7 +342,7 @@ class Segmentation(pl.LightningModule):
         self.test_iou(preds, labels)
         self.test_accuracy(preds, labels)
 
-    def test_epoch_end(self, outs):
+    def on_test_epoch_end(self):
         self.log("test_iou", self.test_iou.compute())
         self.log("test_accuracy", self.test_accuracy.compute())
 
