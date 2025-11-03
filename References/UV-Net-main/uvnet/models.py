@@ -276,20 +276,20 @@ class Segmentation(pl.LightningModule):
         # Setting compute_on_step = False to compute "part IoU"
         # This is because we want to compute the IoU on the entire dataset
         # at the end to account for rare classes, rather than within each batch
-        self.train_iou = torchmetrics.IoU(
-            num_classes=num_classes, compute_on_step=False
+        self.train_iou = torchmetrics.JaccardIndex(
+            num_classes=num_classes, task='multiclass'
         )
-        self.val_iou = torchmetrics.IoU(num_classes=num_classes, compute_on_step=False)
-        self.test_iou = torchmetrics.IoU(num_classes=num_classes, compute_on_step=False)
+        self.val_iou = torchmetrics.JaccardIndex(num_classes=num_classes, task='multiclass')
+        self.test_iou = torchmetrics.JaccardIndex(num_classes=num_classes, task='multiclass')
 
         self.train_accuracy = torchmetrics.Accuracy(
-            num_classes=num_classes, compute_on_step=False
+            num_classes=num_classes, task='multiclass'
         )
         self.val_accuracy = torchmetrics.Accuracy(
-            num_classes=num_classes, compute_on_step=False
+            num_classes=num_classes, task='multiclass'
         )
         self.test_accuracy = torchmetrics.Accuracy(
-            num_classes=num_classes, compute_on_step=False
+            num_classes=num_classes, task='multiclass'
         )
 
     def forward(self, batched_graph):
