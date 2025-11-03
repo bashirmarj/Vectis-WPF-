@@ -20,6 +20,9 @@ Deno.serve(async (req) => {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
         },
+        auth: {
+          persistSession: false,
+        },
       }
     )
 
