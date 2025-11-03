@@ -310,8 +310,8 @@ class Segmentation(pl.LightningModule):
         return loss
 
     def on_train_epoch_end(self):
-        self.log("train_iou", self.train_iou.compute())
-        self.log("train_accuracy", self.train_accuracy.compute())
+        self.log("train_iou", self.train_iou.compute(), sync_dist=True, prog_bar=True)
+        self.log("train_accuracy", self.train_accuracy.compute(), sync_dist=True, prog_bar=True)
 
     def validation_step(self, batch, batch_idx):
         inputs = batch["graph"].to(self.device)
@@ -327,8 +327,8 @@ class Segmentation(pl.LightningModule):
         return loss
 
     def on_validation_epoch_end(self):
-        self.log("val_iou", self.val_iou.compute())
-        self.log("val_accuracy", self.val_accuracy.compute())
+        self.log("val_iou", self.val_iou.compute(), sync_dist=True, prog_bar=True)
+        self.log("val_accuracy", self.val_accuracy.compute(), sync_dist=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         inputs = batch["graph"].to(self.device)
@@ -343,8 +343,8 @@ class Segmentation(pl.LightningModule):
         self.test_accuracy(preds, labels)
 
     def on_test_epoch_end(self):
-        self.log("test_iou", self.test_iou.compute())
-        self.log("test_accuracy", self.test_accuracy.compute())
+        self.log("test_iou", self.test_iou.compute(), sync_dist=True, prog_bar=True)
+        self.log("test_accuracy", self.test_accuracy.compute(), sync_dist=True, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters())
