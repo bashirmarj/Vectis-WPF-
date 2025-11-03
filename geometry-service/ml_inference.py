@@ -92,16 +92,39 @@ def load_uvnet_model():
             return None
         
         # Import model architecture
-        import pytorch_lightning as pl
-        from uvnet_model import Segmentation  # Will create this next
+        from uvnet_model import Segmentation
+        
+        # Load hyperparameters
+        import yaml
+        with open(hparams_path, 'r') as f:
+            hparams = yaml.safe_load(f)
+        
+        logger.info(f"📋 Loaded hparams: {hparams}")
+        
+        # Initialize model
+        num_classes = hparams.get('num_classes', 16)
+        crv_in_channels = hparams.get('crv_in_channels', 6)
         
         logger.info(f"🔄 Loading UV-Net model from {model_path}")
         
         # Load checkpoint
-        model = Segmentation.load_from_checkpoint(
-            model_path,
-            map_location=torch.device('cpu')  # Use CPU for inference
-        )
+        model = Segmentation(num_classes=num_classes, crv_in_channels=crv_in_channels)
+        checkpoint = torch.load(model_path, map_location='cpu')
+        
+        # Handle state_dict with 'model.' prefix
+        state_dict = checkpoint['state_dict']
+        new_state_dict = {}
+        
+        for key, value in state_dict.items():
+            # Remove 'model.' prefix from checkpoint keys
+            if key.startswith('model.'):
+                new_key = key.replace('model.', '')
+                new_state_dict[new_key] = value
+            else:
+                new_state_dict[key] = value
+        
+        # Load the modified state dict into the inner model
+        model.model.load_state_dict(new_state_dict, strict=True)
         model.eval()
         
         _model = model
@@ -112,6 +135,8 @@ def load_uvnet_model():
         
     except Exception as e:
         logger.error(f"❌ Failed to load UV-Net model: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
 
 
@@ -242,6 +267,13 @@ def predict_features(shape):
         # Preprocess
         graph = preprocess_graph(graph)
         
+        # Permute features to match model input format
+        # Node features: [N, H, W, C] -> [N, C, H, W]
+        graph.ndata["x"] = graph.ndata["x"].permute(0, 3, 1, 2)
+        # Edge features: [E, L, C] -> [E, C, L]
+        if graph.edata["x"].shape[0] > 0:
+            graph.edata["x"] = graph.edata["x"].permute(0, 2, 1)
+        
         # Run inference
         with torch.no_grad():
             logits = model(graph)
@@ -277,4 +309,6 @@ def predict_features(shape):
         
     except Exception as e:
         logger.error(f"❌ ML inference failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
