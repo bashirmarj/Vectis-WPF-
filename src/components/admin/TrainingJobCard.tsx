@@ -2,10 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Download, Terminal, Clock, Cpu } from "lucide-react";
+import { Download, Terminal, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,8 @@ interface TrainingJob {
 export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefresh: () => void }) {
   const { toast } = useToast();
   const [showLogs, setShowLogs] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -41,6 +44,8 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
         return 'bg-blue-500';
       case 'failed':
         return 'bg-red-500';
+      case 'cancelled':
+        return 'bg-gray-500';
       case 'pending':
       case 'pending_local':
         return 'bg-yellow-500';
@@ -53,6 +58,8 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
     switch (status) {
       case 'pending_local':
         return 'Waiting for Local Execution';
+      case 'cancelled':
+        return 'Cancelled';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -90,6 +97,35 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
     }
   };
 
+  const handleCancelTraining = async () => {
+    setIsCancelling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('cancel-training', {
+        body: { job_id: job.id }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Training cancelled",
+        description: data.message || "Training job has been cancelled successfully",
+      });
+      
+      setShowCancelDialog(false);
+      onRefresh();
+    } catch (error) {
+      toast({
+        title: "Failed to cancel",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const canCancel = ['pending', 'pending_local', 'running'].includes(job.status);
+
   const progress = job.logs && job.logs.length > 0
     ? Math.min(100, (job.logs.length / (job.epochs || 100)) * 100)
     : 0;
@@ -111,6 +147,17 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
           </div>
 
           <div className="flex gap-2">
+            {canCancel && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowCancelDialog(true)}
+                className="gap-2"
+              >
+                <XCircle className="h-4 w-4" />
+                Cancel
+              </Button>
+            )}
             {job.logs && job.logs.length > 0 && (
               <Button
                 variant="outline"
@@ -203,6 +250,13 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
             <p className="text-sm text-red-600">{job.error_message}</p>
           </div>
         )}
+
+        {/* Cancelled Message */}
+        {job.status === 'cancelled' && (
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-sm text-gray-600">Training was cancelled</p>
+          </div>
+        )}
       </Card>
 
       {/* Logs Dialog */}
@@ -224,6 +278,29 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Training Job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel the training job for "{job.dataset_name}"? 
+              This action cannot be undone. If the training is currently running, it will be stopped.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>No, keep training</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelTraining}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? "Cancelling..." : "Yes, cancel training"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

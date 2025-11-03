@@ -44,6 +44,7 @@ def main():
         from pytorch_lightning.loggers import TensorBoardLogger
         from supabase import create_client
         from dotenv import load_dotenv
+        from cancellation_callback import CancellationCheckCallback
     except ImportError as e:
         print(f"❌ Missing dependency: {e}")
         print("Run: conda activate uv_net_local")
@@ -199,6 +200,13 @@ def main():
         mode="min"
     )
     
+    # Cancellation check callback
+    cancellation_callback = CancellationCheckCallback(
+        supabase_client=supabase,
+        job_id=job_id,
+        check_frequency=1  # Check every epoch
+    )
+    
     logger = TensorBoardLogger(
         str(results_path),
         name=month_day,
@@ -212,7 +220,7 @@ def main():
     # Create trainer
     trainer = pl.Trainer(
         max_epochs=args.epochs,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, cancellation_callback],
         logger=logger,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1,
@@ -231,11 +239,26 @@ def main():
         
         trainer.fit(model, train_loader, val_loader)
         
+        # Check if training was cancelled
+        job_check = supabase.table("training_jobs").select("status").eq("id", job_id).execute()
+        if job_check.data and job_check.data[0].get("status") == "cancelled":
+            print("Training was cancelled. Exiting...")
+            sys.exit(0)
+        
         training_time = int(time.time() - start_time)
         print(f"✓ Training completed in {training_time // 3600}h {(training_time % 3600) // 60}m")
         print()
         
     except Exception as e:
+        # Check if this was a cancellation
+        try:
+            job_check = supabase.table("training_jobs").select("status").eq("id", job_id).execute()
+            if job_check.data and job_check.data[0].get("status") == "cancelled":
+                print("Training was cancelled. Exiting...")
+                sys.exit(0)
+        except:
+            pass
+        
         print(f"❌ Training failed: {e}")
         supabase.table("training_jobs").update({
             "status": "failed",

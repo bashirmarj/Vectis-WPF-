@@ -933,6 +933,8 @@ export type Database = {
           batch_size: number | null
           best_val_accuracy: number | null
           best_val_iou: number | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string | null
           dataset_id: string | null
           dataset_name: string
@@ -958,6 +960,8 @@ export type Database = {
           batch_size?: number | null
           best_val_accuracy?: number | null
           best_val_iou?: number | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
           dataset_id?: string | null
           dataset_name: string
@@ -983,6 +987,8 @@ export type Database = {
           batch_size?: number | null
           best_val_accuracy?: number | null
           best_val_iou?: number | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
           dataset_id?: string | null
           dataset_name?: string
@@ -1005,6 +1011,13 @@ export type Database = {
           val_samples?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "training_jobs_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "training_jobs_dataset_id_fkey"
             columns: ["dataset_id"]
