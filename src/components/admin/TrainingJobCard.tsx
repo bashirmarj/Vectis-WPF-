@@ -129,22 +129,8 @@ export function TrainingJobCard({ job, onRefresh }: { job: TrainingJob; onRefres
   const handleDeleteJob = async () => {
     setIsDeleting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "You must be logged in to delete training jobs",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke('delete-training', {
-        body: { job_id: job.id },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
+        body: { job_id: job.id }
       });
 
       if (error) throw error;
