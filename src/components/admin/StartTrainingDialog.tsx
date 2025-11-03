@@ -94,33 +94,14 @@ export function StartTrainingDialog({ open, onOpenChange, onSuccess }: StartTrai
 
     setLoading(true);
     try {
-      // Get dataset name for display
-      const selectedDataset = datasets.find(d => d.id === datasetId);
-      
-      // Create a training job record
-      const { data: jobData, error: jobError } = await supabase
-        .from('training_jobs')
-        .insert({
-          dataset_id: datasetId,
-          dataset_name: selectedDataset?.name || 'Unknown',
-          status: 'pending',
-          epochs,
-          batch_size: batchSize,
-          learning_rate: learningRate,
-        })
-        .select()
-        .single();
-
-      if (jobError) throw jobError;
-
-      const command = `python training/train_local.py --dataset_id ${datasetId} --batch_size ${batchSize} --epochs ${epochs} --learning_rate ${learningRate} --job_id ${jobData.id}`;
+      const command = `python training/train_local.py --dataset_id ${datasetId} --batch_size ${batchSize} --epochs ${epochs} --learning_rate ${learningRate}`;
       
       setTrainingCommand(command);
       onSuccess();
       
       toast({
-        title: "Training Job Created",
-        description: "Copy the command below to start training",
+        title: "Training Command Generated",
+        description: "Copy and run the command below. The job will appear in the dashboard once training starts.",
       });
     } catch (error) {
       toast({
