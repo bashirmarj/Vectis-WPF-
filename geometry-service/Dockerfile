@@ -1,5 +1,5 @@
 # ---------- CAD Geometry Service (Render + OCC binaries) ----------
-FROM continuumio/miniconda3:24.7.1-0
+FROM continuumio/miniconda3:23.10.0-1
 
 WORKDIR /app
 COPY requirements.txt .
