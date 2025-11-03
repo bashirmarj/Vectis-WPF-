@@ -8,6 +8,15 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
 
+# === ML Inference ===
+try:
+    from ml_inference import predict_features
+    ML_AVAILABLE = True
+    logger.info("✅ ML inference module loaded")
+except ImportError as e:
+    ML_AVAILABLE = False
+    logger.warning(f"⚠️ ML inference not available: {e}")
+
 # === OCC imports ===
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.BRep import BRep_Tool
@@ -1923,6 +1932,17 @@ def analyze_cad():
         mesh_data["vertex_colors"] = vertex_colors
         mesh_data["face_classifications"] = face_classifications
         
+        # 🆕 ML-based feature recognition
+        ml_features = None
+        if ML_AVAILABLE:
+            try:
+                logger.info("🤖 Running ML-based feature recognition...")
+                ml_features = predict_features(shape)
+                if ml_features:
+                    logger.info(f"✅ ML detected {ml_features['feature_summary']['total_faces']} faces")
+            except Exception as e:
+                logger.warning(f"⚠️ ML inference failed (falling back to heuristics): {e}")
+        
         logger.info("📐 Extracting and classifying BREP edges (UNIFIED SINGLE-PASS)...")
         # NEW: Single-pass extraction with guaranteed matching + UIso curves
         edge_result = extract_and_classify_feature_edges(
@@ -1972,7 +1992,7 @@ def analyze_cad():
 
         logger.info(f"✅ Analysis complete: {mesh_data['triangle_count']} triangles, {len(mesh_data['feature_edges'])} edges")
 
-        return jsonify({
+        result = {
             'exact_volume': exact_props['volume'],
             'exact_surface_area': exact_props['surface_area'],
             'center_of_mass': exact_props['center_of_mass'],
@@ -2017,7 +2037,14 @@ def analyze_cad():
             'status': 'success',
             'confidence': 0.98,
             'method': 'professional_edge_extraction_with_angle_filtering'
-        })
+        }
+        
+        # 🆕 Add ML features if available
+        if ml_features:
+            result['ml_features'] = ml_features
+            logger.info("✅ Response includes ML-based feature predictions")
+        
+        return jsonify(result)
 
     except Exception as e:
         logger.error(f"Error processing CAD: {e}")

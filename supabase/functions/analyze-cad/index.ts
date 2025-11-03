@@ -108,6 +108,36 @@ interface MachiningOperation {
   machining_cost: number;
 }
 
+interface MLFeaturePrediction {
+  face_id: number;
+  predicted_class: string;
+  confidence: number;
+  probabilities: number[];
+}
+
+interface MLFeatures {
+  face_predictions: MLFeaturePrediction[];
+  feature_summary: {
+    total_faces: number;
+    hole?: number;
+    boss?: number;
+    pocket?: number;
+    slot?: number;
+    chamfer?: number;
+    fillet?: number;
+    groove?: number;
+    step?: number;
+    plane?: number;
+    cylinder?: number;
+    cone?: number;
+    sphere?: number;
+    torus?: number;
+    bspline?: number;
+    revolution?: number;
+    extrusion?: number;
+  };
+}
+
 interface AnalysisResult {
   volume_cm3: number;
   surface_area_cm2: number;
@@ -124,7 +154,7 @@ interface AnalysisResult {
   detailed_features?: DetailedFeatures;
   feature_tree?: FeatureTree;
   mesh_id?: string;
-  mesh_data?: MeshData; // ✅ Add mesh_data to interface
+  mesh_data?: MeshData;
   // Industrial routing enhancements
   recommended_routings?: string[];
   routing_reasoning?: string[];
@@ -149,6 +179,8 @@ interface AnalysisResult {
     planar_faces?: number;
     complexity_score?: number;
   };
+  // 🆕 ML-based feature recognition
+  ml_features?: MLFeatures;
 }
 
 interface Vector3 {

@@ -4,6 +4,9 @@ FROM continuumio/miniconda3:24.7.1-0
 WORKDIR /app
 COPY requirements.txt .
 COPY app.py .
+COPY ml_inference.py .
+COPY uvnet_model.py .
+COPY occwl_stub.py .
 
 # Install pythonocc-core and numpy from conda-forge (precompiled)
 RUN conda install -y -c conda-forge pythonocc-core=7.7.2 numpy && \
