@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,6 +20,9 @@ Deno.serve(async (req) => {
       {
         global: {
           headers: { Authorization: req.headers.get('Authorization')! },
+        },
+        auth: {
+          persistSession: false,
         },
       }
     );
