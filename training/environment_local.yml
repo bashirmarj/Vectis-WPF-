@@ -20,8 +20,8 @@ dependencies:
   - conda-forge::pytorch-lightning=2.0.0
   - conda-forge::torchmetrics=0.11.4
 
-  # Deep Graph Library with CUDA support
-  - dglteam::dgl-cuda11.8=1.1.0
+  # Deep Graph Library with CUDA support (installed via pip below)
+  # - dglteam::dgl-cuda11.8=1.1.0  # Not available via conda
 
   # CAD geometry library
   - lambouj::occwl=1.0
@@ -55,3 +55,4 @@ dependencies:
     - psutil==5.9.5          # GPU monitoring
     - colorama==0.4.6        # Colored terminal output
     - gputil==1.4.0          # GPU utilities
+    - dgl -f https://data.dgl.ai/wheels/cu118/repo.html  # DGL with CUDA 11.8 support
