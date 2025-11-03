@@ -303,7 +303,8 @@ class Segmentation(pl.LightningModule):
         labels = inputs.ndata["y"]
         logits = self.model(inputs)
         loss = F.cross_entropy(logits, labels, reduction="mean")
-        self.log("train_loss", loss, on_step=False, on_epoch=True, sync_dist=True)
+        batch_size = inputs.batch_size
+        self.log("train_loss", loss, on_step=False, on_epoch=True, sync_dist=True, batch_size=batch_size)
         preds = F.softmax(logits, dim=-1)
         self.train_iou(preds, labels)
         self.train_accuracy(preds, labels)
@@ -320,7 +321,8 @@ class Segmentation(pl.LightningModule):
         labels = inputs.ndata["y"]
         logits = self.model(inputs)
         loss = F.cross_entropy(logits, labels, reduction="mean")
-        self.log("val_loss", loss, on_step=False, on_epoch=True, sync_dist=True)
+        batch_size = inputs.batch_size
+        self.log("val_loss", loss, on_step=False, on_epoch=True, sync_dist=True, batch_size=batch_size)
         preds = F.softmax(logits, dim=-1)
         self.val_iou(preds, labels)
         self.val_accuracy(preds, labels)
@@ -337,7 +339,8 @@ class Segmentation(pl.LightningModule):
         labels = inputs.ndata["y"]
         logits = self.model(inputs)
         loss = F.cross_entropy(logits, labels, reduction="mean")
-        self.log("test_loss", loss, on_step=False, on_epoch=True, sync_dist=True)
+        batch_size = inputs.batch_size
+        self.log("test_loss", loss, on_step=False, on_epoch=True, sync_dist=True, batch_size=batch_size)
         preds = F.softmax(logits, dim=-1)
         self.test_iou(preds, labels)
         self.test_accuracy(preds, labels)
