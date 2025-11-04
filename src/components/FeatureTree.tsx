@@ -1,221 +1,298 @@
+# Updated Frontend Component - Feature Tree
+# Displays feature instances instead of raw face counts
+# Replaces FeatureTree.tsx
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  ChevronRight,
-  ChevronDown,
-  Circle,
-  Box,
-  Cylinder,
-  Wrench,
-  Drill,
-  AlertCircle,
-  Brain,
-  Layers,
-} from 'lucide-react';
+import { ChevronDown, AlertCircle } from 'lucide-react';
 
-// TypeScript Interfaces
-interface ManufacturingFeature {
-  diameter?: number;
-  radius?: number;
-  depth?: number;
-  area?: number;
-  position?: [number, number, number];
-  axis?: [number, number, number];
+interface FeatureParameter {
+  [key: string]: number | null;
 }
 
-interface FeatureSummary {
-  through_holes: number;
-  blind_holes: number;
-  bores: number;
-  bosses: number;
-  total_holes: number;
-  fillets: number;
-  planar_faces: number;
-  complexity_score: number;
-}
-
-interface ManufacturingFeatures {
-  through_holes?: ManufacturingFeature[];
-  blind_holes?: ManufacturingFeature[];
-  bores?: ManufacturingFeature[];
-  bosses?: ManufacturingFeature[];
-  planar_faces?: ManufacturingFeature[];
-  fillets?: ManufacturingFeature[];
-  complex_surfaces?: ManufacturingFeature[];
+interface FeatureInstance {
+  instance_id: number;
+  feature_type: string;
+  face_ids: number[];
+  confidence: number;
+  geometric_primitive: string | null;
+  parameters: FeatureParameter;
+  bounding_box: object | null;
 }
 
 interface MLFeatures {
+  feature_instances: FeatureInstance[];
+  feature_summary: {
+    [key: string]: number;
+  };
+  num_features_detected: number;
+  num_faces_analyzed: number;
   face_predictions: Array<{
     face_id: number;
     predicted_class: string;
     confidence: number;
-    probabilities: number[];
   }>;
-  feature_summary: {
-    total_faces: number;
-    [key: string]: number;
-  };
+  clustering_method?: string;
+  inference_time_sec?: number;
 }
 
-interface FeatureTreeProps {
-  mlFeatures?: MLFeatures | null;
+interface Props {
+  mlFeatures: MLFeatures;
 }
 
-const FeatureTree: React.FC<FeatureTreeProps> = ({ mlFeatures }) => {
-  // State for expandable sections
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['mlFeatures'])
-  );
+export const FeatureTree: React.FC<Props> = ({ mlFeatures }) => {
+  const [expandedInstances, setExpandedInstances] = useState<Set<number>>(new Set());
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
 
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
-
-  const expandAll = () => {
-    setExpandedSections(new Set(['mlFeatures']));
-  };
-
-  const collapseAll = () => {
-    setExpandedSections(new Set());
-  };
-
-  // Helper to format numbers
-  const formatNumber = (num: number | undefined, decimals: number = 2): string => {
-    if (num === undefined || num === null) return 'N/A';
-    return num.toFixed(decimals);
-  };
-
-  // Get complexity color
-  const getComplexityColor = (score: number): string => {
-    if (score <= 3) return 'text-green-600';
-    if (score <= 6) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getComplexityBadge = (score: number): string => {
-    if (score <= 3) return 'bg-green-100 text-green-800';
-    if (score <= 6) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
-  };
-
-  const getFeatureColor = (featureType: string): string => {
-    const colorMap: Record<string, string> = {
-      stock: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
-      rectangular_through_slot: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      chamfer: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      triangular_pocket: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      '6sides_passage': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      slanted_through_step: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
-      triangular_through_slot: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
-      rectangular_blind_slot: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-      triangular_blind_step: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
-      rectangular_blind_step: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-      rectangular_passage: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
-      '2sides_through_step': 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
-      '6sides_pocket': 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
-      triangular_passage: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-      rectangular_pocket: 'bg-lime-100 text-lime-800 dark:bg-lime-900/30 dark:text-lime-300',
-      rectangular_through_step: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/30 dark:text-fuchsia-300',
-    };
-    return colorMap[featureType] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-  };
-
-  // If no ML data, show empty state
-  if (!mlFeatures) {
+  if (!mlFeatures || !mlFeatures.feature_instances) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-600" />
-            ML Feature Recognition
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">No ML feature data available for this part.</p>
-        </CardContent>
-      </Card>
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-600" />
+          <span className="text-sm text-amber-700">No feature data available</span>
+        </div>
+      </div>
     );
   }
 
-  // Render ML features
+  const toggleExpanded = (instanceId: number) => {
+    const newExpanded = new Set(expandedInstances);
+    if (newExpanded.has(instanceId)) {
+      newExpanded.delete(instanceId);
+    } else {
+      newExpanded.add(instanceId);
+    }
+    setExpandedInstances(newExpanded);
+  };
+
+  const getFeatureColor = (featureType: string): string => {
+    const colors: { [key: string]: string } = {
+      hole: 'bg-blue-100 text-blue-900',
+      boss: 'bg-green-100 text-green-900',
+      pocket: 'bg-purple-100 text-purple-900',
+      slot: 'bg-orange-100 text-orange-900',
+      chamfer: 'bg-red-100 text-red-900',
+      fillet: 'bg-cyan-100 text-cyan-900',
+      groove: 'bg-indigo-100 text-indigo-900',
+      step: 'bg-yellow-100 text-yellow-900',
+      default: 'bg-gray-100 text-gray-900',
+    };
+    return colors[featureType] || colors['default'];
+  };
+
+  const getConfidenceColor = (confidence: number): string => {
+    if (confidence >= 0.9) return 'text-green-600';
+    if (confidence >= 0.75) return 'text-blue-600';
+    if (confidence >= 0.6) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   return (
-    <div className="space-y-4">
-      {/* ML Features Detailed View */}
-      {mlFeatures && (
-          <Card>
-            <CardHeader 
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => toggleSection('mlFeatures')}
+    <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+      {/* Header */}
+      <div className="border-b pb-3">
+        <h3 className="text-lg font-semibold text-gray-900">
+          🤖 ML Feature Recognition (NEW)
+        </h3>
+        <p className="text-sm text-gray-600 mt-1">
+          {mlFeatures.num_features_detected} feature instances detected from{' '}
+          {mlFeatures.num_faces_analyzed} faces
+          {mlFeatures.inference_time_sec && (
+            <span className="ml-2 text-gray-500">
+              ({mlFeatures.inference_time_sec}s)
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* Feature Summary Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-blue-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-blue-900">
+            {mlFeatures.num_features_detected}
+          </div>
+          <div className="text-xs text-blue-700">Feature Instances</div>
+        </div>
+        <div className="bg-purple-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-purple-900">
+            {mlFeatures.num_faces_analyzed}
+          </div>
+          <div className="text-xs text-purple-700">Faces Analyzed</div>
+        </div>
+        <div className="bg-green-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-green-900">
+            {(
+              mlFeatures.feature_instances.reduce(
+                (sum, inst) => sum + inst.confidence,
+                0
+              ) / mlFeatures.feature_instances.length || 0
+            ).toFixed(2)}
+          </div>
+          <div className="text-xs text-green-700">Avg Confidence</div>
+        </div>
+      </div>
+
+      {/* Feature Distribution */}
+      {Object.keys(mlFeatures.feature_summary).length > 1 && (
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">
+            Feature Distribution
+          </h4>
+          <div className="grid grid-cols-4 gap-2">
+            {Object.entries(mlFeatures.feature_summary).map(([featureType, count]) => {
+              if (featureType === 'total_features' || count === 0) return null;
+              return (
+                <div
+                  key={featureType}
+                  className={`px-2 py-1 rounded text-xs font-medium ${getFeatureColor(
+                    featureType
+                  )}`}
+                >
+                  {featureType}: {count}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Feature Instances List */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold text-gray-700">Feature Instances</h4>
+        {mlFeatures.feature_instances.length === 0 ? (
+          <div className="p-3 bg-gray-50 rounded text-sm text-gray-600">
+            No features detected. Part may be a simple geometric shape.
+          </div>
+        ) : (
+          mlFeatures.feature_instances.map((instance) => (
+            <div
+              key={instance.instance_id}
+              className="border border-gray-200 rounded-lg overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="w-5 h-5 text-purple-600" />
-                  ML Feature Recognition (16 MFCAD Classes)
-                </CardTitle>
-                {expandedSections.has('mlFeatures') ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-              </div>
-            </CardHeader>
-            {expandedSections.has('mlFeatures') && (
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Summary Stats */}
-                  <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-                      {mlFeatures.feature_summary.total_faces}
+              {/* Instance Header */}
+              <button
+                onClick={() => toggleExpanded(instance.instance_id)}
+                className="w-full px-3 py-2 hover:bg-gray-50 flex items-center justify-between text-left"
+              >
+                <div className="flex items-center gap-2 flex-1">
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      expandedInstances.has(instance.instance_id)
+                        ? 'rotate-0'
+                        : '-rotate-90'
+                    }`}
+                  />
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-semibold ${getFeatureColor(
+                      instance.feature_type
+                    )}`}
+                  >
+                    {instance.feature_type}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    ID: {instance.instance_id}
+                  </span>
+                </div>
+                <span
+                  className={`text-sm font-medium ${getConfidenceColor(
+                    instance.confidence
+                  )}`}
+                >
+                  {(instance.confidence * 100).toFixed(1)}%
+                </span>
+              </button>
+
+              {/* Expanded Details */}
+              {expandedInstances.has(instance.instance_id) && (
+                <div className="border-t bg-gray-50 px-3 py-2 space-y-2">
+                  {/* Geometric Primitive */}
+                  {instance.geometric_primitive && (
+                    <div className="flex justify-between">
+                      <span className="text-xs text-gray-600">
+                        Geometric Primitive:
+                      </span>
+                      <span className="text-xs font-medium text-gray-900">
+                        {instance.geometric_primitive}
+                      </span>
                     </div>
-                    <div className="text-sm text-muted-foreground">Total Faces Analyzed</div>
+                  )}
+
+                  {/* Face IDs */}
+                  <div className="flex justify-between">
+                    <span className="text-xs text-gray-600">Composed of Faces:</span>
+                    <span className="text-xs font-mono text-gray-900">
+                      {instance.face_ids.join(', ')}
+                    </span>
                   </div>
 
-                  {/* Feature Type Distribution */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm text-muted-foreground">Feature Distribution:</h4>
-                    {Object.entries(mlFeatures.feature_summary)
-                      .filter(([key]) => key !== 'total_faces')
-                      .sort(([, a], [, b]) => (b as number) - (a as number))
-                      .map(([featureType, count]) => (
-                        <div key={featureType} className="flex items-center justify-between p-2 rounded hover:bg-accent/50">
-                          <span className="capitalize text-sm">{featureType.replace(/_/g, ' ')}</span>
-                          <Badge className={getFeatureColor(featureType)}>
-                            {count as number}
-                          </Badge>
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* Individual Face Predictions */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-sm text-muted-foreground">Face-Level Predictions:</h4>
-                    <div className="max-h-64 overflow-y-auto space-y-1">
-                      {mlFeatures.face_predictions.map((pred, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 bg-accent/30 rounded text-xs">
-                          <span>Face {pred.face_id}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={getFeatureColor(pred.predicted_class)}>
-                              {pred.predicted_class.replace(/_/g, ' ')}
-                            </Badge>
-                            <span className="text-muted-foreground">
-                              {(pred.confidence * 100).toFixed(1)}%
+                  {/* Parameters */}
+                  {Object.keys(instance.parameters).length > 0 && (
+                    <div className="border-t pt-2 mt-2">
+                      <p className="text-xs font-semibold text-gray-700 mb-1">
+                        Parameters:
+                      </p>
+                      <div className="grid grid-cols-2 gap-1">
+                        {Object.entries(instance.parameters).map(([key, value]) => (
+                          <div key={key} className="text-xs">
+                            <span className="text-gray-600">{key}:</span>
+                            <span className="ml-1 font-medium text-gray-900">
+                              {value !== null ? value : 'N/A'}
                             </span>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-              </CardContent>
-            )}
-          </Card>
+              )}
+            </div>
+          ))
         )}
       </div>
-    );
+
+      {/* Debug Information */}
+      <button
+        onClick={() => setShowDebugInfo(!showDebugInfo)}
+        className="text-xs text-gray-500 hover:text-gray-700 mt-4"
+      >
+        {showDebugInfo ? '▼' : '▶'} Debug Information
+      </button>
+
+      {showDebugInfo && (
+        <div className="bg-gray-50 border border-gray-200 rounded p-3 space-y-2">
+          <div className="text-xs">
+            <p className="text-gray-600">
+              <strong>Clustering Method:</strong>{' '}
+              {mlFeatures.clustering_method || 'N/A'}
+            </p>
+            <p className="text-gray-600">
+              <strong>Total Face Predictions:</strong>{' '}
+              {mlFeatures.face_predictions.length}
+            </p>
+          </div>
+
+          {/* Raw Face Predictions (collapsed) */}
+          <details className="text-xs">
+            <summary className="cursor-pointer text-gray-700 hover:text-gray-900">
+              Show raw face predictions
+            </summary>
+            <div className="mt-2 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded p-2">
+              {mlFeatures.face_predictions.slice(0, 20).map((pred) => (
+                <div key={pred.face_id} className="py-1 text-gray-600">
+                  Face {pred.face_id}: <strong>{pred.predicted_class}</strong>{' '}
+                  ({(pred.confidence * 100).toFixed(1)}%)
+                </div>
+              ))}
+              {mlFeatures.face_predictions.length > 20 && (
+                <div className="text-gray-500 italic">
+                  ... and {mlFeatures.face_predictions.length - 20} more
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default FeatureTree;
