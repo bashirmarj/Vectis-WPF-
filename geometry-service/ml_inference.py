@@ -318,7 +318,7 @@ FEATURE_CLASSES = [
     'boss_with_taper'
 ]
 
-def predict_features_v2(shape, device='cpu'):
+def predict_features(shape, device='cpu'):
     """
     NEW: ML-based feature recognition with feature grouping.
     
