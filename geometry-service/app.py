@@ -1961,9 +1961,8 @@ def analyze_cad():
                 logger.info("🤖 Running ML-based feature recognition...")
                 start_time = time.time()
                 
-                # Use timeout protection (25s max)
-                with timeout_context(25):
-                    ml_features = predict_features(shape)
+                # Call ML inference directly (timeout removed due to Flask threading)
+                ml_features = predict_features(shape)
                 
                 elapsed = time.time() - start_time
                 
