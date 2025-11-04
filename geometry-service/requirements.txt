@@ -10,8 +10,8 @@ dgl==1.1.2
 pytorch-lightning==2.0.9
 PyYAML==6.0.1
 deprecate==1.0.5
-torch-geometric==2.3.0      ← CRITICAL
-scikit-learn==1.3.0         ← Recommended
-scipy==1.11.2               ← Recommended
-requests==2.31.0            ← Recommended
-OCP==7.7.0                  ← Recommended
+torch-geometric==2.3.0
+scikit-learn==1.3.0
+scipy==1.11.2
+requests==2.31.0
+OCP==7.7.0
