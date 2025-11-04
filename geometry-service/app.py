@@ -71,7 +71,7 @@ except ImportError as e:
 try:
     from ml_inference import predict_features, validate_shape
     ML_VERSION = "v2"
-    logger.info("✅ ML inference v2 (with feature grouping) loaded")
+    logger.info("✅ ML inference (with feature grouping) loaded")
 except ImportError:
     ML_VERSION = None
 
@@ -1813,18 +1813,18 @@ def analyze_cad():
         ml_features = None
         
         if ML_VERSION == "v2":
-            # NEW: Use enhanced ML v2 with built-in feature grouping
+            # NEW: Use enhanced ML with built-in feature grouping
             logger.info("🤖 Running ML-based feature recognition (v2 with feature grouping)...")
             try:
                 ml_features = predict_features(shape)
-                logger.info(f"✅ ML v2 inference complete")
+                logger.info(f"✅ ML  inference complete")
                 logger.info(f"   Faces: {ml_features.get('num_faces_analyzed', '?')}")
                 logger.info(f"   Features: {ml_features.get('num_features_detected', '?')}")
             except TimeoutError:
                 logger.error("⏱️ ML inference timeout")
                 ml_features = {"error": "ML inference timeout"}
             except Exception as e:
-                logger.error(f"❌ ML v2 failed: {e}")
+                logger.error(f"❌ ML  failed: {e}")
                 ml_features = {"error": str(e)}
         
         elif ML_AVAILABLE:
