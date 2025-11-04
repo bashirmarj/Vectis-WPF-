@@ -313,24 +313,24 @@ def predict_features(shape):
                 probabilities = torch.softmax(logits, dim=-1)
                 predictions = torch.argmax(probabilities, dim=-1)
             logger.info("✅ Inference complete")
-        
-        # Format results
-        face_predictions = []
-        feature_counts = {cls: 0 for cls in FEATURE_CLASSES}
-        
-        for face_id, (pred, probs) in enumerate(zip(predictions, probabilities)):
-            pred_class = FEATURE_CLASSES[pred.item()]
-            confidence = probs[pred].item()
             
-            face_predictions.append({
-                "face_id": face_id,
-                "predicted_class": pred_class,
-                "confidence": round(confidence, 3),
-                "probabilities": [round(p.item(), 3) for p in probs]
-            })
+            # Format results
+            face_predictions = []
+            feature_counts = {cls: 0 for cls in FEATURE_CLASSES}
             
-            feature_counts[pred_class] += 1
-        
+            for face_id, (pred, probs) in enumerate(zip(predictions, probabilities)):
+                pred_class = FEATURE_CLASSES[pred.item()]
+                confidence = probs[pred].item()
+                
+                face_predictions.append({
+                    "face_id": face_id,
+                    "predicted_class": pred_class,
+                    "confidence": round(confidence, 3),
+                    "probabilities": [round(p.item(), 3) for p in probs]
+                })
+                
+                feature_counts[pred_class] += 1
+            
             logger.info(f"✅ ML inference complete: {len(face_predictions)} faces analyzed")
             
             return {
