@@ -30,8 +30,8 @@ from OCC.Core.GCPnts import (
     GCPnts_UniformDeflection,
 )
 
-import app.occwl.geometry.geom_utils as geom_utils
-import app.occwl.vertex
+import occwl.geometry.geom_utils as geom_utils
+import occwl.vertex
 from occwl.geometry.interval import Interval
 from occwl.shape import Shape
 from occwl.base import VertexContainerMixin, BoundingBoxMixin

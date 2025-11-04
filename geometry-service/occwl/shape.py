@@ -29,7 +29,7 @@ from OCC.Extend.ShapeFactory import (
 )
 from OCC.Core.BRepCheck import BRepCheck_Analyzer
 from OCC.Extend import TopologyUtils
-import app.occwl.geometry.geom_utils as geom_utils
+import occwl.geometry.geom_utils as geom_utils
 
 class ClosestPointData:
     """
