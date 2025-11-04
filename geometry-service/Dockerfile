@@ -6,7 +6,8 @@ COPY requirements.txt .
 COPY app.py .
 COPY ml_inference.py .
 COPY uvnet_model.py .
-COPY occwl_stub.py .
+COPY occwl/ ./occwl/
+COPY util.py .
 
 # Install pythonocc-core and numpy from conda-forge (precompiled)
 RUN conda install -y -c conda-forge pythonocc-core=7.7.2 numpy && \

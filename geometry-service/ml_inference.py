@@ -142,15 +142,18 @@ def load_uvnet_model():
 
 def build_graph_from_step(shape):
     """
-    Convert OpenCASCADE shape to DGL graph format
-    Ported from References/cad-feature-detection-master/backend/app/build_graph.py
+    Build graph from STEP shape using EXACT training logic
+    EXACT copy from References/cad-feature-detection-master/backend/app/build_graph.py
     """
     try:
-        _, dgl = _import_ml_libs()
-        from occwl_stub import face_adjacency, uvgrid, ugrid, Solid
+        torch, dgl = _import_ml_libs()
+        from occwl.graph import face_adjacency
+        from occwl.uvgrid import uvgrid, ugrid
+        from occwl.solid import Solid
         
-        # Build face adjacency graph
-        graph = face_adjacency(Solid(shape))
+        # Build face adjacency graph with B-rep entities
+        solid = Solid(shape)
+        graph = face_adjacency(solid)
         
         # Compute UV-grids for faces (10x10 sampling)
         graph_face_feat = []
@@ -160,12 +163,12 @@ def build_graph_from_step(shape):
             # Sample points, normals, visibility
             points = uvgrid(face, method="point", num_u=10, num_v=10)
             normals = uvgrid(face, method="normal", num_u=10, num_v=10)
-            visibility = uvgrid(face, method="visibility_status", num_u=10, num_v=10)
+            visibility_status = uvgrid(face, method="visibility_status", num_u=10, num_v=10)
             
-            # Mask: 0=Inside, 2=Boundary
-            mask = np.logical_or(visibility == 0, visibility == 2)
+            # Mask: 0=Inside, 2=Boundary (ignore 1=Outside)
+            mask = np.logical_or(visibility_status == 0, visibility_status == 2)
             
-            # Concatenate features
+            # Concatenate channel-wise: [H, W, 7] = [points(3) + normals(3) + mask(1)]
             face_feat = np.concatenate((points, normals, mask), axis=-1)
             graph_face_feat.append(face_feat)
         
@@ -175,11 +178,16 @@ def build_graph_from_step(shape):
         graph_edge_feat = []
         for edge_idx in graph.edges:
             edge = graph.edges[edge_idx]["edge"]
+            
+            # Ignore degenerate edges (e.g., at apex of cone)
             if not edge.has_curve():
                 continue
             
+            # Sample points and tangents
             points = ugrid(edge, method="point", num_u=10)
             tangents = ugrid(edge, method="tangent", num_u=10)
+            
+            # Concatenate: [L, 6] = [points(3) + tangents(3)]
             edge_feat = np.concatenate((points, tangents), axis=-1)
             graph_edge_feat.append(edge_feat)
         
@@ -189,55 +197,53 @@ def build_graph_from_step(shape):
         edges = list(graph.edges)
         src = [e[0] for e in edges]
         dst = [e[1] for e in edges]
+        n_nodes = len(graph.nodes)
         
-        dgl_graph = dgl.graph((src, dst), num_nodes=len(graph.nodes))
-        
-        # Add features to graph
-        torch, _ = _import_ml_libs()
+        dgl_graph = dgl.graph((src, dst), num_nodes=n_nodes)
         dgl_graph.ndata["x"] = torch.tensor(graph_face_feat, dtype=torch.float32)
         dgl_graph.edata["x"] = torch.tensor(graph_edge_feat, dtype=torch.float32)
         
-        logger.info(f"📊 Built DGL graph: {len(graph.nodes)} faces, {len(edges)} edges")
+        logger.info(f"📊 Built DGL graph: {n_nodes} faces, {len(edges)} edges")
         return dgl_graph
         
     except Exception as e:
         logger.error(f"❌ Failed to build graph: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
 
 
 def preprocess_graph(graph):
     """
-    Preprocess graph features (centering and scaling)
-    Based on References/cad-feature-detection-master/feature_detector/model/code/inference.py
+    Preprocess graph using EXACT training logic
+    EXACT copy from References/cad-feature-detection-master/feature_detector/model/code/inference.py
     """
     try:
         torch, _ = _import_ml_libs()
+        import util
         
-        # Center node features
-        node_features = graph.ndata["x"]
-        node_mean = node_features.mean(dim=0, keepdim=True)
-        node_features = node_features - node_mean
+        # Center and scale UV-grids using training preprocessing
+        graph.ndata["x"], center, scale = util.center_and_scale_uvgrid(
+            graph.ndata["x"], return_center_scale=True
+        )
         
-        # Scale by bounding box diagonal
-        bbox_min = node_features.min(dim=0)[0]
-        bbox_max = node_features.max(dim=0)[0]
-        diagonal = torch.norm(bbox_max - bbox_min)
-        node_features = node_features / diagonal
+        # Apply same transform to edge features (points only, first 3 channels)
+        graph.edata["x"][..., :3] -= center
+        graph.edata["x"][..., :3] *= scale
         
-        graph.ndata["x"] = node_features
+        # Permute to match model input format
+        # Node features: [N, H, W, C] -> [N, C, H, W]
+        graph.ndata["x"] = graph.ndata["x"].permute(0, 3, 1, 2).type(torch.FloatTensor)
         
-        # Center edge features
-        if graph.edata["x"].shape[0] > 0:
-            edge_features = graph.edata["x"]
-            edge_mean = edge_features.mean(dim=0, keepdim=True)
-            edge_features = edge_features - edge_mean
-            edge_features = edge_features / diagonal
-            graph.edata["x"] = edge_features
+        # Edge features: [E, L, C] -> [E, C, L]
+        graph.edata["x"] = graph.edata["x"].permute(0, 2, 1).type(torch.FloatTensor)
         
         return graph
         
     except Exception as e:
         logger.error(f"❌ Failed to preprocess graph: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return graph
 
 

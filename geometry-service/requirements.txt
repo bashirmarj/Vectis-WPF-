@@ -8,3 +8,4 @@ python-dotenv==1.0.1
 torch==2.0.1
 dgl==1.1.2
 pytorch-lightning==2.0.9
+PyYAML==6.0.1
