@@ -69,7 +69,7 @@ except ImportError as e:
 
 # === NEW: Enhanced ML Inference Imports ===
 try:
-    from ml_inference_v2 import predict_features, validate_shape
+    from ml_inference import predict_features, validate_shape
     ML_VERSION = "v2"
     logger.info("✅ ML inference v2 (with feature grouping) loaded")
 except ImportError:
@@ -183,7 +183,7 @@ def enhance_ml_features_with_grouping(ml_features, shape):
     """
     NEW: Convert face-level ML predictions to feature instances (solves face vs instance issue).
     
-    Only called if ml_inference_v1 is used. If ml_inference_v2 is available, 
+    Only called if ml_inference_v1 is used. If ml_inference is available, 
     this grouping happens automatically.
     """
     
