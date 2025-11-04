@@ -156,10 +156,21 @@ def build_graph_from_step(shape):
             from occwl.graph import face_adjacency
             from occwl.uvgrid import uvgrid, ugrid
             from occwl.solid import Solid
+            from OCC.Extend.TopologyUtils import TopologyExplorer
+            
+            # Extract the first solid from the shape (handles compounds)
+            t = TopologyExplorer(shape)
+            solids = list(t.solids())
+            if not solids:
+                logger.error("❌ No solids found in shape")
+                return None
+            
+            # Use the first solid
+            solid_shape = solids[0]
             
             logger.info(f"🔗 Building face adjacency graph...")
             # Build face adjacency graph with B-rep entities
-            solid = Solid(shape)
+            solid = Solid(solid_shape)
             graph = face_adjacency(solid)
             num_faces = len(graph.nodes)
             logger.info(f"   Graph: {num_faces} faces, {len(graph.edges)} edges")
