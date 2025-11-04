@@ -203,8 +203,6 @@ export function PartDetailCustomer({
 
                   {hasFeatures ? (
                   <FeatureTree
-                    features={file.analysis?.manufacturing_features || file.analysis?.detected_features}
-                    featureSummary={file.analysis?.feature_summary || file.analysis?.feature_tree}
                     mlFeatures={file.analysis?.ml_features}
                   />
                   ) : (

@@ -36,12 +36,7 @@ interface LineItem {
 }
 
 interface FeatureTree {
-  manufacturing_features?: any;
-  feature_summary?: any;
   ml_features?: any;
-  // Support old format for backward compatibility
-  oriented_sections?: any[];
-  common_dimensions?: any;
 }
 
 interface PartDetailTabsProps {
@@ -107,12 +102,9 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
             </div>
           </TabsContent>
 
-          {/* Features Tab - UPDATED TO USE NEW PROPS */}
+          {/* Features Tab - ML Only */}
           <TabsContent value="features" className="mt-4">
             <FeatureTree
-              features={featureTree?.manufacturing_features}
-              featureSummary={featureTree?.feature_summary}
-              featureTree={featureTree || undefined}
               mlFeatures={featureTree?.ml_features}
             />
           </TabsContent>

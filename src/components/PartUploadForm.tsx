@@ -27,9 +27,6 @@ interface FileWithQuantity {
     confidence?: number;
     method?: string;
     triangle_count?: number;
-    detected_features?: Record<string, boolean>;
-    manufacturing_features?: any;
-    feature_summary?: any;
     ml_features?: any;
     recommended_processes?: string[];
     routing_reasoning?: string[];

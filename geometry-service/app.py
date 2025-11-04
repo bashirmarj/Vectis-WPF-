@@ -1921,7 +1921,6 @@ def analyze_cad():
 
         logger.info("🔍 Analyzing BREP geometry...")
         exact_props = calculate_exact_volume_and_area(shape)
-        manufacturing_features = recognize_manufacturing_features(shape)
         
         logger.info("🎨 Generating display mesh...")
         mesh_data = tessellate_shape(shape)
@@ -1931,16 +1930,25 @@ def analyze_cad():
         mesh_data["vertex_colors"] = vertex_colors
         mesh_data["face_classifications"] = face_classifications
         
-        # 🆕 ML-based feature recognition
+        # 🆕 ML-based feature recognition (REQUIRED)
         ml_features = None
         if ML_AVAILABLE:
             try:
                 logger.info("🤖 Running ML-based feature recognition...")
                 ml_features = predict_features(shape)
                 if ml_features:
-                    logger.info(f"✅ ML detected {ml_features['feature_summary']['total_faces']} faces")
+                    logger.info(f"✅ ML detected {ml_features['feature_summary']['total_faces']} faces with {len([k for k, v in ml_features['feature_summary'].items() if k != 'total_faces' and v > 0])} unique feature types")
             except Exception as e:
-                logger.warning(f"⚠️ ML inference failed (falling back to heuristics): {e}")
+                logger.error(f"❌ ML inference failed: {e}")
+                return jsonify({
+                    "error": "ML inference required but failed",
+                    "details": str(e)
+                }), 500
+        else:
+            logger.error("❌ ML inference module not available")
+            return jsonify({
+                "error": "ML inference not available"
+            }), 500
         
         logger.info("📐 Extracting and classifying BREP edges (UNIFIED SINGLE-PASS)...")
         # NEW: Single-pass extraction with guaranteed matching + UIso curves
@@ -1958,28 +1966,28 @@ def analyze_cad():
         mesh_data["tagged_edges"] = edge_result["tagged_edges"]
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
 
-        is_cylindrical = len(manufacturing_features['holes']) > 0 or len(manufacturing_features['bosses']) > 0
-        has_flat_surfaces = len(manufacturing_features['planar_faces']) > 0
+        # Calculate complexity from ML features if available
+        complexity_score = 5  # Default medium complexity
+        is_cylindrical = False
+        has_flat_surfaces = False
+        total_faces = 0
         
-        # Calculate complexity based on actual features
-        through_holes = len(manufacturing_features.get('through_holes', []))
-        blind_holes = len(manufacturing_features.get('blind_holes', []))
-        bores = len(manufacturing_features.get('bores', []))
-        bosses = len(manufacturing_features.get('bosses', []))
-        fillets = len(manufacturing_features.get('fillets', []))
-        
-        total_features = through_holes + blind_holes + bores + bosses + fillets
-        
-        cylindrical_faces = len(manufacturing_features['holes']) + len(manufacturing_features['bosses'])
-        planar_faces = len(manufacturing_features['planar_faces'])
-        complexity_score = min(10, int(
-            (total_features / 5) +  # Each feature adds to complexity
-            (through_holes * 0.5) +  # Through holes are moderately complex
-            (blind_holes * 0.3) +    # Blind holes slightly less
-            (bores * 0.2) +          # Bores are simple
-            (bosses * 0.4) +         # Bosses add complexity
-            (fillets * 0.1)          # Fillets add minor complexity
-        ))
+        if ml_features:
+            # Calculate complexity based on feature diversity and count
+            feature_counts = ml_features['feature_summary']
+            total_faces = feature_counts.get('total_faces', 0)
+            unique_feature_types = len([v for k, v in feature_counts.items() if k != 'total_faces' and v > 0])
+            
+            # Score based on number of unique features and total faces
+            complexity_score = min(10, int(
+                (unique_feature_types / 2) +  # More feature types = more complex
+                (total_faces / 10)      # More faces = more complex
+            ))
+            
+            # Detect characteristics from ML features
+            cylindrical_features = ['rectangular_through_slot', 'triangular_through_slot', 'rectangular_blind_slot']
+            is_cylindrical = any(feature_counts.get(f, 0) > 0 for f in cylindrical_features)
+            has_flat_surfaces = feature_counts.get('stock', 0) > 0
 
         bbox = Bnd_Box()
         brepbndlib.Add(shape, bbox)
@@ -1995,17 +2003,6 @@ def analyze_cad():
             'exact_volume': exact_props['volume'],
             'exact_surface_area': exact_props['surface_area'],
             'center_of_mass': exact_props['center_of_mass'],
-            'manufacturing_features': manufacturing_features,
-            'feature_summary': {
-                'through_holes': len(manufacturing_features.get('through_holes', [])),
-                'blind_holes': len(manufacturing_features.get('blind_holes', [])),
-                'bores': len(manufacturing_features.get('bores', [])),
-                'bosses': len(manufacturing_features.get('bosses', [])),
-                'total_holes': through_holes + blind_holes,
-                'planar_faces': planar_faces,
-                'fillets': fillets,
-                'complexity_score': complexity_score
-            },
             'mesh_data': {
                 'vertices': mesh_data['vertices'],
                 'indices': mesh_data['indices'],
@@ -2028,10 +2025,8 @@ def analyze_cad():
             'part_width_cm': part_width_cm,
             'part_height_cm': part_height_cm,
             'part_depth_cm': part_depth_cm,
-            'total_faces': total_features,
-            'planar_faces': planar_faces,
-            'cylindrical_faces': cylindrical_faces,
-            'analysis_type': 'dual_representation',
+            'total_faces': total_faces,
+            'analysis_type': 'ml_based',
             'quotation_ready': True,
             'status': 'success',
             'confidence': 0.98,
