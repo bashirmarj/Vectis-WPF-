@@ -59,7 +59,7 @@ def validate_shape(shape):
 # GRAPH CONSTRUCTION WITH ADAPTIVE RESOLUTION
 # ============================================================================
 
-def build_graph_from_step_v2(shape):
+def build_graph_from_step(shape):
     """
     Build graph from STEP file with adaptive UV-grid resolution.
     Faster than v1 (saves 30-40% processing time).
@@ -347,7 +347,7 @@ def predict_features(shape, device='cpu'):
         
         # Build graph
         logger.info("🔗 Building computation graph...")
-        g, nx_graph, face_data = build_graph_from_step_v2(shape)
+        g, nx_graph, face_data = build_graph_from_step(shape)
         
         num_faces = g.number_of_nodes()
         logger.info(f"   Faces to analyze: {num_faces}")
