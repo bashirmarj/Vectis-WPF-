@@ -296,15 +296,8 @@ def predict_features(shape):
                 logger.error("❌ Graph construction returned None")
                 return None
         
-            # Preprocess
+            # Preprocess (includes permutation to [N, C, H, W] and [E, C, L])
             graph = preprocess_graph(graph)
-            
-            # Permute features to match model input format
-            # Node features: [N, H, W, C] -> [N, C, H, W]
-            graph.ndata["x"] = graph.ndata["x"].permute(0, 3, 1, 2)
-            # Edge features: [E, L, C] -> [E, C, L]
-            if graph.edata["x"].shape[0] > 0:
-                graph.edata["x"] = graph.edata["x"].permute(0, 2, 1)
             
             # Run inference
             logger.info("🔮 Running inference on graph...")
