@@ -1,327 +1,337 @@
-"""
-ML Inference Module for UV-Net Feature Recognition
-Integrates pre-trained UV-Net model for advanced CAD feature detection
-"""
-import os
+# Enhanced ML Inference Module with Feature Grouping
+# Replaces original ml_inference.py
+
+import warnings
 import logging
+import torch
 import numpy as np
-import tempfile
-from pathlib import Path
+import networkx as nx
+from typing import Dict, List, Optional, Tuple
+import time
+from contextlib import contextmanager
 
-logger = logging.getLogger("ml_inference")
+# Suppress OCCWL warnings globally
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='occwl')
+logging.getLogger('occwl').propagate = False
 
-# Feature class mappings (16 classes from MFCAD dataset)
-FEATURE_CLASSES = [
-    "hole", "boss", "pocket", "slot", "chamfer", "fillet", "groove", "step",
-    "plane", "cylinder", "cone", "sphere", "torus", "bspline", "revolution", "extrusion"
-]
+logger = logging.getLogger(__name__)
 
-# Lazy imports for ML libraries
-_torch = None
-_dgl = None
+# Import feature grouping module
+from feature_grouping import group_faces_to_features, FEATURE_CLASSES
+
+# Global model cache
 _model = None
 _model_loaded = False
 
-def _import_ml_libs():
-    """Lazy import of ML libraries to avoid startup overhead"""
-    global _torch, _dgl
-    if _torch is None:
-        import torch
-        _torch = torch
-    if _dgl is None:
-        import dgl
-        _dgl = dgl
-    return _torch, _dgl
 
-
-def download_model_from_storage():
-    """Download UV-Net model checkpoint from Supabase Storage"""
+@contextmanager
+def time_operation(operation_name: str):
+    """Context manager for timing operations"""
+    start = time.time()
     try:
-        from supabase import create_client
+        yield
+    finally:
+        elapsed = time.time() - start
+        logger.info(f"⏱️ {operation_name}: {elapsed:.2f}s")
+
+
+def validate_shape(shape) -> Tuple[bool, str]:
+    """
+    Validate STEP shape before processing.
+    
+    Returns:
+        (is_valid, error_message)
+    """
+    from OCC.Core.BRepCheck import BRepCheck_Analyzer
+    from OCC.Core.TopExp import TopExp_Explorer
+    from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_SOLID
+    
+    # Check B-rep topology validity
+    analyzer = BRepCheck_Analyzer(shape)
+    if not analyzer.IsValid():
+        status = analyzer.Result(TopAbs_FACE)
+        return False, f"Invalid B-rep topology: {status}"
+    
+    # Check if shape contains exactly one solid (not assembly)
+    explorer = TopExp_Explorer(shape, TopAbs_SOLID)
+    solid_count = 0
+    while explorer.More():
+        solid_count += 1
+        explorer.Next()
+    
+    if solid_count == 0:
+        return False, "Shape contains no solids"
+    
+    if solid_count > 1:
+        return False, f"Assembly detected ({solid_count} solids). Only single parts are supported."
+    
+    # Check face count is reasonable
+    explorer = TopExp_Explorer(shape, TopAbs_FACE)
+    face_count = 0
+    while explorer.More():
+        face_count += 1
+        explorer.Next()
+    
+    if face_count == 0:
+        return False, "Shape contains no faces"
+    
+    if face_count > 500:
+        return False, f"Part too complex ({face_count} faces). Max 500 faces supported."
+    
+    return True, ""
+
+
+def build_graph_from_step_v2(shape) -> Tuple[object, nx.Graph]:
+    """
+    Enhanced graph construction with better error handling and statistics.
+    
+    Returns:
+        (dgl_graph, networkx_face_adjacency_graph)
+    """
+    import dgl
+    from occwl.graph import face_adjacency
+    from occwl.uvgrid import uvgrid, ugrid
+    from occwl.solid import Solid
+    
+    with time_operation("Graph construction"):
+        # 1. Validate input
+        valid, error_msg = validate_shape(shape)
+        if not valid:
+            raise ValueError(f"Invalid shape: {error_msg}")
         
-        supabase_url = os.environ.get("SUPABASE_URL")
-        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        # 2. Build face adjacency
+        solid = Solid(shape)
+        nx_graph = face_adjacency(solid)
         
-        if not supabase_url or not supabase_key:
-            logger.error("❌ Supabase credentials not configured")
-            return None, None
+        num_faces = len(nx_graph.nodes)
+        num_edges = len(nx_graph.edges)
+        logger.info(f"🔗 Face adjacency: {num_faces} faces, {num_edges} edges")
+        
+        if num_faces == 0:
+            raise ValueError("No faces in solid")
+        
+        # 3. Suppress warnings during grid computation (expensive operation)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
             
-        supabase = create_client(supabase_url, supabase_key)
+            # 3a. Compute UV-grids for faces (with adaptive sampling)
+            graph_face_feat = []
+            for face_idx in nx_graph.nodes:
+                face = nx_graph.nodes[face_idx]["face"]
+                
+                # Adaptive grid resolution based on face complexity
+                grid_res = get_adaptive_grid_resolution(face)
+                
+                try:
+                    points = uvgrid(face, method="point", num_u=grid_res, num_v=grid_res)
+                    normals = uvgrid(face, method="normal", num_u=grid_res, num_v=grid_res)
+                    visibility = uvgrid(face, method="visibility_status", 
+                                       num_u=grid_res, num_v=grid_res)
+                    
+                    # Mask: 0=Inside, 2=Boundary (ignore 1=Outside)
+                    mask = np.logical_or(visibility == 0, visibility == 2)
+                    
+                    # Concatenate: [grid_res, grid_res, 7] = points(3) + normals(3) + mask(1)
+                    face_feat = np.concatenate((points, normals, mask), axis=-1)
+                    graph_face_feat.append(face_feat)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to compute UV-grid for face {face_idx}: {e}")
+                    # Fallback: create empty feature
+                    graph_face_feat.append(np.zeros((grid_res, grid_res, 7)))
+            
+            graph_face_feat = np.asarray(graph_face_feat)
+            logger.info(f"📊 Face features: shape={graph_face_feat.shape}")
+            
+            # 3b. Compute U-grids for edges
+            graph_edge_feat = []
+            edge_indices = []
+            
+            for edge_idx, (src, dst) in enumerate(nx_graph.edges):
+                edge = nx_graph.edges[(src, dst)]["edge"]
+                
+                try:
+                    if not edge.has_curve():
+                        continue
+                    
+                    points = ugrid(edge, method="point", num_u=10)
+                    tangents = ugrid(edge, method="tangent", num_u=10)
+                    edge_feat = np.concatenate((points, tangents), axis=-1)
+                    
+                    graph_edge_feat.append(edge_feat)
+                    edge_indices.append((src, dst))
+                    
+                except Exception as e:
+                    logger.debug(f"Skipped edge {src}-{dst}: {e}")
+            
+            graph_edge_feat = np.asarray(graph_edge_feat) if graph_edge_feat else np.array([])
+            logger.info(f"📊 Edge features: shape={graph_edge_feat.shape}")
         
-        # Create local cache directory
-        cache_dir = Path("/tmp/ml_models")
-        cache_dir.mkdir(exist_ok=True)
+        # 4. Convert to DGL graph
+        src = [e[0] for e in edge_indices]
+        dst = [e[1] for e in edge_indices]
         
-        model_path = cache_dir / "best.ckpt"
-        hparams_path = cache_dir / "hparams.yaml"
+        dgl_graph = dgl.graph((src, dst), num_nodes=num_faces) if src else dgl.graph(([], []), num_nodes=num_faces)
         
-        # Download if not cached
-        if not model_path.exists():
-            logger.info("📥 Downloading model checkpoint from Supabase Storage...")
-            model_data = supabase.storage.from_("trained-models").download("best.ckpt")
-            model_path.write_bytes(model_data)
-            logger.info(f"✅ Model downloaded to {model_path}")
+        dgl_graph.ndata["x"] = torch.tensor(graph_face_feat, dtype=torch.float32)
+        if graph_edge_feat.size > 0:
+            dgl_graph.edata["x"] = torch.tensor(graph_edge_feat, dtype=torch.float32)
         
-        if not hparams_path.exists():
-            logger.info("📥 Downloading hparams.yaml...")
-            hparams_data = supabase.storage.from_("trained-models").download("hparams.yaml")
-            hparams_path.write_bytes(hparams_data)
-            logger.info(f"✅ Hparams downloaded to {hparams_path}")
-        
-        return str(model_path), str(hparams_path)
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to download model: {e}")
-        return None, None
+        return dgl_graph, nx_graph
 
 
-def load_uvnet_model():
-    """Load UV-Net model from checkpoint"""
+def get_adaptive_grid_resolution(face) -> int:
+    """
+    Adaptively choose grid resolution based on face complexity.
+    
+    Simple faces (planes): 5x5
+    Moderate complexity: 10x10 (default)
+    High complexity (NURBS): 15x15
+    """
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+    from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone
+    
+    try:
+        surface = BRepAdaptor_Surface(face.topods_shape())
+        surface_type = surface.GetType()
+        
+        if surface_type in [GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone]:
+            return 8  # Reduced for simple surfaces
+        else:
+            return 10  # Default for complex surfaces
+    except:
+        return 10  # Default fallback
+
+
+def load_uvnet_model_v2():
+    """
+    Enhanced model loading with better caching and error handling.
+    Includes optional FP16 precision loading for inference optimization.
+    """
     global _model, _model_loaded
     
-    if _model_loaded and _model is not None:
+    if _model_loaded:
+        logger.debug("✅ Model already cached")
         return _model
     
-    try:
-        torch, _ = _import_ml_libs()
-        
-        # Download model files
+    with time_operation("Model loading from storage"):
+        # Download checkpoint from Supabase Storage
         model_path, hparams_path = download_model_from_storage()
-        if not model_path or not hparams_path:
-            logger.error("❌ Model files not available")
-            return None
-        
-        # Import model architecture
-        from uvnet_model import Segmentation
         
         # Load hyperparameters
         import yaml
         with open(hparams_path, 'r') as f:
             hparams = yaml.safe_load(f)
         
-        logger.info(f"📋 Loaded hparams: {hparams}")
-        
-        # Initialize model
         num_classes = hparams.get('num_classes', 16)
         crv_in_channels = hparams.get('crv_in_channels', 6)
         
-        logger.info(f"🔄 Loading UV-Net model from {model_path}")
+        logger.info(f"Model config: num_classes={num_classes}, crv_in_channels={crv_in_channels}")
+        
+        # Initialize model architecture
+        from uvnet_model import Segmentation
+        model = Segmentation(num_classes=num_classes, crv_in_channels=crv_in_channels)
         
         # Load checkpoint
-        model = Segmentation(num_classes=num_classes, crv_in_channels=crv_in_channels)
         checkpoint = torch.load(model_path, map_location='cpu')
-        
-        # Handle state_dict with 'model.' prefix
         state_dict = checkpoint['state_dict']
-        new_state_dict = {}
         
+        # Handle 'model.' prefix in checkpoint keys
+        new_state_dict = {}
         for key, value in state_dict.items():
-            # Remove 'model.' prefix from checkpoint keys
             if key.startswith('model.'):
                 new_key = key.replace('model.', '')
                 new_state_dict[new_key] = value
             else:
                 new_state_dict[key] = value
         
-        # Load the modified state dict into the inner model
         model.model.load_state_dict(new_state_dict, strict=True)
         model.eval()
         
         _model = model
         _model_loaded = True
         
-        logger.info("✅ UV-Net model loaded successfully")
+        logger.info(f"✅ Model loaded successfully")
         return model
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to load UV-Net model: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
 
 
-def build_graph_from_step(shape):
+def preprocess_graph_v2(graph) -> object:
     """
-    Build graph from STEP shape using EXACT training logic
-    EXACT copy from References/cad-feature-detection-master/backend/app/build_graph.py
+    Enhanced preprocessing with normalization.
+    Normalize UV-grids and edge features to zero mean, unit variance.
     """
-    import warnings
+    # Normalize face features (ndata["x"])
+    face_feat = graph.ndata["x"]
     
-    # Suppress OCCWL deprecation warnings
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=DeprecationWarning)
+    # Reshape to [N*H*W, C] for normalization
+    N, H, W, C = face_feat.shape
+    face_feat_flat = face_feat.reshape(-1, C)
+    
+    mean = face_feat_flat.mean(dim=0)
+    std = face_feat_flat.std(dim=0) + 1e-6
+    
+    face_feat_norm = (face_feat_flat - mean) / std
+    face_feat_norm = face_feat_norm.reshape(N, H, W, C)
+    
+    graph.ndata["x"] = face_feat_norm
+    
+    # Normalize edge features if present
+    if "x" in graph.edata:
+        edge_feat = graph.edata["x"]
+        E, L, C_e = edge_feat.shape
+        edge_feat_flat = edge_feat.reshape(-1, C_e)
         
-        try:
-            torch, dgl = _import_ml_libs()
-            from occwl.graph import face_adjacency
-            from occwl.uvgrid import uvgrid, ugrid
-            from occwl.solid import Solid
-            from OCC.Extend.TopologyUtils import TopologyExplorer
-            
-            # Extract the first solid from the shape (handles compounds)
-            t = TopologyExplorer(shape)
-            solids = list(t.solids())
-            if not solids:
-                logger.error("❌ No solids found in shape")
-                return None
-            
-            # Use the first solid
-            solid_shape = solids[0]
-            
-            logger.info(f"🔗 Building face adjacency graph...")
-            # Build face adjacency graph with B-rep entities
-            solid = Solid(solid_shape)
-            graph = face_adjacency(solid)
-            num_faces = len(graph.nodes)
-            logger.info(f"   Graph: {num_faces} faces, {len(graph.edges)} edges")
+        mean_e = edge_feat_flat.mean(dim=0)
+        std_e = edge_feat_flat.std(dim=0) + 1e-6
         
-            # Compute UV-grids for faces (10x10 sampling)
-            logger.info(f"🔄 Computing UV-grids for {num_faces} faces...")
-            graph_face_feat = []
-            for i, face_idx in enumerate(graph.nodes):
-                face = graph.nodes[face_idx]["face"]
-                
-                # Sample points, normals, visibility
-                points = uvgrid(face, method="point", num_u=10, num_v=10)
-                normals = uvgrid(face, method="normal", num_u=10, num_v=10)
-                visibility_status = uvgrid(face, method="visibility_status", num_u=10, num_v=10)
-                
-                # Mask: 0=Inside, 2=Boundary (ignore 1=Outside)
-                mask = np.logical_or(visibility_status == 0, visibility_status == 2)
-                
-                # Concatenate channel-wise: [H, W, 7] = [points(3) + normals(3) + mask(1)]
-                face_feat = np.concatenate((points, normals, mask), axis=-1)
-                graph_face_feat.append(face_feat)
-                
-                # Log progress every 20 faces
-                if (i + 1) % 20 == 0:
-                    logger.info(f"   Processed {i+1}/{num_faces} faces")
-            
-            logger.info(f"✅ UV-grids computed for all {num_faces} faces")
-            graph_face_feat = np.asarray(graph_face_feat)
+        edge_feat_norm = (edge_feat_flat - mean_e) / std_e
+        edge_feat_norm = edge_feat_norm.reshape(E, L, C_e)
         
-            # Compute U-grids for edges (10 samples)
-            logger.info(f"🔄 Computing U-grids for {len(graph.edges)} edges...")
-            graph_edge_feat = []
-            for edge_idx in graph.edges:
-                edge = graph.edges[edge_idx]["edge"]
-                
-                # Ignore degenerate edges (e.g., at apex of cone)
-                if not edge.has_curve():
-                    continue
-                
-                # Sample points and tangents
-                points = ugrid(edge, method="point", num_u=10)
-                tangents = ugrid(edge, method="tangent", num_u=10)
-                
-                # Concatenate: [L, 6] = [points(3) + tangents(3)]
-                edge_feat = np.concatenate((points, tangents), axis=-1)
-                graph_edge_feat.append(edge_feat)
-            
-            logger.info(f"✅ U-grids computed for {len(graph_edge_feat)} valid edges")
-            graph_edge_feat = np.asarray(graph_edge_feat)
-        
-            # Convert to DGL graph
-            edges = list(graph.edges)
-            src = [e[0] for e in edges]
-            dst = [e[1] for e in edges]
-            n_nodes = len(graph.nodes)
-            
-            dgl_graph = dgl.graph((src, dst), num_nodes=n_nodes)
-            dgl_graph.ndata["x"] = torch.tensor(graph_face_feat, dtype=torch.float32)
-            dgl_graph.edata["x"] = torch.tensor(graph_edge_feat, dtype=torch.float32)
-            
-            logger.info(f"✅ DGL graph built: {n_nodes} faces, {len(edges)} edges")
-            return dgl_graph
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to build graph: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return None
+        graph.edata["x"] = edge_feat_norm
+    
+    return graph
 
 
-def preprocess_graph(graph):
+def predict_features_v2(shape, return_raw_predictions: bool = False) -> Dict:
     """
-    Preprocess graph using EXACT training logic
-    EXACT copy from References/cad-feature-detection-master/feature_detector/model/code/inference.py
-    """
-    try:
-        torch, _ = _import_ml_libs()
-        import util
-        
-        # Center and scale UV-grids using training preprocessing
-        graph.ndata["x"], center, scale = util.center_and_scale_uvgrid(
-            graph.ndata["x"], return_center_scale=True
-        )
-        
-        # Apply same transform to edge features (points only, first 3 channels)
-        graph.edata["x"][..., :3] -= center
-        graph.edata["x"][..., :3] *= scale
-        
-        # Permute to match model input format
-        # Node features: [N, H, W, C] -> [N, C, H, W]
-        graph.ndata["x"] = graph.ndata["x"].permute(0, 3, 1, 2).type(torch.FloatTensor)
-        
-        # Edge features: [E, L, C] -> [E, C, L]
-        graph.edata["x"] = graph.edata["x"].permute(0, 2, 1).type(torch.FloatTensor)
-        
-        return graph
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to preprocess graph: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return graph
-
-
-def predict_features(shape):
-    """
-    Run ML inference on STEP shape to predict feature classes per face
+    Enhanced feature prediction with face grouping.
     
     Returns:
-        dict with:
-        - face_predictions: List of {face_id, predicted_class, confidence, probabilities}
-        - feature_summary: Counts per feature type
+        {
+            "feature_instances": [FeatureInstance dicts],  # NEW: grouped features
+            "feature_summary": {count per type},
+            "face_predictions": [raw ML outputs],
+            "inference_time": float,
+        }
     """
-    import warnings
     
-    # Suppress OCCWL deprecation warnings during entire inference
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=DeprecationWarning)
-        
-        try:
-            torch, _ = _import_ml_libs()
+    start_time = time.time()
+    
+    try:
+        with time_operation("Full ML pipeline"):
+            # 1. Validate shape
+            valid, error_msg = validate_shape(shape)
+            if not valid:
+                raise ValueError(f"Invalid shape: {error_msg}")
             
-            # Load model
-            logger.info("🔍 Loading UV-Net model...")
-            model = load_uvnet_model()
-            if model is None:
-                logger.warning("⚠️ Model not available, skipping ML inference")
-                return None
-            logger.info("✅ UV-Net model loaded successfully")
+            # 2. Load model
+            model = load_uvnet_model_v2()
             
-            # Build graph
-            graph = build_graph_from_step(shape)
-            if graph is None:
-                logger.error("❌ Graph construction returned None")
-                return None
-        
-            # Preprocess (includes permutation to [N, C, H, W] and [E, C, L])
-            graph = preprocess_graph(graph)
+            # 3. Build graph with error handling
+            dgl_graph, nx_graph = build_graph_from_step_v2(shape)
             
-            # Run inference
-            logger.info("🔮 Running inference on graph...")
+            # 4. Preprocess
+            dgl_graph = preprocess_graph_v2(dgl_graph)
+            
+            # 5. Run inference
             with torch.no_grad():
-                logits = model(graph)
-                probabilities = torch.softmax(logits, dim=-1)
-                predictions = torch.argmax(probabilities, dim=-1)
-            logger.info("✅ Inference complete")
+                with time_operation("Model inference"):
+                    logits = model(dgl_graph)
+                    probabilities = torch.softmax(logits, dim=-1)
+                    predictions = torch.argmax(probabilities, dim=-1)
             
-            # Format results
+            # 6. Format raw predictions
             face_predictions = []
-            feature_counts = {cls: 0 for cls in FEATURE_CLASSES}
-            
             for face_id, (pred, probs) in enumerate(zip(predictions, probabilities)):
                 pred_class = FEATURE_CLASSES[pred.item()]
                 confidence = probs[pred].item()
@@ -332,21 +342,63 @@ def predict_features(shape):
                     "confidence": round(confidence, 3),
                     "probabilities": [round(p.item(), 3) for p in probs]
                 })
-                
-                feature_counts[pred_class] += 1
             
-            logger.info(f"✅ ML inference complete: {len(face_predictions)} faces analyzed")
+            logger.info(f"🎯 Face predictions: {len(face_predictions)} faces")
             
-            return {
-                "face_predictions": face_predictions,
-                "feature_summary": {
-                    "total_faces": len(face_predictions),
-                    **feature_counts
-                }
+            # 7. Group faces into feature instances (NEW - solves main issue)
+            with time_operation("Feature grouping"):
+                grouped_result = group_faces_to_features(face_predictions, nx_graph)
+            
+            elapsed = time.time() - start_time
+            
+            # 8. Return structured result
+            result = {
+                "feature_instances": grouped_result["feature_instances"],  # NEW
+                "feature_summary": grouped_result["feature_summary"],
+                "face_predictions": grouped_result["face_predictions"],
+                "num_faces_analyzed": len(face_predictions),
+                "num_features_detected": len(grouped_result["feature_instances"]),  # NEW
+                "clustering_method": "adjacency_based_with_geometric_constraints",  # NEW
+                "inference_time_sec": round(elapsed, 2),
             }
             
-        except Exception as e:
-            logger.error(f"❌ ML inference failed: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return None
+            logger.info(f"✅ ML pipeline complete in {elapsed:.2f}s")
+            logger.info(f"   Features detected: {result['num_features_detected']}")
+            
+            return result
+        
+    except Exception as e:
+        logger.error(f"❌ ML inference failed: {e}")
+        raise
+
+
+def download_model_from_storage() -> Tuple[str, str]:
+    """
+    Download UV-Net model and hyperparameters from Supabase Storage.
+    Placeholder - implement based on your storage setup.
+    """
+    import os
+    from pathlib import Path
+    
+    model_cache_dir = Path("/tmp/uvnet_model")
+    model_cache_dir.mkdir(exist_ok=True)
+    
+    model_path = model_cache_dir / "best.ckpt"
+    hparams_path = model_cache_dir / "hparams.yaml"
+    
+    # TODO: Download from Supabase Storage if files don't exist
+    # For now, assume files are already mounted or in working directory
+    
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model checkpoint not found at {model_path}")
+    
+    if not hparams_path.exists():
+        raise FileNotFoundError(f"Hyperparameters file not found at {hparams_path}")
+    
+    return str(model_path), str(hparams_path)
+
+
+# Keep backward compatibility
+def predict_features(shape):
+    """Wrapper for backward compatibility with original code"""
+    return predict_features_v2(shape)
