@@ -69,7 +69,7 @@ except ImportError as e:
 
 # === NEW: Enhanced ML Inference Imports ===
 try:
-    from ml_inference_v2 import predict_features_v2, validate_shape
+    from ml_inference_v2 import predict_features, validate_shape
     ML_VERSION = "v2"
     logger.info("✅ ML inference v2 (with feature grouping) loaded")
 except ImportError:
@@ -1816,7 +1816,7 @@ def analyze_cad():
             # NEW: Use enhanced ML v2 with built-in feature grouping
             logger.info("🤖 Running ML-based feature recognition (v2 with feature grouping)...")
             try:
-                ml_features = predict_features_v2(shape)
+                ml_features = predict_features(shape)
                 logger.info(f"✅ ML v2 inference complete")
                 logger.info(f"   Faces: {ml_features.get('num_faces_analyzed', '?')}")
                 logger.info(f"   Features: {ml_features.get('num_features_detected', '?')}")
