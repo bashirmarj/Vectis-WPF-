@@ -145,72 +145,89 @@ def build_graph_from_step(shape):
     Build graph from STEP shape using EXACT training logic
     EXACT copy from References/cad-feature-detection-master/backend/app/build_graph.py
     """
-    try:
-        torch, dgl = _import_ml_libs()
-        from occwl.graph import face_adjacency
-        from occwl.uvgrid import uvgrid, ugrid
-        from occwl.solid import Solid
+    import warnings
+    
+    # Suppress OCCWL deprecation warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
         
-        # Build face adjacency graph with B-rep entities
-        solid = Solid(shape)
-        graph = face_adjacency(solid)
-        
-        # Compute UV-grids for faces (10x10 sampling)
-        graph_face_feat = []
-        for face_idx in graph.nodes:
-            face = graph.nodes[face_idx]["face"]
+        try:
+            torch, dgl = _import_ml_libs()
+            from occwl.graph import face_adjacency
+            from occwl.uvgrid import uvgrid, ugrid
+            from occwl.solid import Solid
             
-            # Sample points, normals, visibility
-            points = uvgrid(face, method="point", num_u=10, num_v=10)
-            normals = uvgrid(face, method="normal", num_u=10, num_v=10)
-            visibility_status = uvgrid(face, method="visibility_status", num_u=10, num_v=10)
+            logger.info(f"🔗 Building face adjacency graph...")
+            # Build face adjacency graph with B-rep entities
+            solid = Solid(shape)
+            graph = face_adjacency(solid)
+            num_faces = len(graph.nodes)
+            logger.info(f"   Graph: {num_faces} faces, {len(graph.edges)} edges")
+        
+            # Compute UV-grids for faces (10x10 sampling)
+            logger.info(f"🔄 Computing UV-grids for {num_faces} faces...")
+            graph_face_feat = []
+            for i, face_idx in enumerate(graph.nodes):
+                face = graph.nodes[face_idx]["face"]
+                
+                # Sample points, normals, visibility
+                points = uvgrid(face, method="point", num_u=10, num_v=10)
+                normals = uvgrid(face, method="normal", num_u=10, num_v=10)
+                visibility_status = uvgrid(face, method="visibility_status", num_u=10, num_v=10)
+                
+                # Mask: 0=Inside, 2=Boundary (ignore 1=Outside)
+                mask = np.logical_or(visibility_status == 0, visibility_status == 2)
+                
+                # Concatenate channel-wise: [H, W, 7] = [points(3) + normals(3) + mask(1)]
+                face_feat = np.concatenate((points, normals, mask), axis=-1)
+                graph_face_feat.append(face_feat)
+                
+                # Log progress every 20 faces
+                if (i + 1) % 20 == 0:
+                    logger.info(f"   Processed {i+1}/{num_faces} faces")
             
-            # Mask: 0=Inside, 2=Boundary (ignore 1=Outside)
-            mask = np.logical_or(visibility_status == 0, visibility_status == 2)
+            logger.info(f"✅ UV-grids computed for all {num_faces} faces")
+            graph_face_feat = np.asarray(graph_face_feat)
+        
+            # Compute U-grids for edges (10 samples)
+            logger.info(f"🔄 Computing U-grids for {len(graph.edges)} edges...")
+            graph_edge_feat = []
+            for edge_idx in graph.edges:
+                edge = graph.edges[edge_idx]["edge"]
+                
+                # Ignore degenerate edges (e.g., at apex of cone)
+                if not edge.has_curve():
+                    continue
+                
+                # Sample points and tangents
+                points = ugrid(edge, method="point", num_u=10)
+                tangents = ugrid(edge, method="tangent", num_u=10)
+                
+                # Concatenate: [L, 6] = [points(3) + tangents(3)]
+                edge_feat = np.concatenate((points, tangents), axis=-1)
+                graph_edge_feat.append(edge_feat)
             
-            # Concatenate channel-wise: [H, W, 7] = [points(3) + normals(3) + mask(1)]
-            face_feat = np.concatenate((points, normals, mask), axis=-1)
-            graph_face_feat.append(face_feat)
+            logger.info(f"✅ U-grids computed for {len(graph_edge_feat)} valid edges")
+            graph_edge_feat = np.asarray(graph_edge_feat)
         
-        graph_face_feat = np.asarray(graph_face_feat)
-        
-        # Compute U-grids for edges (10 samples)
-        graph_edge_feat = []
-        for edge_idx in graph.edges:
-            edge = graph.edges[edge_idx]["edge"]
+            # Convert to DGL graph
+            edges = list(graph.edges)
+            src = [e[0] for e in edges]
+            dst = [e[1] for e in edges]
+            n_nodes = len(graph.nodes)
             
-            # Ignore degenerate edges (e.g., at apex of cone)
-            if not edge.has_curve():
-                continue
+            dgl_graph = dgl.graph((src, dst), num_nodes=n_nodes)
+            dgl_graph.ndata["x"] = torch.tensor(graph_face_feat, dtype=torch.float32)
+            dgl_graph.edata["x"] = torch.tensor(graph_edge_feat, dtype=torch.float32)
             
-            # Sample points and tangents
-            points = ugrid(edge, method="point", num_u=10)
-            tangents = ugrid(edge, method="tangent", num_u=10)
+            logger.info(f"✅ DGL graph built: {n_nodes} faces, {len(edges)} edges")
+            return dgl_graph
             
-            # Concatenate: [L, 6] = [points(3) + tangents(3)]
-            edge_feat = np.concatenate((points, tangents), axis=-1)
-            graph_edge_feat.append(edge_feat)
-        
-        graph_edge_feat = np.asarray(graph_edge_feat)
-        
-        # Convert to DGL graph
-        edges = list(graph.edges)
-        src = [e[0] for e in edges]
-        dst = [e[1] for e in edges]
-        n_nodes = len(graph.nodes)
-        
-        dgl_graph = dgl.graph((src, dst), num_nodes=n_nodes)
-        dgl_graph.ndata["x"] = torch.tensor(graph_face_feat, dtype=torch.float32)
-        dgl_graph.edata["x"] = torch.tensor(graph_edge_feat, dtype=torch.float32)
-        
-        logger.info(f"📊 Built DGL graph: {n_nodes} faces, {len(edges)} edges")
-        return dgl_graph
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to build graph: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
+        except Exception as e:
+            logger.error(f"❌ Failed to build graph: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
 
 
 def preprocess_graph(graph):
@@ -256,35 +273,46 @@ def predict_features(shape):
         - face_predictions: List of {face_id, predicted_class, confidence, probabilities}
         - feature_summary: Counts per feature type
     """
-    try:
-        torch, _ = _import_ml_libs()
+    import warnings
+    
+    # Suppress OCCWL deprecation warnings during entire inference
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
         
-        # Load model
-        model = load_uvnet_model()
-        if model is None:
-            logger.warning("⚠️ Model not available, skipping ML inference")
-            return None
+        try:
+            torch, _ = _import_ml_libs()
+            
+            # Load model
+            logger.info("🔍 Loading UV-Net model...")
+            model = load_uvnet_model()
+            if model is None:
+                logger.warning("⚠️ Model not available, skipping ML inference")
+                return None
+            logger.info("✅ UV-Net model loaded successfully")
+            
+            # Build graph
+            graph = build_graph_from_step(shape)
+            if graph is None:
+                logger.error("❌ Graph construction returned None")
+                return None
         
-        # Build graph
-        graph = build_graph_from_step(shape)
-        if graph is None:
-            return None
-        
-        # Preprocess
-        graph = preprocess_graph(graph)
-        
-        # Permute features to match model input format
-        # Node features: [N, H, W, C] -> [N, C, H, W]
-        graph.ndata["x"] = graph.ndata["x"].permute(0, 3, 1, 2)
-        # Edge features: [E, L, C] -> [E, C, L]
-        if graph.edata["x"].shape[0] > 0:
-            graph.edata["x"] = graph.edata["x"].permute(0, 2, 1)
-        
-        # Run inference
-        with torch.no_grad():
-            logits = model(graph)
-            probabilities = torch.softmax(logits, dim=-1)
-            predictions = torch.argmax(probabilities, dim=-1)
+            # Preprocess
+            graph = preprocess_graph(graph)
+            
+            # Permute features to match model input format
+            # Node features: [N, H, W, C] -> [N, C, H, W]
+            graph.ndata["x"] = graph.ndata["x"].permute(0, 3, 1, 2)
+            # Edge features: [E, L, C] -> [E, C, L]
+            if graph.edata["x"].shape[0] > 0:
+                graph.edata["x"] = graph.edata["x"].permute(0, 2, 1)
+            
+            # Run inference
+            logger.info("🔮 Running inference on graph...")
+            with torch.no_grad():
+                logits = model(graph)
+                probabilities = torch.softmax(logits, dim=-1)
+                predictions = torch.argmax(probabilities, dim=-1)
+            logger.info("✅ Inference complete")
         
         # Format results
         face_predictions = []
@@ -303,18 +331,18 @@ def predict_features(shape):
             
             feature_counts[pred_class] += 1
         
-        logger.info(f"✅ ML inference complete: {len(face_predictions)} faces analyzed")
-        
-        return {
-            "face_predictions": face_predictions,
-            "feature_summary": {
-                "total_faces": len(face_predictions),
-                **feature_counts
+            logger.info(f"✅ ML inference complete: {len(face_predictions)} faces analyzed")
+            
+            return {
+                "face_predictions": face_predictions,
+                "feature_summary": {
+                    "total_faces": len(face_predictions),
+                    **feature_counts
+                }
             }
-        }
-        
-    except Exception as e:
-        logger.error(f"❌ ML inference failed: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
+            
+        except Exception as e:
+            logger.error(f"❌ ML inference failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None

@@ -1,6 +1,9 @@
 import os
 import io
 import math
+import time
+import signal
+import warnings
 import tempfile
 import numpy as np
 import networkx as nx
@@ -8,6 +11,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
 import logging
+from contextlib import contextmanager
+from functools import wraps
 
 # === OCC imports ===
 from OCC.Core.STEPControl import STEPControl_Reader
@@ -44,6 +49,10 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# === Suppress OCCWL deprecation warnings globally ===
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='occwl')
+logging.getLogger('occwl').propagate = False
+
 # === ML Inference ===
 try:
     from ml_inference import predict_features
@@ -52,6 +61,21 @@ try:
 except ImportError as e:
     ML_AVAILABLE = False
     logger.warning(f"⚠️ ML inference not available: {e}")
+
+# === Timeout utilities ===
+@contextmanager
+def timeout_context(seconds):
+    """Context manager for timeout"""
+    def signal_handler(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds}s")
+    
+    old_handler = signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
 
 # --------------------------------------------------
 # === Geometry Utilities ===
@@ -1935,13 +1959,35 @@ def analyze_cad():
         if ML_AVAILABLE:
             try:
                 logger.info("🤖 Running ML-based feature recognition...")
-                ml_features = predict_features(shape)
+                start_time = time.time()
+                
+                # Use timeout protection (25s max)
+                with timeout_context(25):
+                    ml_features = predict_features(shape)
+                
+                elapsed = time.time() - start_time
+                
                 if ml_features:
-                    logger.info(f"✅ ML detected {ml_features['feature_summary']['total_faces']} faces with {len([k for k, v in ml_features['feature_summary'].items() if k != 'total_faces' and v > 0])} unique feature types")
+                    unique_features = len([k for k, v in ml_features['feature_summary'].items() if k != 'total_faces' and v > 0])
+                    logger.info(f"✅ ML inference complete in {elapsed:.2f}s")
+                    logger.info(f"   Detected {ml_features['feature_summary']['total_faces']} faces with {unique_features} unique feature types")
+                else:
+                    raise Exception("ML inference returned None")
+                    
+            except TimeoutError as e:
+                logger.error(f"⏱️ ML inference timeout: {e}")
+                return jsonify({
+                    "error": "ML inference timeout",
+                    "details": "Part geometry too complex for ML analysis (>25s). Try simplifying.",
+                    "fallback_available": False
+                }), 500
+                
             except Exception as e:
                 logger.error(f"❌ ML inference failed: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 return jsonify({
-                    "error": "ML inference required but failed",
+                    "error": "ML inference failed",
                     "details": str(e)
                 }), 500
         else:
