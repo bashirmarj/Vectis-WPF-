@@ -9,6 +9,7 @@ COPY feature_grouping.py .
 COPY uvnet_model.py .
 COPY occwl/ ./occwl/
 COPY util.py .
+COPY checkpoints/ ./checkpoints/    
 
 # Install pythonocc-core and numpy from conda-forge (precompiled)
 RUN conda install -y -c conda-forge pythonocc-core=7.7.2 numpy && \
