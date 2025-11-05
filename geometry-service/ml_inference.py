@@ -1,55 +1,6 @@
-# 🚀 UV-NET CHECKPOINT INTEGRATION GUIDE
-
-## Checkpoint Location
-
-**Google Drive Link:**
-```
-https://drive.google.com/file/d/1-0S-N-UA_6sCXcH8FIRgqOeLy4Ktg6lh/view?usp=sharing
-```
-
-**File Name:** `best.ckpt` (PyTorch Lightning checkpoint)
-
----
-
-## 📋 IMPLEMENTATION STRATEGY
-
-You have **3 options** to load the checkpoint:
-
-### Option 1: Download & Store Locally (RECOMMENDED FOR PRODUCTION)
-- Download from Google Drive to your repo
-- Store in `geometry-service/checkpoints/` folder
-- Load at runtime from local storage
-- No network dependency during inference
-
-### Option 2: Download from Google Drive at Runtime
-- Load directly from Drive URL
-- Slower first inference (download every restart)
-- No storage needed in repo
-
-### Option 3: Store in Supabase Storage (RECOMMENDED FOR DEPLOYMENT)
-- Upload checkpoint to Supabase
-- Load at runtime from Supabase
-- Works well with Render deployment
-
----
-
-## ✅ OPTION 1: LOCAL CHECKPOINT (RECOMMENDED)
-
-### Step 1: Download Checkpoint
-
-1. Go to Google Drive link
-2. Download `best.ckpt`
-3. Create folder: `geometry-service/checkpoints/`
-4. Place `best.ckpt` in that folder
-
-### Step 2: Update ml_inference.py
-
-Replace your entire `ml_inference.py` with this:
-
-```python
-# ml_inference.py - WITH UV-NET INTEGRATION
+# ml_inference.py - FIXED VERSION
 # Complete ML inference pipeline with UV-Net checkpoint loading
-# Ready to copy and paste - no modifications needed
+# Ready to copy and paste - NO URLS, CLEAN CODE
 
 import torch
 import torch.nn as nn
@@ -85,18 +36,14 @@ def load_uvnet_model():
         
         logger.info(f"📥 Loading UV-Net checkpoint from: {CHECKPOINT_PATH}")
         
-        # Load checkpoint using PyTorch Lightning
         try:
-            # Method 1: Try loading with PyTorch Lightning
             model = pl.LightningModule.load_from_checkpoint(str(CHECKPOINT_PATH))
             logger.info("✅ UV-Net model loaded successfully (PyTorch Lightning)")
             return model
         except:
-            # Method 2: Try loading as plain PyTorch state dict
             try:
                 checkpoint = torch.load(str(CHECKPOINT_PATH), map_location='cpu')
                 
-                # If checkpoint contains 'state_dict', it's from PyTorch Lightning
                 if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
                     logger.info("✅ Loaded PyTorch Lightning checkpoint (state_dict)")
                     return checkpoint['state_dict']
@@ -126,7 +73,7 @@ def run_uvnet_inference(model, uv_features):
         uv_features: Extracted UV coordinate features from faces
     
     Returns:
-        List of predictions: [{face_id, predicted_class, confidence}, ...]
+        Predictions tensor
     """
     try:
         if model is None:
@@ -135,39 +82,30 @@ def run_uvnet_inference(model, uv_features):
         
         logger.info("🧠 Running UV-Net inference...")
         
-        # Prepare input tensor
         if isinstance(uv_features, list):
             uv_features = np.array(uv_features)
         
-        # Convert to torch tensor
         input_tensor = torch.from_numpy(uv_features).float()
         
-        # Move to device
         device = next(model.parameters()).device if hasattr(model, 'parameters') else 'cpu'
         input_tensor = input_tensor.to(device)
         
-        # Run inference
         model.eval()
         with torch.no_grad():
             if hasattr(model, 'forward'):
-                # Full model
                 outputs = model(input_tensor)
             else:
                 logger.warning("⚠️ Model has no forward method")
                 return None
         
-        # Parse outputs
         if isinstance(outputs, tuple):
             predictions_tensor = outputs[0] if len(outputs) > 0 else outputs
         else:
             predictions_tensor = outputs
         
-        # Convert to probabilities
         if predictions_tensor.dim() == 1:
-            # Single output per sample
             predictions = torch.sigmoid(predictions_tensor)
         else:
-            # Multiple classes per sample
             predictions = torch.softmax(predictions_tensor, dim=-1)
         
         logger.info("✅ UV-Net inference complete")
@@ -192,7 +130,7 @@ def extract_uv_coordinates_from_face(face, num_samples=16):
         num_samples: Number of samples in U and V directions
     
     Returns:
-        np.ndarray: UV coordinate samples (num_samples*num_samples x 2)
+        np.ndarray: UV coordinate samples
     """
     try:
         from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
@@ -204,7 +142,6 @@ def extract_uv_coordinates_from_face(face, num_samples=16):
         v_min = surf_adaptor.FirstVParameter()
         v_max = surf_adaptor.LastVParameter()
         
-        # Normalize to 0-1 range
         uv_samples = []
         for i in range(num_samples):
             for j in range(num_samples):
@@ -252,7 +189,6 @@ def extract_uv_features_from_shape(shape, face_data):
                 logger.debug(f"Failed to extract UV from face {face_idx}")
                 all_uv_features.append(np.zeros((64, 2)))
         
-        # Flatten to 2D array
         all_uv_features = np.vstack(all_uv_features) if all_uv_features else np.zeros((len(faces), 2))
         
         logger.info(f"✅ Extracted UV features: shape {all_uv_features.shape}")
@@ -291,7 +227,6 @@ def predictions_to_face_predictions(predictions, num_faces):
         
         face_predictions = []
         
-        # Aggregate UV-level predictions to face-level
         samples_per_face = len(predictions) // num_faces if num_faces > 0 else 1
         
         for face_id in range(num_faces):
@@ -301,10 +236,8 @@ def predictions_to_face_predictions(predictions, num_faces):
             if start_idx < len(predictions):
                 face_preds = predictions[start_idx:end_idx]
                 
-                # Get average prediction
                 avg_pred = np.mean(face_preds, axis=0)
                 
-                # Get class with highest probability
                 if len(avg_pred) > 0:
                     pred_class_idx = np.argmax(avg_pred)
                     confidence = float(avg_pred[pred_class_idx])
@@ -330,7 +263,7 @@ def predictions_to_face_predictions(predictions, num_faces):
         return None
 
 # ============================================================================
-# SHAPE VALIDATION & GRAPH BUILDING (from previous code)
+# SHAPE VALIDATION & GRAPH BUILDING
 # ============================================================================
 
 def validate_shape(shape):
@@ -518,12 +451,10 @@ def predict_features(shape):
     try:
         logger.info("🤖 Starting ML feature inference with UV-Net...")
 
-        # Step 1: Validate shape
         is_valid, error_msg = validate_shape(shape)
         if not is_valid:
             logger.warning(f"⚠️ Shape validation: {error_msg}")
 
-        # Step 2: Build graph
         logger.info("📊 Building geometry graph...")
         dgl_graph, nx_graph, face_data = build_graph_from_step(shape)
         
@@ -540,20 +471,17 @@ def predict_features(shape):
         num_faces = len(face_data)
         logger.info(f"✅ Extracted {num_faces} faces from geometry")
 
-        # Step 3: Load UV-Net model
         logger.info("🤖 Loading UV-Net model...")
         model = load_uvnet_model()
         
         if model is None:
             logger.error("❌ UV-Net model not available, using placeholder")
-            # Fallback to simple classification
             face_predictions = [{
                 'face_id': i,
                 'predicted_class': 'plane',
                 'confidence': 0.5
             } for i in range(num_faces)]
         else:
-            # Step 4: Extract UV features
             logger.info("📐 Extracting UV features...")
             uv_features = extract_uv_features_from_shape(shape, face_data)
             
@@ -565,7 +493,6 @@ def predict_features(shape):
                     'confidence': 0.5
                 } for i in range(num_faces)]
             else:
-                # Step 5: Run UV-Net inference
                 logger.info("🧠 Running UV-Net inference...")
                 predictions = run_uvnet_inference(model, uv_features)
                 
@@ -577,7 +504,6 @@ def predict_features(shape):
                         'confidence': 0.5
                     } for i in range(num_faces)]
                 else:
-                    # Convert predictions to face level
                     face_predictions = predictions_to_face_predictions(predictions, num_faces)
                     
                     if face_predictions is None:
@@ -590,7 +516,6 @@ def predict_features(shape):
 
         logger.info(f"✅ Generated {len(face_predictions)} face predictions")
 
-        # Step 6: Group faces into features
         logger.info("🔄 Grouping faces into features...")
         grouping_result = group_faces_into_features(face_predictions, nx_graph)
 
