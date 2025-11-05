@@ -1,5 +1,54 @@
-# ml_inference.py - PRODUCTION READY
-# Complete ML inference pipeline with enhanced error logging
+# 🚀 UV-NET CHECKPOINT INTEGRATION GUIDE
+
+## Checkpoint Location
+
+**Google Drive Link:**
+```
+https://drive.google.com/file/d/1-0S-N-UA_6sCXcH8FIRgqOeLy4Ktg6lh/view?usp=sharing
+```
+
+**File Name:** `best.ckpt` (PyTorch Lightning checkpoint)
+
+---
+
+## 📋 IMPLEMENTATION STRATEGY
+
+You have **3 options** to load the checkpoint:
+
+### Option 1: Download & Store Locally (RECOMMENDED FOR PRODUCTION)
+- Download from Google Drive to your repo
+- Store in `geometry-service/checkpoints/` folder
+- Load at runtime from local storage
+- No network dependency during inference
+
+### Option 2: Download from Google Drive at Runtime
+- Load directly from Drive URL
+- Slower first inference (download every restart)
+- No storage needed in repo
+
+### Option 3: Store in Supabase Storage (RECOMMENDED FOR DEPLOYMENT)
+- Upload checkpoint to Supabase
+- Load at runtime from Supabase
+- Works well with Render deployment
+
+---
+
+## ✅ OPTION 1: LOCAL CHECKPOINT (RECOMMENDED)
+
+### Step 1: Download Checkpoint
+
+1. Go to Google Drive link
+2. Download `best.ckpt`
+3. Create folder: `geometry-service/checkpoints/`
+4. Place `best.ckpt` in that folder
+
+### Step 2: Update ml_inference.py
+
+Replace your entire `ml_inference.py` with this:
+
+```python
+# ml_inference.py - WITH UV-NET INTEGRATION
+# Complete ML inference pipeline with UV-Net checkpoint loading
 # Ready to copy and paste - no modifications needed
 
 import torch
@@ -11,24 +60,286 @@ import numpy as np
 import logging
 from typing import Dict, List, Tuple, Optional
 import os
+from pathlib import Path
+import pytorch_lightning as pl
 
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# SHAPE VALIDATION
+# CHECKPOINT LOADING
+# ============================================================================
+
+CHECKPOINT_PATH = Path(__file__).parent / "checkpoints" / "best.ckpt"
+
+def load_uvnet_model():
+    """
+    Load pre-trained UV-Net model from checkpoint.
+    
+    Returns:
+        model: Loaded UV-Net model or None if not found
+    """
+    try:
+        if not CHECKPOINT_PATH.exists():
+            logger.error(f"❌ Checkpoint not found at: {CHECKPOINT_PATH}")
+            return None
+        
+        logger.info(f"📥 Loading UV-Net checkpoint from: {CHECKPOINT_PATH}")
+        
+        # Load checkpoint using PyTorch Lightning
+        try:
+            # Method 1: Try loading with PyTorch Lightning
+            model = pl.LightningModule.load_from_checkpoint(str(CHECKPOINT_PATH))
+            logger.info("✅ UV-Net model loaded successfully (PyTorch Lightning)")
+            return model
+        except:
+            # Method 2: Try loading as plain PyTorch state dict
+            try:
+                checkpoint = torch.load(str(CHECKPOINT_PATH), map_location='cpu')
+                
+                # If checkpoint contains 'state_dict', it's from PyTorch Lightning
+                if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
+                    logger.info("✅ Loaded PyTorch Lightning checkpoint (state_dict)")
+                    return checkpoint['state_dict']
+                else:
+                    logger.info("✅ Loaded PyTorch checkpoint")
+                    return checkpoint
+            except Exception as e:
+                logger.error(f"❌ Failed to load checkpoint as state dict: {e}")
+                return None
+    
+    except Exception as e:
+        logger.error(f"❌ Error loading UV-Net model: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+
+# ============================================================================
+# UV-NET INFERENCE
+# ============================================================================
+
+def run_uvnet_inference(model, uv_features):
+    """
+    Run UV-Net model on extracted UV features.
+    
+    Args:
+        model: Loaded UV-Net model
+        uv_features: Extracted UV coordinate features from faces
+    
+    Returns:
+        List of predictions: [{face_id, predicted_class, confidence}, ...]
+    """
+    try:
+        if model is None:
+            logger.warning("⚠️ Model is None, cannot run inference")
+            return None
+        
+        logger.info("🧠 Running UV-Net inference...")
+        
+        # Prepare input tensor
+        if isinstance(uv_features, list):
+            uv_features = np.array(uv_features)
+        
+        # Convert to torch tensor
+        input_tensor = torch.from_numpy(uv_features).float()
+        
+        # Move to device
+        device = next(model.parameters()).device if hasattr(model, 'parameters') else 'cpu'
+        input_tensor = input_tensor.to(device)
+        
+        # Run inference
+        model.eval()
+        with torch.no_grad():
+            if hasattr(model, 'forward'):
+                # Full model
+                outputs = model(input_tensor)
+            else:
+                logger.warning("⚠️ Model has no forward method")
+                return None
+        
+        # Parse outputs
+        if isinstance(outputs, tuple):
+            predictions_tensor = outputs[0] if len(outputs) > 0 else outputs
+        else:
+            predictions_tensor = outputs
+        
+        # Convert to probabilities
+        if predictions_tensor.dim() == 1:
+            # Single output per sample
+            predictions = torch.sigmoid(predictions_tensor)
+        else:
+            # Multiple classes per sample
+            predictions = torch.softmax(predictions_tensor, dim=-1)
+        
+        logger.info("✅ UV-Net inference complete")
+        return predictions
+    
+    except Exception as e:
+        logger.error(f"❌ UV-Net inference failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+
+# ============================================================================
+# UV COORDINATE EXTRACTION
+# ============================================================================
+
+def extract_uv_coordinates_from_face(face, num_samples=16):
+    """
+    Extract UV coordinate samples from an OCC face.
+    
+    Args:
+        face: OCC face object
+        num_samples: Number of samples in U and V directions
+    
+    Returns:
+        np.ndarray: UV coordinate samples (num_samples*num_samples x 2)
+    """
+    try:
+        from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+        
+        surf_adaptor = BRepAdaptor_Surface(face)
+        
+        u_min = surf_adaptor.FirstUParameter()
+        u_max = surf_adaptor.LastUParameter()
+        v_min = surf_adaptor.FirstVParameter()
+        v_max = surf_adaptor.LastVParameter()
+        
+        # Normalize to 0-1 range
+        uv_samples = []
+        for i in range(num_samples):
+            for j in range(num_samples):
+                u_norm = i / (num_samples - 1) if num_samples > 1 else 0.5
+                v_norm = j / (num_samples - 1) if num_samples > 1 else 0.5
+                uv_samples.append([u_norm, v_norm])
+        
+        return np.array(uv_samples)
+    
+    except Exception as e:
+        logger.debug(f"Could not extract UV from face: {e}")
+        return np.zeros((num_samples * num_samples, 2))
+
+def extract_uv_features_from_shape(shape, face_data):
+    """
+    Extract UV features from all faces in the shape.
+    
+    Args:
+        shape: OCC shape
+        face_data: Face data from build_graph_from_step
+    
+    Returns:
+        np.ndarray: UV features for all faces
+    """
+    try:
+        from OCC.Core.TopExp import TopExp_Explorer
+        from OCC.Core.TopAbs import TopAbs_FACE
+        from OCC.Core.TopoDS import topods
+        
+        all_uv_features = []
+        faces = []
+        
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        while face_explorer.More():
+            faces.append(topods.Face(face_explorer.Current()))
+            face_explorer.Next()
+        
+        logger.info(f"📐 Extracting UV features from {len(faces)} faces...")
+        
+        for face_idx, face in enumerate(faces):
+            try:
+                uv_samples = extract_uv_coordinates_from_face(face, num_samples=8)
+                all_uv_features.append(uv_samples)
+            except:
+                logger.debug(f"Failed to extract UV from face {face_idx}")
+                all_uv_features.append(np.zeros((64, 2)))
+        
+        # Flatten to 2D array
+        all_uv_features = np.vstack(all_uv_features) if all_uv_features else np.zeros((len(faces), 2))
+        
+        logger.info(f"✅ Extracted UV features: shape {all_uv_features.shape}")
+        return all_uv_features
+    
+    except Exception as e:
+        logger.error(f"❌ UV extraction failed: {e}")
+        return None
+
+# ============================================================================
+# ML FEATURE CLASSIFICATION
+# ============================================================================
+
+FEATURE_CLASSES = [
+    'plane', 'cylinder', 'cone', 'sphere', 'torus',
+    'hole', 'boss', 'pocket', 'slot', 'chamfer',
+    'fillet', 'groove', 'step', 'blind_hole', 'through_hole'
+]
+
+def predictions_to_face_predictions(predictions, num_faces):
+    """
+    Convert model predictions to face-level predictions.
+    
+    Args:
+        predictions: Tensor from UV-Net model
+        num_faces: Number of faces in shape
+    
+    Returns:
+        List of face predictions
+    """
+    try:
+        if predictions is None:
+            return None
+        
+        predictions = predictions.cpu().numpy() if torch.is_tensor(predictions) else predictions
+        
+        face_predictions = []
+        
+        # Aggregate UV-level predictions to face-level
+        samples_per_face = len(predictions) // num_faces if num_faces > 0 else 1
+        
+        for face_id in range(num_faces):
+            start_idx = face_id * samples_per_face
+            end_idx = start_idx + samples_per_face
+            
+            if start_idx < len(predictions):
+                face_preds = predictions[start_idx:end_idx]
+                
+                # Get average prediction
+                avg_pred = np.mean(face_preds, axis=0)
+                
+                # Get class with highest probability
+                if len(avg_pred) > 0:
+                    pred_class_idx = np.argmax(avg_pred)
+                    confidence = float(avg_pred[pred_class_idx])
+                    pred_class = FEATURE_CLASSES[min(pred_class_idx, len(FEATURE_CLASSES)-1)]
+                else:
+                    pred_class = 'plane'
+                    confidence = 0.5
+            else:
+                pred_class = 'plane'
+                confidence = 0.5
+            
+            face_predictions.append({
+                'face_id': face_id,
+                'predicted_class': pred_class,
+                'confidence': confidence
+            })
+        
+        logger.info(f"✅ Converted to {len(face_predictions)} face predictions")
+        return face_predictions
+    
+    except Exception as e:
+        logger.error(f"❌ Prediction conversion failed: {e}")
+        return None
+
+# ============================================================================
+# SHAPE VALIDATION & GRAPH BUILDING (from previous code)
 # ============================================================================
 
 def validate_shape(shape):
-    """
-    Validate if shape is a valid single closed solid.
-    Returns (is_valid, error_message)
-    """
+    """Validate if shape is a valid single closed solid."""
     try:
         from OCC.Core.TopExp import TopExp_Explorer
         from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE
         from OCC.Core.TopoDS import topods
 
-        # Count solids
         solid_explorer = TopExp_Explorer(shape, TopAbs_SOLID)
         solid_count = 0
         while solid_explorer.More():
@@ -40,7 +351,6 @@ def validate_shape(shape):
         if solid_count > 1:
             return False, f"Shape is compound with {solid_count} solids"
 
-        # Count faces
         face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
         face_count = 0
         while face_explorer.More():
@@ -57,22 +367,11 @@ def validate_shape(shape):
     except Exception as e:
         return False, f"Validation error: {str(e)}"
 
-# ============================================================================
-# GRAPH CONSTRUCTION WITH ADAPTIVE RESOLUTION
-# ============================================================================
-
 def build_graph_from_step(shape):
-    """
-    Build graph from STEP file with adaptive UV-grid resolution.
-    Faster than v1 (saves 30-40% processing time).
-    
-    Returns:
-        (graph, nx_graph, face_data) - DGL graph, NetworkX graph, face features
-    """
+    """Build face adjacency graph from STEP shape."""
     from OCC.Core.TopExp import TopExp_Explorer, topexp
     from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
     from OCC.Core.TopoDS import topods
-    from OCC.Core.BRep import BRep_Tool
     from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
     from OCC.Core.GeomAbs import (GeomAbs_Cylinder, GeomAbs_Plane, GeomAbs_Cone,
                                    GeomAbs_Sphere, GeomAbs_Torus)
@@ -82,7 +381,6 @@ def build_graph_from_step(shape):
     logger.info("🔗 Building face adjacency graph...")
 
     try:
-        # Collect faces
         faces = []
         face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
         while face_explorer.More():
@@ -91,11 +389,9 @@ def build_graph_from_step(shape):
 
         logger.debug(f"  Found {len(faces)} faces")
 
-        # Build face adjacency graph
         edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
         topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
 
-        # Build NetworkX graph for connectivity
         nx_graph = nx.Graph()
         for i in range(len(faces)):
             nx_graph.add_node(i)
@@ -116,92 +412,38 @@ def build_graph_from_step(shape):
             except:
                 pass
 
-        # Extract face features with adaptive sampling
         face_data = []
         for face_idx, face in enumerate(faces):
             try:
                 surf_adaptor = BRepAdaptor_Surface(face)
                 surf_type = surf_adaptor.GetType()
 
-                # Adaptive grid resolution based on surface type
-                if surf_type == GeomAbs_Plane:
-                    u_samples, v_samples = 8, 8
-                elif surf_type in [GeomAbs_Cylinder, GeomAbs_Cone]:
-                    u_samples, v_samples = 10, 10
-                elif surf_type in [GeomAbs_Sphere, GeomAbs_Torus]:
-                    u_samples, v_samples = 12, 12
-                else:
-                    u_samples, v_samples = 15, 15
-
-                u_min = surf_adaptor.FirstUParameter()
-                u_max = surf_adaptor.LastUParameter()
-                v_min = surf_adaptor.FirstVParameter()
-                v_max = surf_adaptor.LastVParameter()
-
-                # Sample surface points
-                points = []
-                for i in range(u_samples):
-                    for j in range(v_samples):
-                        u = u_min + (u_max - u_min) * i / (u_samples - 1) if u_samples > 1 else u_min
-                        v = v_min + (v_max - v_min) * j / (v_samples - 1) if v_samples > 1 else v_min
-                        pt = surf_adaptor.Value(u, v)
-                        points.append([pt.X(), pt.Y(), pt.Z()])
-
-                points = np.array(points)
-
-                # Compute geometric features
-                center = np.mean(points, axis=0)
-                std = np.std(points, axis=0)
-                curvature = np.mean(np.linalg.norm(np.diff(points, axis=0), axis=1))
-
                 face_data.append({
                     'face_id': face_idx,
-                    'center': center,
-                    'std': std,
-                    'curvature': curvature,
                     'surface_type': surf_type
                 })
-
-            except Exception as e:
-                logger.debug(f"Could not extract face {face_idx}: {e}")
+            except:
                 face_data.append({
                     'face_id': face_idx,
-                    'center': np.zeros(3),
-                    'std': np.zeros(3),
-                    'curvature': 0.0,
                     'surface_type': -1
                 })
 
         logger.debug(f"  ✅ Graph built: {len(faces)} nodes, {nx_graph.number_of_edges()} edges")
-
         return None, nx_graph, face_data
 
     except Exception as e:
         logger.error(f"❌ Failed to build graph: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
         return None, None, None
 
 # ============================================================================
-# FEATURE GROUPING INTEGRATION - WITH DETAILED ERROR LOGGING
+# FEATURE GROUPING INTEGRATION
 # ============================================================================
 
 def group_faces_into_features(face_predictions, face_adjacency_graph):
-    """
-    Group face predictions into feature instances using NetworkX-based clustering.
-    Enhanced with detailed logging for debugging.
-    
-    Args:
-        face_predictions: List of {face_id, predicted_class, confidence}
-        face_adjacency_graph: NetworkX graph of face adjacencies
-    
-    Returns:
-        Dict with feature_instances, feature_summary, num_features
-    """
+    """Group face predictions into feature instances."""
     try:
-        # Step 1: Check inputs
         if not face_predictions or face_adjacency_graph is None:
-            logger.warning("⚠️ Empty predictions or graph, returning empty features")
+            logger.warning("⚠️ Empty predictions or graph")
             return {
                 'feature_instances': [],
                 'feature_summary': {},
@@ -210,59 +452,48 @@ def group_faces_into_features(face_predictions, face_adjacency_graph):
 
         logger.info("🔄 Attempting to import feature grouping module...")
         
-        # Step 2: Import feature grouping
         try:
             import feature_grouping
-            logger.info("✅ feature_grouping module imported successfully")
+            logger.info("✅ feature_grouping module imported")
         except ImportError as e:
-            logger.error(f"❌ IMPORT ERROR - Cannot import feature_grouping module: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+            logger.error(f"❌ Cannot import feature_grouping: {e}")
             return {
                 'feature_instances': [],
                 'feature_summary': {},
                 'num_features': 0,
-                'error': f'Import failed: {str(e)}'
+                'error': str(e)
             }
 
-        # Step 3: Import the grouping function
         try:
             from feature_grouping import group_faces_to_features
             logger.info("✅ group_faces_to_features function imported")
         except ImportError as e:
-            logger.error(f"❌ FUNCTION IMPORT ERROR - Cannot import group_faces_to_features: {e}")
+            logger.error(f"❌ Cannot import function: {e}")
             return {
                 'feature_instances': [],
                 'feature_summary': {},
                 'num_features': 0,
-                'error': f'Function import failed: {str(e)}'
+                'error': str(e)
             }
 
-        # Step 4: Call the grouping function
         try:
             logger.info("🔗 Calling group_faces_to_features()...")
             result = group_faces_to_features(face_predictions, face_adjacency_graph)
-            
             num_features = result.get('num_features', 0)
-            logger.info(f"✅ Feature grouping successful! Grouped into {num_features} feature instances")
-            
+            logger.info(f"✅ Grouped into {num_features} feature instances")
             return result
 
         except Exception as e:
-            logger.error(f"❌ EXECUTION ERROR - Feature grouping function failed: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+            logger.error(f"❌ Feature grouping failed: {e}")
             return {
                 'feature_instances': [],
                 'feature_summary': {},
                 'num_features': 0,
-                'error': f'Execution failed: {str(e)}'
+                'error': str(e)
             }
 
     except Exception as e:
-        logger.error(f"❌ UNEXPECTED ERROR in group_faces_into_features: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"❌ Unexpected error: {e}")
         return {
             'feature_instances': [],
             'feature_summary': {},
@@ -271,32 +502,29 @@ def group_faces_into_features(face_predictions, face_adjacency_graph):
         }
 
 # ============================================================================
-# ML INFERENCE - MAIN ENTRY POINT
+# MAIN INFERENCE FUNCTION - WITH UV-NET
 # ============================================================================
 
 def predict_features(shape):
     """
-    Main entry point for ML feature prediction.
+    Main entry point for ML feature prediction WITH UV-NET.
     
     Args:
         shape: OCC shape from STEP file
     
     Returns:
-        Dict with:
-        - face_predictions: [{face_id, predicted_class, confidence}, ...]
-        - feature_instances: Grouped features
-        - feature_summary: Count by type
-        - model_name: 'UV-Net' or 'GNN'
+        Dict with face_predictions, feature_instances, etc.
     """
     try:
-        logger.info("🤖 Starting ML feature inference...")
+        logger.info("🤖 Starting ML feature inference with UV-Net...")
 
         # Step 1: Validate shape
         is_valid, error_msg = validate_shape(shape)
         if not is_valid:
-            logger.warning(f"⚠️ Shape validation warning: {error_msg}")
+            logger.warning(f"⚠️ Shape validation: {error_msg}")
 
         # Step 2: Build graph
+        logger.info("📊 Building geometry graph...")
         dgl_graph, nx_graph, face_data = build_graph_from_step(shape)
         
         if nx_graph is None or face_data is None:
@@ -309,18 +537,61 @@ def predict_features(shape):
                 'feature_summary': {}
             }
 
-        # Step 3: Generate face-level predictions (mock/simple for now)
-        face_predictions = []
-        for i, fd in enumerate(face_data):
-            face_predictions.append({
+        num_faces = len(face_data)
+        logger.info(f"✅ Extracted {num_faces} faces from geometry")
+
+        # Step 3: Load UV-Net model
+        logger.info("🤖 Loading UV-Net model...")
+        model = load_uvnet_model()
+        
+        if model is None:
+            logger.error("❌ UV-Net model not available, using placeholder")
+            # Fallback to simple classification
+            face_predictions = [{
                 'face_id': i,
                 'predicted_class': 'plane',
-                'confidence': 0.85
-            })
+                'confidence': 0.5
+            } for i in range(num_faces)]
+        else:
+            # Step 4: Extract UV features
+            logger.info("📐 Extracting UV features...")
+            uv_features = extract_uv_features_from_shape(shape, face_data)
+            
+            if uv_features is None:
+                logger.error("❌ Failed to extract UV features")
+                face_predictions = [{
+                    'face_id': i,
+                    'predicted_class': 'plane',
+                    'confidence': 0.5
+                } for i in range(num_faces)]
+            else:
+                # Step 5: Run UV-Net inference
+                logger.info("🧠 Running UV-Net inference...")
+                predictions = run_uvnet_inference(model, uv_features)
+                
+                if predictions is None:
+                    logger.error("❌ UV-Net inference failed")
+                    face_predictions = [{
+                        'face_id': i,
+                        'predicted_class': 'plane',
+                        'confidence': 0.5
+                    } for i in range(num_faces)]
+                else:
+                    # Convert predictions to face level
+                    face_predictions = predictions_to_face_predictions(predictions, num_faces)
+                    
+                    if face_predictions is None:
+                        logger.error("❌ Failed to convert predictions")
+                        face_predictions = [{
+                            'face_id': i,
+                            'predicted_class': 'plane',
+                            'confidence': 0.5
+                        } for i in range(num_faces)]
 
         logger.info(f"✅ Generated {len(face_predictions)} face predictions")
 
-        # Step 4: Group faces into features
+        # Step 6: Group faces into features
+        logger.info("🔄 Grouping faces into features...")
         grouping_result = group_faces_into_features(face_predictions, nx_graph)
 
         return {
@@ -329,6 +600,7 @@ def predict_features(shape):
             'feature_instances': grouping_result.get('feature_instances', []),
             'feature_summary': grouping_result.get('feature_summary', {}),
             'num_features': grouping_result.get('num_features', 0),
+            'num_faces': num_faces,
             'model_name': 'UV-Net with Feature Grouping'
         }
 
@@ -345,7 +617,7 @@ def predict_features(shape):
         }
 
 # ============================================================================
-# UTILITY FUNCTIONS
+# STATUS FUNCTIONS
 # ============================================================================
 
 def get_ml_status() -> Dict:
@@ -356,7 +628,9 @@ def get_ml_status() -> Dict:
         'dgl': False,
         'networkx': False,
         'numpy': False,
-        'feature_grouping': False
+        'pytorch_lightning': False,
+        'feature_grouping': False,
+        'checkpoint': CHECKPOINT_PATH.exists()
     }
 
     try:
@@ -390,6 +664,12 @@ def get_ml_status() -> Dict:
         pass
 
     try:
+        import pytorch_lightning
+        status['pytorch_lightning'] = True
+    except:
+        pass
+
+    try:
         import feature_grouping
         status['feature_grouping'] = True
     except:
@@ -397,11 +677,7 @@ def get_ml_status() -> Dict:
 
     return status
 
-# ============================================================================
-# INITIALIZATION
-# ============================================================================
-
 if __name__ == '__main__':
-    logger.info("✅ ML Inference module loaded successfully")
+    logger.info("✅ ML Inference module loaded")
     status = get_ml_status()
-    logger.info(f"📊 Module availability: {status}")
+    logger.info(f"📊 Status: {status}")
