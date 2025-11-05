@@ -5,6 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 COPY app.py .
 COPY ml_inference.py .
+COPY feature_grouping.py .
 COPY uvnet_model.py .
 COPY occwl/ ./occwl/
 COPY util.py .
