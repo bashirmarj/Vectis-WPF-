@@ -1,3 +1,0 @@
-sagemaker
-boto3
-python-dotenv
