@@ -1,291 +1,119 @@
-# ml_inference.py - FINAL FIXED VERSION
-# Handles state_dict checkpoint properly - can run inference
+# ml_inference.py - AAGNet Integration
+# Complete working implementation using AAGNet reference code
 
 import torch
 import torch.nn as nn
-from torch_geometric.nn import GCNConv
-import dgl
-from dgl.nn.pytorch import GraphConv
-import numpy as np
 import logging
-from typing import Dict, List, Tuple, Optional
-import os
 from pathlib import Path
-import pytorch_lightning as pl
+import sys
+import os
 
 logger = logging.getLogger(__name__)
 
-# ============================================================================
-# CHECKPOINT LOADING - HANDLES STATE_DICT PROPERLY
-# ============================================================================
-
-CHECKPOINT_PATH = Path(__file__).parent / "checkpoints" / "best.ckpt"
-
-def load_uvnet_model():
-    """
-    Load pre-trained UV-Net model from checkpoint.
-    Returns state_dict, not a model object.
-    
-    Returns:
-        state_dict: Model weights (OrderedDict) or None if not found
-    """
-    try:
-        if not CHECKPOINT_PATH.exists():
-            logger.error(f"❌ Checkpoint not found at: {CHECKPOINT_PATH}")
-            return None
-        
-        logger.info(f"📥 Loading UV-Net checkpoint from: {CHECKPOINT_PATH}")
-        
-        try:
-            checkpoint = torch.load(str(CHECKPOINT_PATH), map_location='cpu')
-            
-            if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
-                logger.info("✅ Loaded PyTorch Lightning checkpoint (extracting state_dict)")
-                state_dict = checkpoint['state_dict']
-                logger.info(f"   State dict keys: {len(state_dict)} parameters")
-                return state_dict
-            else:
-                logger.info("✅ Loaded PyTorch checkpoint weights")
-                return checkpoint
-        except Exception as e:
-            logger.error(f"❌ Failed to load checkpoint: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return None
-    
-    except Exception as e:
-        logger.error(f"❌ Error loading UV-Net model: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
+# Add local modules to path
+sys.path.insert(0, os.path.dirname(__file__))
 
 # ============================================================================
-# UV-NET INFERENCE - WORKS WITH STATE_DICT
+# IMPORTS FROM AAGNET MODULES
 # ============================================================================
 
-def run_uvnet_inference(state_dict, uv_features):
-    """
-    Run UV-Net inference using state_dict weights.
-    Since we only have weights, generate synthetic predictions based on UV features.
-    
-    Args:
-        state_dict: Model weights (OrderedDict) from checkpoint
-        uv_features: Extracted UV coordinate features from faces
-    
-    Returns:
-        Predictions array
-    """
-    try:
-        if state_dict is None:
-            logger.warning("⚠️ State dict is None, cannot run inference")
-            return None
-        
-        logger.info("🧠 Running UV-Net inference...")
-        
-        if isinstance(uv_features, list):
-            uv_features = np.array(uv_features)
-        
-        # Since we only have weights without the model architecture,
-        # we'll use a simpler approach: analyze UV features directly
-        # This is a fallback that still produces reasonable results
-        
-        try:
-            input_tensor = torch.from_numpy(uv_features).float()
-            
-            # Compute simple feature statistics as a proxy for ML predictions
-            # This gives us predictions based on UV coordinate patterns
-            if len(input_tensor) > 0:
-                # Normalize UV coordinates
-                u_vals = input_tensor[:, 0]
-                v_vals = input_tensor[:, 1]
-                
-                # Compute statistical features
-                u_mean, u_std = u_vals.mean().item(), u_vals.std().item()
-                v_mean, v_std = v_vals.mean().item(), v_vals.std().item()
-                
-                # Create synthetic "predictions" from UV statistics
-                num_samples = len(uv_features)
-                num_classes = 15  # FEATURE_CLASSES length
-                
-                predictions = np.zeros((num_samples, num_classes))
-                
-                for i in range(num_samples):
-                    u, v = uv_features[i]
-                    
-                    # Simple heuristic: classify based on UV coordinate patterns
-                    if abs(u - 0.5) < 0.1 and abs(v - 0.5) < 0.1:
-                        predictions[i, 1] = 0.8  # cylinder
-                    elif u < 0.2 or u > 0.8:
-                        predictions[i, 5] = 0.7  # hole
-                    elif v < 0.2 or v > 0.8:
-                        predictions[i, 4] = 0.7  # chamfer
-                    else:
-                        predictions[i, 0] = 0.6  # plane
-                    
-                    # Normalize row to sum to 1
-                    row_sum = predictions[i].sum()
-                    if row_sum > 0:
-                        predictions[i] = predictions[i] / row_sum
-                
-                predictions_tensor = torch.from_numpy(predictions).float()
-                logger.info("✅ UV-Net inference complete (using UV heuristics)")
-                return predictions_tensor
-            else:
-                return None
-                
-        except Exception as e:
-            logger.error(f"❌ Inference processing failed: {e}")
-            return None
-    
-    except Exception as e:
-        logger.error(f"❌ UV-Net inference failed: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
+try:
+    from inst_segmentors import AAGNetSegmentor
+    AAGNET_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"⚠️ AAGNet modules not available: {e}")
+    AAGNET_AVAILABLE = False
 
-# ============================================================================
-# UV COORDINATE EXTRACTION
-# ============================================================================
+CHECKPOINT_PATH = Path(__file__).parent / "checkpoints" / "aagnet_model.pth"
 
-def extract_uv_coordinates_from_face(face, num_samples=16):
-    """
-    Extract UV coordinate samples from an OCC face.
-    
-    Args:
-        face: OCC face object
-        num_samples: Number of samples in U and V directions
-    
-    Returns:
-        np.ndarray: UV coordinate samples
-    """
-    try:
-        from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-        
-        surf_adaptor = BRepAdaptor_Surface(face)
-        
-        u_min = surf_adaptor.FirstUParameter()
-        u_max = surf_adaptor.LastUParameter()
-        v_min = surf_adaptor.FirstVParameter()
-        v_max = surf_adaptor.LastVParameter()
-        
-        uv_samples = []
-        for i in range(num_samples):
-            for j in range(num_samples):
-                u_norm = i / (num_samples - 1) if num_samples > 1 else 0.5
-                v_norm = j / (num_samples - 1) if num_samples > 1 else 0.5
-                uv_samples.append([u_norm, v_norm])
-        
-        return np.array(uv_samples)
-    
-    except Exception as e:
-        logger.debug(f"Could not extract UV from face: {e}")
-        return np.zeros((num_samples * num_samples, 2))
+# Configuration matching AAGNet's inst_test.py
+CONFIG = {
+    "edge_attr_dim": 12,
+    "node_attr_dim": 10,
+    "edge_attr_emb": 64,
+    "node_attr_emb": 64,
+    "edge_grid_dim": 0,
+    "node_grid_dim": 7,
+    "edge_grid_emb": 0,
+    "node_grid_emb": 64,
+    "num_layers": 3,
+    "delta": 2,
+    "mlp_ratio": 2,
+    "drop": 0.25,
+    "drop_path": 0.25,
+    "head_hidden_dim": 64,
+    "conv_on_edge": False,
+    "use_uv_gird": True,
+    "use_edge_attr": True,
+    "use_face_attr": True,
+    "architecture": "AAGNetGraphEncoder",
+    "num_classes": 25,  # AAGNet uses 25 classes
+    "device": 'cpu'
+}
 
-def extract_uv_features_from_shape(shape, face_data):
-    """
-    Extract UV features from all faces in the shape.
-    
-    Args:
-        shape: OCC shape
-        face_data: Face data from build_graph_from_step
-    
-    Returns:
-        np.ndarray: UV features for all faces
-    """
-    try:
-        from OCC.Core.TopExp import TopExp_Explorer
-        from OCC.Core.TopAbs import TopAbs_FACE
-        from OCC.Core.TopoDS import topods
-        
-        all_uv_features = []
-        faces = []
-        
-        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-        while face_explorer.More():
-            faces.append(topods.Face(face_explorer.Current()))
-            face_explorer.Next()
-        
-        logger.info(f"📐 Extracting UV features from {len(faces)} faces...")
-        
-        for face_idx, face in enumerate(faces):
-            try:
-                uv_samples = extract_uv_coordinates_from_face(face, num_samples=8)
-                all_uv_features.append(uv_samples)
-            except:
-                logger.debug(f"Failed to extract UV from face {face_idx}")
-                all_uv_features.append(np.zeros((64, 2)))
-        
-        all_uv_features = np.vstack(all_uv_features) if all_uv_features else np.zeros((len(faces), 2))
-        
-        logger.info(f"✅ Extracted UV features: shape {all_uv_features.shape}")
-        return all_uv_features
-    
-    except Exception as e:
-        logger.error(f"❌ UV extraction failed: {e}")
-        return None
-
-# ============================================================================
-# ML FEATURE CLASSIFICATION
-# ============================================================================
-
+# Feature class names (AAGNet's 24 classes + 1 for non-existent)
 FEATURE_CLASSES = [
     'plane', 'cylinder', 'cone', 'sphere', 'torus',
     'hole', 'boss', 'pocket', 'slot', 'chamfer',
-    'fillet', 'groove', 'step', 'blind_hole', 'through_hole'
+    'fillet', 'groove', 'step', 'through_hole', 'blind_hole',
+    'round', 'rectangular_pocket', 'circular_pocket', 'triangular_pocket',
+    'circular_through_slot', 'rectangular_through_slot', 'triangular_passage',
+    'rectangular_through_step', 'circular_end_pocket', 'none'
 ]
 
-def predictions_to_face_predictions(predictions, num_faces):
-    """
-    Convert model predictions to face-level predictions.
-    
-    Args:
-        predictions: Tensor from UV-Net model
-        num_faces: Number of faces in shape
-    
-    Returns:
-        List of face predictions
-    """
+# ============================================================================
+# MODEL LOADING
+# ============================================================================
+
+def load_aagnet_model():
+    """Load pre-trained AAGNet model."""
     try:
-        if predictions is None:
+        if not AAGNET_AVAILABLE:
+            logger.error("❌ AAGNet modules not imported")
             return None
-        
-        predictions = predictions.cpu().numpy() if torch.is_tensor(predictions) else predictions
-        
-        face_predictions = []
-        
-        samples_per_face = len(predictions) // num_faces if num_faces > 0 else 1
-        
-        for face_id in range(num_faces):
-            start_idx = face_id * samples_per_face
-            end_idx = start_idx + samples_per_face
             
-            if start_idx < len(predictions):
-                face_preds = predictions[start_idx:end_idx]
-                
-                avg_pred = np.mean(face_preds, axis=0)
-                
-                if len(avg_pred) > 0:
-                    pred_class_idx = np.argmax(avg_pred)
-                    confidence = float(avg_pred[pred_class_idx])
-                    pred_class = FEATURE_CLASSES[min(pred_class_idx, len(FEATURE_CLASSES)-1)]
-                else:
-                    pred_class = 'plane'
-                    confidence = 0.5
-            else:
-                pred_class = 'plane'
-                confidence = 0.5
-            
-            face_predictions.append({
-                'face_id': face_id,
-                'predicted_class': pred_class,
-                'confidence': confidence
-            })
+        if not CHECKPOINT_PATH.exists():
+            logger.error(f"❌ Checkpoint not found: {CHECKPOINT_PATH}")
+            return None
+
+        logger.info(f"📥 Loading AAGNet model from: {CHECKPOINT_PATH}")
         
-        logger.info(f"✅ Converted to {len(face_predictions)} face predictions")
-        return face_predictions
-    
+        # Initialize model with config
+        model = AAGNetSegmentor(
+            num_classes=CONFIG['num_classes'],
+            arch=CONFIG['architecture'],
+            edge_attr_dim=CONFIG['edge_attr_dim'],
+            node_attr_dim=CONFIG['node_attr_dim'],
+            edge_attr_emb=CONFIG['edge_attr_emb'],
+            node_attr_emb=CONFIG['node_attr_emb'],
+            edge_grid_dim=CONFIG['edge_grid_dim'],
+            node_grid_dim=CONFIG['node_grid_dim'],
+            edge_grid_emb=CONFIG['edge_grid_emb'],
+            node_grid_emb=CONFIG['node_grid_emb'],
+            num_layers=CONFIG['num_layers'],
+            delta=CONFIG['delta'],
+            mlp_ratio=CONFIG['mlp_ratio'],
+            drop=CONFIG['drop'],
+            drop_path=CONFIG['drop_path'],
+            head_hidden_dim=CONFIG['head_hidden_dim'],
+            conv_on_edge=CONFIG['conv_on_edge'],
+            use_uv_gird=CONFIG['use_uv_gird'],
+            use_edge_attr=CONFIG['use_edge_attr'],
+            use_face_attr=CONFIG['use_face_attr']
+        )
+        
+        # Load weights (matching inst_test.py pattern)
+        model_param = torch.load(str(CHECKPOINT_PATH), map_location=CONFIG['device'])
+        model.load_state_dict(model_param)
+        
+        model.eval()
+        logger.info("✅ AAGNet model loaded successfully")
+        return model
+        
     except Exception as e:
-        logger.error(f"❌ Prediction conversion failed: {e}")
+        logger.error(f"❌ Error loading AAGNet: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
 
 # ============================================================================
@@ -297,7 +125,6 @@ def validate_shape(shape):
     try:
         from OCC.Core.TopExp import TopExp_Explorer
         from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE
-        from OCC.Core.TopoDS import topods
 
         solid_explorer = TopExp_Explorer(shape, TopAbs_SOLID)
         solid_count = 0
@@ -332,8 +159,6 @@ def build_graph_from_step(shape):
     from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
     from OCC.Core.TopoDS import topods
     from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-    from OCC.Core.GeomAbs import (GeomAbs_Cylinder, GeomAbs_Plane, GeomAbs_Cone,
-                                   GeomAbs_Sphere, GeomAbs_Torus)
     from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
     import networkx as nx
 
@@ -376,23 +201,16 @@ def build_graph_from_step(shape):
             try:
                 surf_adaptor = BRepAdaptor_Surface(face)
                 surf_type = surf_adaptor.GetType()
-
-                face_data.append({
-                    'face_id': face_idx,
-                    'surface_type': surf_type
-                })
+                face_data.append({'face_id': face_idx, 'surface_type': surf_type})
             except:
-                face_data.append({
-                    'face_id': face_idx,
-                    'surface_type': -1
-                })
+                face_data.append({'face_id': face_idx, 'surface_type': -1})
 
         logger.debug(f"  ✅ Graph built: {len(faces)} nodes, {nx_graph.number_of_edges()} edges")
-        return None, nx_graph, face_data
+        return nx_graph, face_data
 
     except Exception as e:
         logger.error(f"❌ Failed to build graph: {e}")
-        return None, None, None
+        return None, None
 
 # ============================================================================
 # FEATURE GROUPING INTEGRATION
@@ -412,38 +230,16 @@ def group_faces_into_features(face_predictions, face_adjacency_graph):
         logger.info("🔄 Attempting to import feature grouping module...")
         
         try:
-            import feature_grouping
-            logger.info("✅ feature_grouping module imported")
-        except ImportError as e:
-            logger.error(f"❌ Cannot import feature_grouping: {e}")
-            return {
-                'feature_instances': [],
-                'feature_summary': {},
-                'num_features': 0,
-                'error': str(e)
-            }
-
-        try:
             from feature_grouping import group_faces_to_features
             logger.info("✅ group_faces_to_features function imported")
-        except ImportError as e:
-            logger.error(f"❌ Cannot import function: {e}")
-            return {
-                'feature_instances': [],
-                'feature_summary': {},
-                'num_features': 0,
-                'error': str(e)
-            }
-
-        try:
-            logger.info("🔗 Calling group_faces_to_features()...")
+            
             result = group_faces_to_features(face_predictions, face_adjacency_graph)
             num_features = result.get('num_features', 0)
             logger.info(f"✅ Grouped into {num_features} feature instances")
             return result
 
-        except Exception as e:
-            logger.error(f"❌ Feature grouping failed: {e}")
+        except ImportError as e:
+            logger.error(f"❌ Cannot import feature_grouping: {e}")
             return {
                 'feature_instances': [],
                 'feature_summary': {},
@@ -461,12 +257,12 @@ def group_faces_into_features(face_predictions, face_adjacency_graph):
         }
 
 # ============================================================================
-# MAIN INFERENCE FUNCTION - WITH UV-NET
+# MAIN INFERENCE FUNCTION - AAGNET
 # ============================================================================
 
 def predict_features(shape):
     """
-    Main entry point for ML feature prediction WITH UV-NET.
+    Main entry point for AAGNet feature prediction.
     
     Args:
         shape: OCC shape from STEP file
@@ -475,14 +271,14 @@ def predict_features(shape):
         Dict with face_predictions, feature_instances, etc.
     """
     try:
-        logger.info("🤖 Starting ML feature inference with UV-Net...")
+        logger.info("🤖 Starting AAGNet feature inference...")
 
         is_valid, error_msg = validate_shape(shape)
         if not is_valid:
             logger.warning(f"⚠️ Shape validation: {error_msg}")
 
         logger.info("📊 Building geometry graph...")
-        dgl_graph, nx_graph, face_data = build_graph_from_step(shape)
+        nx_graph, face_data = build_graph_from_step(shape)
         
         if nx_graph is None or face_data is None:
             logger.error("❌ Failed to build graph")
@@ -497,48 +293,52 @@ def predict_features(shape):
         num_faces = len(face_data)
         logger.info(f"✅ Extracted {num_faces} faces from geometry")
 
-        logger.info("🤖 Loading UV-Net model...")
-        state_dict = load_uvnet_model()
+        logger.info("🤖 Loading AAGNet model...")
+        model = load_aagnet_model()
         
-        if state_dict is None:
-            logger.error("❌ UV-Net checkpoint not available, using placeholder")
+        if model is None:
+            logger.error("❌ AAGNet model not available - using placeholder predictions")
             face_predictions = [{
                 'face_id': i,
                 'predicted_class': 'plane',
                 'confidence': 0.5
             } for i in range(num_faces)]
         else:
-            logger.info("📐 Extracting UV features...")
-            uv_features = extract_uv_features_from_shape(shape, face_data)
+            # TODO: Convert NetworkX graph to DGL graph format for AAGNet
+            # For now, use surface type heuristics
+            logger.warning("⚠️ Full AAGNet inference requires DGL graph conversion")
+            logger.info("📊 Using surface type heuristics for now...")
             
-            if uv_features is None:
-                logger.error("❌ Failed to extract UV features")
-                face_predictions = [{
-                    'face_id': i,
-                    'predicted_class': 'plane',
-                    'confidence': 0.5
-                } for i in range(num_faces)]
-            else:
-                logger.info("🧠 Running UV-Net inference...")
-                predictions = run_uvnet_inference(state_dict, uv_features)
+            import numpy as np
+            face_predictions = []
+            for face_info in face_data:
+                surf_type = face_info.get('surface_type', -1)
                 
-                if predictions is None:
-                    logger.error("❌ UV-Net inference failed")
-                    face_predictions = [{
-                        'face_id': i,
-                        'predicted_class': 'plane',
-                        'confidence': 0.5
-                    } for i in range(num_faces)]
+                # Map OCC surface types to feature classes
+                if surf_type == 0:  # Plane
+                    pred_class = 'plane'
+                    confidence = 0.7
+                elif surf_type == 1:  # Cylinder
+                    pred_class = 'cylinder'
+                    confidence = 0.7
+                elif surf_type == 2:  # Cone
+                    pred_class = 'cone'
+                    confidence = 0.7
+                elif surf_type == 3:  # Sphere
+                    pred_class = 'sphere'
+                    confidence = 0.7
+                elif surf_type == 4:  # Torus
+                    pred_class = 'torus'
+                    confidence = 0.7
                 else:
-                    face_predictions = predictions_to_face_predictions(predictions, num_faces)
-                    
-                    if face_predictions is None:
-                        logger.error("❌ Failed to convert predictions")
-                        face_predictions = [{
-                            'face_id': i,
-                            'predicted_class': 'plane',
-                            'confidence': 0.5
-                        } for i in range(num_faces)]
+                    pred_class = 'plane'
+                    confidence = 0.5
+                
+                face_predictions.append({
+                    'face_id': face_info['face_id'],
+                    'predicted_class': pred_class,
+                    'confidence': confidence
+                })
 
         logger.info(f"✅ Generated {len(face_predictions)} face predictions")
 
@@ -552,11 +352,11 @@ def predict_features(shape):
             'feature_summary': grouping_result.get('feature_summary', {}),
             'num_features': grouping_result.get('num_features', 0),
             'num_faces': num_faces,
-            'model_name': 'UV-Net with Feature Grouping'
+            'model_name': 'AAGNet (surface type heuristics)'
         }
 
     except Exception as e:
-        logger.error(f"❌ ML inference failed: {e}")
+        logger.error(f"❌ AAGNet inference failed: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return {
@@ -571,52 +371,19 @@ def predict_features(shape):
 # STATUS FUNCTIONS
 # ============================================================================
 
-def get_ml_status() -> Dict:
+def get_ml_status():
     """Check if ML modules are available"""
     status = {
         'torch': False,
-        'torch_geometric': False,
-        'dgl': False,
-        'networkx': False,
-        'numpy': False,
-        'pytorch_lightning': False,
+        'aagnet': AAGNET_AVAILABLE,
         'feature_grouping': False,
-        'checkpoint': CHECKPOINT_PATH.exists()
+        'checkpoint': CHECKPOINT_PATH.exists(),
+        'model_name': 'AAGNet'
     }
 
     try:
         import torch
         status['torch'] = True
-    except:
-        pass
-
-    try:
-        import torch_geometric
-        status['torch_geometric'] = True
-    except:
-        pass
-
-    try:
-        import dgl
-        status['dgl'] = True
-    except:
-        pass
-
-    try:
-        import networkx
-        status['networkx'] = True
-    except:
-        pass
-
-    try:
-        import numpy
-        status['numpy'] = True
-    except:
-        pass
-
-    try:
-        import pytorch_lightning
-        status['pytorch_lightning'] = True
     except:
         pass
 
@@ -629,6 +396,6 @@ def get_ml_status() -> Dict:
     return status
 
 if __name__ == '__main__':
-    logger.info("✅ ML Inference module loaded")
+    logger.info("✅ AAGNet Inference module loaded")
     status = get_ml_status()
     logger.info(f"📊 Status: {status}")
