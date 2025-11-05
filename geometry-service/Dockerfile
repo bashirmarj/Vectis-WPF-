@@ -24,8 +24,7 @@ COPY loss.py .
 COPY misc.py .
 COPY pnaconv.py .
 
-# Copy optional dependencies (if needed)
-COPY occwl/ ./occwl/
+# Copy checkpoints folder (contains aagnet_model.pth)
 COPY checkpoints/ ./checkpoints/
 
 # Install pythonocc-core and dependencies from conda-forge (precompiled)
