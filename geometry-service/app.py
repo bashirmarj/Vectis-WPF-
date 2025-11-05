@@ -1,6 +1,11 @@
 # COMPLETE MERGED app.py - YOUR FULL 2000+ LINES + FEATURE GROUPING INTEGRATED
 # Ready to deploy - just copy and paste this entire file
 # NO manual merging needed - everything is already combined
+try:
+    from feature_grouping import group_faces_to_features
+    print("✅ Feature grouping import works!")
+except Exception as e:
+    print(f"❌ Feature grouping import fails: {e}")
 
 import os
 import io
