@@ -75,39 +75,39 @@ export const PartUploadForm = () => {
     try {
       setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, isAnalyzing: true } : f)));
 
-      // Convert file to base64
-      const fileBuffer = await fileWithQty.file.arrayBuffer();
-      const base64File = btoa(new Uint8Array(fileBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ""));
-
       console.log(`📤 Sending ${fileWithQty.file.name} to edge function (may take 30-60s on first use)...`);
 
       // Step 1: Upload to Supabase Storage first
-const fileExt = fileWithQty.file.name.split('.').pop()?.toLowerCase() || 'step';
-const fileName = `${Date.now()}_${fileWithQty.file.name}`;
-const filePath = `uploads/${fileName}`;
+      const fileExt = fileWithQty.file.name.split('.').pop()?.toLowerCase() || 'step';
+      const fileName = `${Date.now()}_${fileWithQty.file.name}`;
+      const filePath = `uploads/${fileName}`;
 
-const { data: uploadData, error: uploadError } = await supabase.storage
-  .from('cad-files')
-  .upload(filePath, fileWithQty.file);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('trained-models')
+        .upload(filePath, fileWithQty.file);
 
-if (uploadError) {
-  throw new Error(`Upload failed: ${uploadError.message}`);
-}
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
 
-// Step 2: Get public URL
-const { data: urlData } = supabase.storage
-  .from('cad-files')
-  .getPublicUrl(filePath);
+      // Step 2: Create signed URL (since trained-models is private)
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from('trained-models')
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
 
-// Step 3: Call edge function
-const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
-  body: {
-    fileUrl: urlData.publicUrl,    // ✅ URL
-    fileName: fileWithQty.file.name,  // ✅ Original name
-    fileType: fileExt,             // ✅ Extension
-    material: fileWithQty.material,
-  },
-});
+      if (urlError) {
+        throw new Error(`Failed to create signed URL: ${urlError.message}`);
+      }
+
+      // Step 3: Call edge function
+      const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
+        body: {
+          fileUrl: urlData.signedUrl,        // ✅ Using signed URL for private bucket
+          fileName: fileWithQty.file.name,
+          fileType: fileExt,
+          material: fileWithQty.material,
+        },
+      });
 
       if (error) {
         throw new Error(error.message || "Edge function error");
