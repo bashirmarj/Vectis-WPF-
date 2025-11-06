@@ -113,8 +113,22 @@ class AAGNetRecognizer:
         
         # Load attribute schema and statistics
         self.weights_path = model_weights_path or str(Path(__file__).parent / 'aagnet_model.pth')
-        self.attribute_schema = load_json_or_pkl(str( / 'feature_lists' / 'all.json'))
-        self.stat = load_statistics(str( / 'weights' / 'attr_stat.json'))
+        
+        # Load attribute schema (optional - uses defaults if not found)
+        try:
+            self.attribute_schema = load_json_or_pkl(str(AAGNET_PATH / 'feature_lists' / 'all.json'))
+            logger.info("✅ Loaded attribute schema from feature_lists/all.json")
+        except (FileNotFoundError, Exception) as e:
+            logger.warning(f"⚠️ Attribute schema not found, using defaults: {e}")
+            self.attribute_schema = None
+        
+        # Load normalization statistics (optional - uses defaults if not found)
+        try:
+            self.stat = load_statistics(str(AAGNET_PATH / 'weights' / 'attr_stat.json'))
+            logger.info("✅ Loaded normalization stats from weights/attr_stat.json")
+        except (FileNotFoundError, Exception) as e:
+            logger.warning(f"⚠️ Normalization stats not found, using defaults: {e}")
+            self.stat = None
         
         # Initialize model
         self._init_model()
@@ -146,12 +160,12 @@ class AAGNetRecognizer:
         )
         
         # Load pretrained weights
-        if os.path.exists(self.weight_path):
-            checkpoint = torch.load(self.weight_path, map_location=self.device)
+        if os.path.exists(self.weights_path):
+            checkpoint = torch.load(self.weights_path, map_location=self.device)
             self.recognizer.load_state_dict(checkpoint, strict=False)
-            logger.info(f"Loaded model weights from {self.weight_path}")
+            logger.info(f"✅ Loaded model weights from {self.weights_path}")
         else:
-            logger.warning(f"Model weights not found at {self.weight_path}, using random initialization")
+            logger.warning(f"⚠️ Model weights not found at {self.weights_path}, using random initialization")
         
         self.recognizer = self.recognizer.to(self.device)
         self.recognizer.eval()
@@ -419,7 +433,7 @@ if __name__ == '__main__':
     recognizer = AAGNetRecognizer(device='cpu')
     
     # Test with example file
-    test_file = str( / 'examples' / 'partA.step')
+    test_file = str(AAGNET_PATH / 'examples' / 'partA.step')
     if os.path.exists(test_file):
         result = recognizer.recognize_features(test_file)
         print(json.dumps(result, indent=2))
