@@ -25,7 +25,7 @@ from contextlib import contextmanager
 from functools import wraps
 
 # === OCC imports ===
-from OCC.Core.STEPControl import STEPControl_Reader
+from OCC.Core.STEPControl import STEPControl_Reader, STEPControl_Writer
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_IN, TopAbs_OUT, TopAbs_REVERSED
@@ -89,6 +89,15 @@ except ImportError:
     FEATURE_GROUPING_AVAILABLE = False
     logger.warning("⚠️ Feature grouping not available")
 
+# === NEW: AAGNet Integration ===
+try:
+    from aagnet_recognizer import AAGNetRecognizer, create_flask_endpoint
+    AAGNET_AVAILABLE = True
+    logger.info("✅ AAGNet recognizer loaded")
+except ImportError as e:
+    AAGNET_AVAILABLE = False
+    logger.warning(f"⚠️ AAGNet not available: {e}")
+
 # === Timeout utilities ===
 @contextmanager
 def timeout_context(seconds):
@@ -104,6 +113,19 @@ def timeout_context(seconds):
     finally:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, old_handler)
+
+# === Initialize AAGNet Recognizer ===
+aagnet_recognizer = None
+if AAGNET_AVAILABLE:
+    try:
+        logger.info("🚀 Initializing AAGNet recognizer...")
+        aagnet_recognizer = AAGNetRecognizer(device='cpu')  # Use 'cuda' if GPU available
+        create_flask_endpoint(app, aagnet_recognizer)
+        logger.info("✅ AAGNet endpoint registered at /api/aagnet/recognize")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize AAGNet: {e}")
+        AAGNET_AVAILABLE = False
+        aagnet_recognizer = None
 
 # --------------------------------------------------
 # === Geometry Utilities ===
@@ -1814,27 +1836,76 @@ def analyze_cad():
         mesh_data["vertex_colors"] = vertex_colors
         mesh_data["face_classifications"] = face_classifications
         
-        # ===== ENHANCED ML-based feature recognition WITH FEATURE GROUPING =====
+        # ===== AAGNet-based feature recognition (PRIMARY) =====
         ml_features = None
         
-        if ML_VERSION == "v2":
-            # NEW: Use enhanced ML with built-in feature grouping
-            logger.info("🤖 Running ML-based feature recognition (v2 with feature grouping)...")
+        if AAGNET_AVAILABLE and aagnet_recognizer is not None:
+            logger.info("🤖 Running AAGNet feature recognition (24 classes with instance segmentation)...")
+            try:
+                # Save shape to temporary STEP file for AAGNet
+                fd, aagnet_tmp = tempfile.mkstemp(suffix=".step")
+                os.close(fd)
+                
+                # Write shape to STEP file for AAGNet
+                writer = STEPControl_Writer()
+                writer.Transfer(shape, 1)  # 1 = IFSelect_RetDone
+                writer.Write(aagnet_tmp)
+                
+                # Run AAGNet recognition
+                aagnet_result = aagnet_recognizer.recognize_features(aagnet_tmp)
+                
+                # Clean up temp file
+                os.unlink(aagnet_tmp)
+                
+                if aagnet_result.get('success'):
+                    # Transform AAGNet output to expected format
+                    ml_features = {
+                        'feature_instances': [
+                            {
+                                'feature_type': inst['type'],
+                                'face_ids': inst['face_indices'],
+                                'bottom_faces': inst['bottom_faces'],
+                                'confidence': inst['confidence']
+                            }
+                            for inst in aagnet_result.get('instances', [])
+                        ],
+                        'num_features_detected': aagnet_result.get('num_instances', 0),
+                        'num_faces_analyzed': aagnet_result.get('num_faces', 0),
+                        'inference_time_sec': aagnet_result.get('processing_time', 0),
+                        'recognition_method': 'AAGNet'
+                    }
+                    logger.info(f"✅ AAGNet recognition complete")
+                    logger.info(f"   Features: {ml_features['num_features_detected']}")
+                    logger.info(f"   Faces: {ml_features['num_faces_analyzed']}")
+                    logger.info(f"   Time: {ml_features['inference_time_sec']:.2f}s")
+                else:
+                    logger.error(f"❌ AAGNet recognition failed: {aagnet_result.get('error')}")
+                    ml_features = {"error": aagnet_result.get('error', 'Unknown error'), "recognition_method": "AAGNet"}
+                    
+            except Exception as e:
+                logger.error(f"❌ AAGNet failed: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                ml_features = {"error": str(e), "recognition_method": "AAGNet"}
+        
+        elif ML_VERSION == "v2":
+            # FALLBACK 1: Use enhanced ML with built-in feature grouping (UV-Net)
+            logger.info("🤖 Running ML-based feature recognition (v2 with feature grouping - UV-Net fallback)...")
             try:
                 ml_features = predict_features(shape)
-                logger.info(f"✅ ML  inference complete")
+                logger.info(f"✅ ML v2 inference complete")
                 logger.info(f"   Faces: {ml_features.get('num_faces_analyzed', '?')}")
                 logger.info(f"   Features: {ml_features.get('num_features_detected', '?')}")
             except TimeoutError:
                 logger.error("⏱️ ML inference timeout")
                 ml_features = {"error": "ML inference timeout"}
             except Exception as e:
-                logger.error(f"❌ ML  failed: {e}")
+                logger.error(f"❌ ML v2 failed: {e}")
                 ml_features = {"error": str(e)}
         
         elif ML_AVAILABLE:
-            # LEGACY: Use v1 + enhancement layer for feature grouping
-            logger.info("🤖 Running ML-based feature recognition (v1 + feature grouping)...")
+            # FALLBACK 2: Use v1 + enhancement layer for feature grouping (UV-Net legacy)
+            logger.info("🤖 Running ML-based feature recognition (v1 + feature grouping - UV-Net fallback)...")
             try:
                 ml_features = predict_features(shape)
                 
@@ -1852,7 +1923,7 @@ def analyze_cad():
                 ml_features = {"error": str(e)}
         
         else:
-            logger.warning("⚠️ ML inference not available")
+            logger.warning("⚠️ No feature recognition available (AAGNet and UV-Net both unavailable)")
         
         logger.info("📐 Extracting and classifying BREP edges...")
         
@@ -1914,17 +1985,19 @@ def analyze_cad():
 def root():
     return jsonify({
         "service": "CAD Geometry Analysis Service",
-        "version": "8.0.0-smart-edge-extraction-with-feature-grouping",
+        "version": "9.0.0-aagnet-24class-instance-segmentation",
         "status": "running",
         "endpoints": {
             "health": "/health",
-            "analyze": "/analyze-cad"
+            "analyze": "/analyze-cad",
+            "aagnet": "/api/aagnet/recognize" if AAGNET_AVAILABLE else "unavailable"
         },
         "features": {
             "classification": "Mesh-based with neighbor propagation",
-            "feature_detection": "Accurate through-hole, blind hole, bore, and boss detection",
+            "feature_detection": "AAGNet 24-class with instance segmentation" if AAGNET_AVAILABLE else "UV-Net fallback",
             "edge_extraction": "Professional smart filtering (20° dihedral angle threshold)",
             "feature_grouping": FEATURE_GROUPING_AVAILABLE,
+            "aagnet_available": AAGNET_AVAILABLE,
             "ml_version": ML_VERSION or "v1_legacy"
         }
     })
