@@ -19,8 +19,11 @@ from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.IFSelect import IFSelect_RetDone
 
 # Add AAGNet modules to path
-AAGNET_PATH = Path(__file__).parent / 'AAGNet-main'
+AAGNET_PATH = Path(__file__).parent / 'AAGNet'
+OCCWL_PATH = Path(__file__).parent / 'occwl'
+
 sys.path.insert(0, str(AAGNET_PATH))
+sys.path.insert(0, str(OCCWL_PATH))
 
 from dataset.AAGExtractor import AAGExtractor
 from dataset.topologyCheker import TopologyChecker
@@ -109,9 +112,9 @@ class AAGNetRecognizer:
         self.topoChecker = TopologyChecker()
         
         # Load attribute schema and statistics
-        self.weight_path = model_weights_path or str(AAGNET_PATH / 'weights' / 'weight_on_MFInstseg.pth')
-        self.attribute_schema = load_json_or_pkl(str(AAGNET_PATH / 'feature_lists' / 'all.json'))
-        self.stat = load_statistics(str(AAGNET_PATH / 'weights' / 'attr_stat.json'))
+        self.weights_path = model_weights_path or str(Path(__file__).parent / 'aagnet_model.pth')
+        self.attribute_schema = load_json_or_pkl(str( / 'feature_lists' / 'all.json'))
+        self.stat = load_statistics(str( / 'weights' / 'attr_stat.json'))
         
         # Initialize model
         self._init_model()
@@ -416,7 +419,7 @@ if __name__ == '__main__':
     recognizer = AAGNetRecognizer(device='cpu')
     
     # Test with example file
-    test_file = str(AAGNET_PATH / 'examples' / 'partA.step')
+    test_file = str( / 'examples' / 'partA.step')
     if os.path.exists(test_file):
         result = recognizer.recognize_features(test_file)
         print(json.dumps(result, indent=2))
