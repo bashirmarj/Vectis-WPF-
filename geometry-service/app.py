@@ -16,7 +16,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
 import logging
-from contextlib import contextmanager
+from contextmanager import contextmanager
 from functools import wraps
 
 # === OCC imports ===
@@ -1886,61 +1886,54 @@ def analyze_cad():
         mesh_data["tagged_edges"] = edge_result["tagged_edges"]
         mesh_data["triangle_count"] = len(mesh_data.get("indices", [])) // 3
         
+        # Calculate bounding box
         bbox = Bnd_Box()
         brepbndlib.Add(shape, bbox)
         xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
         
-              # Near line ~1895 in app.py
-bbox = Bnd_Box()
-brepbndlib.Add(shape, bbox)
-xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-
-result = {
-    'success': True,
-    'exact_volume': exact_props['volume'],
-    'exact_surface_area': exact_props['surface_area'],
-    'center_of_mass': exact_props['center_of_mass'],
-    'volume_cm3': exact_props['volume'] / 1000,
-    'surface_area_cm2': exact_props['surface_area'] / 100,
-    'triangle_count': mesh_data['triangle_count'],
-    'method': 'tessellation',
-    'bounding_box': {
-        'min': [xmin, ymin, zmin],
-        'max': [xmax, ymax, zmax]
-    },
-    'complexity_score': mesh_data['triangle_count'] / 1000,
-    
-    # Nested mesh_data structure
-    'mesh_data': {
-        'vertices': mesh_data['vertices'],
-        'indices': mesh_data['indices'],
-        'normals': mesh_data['normals'],
-        'vertex_colors': mesh_data['vertex_colors'],
-        'vertex_face_ids': mesh_data.get('vertex_face_ids', []),
-        'face_classifications': mesh_data['face_classifications'],
-        'feature_edges': mesh_data['feature_edges'],
-        'edge_classifications': mesh_data['edge_classifications'],
-        'tagged_feature_edges': mesh_data['tagged_edges'],
-        'triangle_count': mesh_data['triangle_count'],
-        'face_classification_method': 'mesh_based_with_propagation',
-        'edge_extraction_method': 'smart_filtering_20deg'
-    },
-    
-    # Top-level mesh fields (Edge Function compatibility)
-    'vertices': mesh_data['vertices'],
-    'indices': mesh_data['indices'], 
-    'normals': mesh_data['normals'],
-    'vertex_colors': mesh_data['vertex_colors'],
-    'face_classifications': mesh_data['face_classifications'],
-    
-    # ML features from AAGNet
-    'ml_features': ml_features,
-    'status': 'success'
-}
-
-logger.info("✅ Analysis complete")
-return jsonify(result)
-
+        # Create result object
+        result = {
+            'success': True,
+            'exact_volume': exact_props['volume'],
+            'exact_surface_area': exact_props['surface_area'],
+            'center_of_mass': exact_props['center_of_mass'],
+            'volume_cm3': exact_props['volume'] / 1000,
+            'surface_area_cm2': exact_props['surface_area'] / 100,
+            'triangle_count': mesh_data['triangle_count'],
+            'method': 'tessellation',
+            'bounding_box': {
+                'min': [xmin, ymin, zmin],
+                'max': [xmax, ymax, zmax]
+            },
+            'complexity_score': mesh_data['triangle_count'] / 1000,
+            
+            # Nested mesh_data structure
+            'mesh_data': {
+                'vertices': mesh_data['vertices'],
+                'indices': mesh_data['indices'],
+                'normals': mesh_data['normals'],
+                'vertex_colors': mesh_data['vertex_colors'],
+                'vertex_face_ids': mesh_data.get('vertex_face_ids', []),
+                'face_classifications': mesh_data['face_classifications'],
+                'feature_edges': mesh_data['feature_edges'],
+                'edge_classifications': mesh_data['edge_classifications'],
+                'tagged_feature_edges': mesh_data['tagged_edges'],
+                'triangle_count': mesh_data['triangle_count'],
+                'face_classification_method': 'mesh_based_with_propagation',
+                'edge_extraction_method': 'smart_filtering_20deg'
+            },
+            
+            # Top-level mesh fields (Edge Function compatibility)
+            'vertices': mesh_data['vertices'],
+            'indices': mesh_data['indices'], 
+            'normals': mesh_data['normals'],
+            'vertex_colors': mesh_data['vertex_colors'],
+            'face_classifications': mesh_data['face_classifications'],
+            
+            # ML features from AAGNet
+            'ml_features': ml_features,
+            'status': 'success'
+        }
         
         logger.info("✅ Analysis complete")
         return jsonify(result)
