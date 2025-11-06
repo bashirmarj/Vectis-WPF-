@@ -24,7 +24,7 @@ tqdm==4.65.0
 h5py==3.9.0
 
 # OCCWL Dependencies
-deprecate==2.1.1
+deprecate==1.0.5
 
 # Database
 supabase==2.0.3
