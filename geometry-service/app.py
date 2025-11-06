@@ -1890,10 +1890,17 @@ def analyze_cad():
         brepbndlib.Add(shape, bbox)
         xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
         
-        result = {
+              result = {
+            'success': True,
             'exact_volume': exact_props['volume'],
             'exact_surface_area': exact_props['surface_area'],
             'center_of_mass': exact_props['center_of_mass'],
+            'volume_cm3': exact_props['volume'] / 1000,
+            'surface_area_cm2': exact_props['surface_area'] / 100,
+            'triangle_count': mesh_data['triangle_count'],
+            'method': 'tessellation',
+            
+            # ✅ CRITICAL FIX: Include mesh_data at top level for Edge Function
             'mesh_data': {
                 'vertices': mesh_data['vertices'],
                 'indices': mesh_data['indices'],
@@ -1908,11 +1915,18 @@ def analyze_cad():
                 'face_classification_method': 'mesh_based_with_propagation',
                 'edge_extraction_method': 'smart_filtering_20deg'
             },
-            'volume_cm3': exact_props['volume'] / 1000,
-            'surface_area_cm2': exact_props['surface_area'] / 100,
-            'ml_features': ml_features,  # NEW: Now includes feature_instances!
+            
+            # ✅ ALSO include individual mesh fields at top level (what Edge Function expects)
+            'vertices': mesh_data['vertices'],
+            'indices': mesh_data['indices'], 
+            'normals': mesh_data['normals'],
+            'vertex_colors': mesh_data['vertex_colors'],
+            'face_classifications': mesh_data['face_classifications'],
+            
+            'ml_features': ml_features,
             'status': 'success'
         }
+
         
         logger.info("✅ Analysis complete")
         return jsonify(result)
