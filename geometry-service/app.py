@@ -1,11 +1,6 @@
-# COMPLETE MERGED app.py - YOUR FULL 2000+ LINES + FEATURE GROUPING INTEGRATED
-# Ready to deploy - just copy and paste this entire file
-# NO manual merging needed - everything is already combined
-try:
-    from feature_grouping import group_faces_to_features
-    print("✅ Feature grouping import works!")
-except Exception as e:
-    print(f"❌ Feature grouping import fails: {e}")
+# app.py - CAD Geometry Analysis Service with AAGNet Feature Recognition
+# Version 10.0.0 - AAGNet Only (UV-Net Removed)
+# All feature recognition now handled by AAGNet
 
 import os
 import io
@@ -63,31 +58,11 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 warnings.filterwarnings('ignore', category=DeprecationWarning, module='occwl')
 logging.getLogger('occwl').propagate = False
 
-# === ML Inference ===
-try:
-    from ml_inference import predict_features
-    ML_AVAILABLE = True
-    logger.info("✅ ML inference module loaded")
-except ImportError as e:
-    ML_AVAILABLE = False
-    logger.warning(f"⚠️ ML inference not available: {e}")
-
-# === NEW: Enhanced ML Inference Imports ===
-try:
-    from ml_inference import predict_features, validate_shape
-    ML_VERSION = "v2"
-    logger.info("✅ ML inference (with feature grouping) loaded")
-except ImportError:
-    ML_VERSION = None
-
-# === NEW: Import Feature Grouping ===
-try:
-    from feature_grouping import group_faces_to_features
-    FEATURE_GROUPING_AVAILABLE = True
-    logger.info("✅ Feature grouping module loaded")
-except ImportError:
-    FEATURE_GROUPING_AVAILABLE = False
-    logger.warning("⚠️ Feature grouping not available")
+# === REMOVED: UV-Net ML Inference (deprecated) ===
+ML_AVAILABLE = False
+ML_VERSION = None
+FEATURE_GROUPING_AVAILABLE = False
+logger.info("ℹ️ UV-Net inference disabled - using AAGNet only")
 
 # === NEW: AAGNet Integration ===
 try:
@@ -1887,43 +1862,13 @@ def analyze_cad():
                 import traceback
                 logger.error(traceback.format_exc())
                 ml_features = {"error": str(e), "recognition_method": "AAGNet"}
-        
-        elif ML_VERSION == "v2":
-            # FALLBACK 1: Use enhanced ML with built-in feature grouping (UV-Net)
-            logger.info("🤖 Running ML-based feature recognition (v2 with feature grouping - UV-Net fallback)...")
-            try:
-                ml_features = predict_features(shape)
-                logger.info(f"✅ ML v2 inference complete")
-                logger.info(f"   Faces: {ml_features.get('num_faces_analyzed', '?')}")
-                logger.info(f"   Features: {ml_features.get('num_features_detected', '?')}")
-            except TimeoutError:
-                logger.error("⏱️ ML inference timeout")
-                ml_features = {"error": "ML inference timeout"}
-            except Exception as e:
-                logger.error(f"❌ ML v2 failed: {e}")
-                ml_features = {"error": str(e)}
-        
-        elif ML_AVAILABLE:
-            # FALLBACK 2: Use v1 + enhancement layer for feature grouping (UV-Net legacy)
-            logger.info("🤖 Running ML-based feature recognition (v1 + feature grouping - UV-Net fallback)...")
-            try:
-                ml_features = predict_features(shape)
-                
-                # NEW: Enhance v1 output with feature grouping
-                ml_features = enhance_ml_features_with_grouping(ml_features, shape)
-                
-                logger.info(f"✅ ML v1 inference + grouping complete")
-                logger.info(f"   Faces: {len(ml_features.get('face_predictions', []))}")
-                logger.info(f"   Features: {ml_features.get('num_features_detected', 0)}")
-            except TimeoutError:
-                logger.error("⏱️ ML inference timeout")
-                ml_features = {"error": "ML inference timeout"}
-            except Exception as e:
-                logger.error(f"❌ ML v1 failed: {e}")
-                ml_features = {"error": str(e)}
-        
         else:
-            logger.warning("⚠️ No feature recognition available (AAGNet and UV-Net both unavailable)")
+            logger.error("❌ AAGNet not available - cannot process file")
+            ml_features = {
+                "error": "AAGNet not initialized",
+                "recognition_method": "none",
+                "message": "Feature recognition requires AAGNet to be properly installed"
+            }
         
         logger.info("📐 Extracting and classifying BREP edges...")
         
@@ -1985,7 +1930,7 @@ def analyze_cad():
 def root():
     return jsonify({
         "service": "CAD Geometry Analysis Service",
-        "version": "9.0.0-aagnet-24class-instance-segmentation",
+        "version": "10.0.0-aagnet-only",
         "status": "running",
         "endpoints": {
             "health": "/health",
@@ -1994,11 +1939,11 @@ def root():
         },
         "features": {
             "classification": "Mesh-based with neighbor propagation",
-            "feature_detection": "AAGNet 24-class with instance segmentation" if AAGNET_AVAILABLE else "UV-Net fallback",
+            "feature_detection": "AAGNet 24-class with instance segmentation" if AAGNET_AVAILABLE else "unavailable",
             "edge_extraction": "Professional smart filtering (20° dihedral angle threshold)",
-            "feature_grouping": FEATURE_GROUPING_AVAILABLE,
+            "feature_grouping": False,
             "aagnet_available": AAGNET_AVAILABLE,
-            "ml_version": ML_VERSION or "v1_legacy"
+            "ml_version": "none (AAGNet only)"
         }
     })
 
