@@ -19,7 +19,7 @@
         "EllipticalEdgeAttribute",
         "NonRationalBSplineEdgeAttribute",
         "RationalBSplineEdgeAttribute",
-        "StraightEdgeAttribute",
+        "StraightEdgeAttribute"
     ],
     "UV-grid":{
         "num_srf_u": 5,
