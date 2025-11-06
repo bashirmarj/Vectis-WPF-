@@ -1890,42 +1890,56 @@ def analyze_cad():
         brepbndlib.Add(shape, bbox)
         xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
         
-              result = {
-            'success': True,
-            'exact_volume': exact_props['volume'],
-            'exact_surface_area': exact_props['surface_area'],
-            'center_of_mass': exact_props['center_of_mass'],
-            'volume_cm3': exact_props['volume'] / 1000,
-            'surface_area_cm2': exact_props['surface_area'] / 100,
-            'triangle_count': mesh_data['triangle_count'],
-            'method': 'tessellation',
-            
-            # ✅ CRITICAL FIX: Include mesh_data at top level for Edge Function
-            'mesh_data': {
-                'vertices': mesh_data['vertices'],
-                'indices': mesh_data['indices'],
-                'normals': mesh_data['normals'],
-                'vertex_colors': mesh_data['vertex_colors'],
-                'vertex_face_ids': mesh_data.get('vertex_face_ids', []),
-                'face_classifications': mesh_data['face_classifications'],
-                'feature_edges': mesh_data['feature_edges'],
-                'edge_classifications': mesh_data['edge_classifications'],
-                'tagged_feature_edges': mesh_data['tagged_edges'],
-                'triangle_count': mesh_data['triangle_count'],
-                'face_classification_method': 'mesh_based_with_propagation',
-                'edge_extraction_method': 'smart_filtering_20deg'
-            },
-            
-            # ✅ ALSO include individual mesh fields at top level (what Edge Function expects)
-            'vertices': mesh_data['vertices'],
-            'indices': mesh_data['indices'], 
-            'normals': mesh_data['normals'],
-            'vertex_colors': mesh_data['vertex_colors'],
-            'face_classifications': mesh_data['face_classifications'],
-            
-            'ml_features': ml_features,
-            'status': 'success'
-        }
+              # Near line ~1895 in app.py
+bbox = Bnd_Box()
+brepbndlib.Add(shape, bbox)
+xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+
+result = {
+    'success': True,
+    'exact_volume': exact_props['volume'],
+    'exact_surface_area': exact_props['surface_area'],
+    'center_of_mass': exact_props['center_of_mass'],
+    'volume_cm3': exact_props['volume'] / 1000,
+    'surface_area_cm2': exact_props['surface_area'] / 100,
+    'triangle_count': mesh_data['triangle_count'],
+    'method': 'tessellation',
+    'bounding_box': {
+        'min': [xmin, ymin, zmin],
+        'max': [xmax, ymax, zmax]
+    },
+    'complexity_score': mesh_data['triangle_count'] / 1000,
+    
+    # Nested mesh_data structure
+    'mesh_data': {
+        'vertices': mesh_data['vertices'],
+        'indices': mesh_data['indices'],
+        'normals': mesh_data['normals'],
+        'vertex_colors': mesh_data['vertex_colors'],
+        'vertex_face_ids': mesh_data.get('vertex_face_ids', []),
+        'face_classifications': mesh_data['face_classifications'],
+        'feature_edges': mesh_data['feature_edges'],
+        'edge_classifications': mesh_data['edge_classifications'],
+        'tagged_feature_edges': mesh_data['tagged_edges'],
+        'triangle_count': mesh_data['triangle_count'],
+        'face_classification_method': 'mesh_based_with_propagation',
+        'edge_extraction_method': 'smart_filtering_20deg'
+    },
+    
+    # Top-level mesh fields (Edge Function compatibility)
+    'vertices': mesh_data['vertices'],
+    'indices': mesh_data['indices'], 
+    'normals': mesh_data['normals'],
+    'vertex_colors': mesh_data['vertex_colors'],
+    'face_classifications': mesh_data['face_classifications'],
+    
+    # ML features from AAGNet
+    'ml_features': ml_features,
+    'status': 'success'
+}
+
+logger.info("✅ Analysis complete")
+return jsonify(result)
 
         
         logger.info("✅ Analysis complete")
