@@ -16,7 +16,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
 import logging
-from contextmanager import contextmanager
+from contextlib import contextmanager
 from functools import wraps
 
 # === OCC imports ===
