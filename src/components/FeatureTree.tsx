@@ -1,253 +1,312 @@
-import React, { useState, useMemo } from "react";
-import "./FeatureTree.css";
+import React, { useMemo } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  Box, 
+  Circle, 
+  Square, 
+  Triangle,
+  Layers,
+  Zap
+} from 'lucide-react';
+import './FeatureTree.css';
 
-interface FeatureInstance {
-  instance_id: number;
-  feature_type: string;
-  face_ids: number[];
+// ✅ FIXED: AAGNet multi-task output interface
+interface AAGNetFeatureInstance {
+  type: string;
+  face_indices: number[];
+  bottom_faces: number[];
   confidence: number;
-  geometric_primitive?: string;
-  parameters?: Record<string, number | string>;
 }
 
-interface MLFeatures {
-  feature_instances?: FeatureInstance[];
-  feature_summary?: Record<string, number>;
-  num_features_detected?: number;
-  num_faces_analyzed?: number;
-  face_predictions?: Array<{
-    face_id: number;
-    predicted_class: string;
-    confidence: number;
-  }>;
-  inference_time_sec?: number;
+interface AAGNetFeatures {
+  instances: AAGNetFeatureInstance[];
+  semantic_labels: number[];
+  extended_attributes?: {
+    face_attributes: number[][];
+    edge_attributes: number[][];
+  };
+  num_faces: number;
+  num_instances: number;
+  processing_time?: number;
 }
 
 interface FeatureTreeProps {
-  mlFeatures?: MLFeatures;
+  mlFeatures?: AAGNetFeatures;
+  featureSummary?: any;
+  onFeatureSelect?: (featureInstance: AAGNetFeatureInstance) => void;
   isLoading?: boolean;
 }
 
-const FeatureTree: React.FC<FeatureTreeProps> = ({ mlFeatures, isLoading = false }) => {
-  const [expandedInstances, setExpandedInstances] = useState<Set<number>>(new Set());
-  const [showRawPredictions, setShowRawPredictions] = useState(false);
+// Feature type to display name mapping
+const FEATURE_DISPLAY_NAMES: Record<string, string> = {
+  'chamfer': 'Chamfer',
+  'through_hole': 'Through Hole',
+  'triangular_passage': 'Triangular Passage',
+  'rectangular_passage': 'Rectangular Passage',
+  '6sides_passage': '6-Sides Passage',
+  'triangular_through_slot': 'Triangular Through Slot',
+  'rectangular_through_slot': 'Rectangular Through Slot',
+  'circular_through_slot': 'Circular Through Slot',
+  'rectangular_through_step': 'Rectangular Through Step',
+  '2sides_through_step': '2-Sides Through Step',
+  'slanted_through_step': 'Slanted Through Step',
+  'Oring': 'O-Ring',
+  'blind_hole': 'Blind Hole',
+  'triangular_pocket': 'Triangular Pocket',
+  'rectangular_pocket': 'Rectangular Pocket',
+  '6sides_pocket': '6-Sides Pocket',
+  'circular_end_pocket': 'Circular End Pocket',
+  'rectangular_blind_slot': 'Rectangular Blind Slot',
+  'v_circular_end_blind_slot': 'V-Circular End Blind Slot',
+  'h_circular_end_blind_slot': 'H-Circular End Blind Slot',
+  'triangular_blind_step': 'Triangular Blind Step',
+  'circular_blind_step': 'Circular Blind Step',
+  'rectangular_blind_step': 'Rectangular Blind Step',
+  'round': 'Round',
+  'stock': 'Stock'
+};
 
-  const toggleInstanceExpanded = (instanceId: number) => {
-    const newSet = new Set(expandedInstances);
-    if (newSet.has(instanceId)) {
-      newSet.delete(instanceId);
-    } else {
-      newSet.add(instanceId);
-    }
-    setExpandedInstances(newSet);
-  };
+// Feature category classification
+const FEATURE_CATEGORIES = {
+  holes: ['through_hole', 'blind_hole'],
+  pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket'],
+  slots: [
+    'triangular_through_slot', 
+    'rectangular_through_slot', 
+    'circular_through_slot',
+    'rectangular_blind_slot',
+    'v_circular_end_blind_slot',
+    'h_circular_end_blind_slot'
+  ],
+  steps: [
+    'rectangular_through_step',
+    '2sides_through_step',
+    'slanted_through_step',
+    'triangular_blind_step',
+    'circular_blind_step',
+    'rectangular_blind_step'
+  ],
+  passages: ['triangular_passage', 'rectangular_passage', '6sides_passage'],
+  chamfers: ['chamfer', 'round'],
+  other: ['Oring']
+};
 
-  const featureInstances = useMemo(() => {
-    return mlFeatures?.feature_instances || [];
-  }, [mlFeatures]);
+// Feature category display names
+const CATEGORY_NAMES = {
+  holes: 'Holes',
+  pockets: 'Pockets',
+  slots: 'Slots',
+  steps: 'Steps',
+  passages: 'Passages',
+  chamfers: 'Chamfers & Rounds',
+  other: 'Other Features'
+};
 
-  const featureSummary = useMemo(() => {
-    return mlFeatures?.feature_summary || {};
-  }, [mlFeatures]);
+// Category icons
+const CategoryIcon: Record<string, React.ComponentType<any>> = {
+  holes: Circle,
+  pockets: Box,
+  slots: Square,
+  steps: Layers,
+  passages: Triangle,
+  chamfers: Zap,
+  other: Box
+};
 
-  const facePredictions = useMemo(() => {
-    return mlFeatures?.face_predictions || [];
-  }, [mlFeatures]);
+// Confidence color coding
+const getConfidenceColor = (confidence: number): string => {
+  if (confidence >= 0.9) return 'text-green-600 bg-green-50';
+  if (confidence >= 0.7) return 'text-yellow-600 bg-yellow-50';
+  return 'text-red-600 bg-red-50';
+};
 
-  const numFeaturesDetected = useMemo(() => {
-    return mlFeatures?.num_features_detected || 0;
-  }, [mlFeatures]);
+const getConfidenceBadge = (confidence: number): string => {
+  if (confidence >= 0.9) return 'High';
+  if (confidence >= 0.7) return 'Medium';
+  return 'Low';
+};
 
-  const numFacesAnalyzed = useMemo(() => {
-    return mlFeatures?.num_faces_analyzed || 0;
-  }, [mlFeatures]);
-
-  const inferenceTime = useMemo(() => {
-    return mlFeatures?.inference_time_sec || 0;
-  }, [mlFeatures]);
+const FeatureTree: React.FC<FeatureTreeProps> = ({ 
+  mlFeatures, 
+  featureSummary,
+  onFeatureSelect,
+  isLoading = false
+}) => {
+  // ✅ FIXED: Proper state management with useMemo
+  const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(
+    new Set(Object.keys(CATEGORY_NAMES))
+  );
 
   if (isLoading) {
     return (
-      <div className="feature-tree loading">
-        <div className="spinner"></div>
-        <p>Running ML feature recognition...</p>
-      </div>
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Loading Features...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
-  if (!mlFeatures) {
+  if (!mlFeatures || !mlFeatures.instances || mlFeatures.instances.length === 0) {
     return (
-      <div className="feature-tree empty">
-        <p>Upload a STEP file to see feature analysis</p>
-      </div>
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Feature Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Upload a STEP file to see feature analysis</p>
+        </CardContent>
+      </Card>
     );
   }
 
-  if (mlFeatures.error) {
-    return (
-      <div className="feature-tree error">
-        <h3>❌ ML Inference Error</h3>
-        <p>{mlFeatures.error}</p>
-      </div>
-    );
-  }
+  // Group features by category
+  const categorizedFeatures = useMemo(() => {
+    const grouped: Record<string, AAGNetFeatureInstance[]> = {
+      holes: [],
+      pockets: [],
+      slots: [],
+      steps: [],
+      passages: [],
+      chamfers: [],
+      other: []
+    };
+
+    mlFeatures.instances.forEach(instance => {
+      let categorized = false;
+      
+      for (const [category, types] of Object.entries(FEATURE_CATEGORIES)) {
+        if (types.includes(instance.type)) {
+          grouped[category].push(instance);
+          categorized = true;
+          break;
+        }
+      }
+      
+      if (!categorized) {
+        grouped.other.push(instance);
+      }
+    });
+
+    return grouped;
+  }, [mlFeatures.instances]);
+
+  // Calculate summary statistics
+  const stats = useMemo(() => {
+    const totalFeatures = mlFeatures.num_instances;
+    const totalFaces = mlFeatures.num_faces;
+    const avgConfidence = mlFeatures.instances.length > 0
+      ? mlFeatures.instances.reduce((sum, f) => sum + f.confidence, 0) / mlFeatures.instances.length
+      : 0;
+    
+    return {
+      totalFeatures,
+      totalFaces,
+      avgConfidence,
+      highConfidence: mlFeatures.instances.filter(f => f.confidence >= 0.9).length,
+      mediumConfidence: mlFeatures.instances.filter(f => f.confidence >= 0.7 && f.confidence < 0.9).length,
+      lowConfidence: mlFeatures.instances.filter(f => f.confidence < 0.7).length
+    };
+  }, [mlFeatures]);
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
 
   return (
-    <div className="feature-tree">
-      {/* Header */}
-      <div className="feature-tree-header">
-        <h2>🤖 ML Feature Recognition</h2>
-        <p className="subtitle">
-          {numFeaturesDetected} feature instances detected from {numFacesAnalyzed} faces in {inferenceTime}s
-        </p>
-      </div>
-
-      {/* Feature Distribution */}
-      <div className="feature-distribution">
-        <h3>📊 Feature Distribution</h3>
-        <div className="distribution-grid">
-          {Object.entries(featureSummary).map(([featureType, count]) => {
-            if (featureType === "total_features") return null;
-
-            return (
-              <div key={featureType} className="distribution-item">
-                <span className="feature-type">{featureType}</span>
-                <span className="count">{count}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Feature Instances */}
-      <div className="feature-instances">
-        <h3>📋 Feature Instances ({featureInstances.length})</h3>
-
-        {featureInstances.length === 0 ? (
-          <div className="no-features">
-            <p>No feature instances detected</p>
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Zap className="h-5 w-5" />
+          AAGNet Feature Recognition
+        </CardTitle>
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <div className="text-center p-2 bg-muted rounded">
+            <div className="text-2xl font-bold">{stats.totalFeatures}</div>
+            <div className="text-xs text-muted-foreground">Features</div>
           </div>
-        ) : (
-          <div className="instances-list">
-            {featureInstances.map((instance) => (
-              <div key={instance.instance_id} className="instance-card">
-                <div className="instance-header" onClick={() => toggleInstanceExpanded(instance.instance_id)}>
-                  <span className="toggle-icon">{expandedInstances.has(instance.instance_id) ? "▼" : "▶"}</span>
+          <div className="text-center p-2 bg-muted rounded">
+            <div className="text-2xl font-bold">{stats.totalFaces}</div>
+            <div className="text-xs text-muted-foreground">Faces</div>
+          </div>
+          <div className="text-center p-2 bg-muted rounded">
+            <div className="text-2xl font-bold">{(stats.avgConfidence * 100).toFixed(0)}%</div>
+            <div className="text-xs text-muted-foreground">Confidence</div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[600px]">
+          <div className="space-y-4">
+            {Object.entries(CATEGORY_NAMES).map(([categoryKey, categoryName]) => {
+              const categoryFeatures = categorizedFeatures[categoryKey];
+              if (categoryFeatures.length === 0) return null;
 
-                  <div className="instance-title">
-                    <span className="instance-id">[ID:{instance.instance_id}]</span>
-                    <span className="feature-type-badge">{instance.feature_type}</span>
-                    <span className="confidence">{(instance.confidence * 100).toFixed(0)}%</span>
-                  </div>
-                </div>
+              const IconComponent = CategoryIcon[categoryKey];
+              const isExpanded = expandedCategories.has(categoryKey);
 
-                {expandedInstances.has(instance.instance_id) && (
-                  <div className="instance-details">
-                    {/* Faces */}
-                    <div className="detail-section">
-                      <h4>Faces ({instance.face_ids.length})</h4>
-                      <div className="face-ids">
-                        {instance.face_ids.map((faceId) => (
-                          <span key={faceId} className="face-id">
-                            {faceId}
-                          </span>
-                        ))}
-                      </div>
+              return (
+                <div key={categoryKey} className="border rounded-lg p-3">
+                  <button
+                    onClick={() => toggleCategory(categoryKey)}
+                    className="w-full flex items-center justify-between hover:bg-muted/50 p-2 rounded"
+                  >
+                    <div className="flex items-center gap-2">
+                      <IconComponent className="h-4 w-4" />
+                      <span className="font-medium">{categoryName}</span>
+                      <Badge variant="secondary">{categoryFeatures.length}</Badge>
                     </div>
+                    {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
 
-                    {/* Geometric Primitive */}
-                    {instance.geometric_primitive && (
-                      <div className="detail-section">
-                        <h4>Geometric Primitive</h4>
-                        <p className="primitive">{instance.geometric_primitive}</p>
-                      </div>
-                    )}
-
-                    {/* Parameters */}
-                    {instance.parameters && Object.keys(instance.parameters).length > 0 && (
-                      <div className="detail-section">
-                        <h4>Parameters</h4>
-                        <div className="parameters">
-                          {Object.entries(instance.parameters).map(([key, value]) => (
-                            <div key={key} className="parameter">
-                              <span className="param-name">{key}:</span>
-                              <span className="param-value">
-                                {typeof value === "number" ? value.toFixed(2) : value}
-                              </span>
-                            </div>
-                          ))}
+                  {isExpanded && (
+                    <div className="mt-2 space-y-2">
+                      {categoryFeatures.map((feature, idx) => (
+                        <div
+                          key={idx}
+                          className="ml-6 p-2 border-l-2 border-primary/20 hover:bg-muted/30 rounded cursor-pointer"
+                          onClick={() => onFeatureSelect?.(feature)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {FEATURE_DISPLAY_NAMES[feature.type] || feature.type}
+                            </span>
+                            <Badge className={getConfidenceColor(feature.confidence)} variant="outline">
+                              {getConfidenceBadge(feature.confidence)} ({(feature.confidence * 100).toFixed(0)}%)
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {feature.face_indices.length} faces
+                            {feature.bottom_faces.length > 0 && ` • ${feature.bottom_faces.length} bottom faces`}
+                          </div>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Confidence */}
-                    <div className="detail-section">
-                      <h4>Confidence Score</h4>
-                      <div className="confidence-bar">
-                        <div className="confidence-fill" style={{ width: `${instance.confidence * 100}%` }}></div>
-                      </div>
-                      <p className="confidence-value">{(instance.confidence * 100).toFixed(1)}%</p>
+                      ))}
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Statistics */}
-      <div className="feature-statistics">
-        <h3>📈 Analysis Statistics</h3>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-label">Features Detected</span>
-            <span className="stat-value">{numFeaturesDetected}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Faces Analyzed</span>
-            <span className="stat-value">{numFacesAnalyzed}</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Avg Confidence</span>
-            <span className="stat-value">
-              {featureInstances.length > 0
-                ? (
-                    (featureInstances.reduce((sum, inst) => sum + inst.confidence, 0) / featureInstances.length) *
-                    100
-                  ).toFixed(0)
-                : "N/A"}
-              %
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Inference Time</span>
-            <span className="stat-value">{inferenceTime.toFixed(2)}s</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Toggle Raw Predictions */}
-      <div className="feature-debug">
-        <button className="toggle-raw-button" onClick={() => setShowRawPredictions(!showRawPredictions)}>
-          {showRawPredictions ? "▼" : "▶"} Raw Face Predictions ({facePredictions.length})
-        </button>
-
-        {showRawPredictions && (
-          <div className="raw-predictions">
-            <div className="predictions-list">
-              {facePredictions.map((pred, idx) => (
-                <div key={idx} className="prediction-item">
-                  <span className="face-id">Face {pred.face_id}</span>
-                  <span className="class">{pred.predicted_class}</span>
-                  <span className="confidence">{(pred.confidence * 100).toFixed(0)}%</span>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
-      </div>
-    </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 };
 

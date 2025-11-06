@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string | null
           edge_classifications: Json | null
+          extended_attributes: Json | null
           face_classifications: Json | null
           face_types: string[] | null
           feature_edges: Json | null
@@ -25,9 +26,13 @@ export type Database = {
           file_name: string
           id: string
           indices: number[]
+          instance_features: Json | null
           line_item_id: string | null
           normals: number[]
+          processing_time_ms: number | null
           quotation_id: string | null
+          recognition_method: string | null
+          semantic_labels: number[] | null
           tagged_feature_edges: Json | null
           triangle_count: number
           vertex_colors: string[] | null
@@ -37,6 +42,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           edge_classifications?: Json | null
+          extended_attributes?: Json | null
           face_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
@@ -44,9 +50,13 @@ export type Database = {
           file_name: string
           id?: string
           indices: number[]
+          instance_features?: Json | null
           line_item_id?: string | null
           normals: number[]
+          processing_time_ms?: number | null
           quotation_id?: string | null
+          recognition_method?: string | null
+          semantic_labels?: number[] | null
           tagged_feature_edges?: Json | null
           triangle_count: number
           vertex_colors?: string[] | null
@@ -56,6 +66,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           edge_classifications?: Json | null
+          extended_attributes?: Json | null
           face_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
@@ -63,9 +74,13 @@ export type Database = {
           file_name?: string
           id?: string
           indices?: number[]
+          instance_features?: Json | null
           line_item_id?: string | null
           normals?: number[]
+          processing_time_ms?: number | null
           quotation_id?: string | null
+          recognition_method?: string | null
+          semantic_labels?: number[] | null
           tagged_feature_edges?: Json | null
           triangle_count?: number
           vertex_colors?: string[] | null
@@ -242,6 +257,47 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_feature_instances: {
+        Row: {
+          bottom_face_indices: number[] | null
+          confidence: number
+          created_at: string | null
+          face_indices: number[]
+          feature_type: string
+          id: string
+          mesh_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bottom_face_indices?: number[] | null
+          confidence: number
+          created_at?: string | null
+          face_indices: number[]
+          feature_type: string
+          id?: string
+          mesh_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bottom_face_indices?: number[] | null
+          confidence?: number
+          created_at?: string | null
+          face_indices?: number[]
+          feature_type?: string
+          id?: string
+          mesh_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_feature_instances_mesh_id_fkey"
+            columns: ["mesh_id"]
+            isOneToOne: false
+            referencedRelation: "cad_meshes"
             referencedColumns: ["id"]
           },
         ]
