@@ -83,16 +83,16 @@ export const PartUploadForm = () => {
       const filePath = `uploads/${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('trained-models')
+        .from('cad-files') // ✅ FIXED: Changed from 'trained-models' to 'cad-files'
         .upload(filePath, fileWithQty.file);
 
       if (uploadError) {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // Step 2: Create signed URL (since trained-models is private)
+      // Step 2: Create signed URL (for public bucket, this could be a simple public URL too)
       const { data: urlData, error: urlError } = await supabase.storage
-        .from('trained-models')
+        .from('cad-files') // ✅ FIXED: Changed from 'trained-models' to 'cad-files'
         .createSignedUrl(filePath, 3600); // 1 hour expiry
 
       if (urlError) {
@@ -102,7 +102,7 @@ export const PartUploadForm = () => {
       // Step 3: Call edge function
       const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
         body: {
-          fileUrl: urlData.signedUrl,        // ✅ Using signed URL for private bucket
+          fileUrl: urlData.signedUrl,        // ✅ Using signed URL for bucket
           fileName: fileWithQty.file.name,
           fileType: fileExt,
           material: fileWithQty.material,
