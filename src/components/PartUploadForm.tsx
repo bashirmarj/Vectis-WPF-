@@ -81,14 +81,33 @@ export const PartUploadForm = () => {
 
       console.log(`📤 Sending ${fileWithQty.file.name} to edge function (may take 30-60s on first use)...`);
 
-      const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
-        body: {
-          file_name: fileWithQty.file.name,
-          file_data: base64File,
-          file_size: fileWithQty.file.size,
-          material: fileWithQty.material,
-        },
-      });
+      // Step 1: Upload to Supabase Storage first
+const fileExt = fileWithQty.file.name.split('.').pop()?.toLowerCase() || 'step';
+const fileName = `${Date.now()}_${fileWithQty.file.name}`;
+const filePath = `uploads/${fileName}`;
+
+const { data: uploadData, error: uploadError } = await supabase.storage
+  .from('cad-files')
+  .upload(filePath, fileWithQty.file);
+
+if (uploadError) {
+  throw new Error(`Upload failed: ${uploadError.message}`);
+}
+
+// Step 2: Get public URL
+const { data: urlData } = supabase.storage
+  .from('cad-files')
+  .getPublicUrl(filePath);
+
+// Step 3: Call edge function
+const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
+  body: {
+    fileUrl: urlData.publicUrl,    // ✅ URL
+    fileName: fileWithQty.file.name,  // ✅ Original name
+    fileType: fileExt,             // ✅ Extension
+    material: fileWithQty.material,
+  },
+});
 
       if (error) {
         throw new Error(error.message || "Edge function error");
