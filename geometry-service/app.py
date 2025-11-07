@@ -661,7 +661,7 @@ def run_5_stage_validation(file_path: str) -> ValidationResult:
     
     passed = quality_score >= config.QUALITY_SCORE_MIN
     
-    logger.info(f"✅ Validation complete: Quality={quality_score:.2f}, Tier={processing_tier.name}")
+    logger.info(f"✅ Validation complete: Quality={quality_score:.2f}, Tier={processing_tier}")
     
     return ValidationResult(
         passed=passed,
@@ -1141,7 +1141,7 @@ def analyze_cad():
             log_audit_trail("validation_complete", request_id, {
                 "file_hash": file_hash,
                 "quality_score": validation_result.quality_score,
-                "processing_tier": validation_result.processing_tier.name,
+                "processing_tier": validation_result.processing_tier,
                 "healing_applied": validation_result.healing_applied,
                 "issues": validation_result.issues,
                 "warnings": validation_result.warnings
@@ -1183,7 +1183,7 @@ def analyze_cad():
                 ProcessingTier.TIER_3_POINT_CLOUD: 0.60
             }[processing_tier]
             
-            logger.info(f"📊 Processing with {processing_tier.name} (confidence: {confidence_multiplier:.2f})")
+            logger.info(f"📊 Processing with {processing_tier} (confidence: {confidence_multiplier:.2f})")
             
             # Read shape (possibly healed during validation)
             reader = STEPControl_Reader()
@@ -1245,7 +1245,7 @@ def analyze_cad():
                             'num_faces_analyzed': aagnet_result.get('num_faces', 0),
                             'inference_time_sec': aagnet_result.get('processing_time', 0),
                             'recognition_method': 'AAGNet',
-                            'processing_tier': processing_tier.name,
+                            'processing_tier': processing_tier,
                             'confidence_multiplier': confidence_multiplier
                         }
                         
@@ -1314,7 +1314,7 @@ def analyze_cad():
                 # Validation & Quality
                 'validation': {
                     'quality_score': validation_result.quality_score,
-                    'processing_tier': processing_tier.name,
+                    'processing_tier': processing_tier,
                     'healing_applied': validation_result.healing_applied,
                     'warnings': validation_result.warnings,
                     'confidence_multiplier': confidence_multiplier
