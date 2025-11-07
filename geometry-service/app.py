@@ -1180,8 +1180,9 @@ def analyze_cad():
             confidence_multiplier = {
                 ProcessingTier.TIER_1_BREP: 0.95,
                 ProcessingTier.TIER_2_MESH: 0.75,
-                ProcessingTier.TIER_3_POINT_CLOUD: 0.60
-            }[processing_tier]
+                ProcessingTier.TIER_3_POINT_CLOUD: 0.60,
+                ProcessingTier.TIER_4_BASIC: 0.40
+            }.get(processing_tier, 0.75)  # Default to 0.75 if tier not found
             
             logger.info(f"📊 Processing with {processing_tier} (confidence: {confidence_multiplier:.2f})")
             
