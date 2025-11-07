@@ -176,16 +176,16 @@ class Face(Shape, BoundingBoxMixin, TriangulatorMixin, WireContainerMixin, \
         Returns:
             OCC.Geom.Handle_Geom_Surface: Interface to all surface geometry
         """
-    loc = TopLoc_Location()
-    surf = BRep_Tool.Surface(self.topods_shape(), loc)
-    if not loc.IsIdentity():
-        tsf = loc.Transformation()
-        np_tsf = geom_utils.to_numpy(tsf)
-        assert np.allclose(np_tsf, np.eye(4)), \
-            "Requesting surface for transformed face. /n\
-            Call solid.set_transform_to_identity() to remove the transform \
-            or compound.Transform(np.eye(4)) to bake in the assembly transform"
-    return surf
+        loc = TopLoc_Location()
+        surf = BRep_Tool.Surface(self.topods_shape(), loc)
+        if not loc.IsIdentity():
+            tsf = loc.Transformation()
+            np_tsf = geom_utils.to_numpy(tsf)
+            assert np.allclose(np_tsf, np.eye(4)), \
+                "Requesting surface for transformed face. /n\
+                Call solid.set_transform_to_identity() to remove the transform \
+                or compound.Transform(np.eye(4)) to bake in the assembly transform"
+        return surf
 
     def reversed_face(self):
         """
