@@ -311,11 +311,10 @@ serve(async (req) => {
               level: 'INFO',
               correlation_id: correlationId,
               tier: 'EDGE',
-              message: 'Flask analysis successful',
+              message: 'Geometry service processing complete',
               context: { 
-                has_ml_features: !!flaskResult.ml_features,
-                triangle_count: flaskResult.triangle_count,
-                method: flaskResult.method
+                has_mesh: !!flaskResult.mesh_data,
+                has_ml_features: !!flaskResult.ml_features
               }
             }));
 
@@ -460,14 +459,28 @@ serve(async (req) => {
           level: 'DEBUG',
           correlation_id: correlationId,
           tier: 'EDGE',
-          message: 'Attempting to store mesh data'
+          message: 'Attempting to store mesh data',
+          context: { 
+            hasVertices: !!analysisResult.mesh_data.vertices,
+            vertexCount: analysisResult.mesh_data.vertices?.length || 0,
+            triangleCount: analysisResult.mesh_data.triangle_count || 0
+          }
         }));
+
+        // Generate file hash from file content if available, else use metadata
+        const fileHash = fileData 
+          ? await crypto.subtle.digest('SHA-256', fileData).then(
+              (hashBuffer) => Array.from(new Uint8Array(hashBuffer))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('')
+            )
+          : `${fileName}_${Date.now()}_${correlationId}`;
 
         const { data: mesh, error } = await supabaseClient
           .from('cad_meshes')
           .insert({
             file_name: fileName,
-            file_hash: `${fileName}_${Date.now()}_${correlationId}`,
+            file_hash: fileHash,
             vertices: analysisResult.mesh_data.vertices,
             indices: analysisResult.mesh_data.indices || [],
             normals: analysisResult.mesh_data.normals || [],
@@ -482,12 +495,12 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          console.warn(JSON.stringify({
+          console.error(JSON.stringify({
             timestamp: new Date().toISOString(),
-            level: 'WARN',
+            level: 'ERROR',
             correlation_id: correlationId,
             tier: 'EDGE',
-            message: 'Mesh storage failed',
+            message: 'Database insertion failed',
             context: { error: error.message }
           }));
         } else {
@@ -502,12 +515,12 @@ serve(async (req) => {
           }));
         }
       } catch (dbError) {
-        console.warn(JSON.stringify({
+        console.error(JSON.stringify({
           timestamp: new Date().toISOString(),
-          level: 'WARN',
+          level: 'ERROR',
           correlation_id: correlationId,
           tier: 'EDGE',
-          message: 'Database storage failed',
+          message: 'Database storage error',
           context: { error: (dbError as Error).message }
         }));
       }
