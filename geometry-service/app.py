@@ -1857,21 +1857,17 @@ def analyze_cad():
                     logger.info(f"   Faces: {ml_features['num_faces_analyzed']}")
                     logger.info(f"   Time: {ml_features['inference_time_sec']:.2f}s")
                 else:
-                    logger.error(f"❌ AAGNet recognition failed: {aagnet_result.get('error')}")
-                    ml_features = {"error": aagnet_result.get('error', 'Unknown error'), "recognition_method": "AAGNet"}
+                    logger.warning(f"⚠️ AAGNet recognition failed: {aagnet_result.get('error')}")
+                    ml_features = None  # ML features optional, mesh data is what matters
                     
             except Exception as e:
-                logger.error(f"❌ AAGNet failed: {e}")
+                logger.warning(f"⚠️ AAGNet failed, but mesh extraction succeeded: {e}")
                 import traceback
-                logger.error(traceback.format_exc())
-                ml_features = {"error": str(e), "recognition_method": "AAGNet"}
+                logger.debug(traceback.format_exc())
+                ml_features = None  # ML features optional, mesh data is what matters
         else:
-            logger.error("❌ AAGNet not available - cannot process file")
-            ml_features = {
-                "error": "AAGNet not initialized",
-                "recognition_method": "none",
-                "message": "Feature recognition requires AAGNet to be properly installed"
-            }
+            logger.info("ℹ️ AAGNet not available - proceeding with mesh extraction only")
+            ml_features = None  # ML features optional, mesh data is what matters
         
         logger.info("📐 Extracting and classifying BREP edges...")
         

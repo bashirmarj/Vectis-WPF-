@@ -452,7 +452,31 @@ serve(async (req) => {
     // Store mesh data if available and Supabase is configured
     let meshId: string | undefined;
     
-    if (supabaseClient && analysisResult.mesh_data && analysisResult.mesh_data.vertices) {
+    // Enhanced logging for mesh storage conditions
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'DEBUG',
+      correlation_id: correlationId,
+      tier: 'EDGE',
+      message: 'Checking mesh storage preconditions',
+      context: {
+        hasSupabaseClient: !!supabaseClient,
+        hasAnalysisResult: !!analysisResult,
+        hasMeshData: !!analysisResult?.mesh_data,
+        hasVertices: !!analysisResult?.mesh_data?.vertices,
+        hasTopLevelVertices: !!analysisResult?.vertices,
+        meshDataKeys: analysisResult?.mesh_data ? Object.keys(analysisResult.mesh_data) : [],
+        topLevelKeys: Object.keys(analysisResult || {}),
+        vertexCount: analysisResult?.mesh_data?.vertices?.length || analysisResult?.vertices?.length || 0
+      }
+    }));
+    
+    // Check for vertices at EITHER mesh_data.vertices OR top-level vertices
+    const vertices = analysisResult?.mesh_data?.vertices || analysisResult?.vertices;
+    const indices = analysisResult?.mesh_data?.indices || analysisResult?.indices;
+    const normals = analysisResult?.mesh_data?.normals || analysisResult?.normals;
+    
+    if (supabaseClient && vertices && vertices.length > 0) {
       try {
         console.log(JSON.stringify({
           timestamp: new Date().toISOString(),
@@ -461,32 +485,56 @@ serve(async (req) => {
           tier: 'EDGE',
           message: 'Attempting to store mesh data',
           context: { 
-            hasVertices: !!analysisResult.mesh_data.vertices,
-            vertexCount: analysisResult.mesh_data.vertices?.length || 0,
-            triangleCount: analysisResult.mesh_data.triangle_count || 0
+            vertexCount: vertices.length,
+            indexCount: indices?.length || 0,
+            normalCount: normals?.length || 0,
+            triangleCount: analysisResult.mesh_data?.triangle_count || (indices?.length / 3) || 0
           }
         }));
 
-        // Generate file hash from file content if available, else use metadata
-        const fileHash = fileData 
-          ? await crypto.subtle.digest('SHA-256', fileData).then(
-              (hashBuffer) => Array.from(new Uint8Array(hashBuffer))
-                .map(b => b.toString(16).padStart(2, '0'))
-                .join('')
-            )
-          : `${fileName}_${Date.now()}_${correlationId}`;
+        // ALWAYS generate file hash with fallback
+        let fileHash: string;
+        try {
+          if (fileData && fileData.byteLength > 0) {
+            const hashBuffer = await crypto.subtle.digest('SHA-256', fileData);
+            fileHash = Array.from(new Uint8Array(hashBuffer))
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join('');
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              tier: 'EDGE',
+              message: 'Generated SHA-256 file hash',
+              context: { hashLength: fileHash.length }
+            }));
+          } else {
+            throw new Error('No file data available for hashing');
+          }
+        } catch (hashError) {
+          // Fallback hash generation
+          fileHash = `fallback_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${correlationId.substring(0, 8)}`;
+          console.log(JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'WARN',
+            correlation_id: correlationId,
+            tier: 'EDGE',
+            message: 'Using fallback file hash',
+            context: { reason: (hashError as Error).message, fallbackHash: fileHash }
+          }));
+        }
 
         const { data: mesh, error } = await supabaseClient
           .from('cad_meshes')
           .insert({
             file_name: fileName,
             file_hash: fileHash,
-            vertices: analysisResult.mesh_data.vertices,
-            indices: analysisResult.mesh_data.indices || [],
-            normals: analysisResult.mesh_data.normals || [],
-            triangle_count: analysisResult.mesh_data.triangle_count || 0,
-            ml_model_version: analysisResult.ml_features?.model_info?.architecture || 'heuristic',
-            instance_features: analysisResult.ml_features ? {
+            vertices: vertices,
+            indices: indices || [],
+            normals: normals || [],
+            triangle_count: analysisResult.mesh_data?.triangle_count || (indices ? Math.floor(indices.length / 3) : 0),
+            ml_model_version: analysisResult.ml_features?.model_info?.architecture || analysisResult.ml_features?.recognition_method || 'geometric_only',
+            instance_features: analysisResult.ml_features?.feature_instances ? {
               instances: analysisResult.ml_features.feature_instances,
               summary: analysisResult.ml_features.feature_summary
             } : null

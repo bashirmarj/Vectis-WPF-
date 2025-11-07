@@ -227,7 +227,7 @@ class Edge(Shape, VertexContainerMixin, BoundingBoxMixin):
         Returns:
             OCC.Geom.Handle_Geom_Curve: Interface to all curve geometry
         """
-        return BRep_Tool_Curve(self.topods_shape())[0]
+        return BRep_Tool.Curve(self.topods_shape())[0]
 
     def specific_curve(self):
         """

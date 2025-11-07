@@ -277,7 +277,7 @@ class Face(Shape, BoundingBoxMixin, TriangulatorMixin, WireContainerMixin, \
             np.ndarray: 3D unit normal vector
         """
         loc = TopLoc_Location()
-        surf = BRep_Tool_Surface(self.topods_shape(), loc)
+        surf = BRep_Tool.Surface(self.topods_shape(), loc)
         res = GeomLProp_SLProps(surf, uv[0], uv[1], 1, 1e-9)
         if not res.IsNormalDefined():
             return (0, 0, 0)
