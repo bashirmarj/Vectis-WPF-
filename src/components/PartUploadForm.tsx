@@ -90,10 +90,17 @@ export const PartUploadForm = () => {
       const filePath = `uploads/${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('cad-files') // ✅ FIXED: Changed from 'trained-models' to 'cad-files'
-        .upload(filePath, fileWithQty.file);
+        .from('cad-files')
+        .upload(filePath, fileWithQty.file, {
+          contentType: 'model/step', // ✅ Explicitly set correct MIME type
+          upsert: true
+        });
 
       if (uploadError) {
+        // Check if it's a MIME type error
+        if (uploadError.message.includes('mime') || uploadError.message.includes('MIME')) {
+          throw new Error(`File type not supported. Please ensure you're uploading a valid STEP (.step, .stp) or IGES (.iges, .igs) file. Error: ${uploadError.message}`);
+        }
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
@@ -213,22 +220,39 @@ export const PartUploadForm = () => {
     }
   };
 
+  // Validate CAD file by MIME type and extension
+  const validateCADFile = (file: File): boolean => {
+    const validMimeTypes = [
+      'model/step',
+      'model/step+xml', 
+      'model/iges',
+      'application/step',
+      'application/stp',
+      'application/iges',
+      'application/igs',
+      'text/plain',
+      'application/octet-stream'
+    ];
+    
+    const validExtensions = ['.step', '.stp', '.iges', '.igs'];
+    const hasValidExtension = validExtensions.some(ext => 
+      file.name.toLowerCase().endsWith(ext)
+    );
+    
+    // Accept if either MIME type or extension is valid
+    return validMimeTypes.includes(file.type) || hasValidExtension;
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
 
-    const invalidFiles = selectedFiles.filter(
-      (file) =>
-        !file.name.toLowerCase().endsWith(".step") &&
-        !file.name.toLowerCase().endsWith(".stp") &&
-        !file.name.toLowerCase().endsWith(".iges") &&
-        !file.name.toLowerCase().endsWith(".igs"),
-    );
+    const invalidFiles = selectedFiles.filter(file => !validateCADFile(file));
 
     if (invalidFiles.length > 0) {
       toast({
         title: "Invalid file type",
-        description: "Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported",
+        description: `Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}`,
         variant: "destructive",
       });
       return;
