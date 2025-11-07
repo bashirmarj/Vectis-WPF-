@@ -2,8 +2,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { FileUploadScreen } from "./part-upload/FileUploadScreen";
 import PartConfigScreen from "./part-upload/PartConfigScreen";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Lock } from "lucide-react";
 
 interface FileWithQuantity {
   file: File;
@@ -45,6 +50,8 @@ export const PartUploadForm = () => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   // Load materials & processes from Supabase
   useEffect(() => {
@@ -302,6 +309,53 @@ export const PartUploadForm = () => {
   };
 
   const isAnalyzing = files.some((f) => f.isAnalyzing);
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show auth required message if not logged in
+  if (!user) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold">Authentication Required</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Please sign in or create an account to upload CAD files and request a quote.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Button 
+                onClick={() => navigate('/auth?returnTo=/services/custom-parts')}
+                size="lg"
+              >
+                Sign In
+              </Button>
+              <Button 
+                onClick={() => navigate('/auth?returnTo=/services/custom-parts')}
+                variant="outline"
+                size="lg"
+              >
+                Create Account
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (currentScreen === "upload") {
     return (

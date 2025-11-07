@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 
 const Auth = () => {
+  const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [isResetMode, setIsResetMode] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
@@ -24,13 +25,14 @@ const Auth = () => {
   const { signIn, signUp, user, resetPassword, updatePassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const returnTo = searchParams.get('returnTo') || '/';
 
   // Redirect if already logged in (but NOT during password recovery)
   useEffect(() => {
     if (user && !isInRecoveryFlow) {
-      navigate('/');
+      navigate(returnTo);
     }
-  }, [user, navigate, isInRecoveryFlow]);
+  }, [user, navigate, isInRecoveryFlow, returnTo]);
 
   // Check for password recovery in URL hash
   useEffect(() => {
@@ -68,7 +70,7 @@ const Auth = () => {
             title: 'Welcome back!',
             description: 'You have successfully logged in.',
           });
-          navigate('/');
+          navigate(returnTo);
         }
       } else {
         const { error } = await signUp(email, password, fullName);
