@@ -1105,18 +1105,9 @@ def analyze_cad():
     request_id = hashlib.md5(f"{datetime.utcnow().isoformat()}{os.urandom(8)}".encode()).hexdigest()[:16]
     start_time = time.time()
     file_hash = None
+    tmp_path = None  # Initialize to prevent UnboundLocalError
     
     try:
-        # Check circuit breaker
-        can_proceed, message = circuit_breaker.can_proceed()
-        if not can_proceed:
-            logger.warning(f"🔴 Circuit breaker blocked request: {message}")
-            return jsonify({
-                "error": "Service temporarily unavailable",
-                "message": message,
-                "request_id": request_id
-            }), 503
-        
         # Validate request
         if "file" not in request.files:
             return jsonify({
@@ -1410,7 +1401,7 @@ def analyze_cad():
         # Store in DLQ using standalone module
         dlq.store_failure(
             correlation_id=request_id,
-            file_path=tmp_path if os.path.exists(tmp_path) else "unknown",
+            file_path=tmp_path if tmp_path and os.path.exists(tmp_path) else "unknown",
             error_type="transient",
             error_message=str(e),
             error_details={"timeout": True},
@@ -1443,7 +1434,7 @@ def analyze_cad():
         # Store in DLQ using standalone module
         dlq.store_failure(
             correlation_id=request_id,
-            file_path=tmp_path if os.path.exists(tmp_path) else "unknown",
+            file_path=tmp_path if tmp_path and os.path.exists(tmp_path) else "unknown",
             error_type=error_type_str,
             error_message=str(e),
             error_details={
