@@ -275,11 +275,11 @@ class Edge(Shape, VertexContainerMixin, BoundingBoxMixin):
         Returns:
             occwl.geometry.Interval: a 1D interval [u_min, u_max]
         """
-    if not self.has_curve():
-        # Return an empty interval
-        return Interval()
-    _, umin, umax = BRep_Tool.Curve(self.topods_shape())
-    return Interval(umin, umax)
+        if not self.has_curve():
+            # Return an empty interval
+            return Interval()
+        _, umin, umax = BRep_Tool.Curve(self.topods_shape())
+        return Interval(umin, umax)
 
     def reversed_edge(self):
         """
