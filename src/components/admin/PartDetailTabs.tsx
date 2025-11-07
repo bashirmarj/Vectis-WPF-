@@ -105,7 +105,7 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
           {/* Features Tab - ML Only */}
           <TabsContent value="features" className="mt-4">
             <FeatureTree
-              mlFeatures={featureTree?.ml_features}
+              features={featureTree?.ml_features}
             />
           </TabsContent>
 

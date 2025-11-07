@@ -203,7 +203,7 @@ export function PartDetailCustomer({
 
                   {hasFeatures ? (
                   <FeatureTree
-                    mlFeatures={file.analysis?.ml_features}
+                    features={file.analysis?.ml_features}
                   />
                   ) : (
                     <Card className="border-dashed">
