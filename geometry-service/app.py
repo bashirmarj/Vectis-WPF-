@@ -56,7 +56,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # === Suppress OCCWL deprecation warnings globally ===
 warnings.filterwarnings('ignore', category=DeprecationWarning, module='occwl')
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*BRep_Tool.*')
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*breptools.*')
 logging.getLogger('occwl').propagate = False
+logging.getLogger('occwl').setLevel(logging.ERROR)
 
 # === REMOVED: UV-Net ML Inference (deprecated) ===
 ML_AVAILABLE = False
