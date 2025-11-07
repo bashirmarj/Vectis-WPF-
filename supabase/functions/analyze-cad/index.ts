@@ -138,12 +138,50 @@ serve(async (req) => {
           fileSize, 
           material, 
           quantity,
-          hasFileData: !!(body.fileData || body.file_data)
+          hasFileData: !!(body.fileData || body.file_data),
+          hasFileUrl: !!body.fileUrl
         }
       }));
       
+      // Handle fileUrl (fetch from Supabase storage)
+      if (body.fileUrl) {
+        try {
+          console.log(JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'DEBUG',
+            correlation_id: correlationId,
+            tier: 'EDGE',
+            message: 'Fetching file from URL',
+            context: { fileUrl: body.fileUrl.substring(0, 100) + '...' }
+          }));
+          
+          const fileResponse = await fetch(body.fileUrl);
+          if (!fileResponse.ok) {
+            throw new Error(`Failed to fetch file: ${fileResponse.status} ${fileResponse.statusText}`);
+          }
+          fileData = await fileResponse.arrayBuffer();
+          
+          console.log(JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'DEBUG',
+            correlation_id: correlationId,
+            tier: 'EDGE',
+            message: 'File fetched successfully',
+            context: { byteLength: fileData.byteLength }
+          }));
+        } catch (fetchError) {
+          console.error(JSON.stringify({
+            timestamp: new Date().toISOString(),
+            level: 'ERROR',
+            correlation_id: correlationId,
+            tier: 'EDGE',
+            message: 'Failed to fetch file from URL',
+            context: { error: (fetchError as Error).message }
+          }));
+        }
+      }
       // Handle base64 file data if provided
-      if (body.fileData || body.file_data) {
+      else if (body.fileData || body.file_data) {
         try {
           const base64Data = body.fileData || body.file_data;
           const binaryString = atob(base64Data);
