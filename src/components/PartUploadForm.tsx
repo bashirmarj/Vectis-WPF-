@@ -280,13 +280,28 @@ export const PartUploadForm = () => {
     }
   };
 
+  const handleRetryAnalysis = async (index: number) => {
+    const file = files[index];
+    if (!file) return;
+    
+    toast({
+      title: "🔄 Retrying Analysis",
+      description: `Re-analyzing ${file.file.name}...`,
+    });
+    
+    await analyzeFile(file, index);
+  };
+
   const handleContinue = () => {
     // Check if all files have been analyzed
     const unanalyzedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
+    const failedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
+    
     if (unanalyzedFiles.length > 0) {
+      const fileList = unanalyzedFiles.map(f => f.file.name).join(', ');
       toast({
         title: "⚠️ Files Not Analyzed",
-        description: "Please wait for all files to finish analyzing",
+        description: `${unanalyzedFiles.length} file(s) failed analysis: ${fileList}. Please retry or remove them to continue.`,
         variant: "destructive",
       });
       return;
@@ -387,6 +402,7 @@ export const PartUploadForm = () => {
         files={files}
         onFileSelect={handleFileSelect}
         onRemoveFile={handleRemoveFile}
+        onRetryFile={handleRetryAnalysis}
         onContinue={handleContinue}
         isAnalyzing={isAnalyzing}
       />
