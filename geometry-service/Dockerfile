@@ -9,6 +9,10 @@ RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 numpy && \
 # Copy all application files (AAGNet files already in repo!)
 COPY . .
 
+# Remove any Python cache files to ensure fresh deployment
+RUN find . -type d -name __pycache__ -exec rm -r {} + || true && \
+    find . -type f -name '*.pyc' -delete || true
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

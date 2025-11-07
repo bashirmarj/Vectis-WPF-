@@ -1458,9 +1458,19 @@ def analyze_cad():
 
 @app.route("/")
 def root():
+    import hashlib
+    # Get a hash of the current app.py file to verify version
+    try:
+        with open(__file__, 'rb') as f:
+            file_hash = hashlib.md5(f.read()).hexdigest()[:8]
+    except:
+        file_hash = "unknown"
+    
     return jsonify({
         "service": "CAD Geometry Analysis Service",
-        "version": "11.0.0-production",
+        "version": "11.0.1-processing-tier-fix",
+        "code_hash": file_hash,
+        "fix_applied": "AttributeError processing_tier.name fixed",
         "status": "running",
         "endpoints": {
             "health": "/health",
