@@ -239,9 +239,9 @@ class Face(Shape, BoundingBoxMixin, TriangulatorMixin, WireContainerMixin, \
         Returns:
             np.ndarray: 3D Point
         """
-    loc = TopLoc_Location()
-    surf = BRep_Tool.Surface(self.topods_shape(), loc)
-    pt = surf.Value(uv[0], uv[1])
+        loc = TopLoc_Location()
+        surf = BRep_Tool.Surface(self.topods_shape(), loc)
+        pt = surf.Value(uv[0], uv[1])
         pt = pt.Transformed(loc.Transformation())
         return geom_utils.gp_to_numpy(pt)
 
@@ -255,9 +255,9 @@ class Face(Shape, BoundingBoxMixin, TriangulatorMixin, WireContainerMixin, \
         Returns:
             Pair of np.ndarray or None: 3D unit vectors
         """
-    loc = TopLoc_Location()
-    surf = BRep_Tool.Surface(self.topods_shape(), loc)
-    dU, dV = gp_Dir(), gp_Dir()
+        loc = TopLoc_Location()
+        surf = BRep_Tool.Surface(self.topods_shape(), loc)
+        dU, dV = gp_Dir(), gp_Dir()
         res = GeomLProp_SLProps(surf, uv[0], uv[1], 1, 1e-9)
         if res.IsTangentUDefined() and res.IsTangentVDefined():
             res.TangentU(dU), res.TangentV(dV)
@@ -429,9 +429,9 @@ class Face(Shape, BoundingBoxMixin, TriangulatorMixin, WireContainerMixin, \
         Returns:
             np.ndarray: UV-coordinate
         """
-    loc = TopLoc_Location()
-    surf = BRep_Tool.Surface(self.topods_shape(), loc)
-    gp_pt = gp_Pnt(pt[0], pt[1], pt[2])
+        loc = TopLoc_Location()
+        surf = BRep_Tool.Surface(self.topods_shape(), loc)
+        gp_pt = gp_Pnt(pt[0], pt[1], pt[2])
         inv = loc.Transformation().Inverted()
         gp_pt.Transformed(inv)
         uv = ShapeAnalysis_Surface(surf).ValueOfUV(
