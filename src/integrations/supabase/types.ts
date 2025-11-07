@@ -128,6 +128,42 @@ export type Database = {
         }
         Relationships: []
       }
+      failed_cad_analyses: {
+        Row: {
+          correlation_id: string
+          created_at: string | null
+          error_details: Json | null
+          error_message: string
+          error_type: string
+          file_path: string
+          id: string
+          retry_count: number | null
+          traceback: string | null
+        }
+        Insert: {
+          correlation_id: string
+          created_at?: string | null
+          error_details?: Json | null
+          error_message: string
+          error_type: string
+          file_path: string
+          id?: string
+          retry_count?: number | null
+          traceback?: string | null
+        }
+        Update: {
+          correlation_id?: string
+          created_at?: string | null
+          error_details?: Json | null
+          error_message?: string
+          error_type?: string
+          file_path?: string
+          id?: string
+          retry_count?: number | null
+          traceback?: string | null
+        }
+        Relationships: []
+      }
       feature_validations: {
         Row: {
           confidence_scores: Json | null

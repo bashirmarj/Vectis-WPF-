@@ -36,6 +36,12 @@ import logging
 from contextlib import contextmanager
 from functools import wraps
 
+# Import production hardening modules
+from circuit_breaker import aagnet_circuit_breaker, CircuitBreakerError
+from retry_utils import exponential_backoff_retry, TransientError, PermanentError, SystemicError
+from dead_letter_queue import dlq
+from graceful_degradation import GracefulDegradation, ProcessingTier
+
 # === OCC imports ===
 from OCC.Core.STEPControl import STEPControl_Reader, STEPControl_Writer
 from OCC.Core.BRep import BRep_Tool
@@ -104,7 +110,7 @@ class ProductionConfig:
     CONFIDENCE_PARTIALLY_RECOGNIZED = 0.7
     
     # Dead letter queue
-    DLQ_TABLE = "cad_processing_failures"  # Supabase table
+    DLQ_TABLE = "failed_cad_analyses"  # Supabase table (matches standalone module)
     
     # ISO compliance
     AUDIT_LOG_TABLE = "cad_processing_audit"  # ISO 9001 audit trail
@@ -137,11 +143,7 @@ class ErrorType(Enum):
     PERMANENT = "permanent"  # Invalid input, validation failures - NO RETRY
     SYSTEMIC = "systemic"  # Model load failures, persistent timeouts - ALERT OPS
 
-class ProcessingTier(Enum):
-    """Fallback processing tiers"""
-    TIER_1_BREP = 1  # Full B-Rep processing (confidence 0.95)
-    TIER_2_MESH = 2  # Mesh-based processing (confidence 0.75)
-    TIER_3_POINT_CLOUD = 3  # Point cloud fallback (confidence 0.60)
+# Note: ProcessingTier is now imported from graceful_degradation module
 
 @dataclass
 class ValidationResult:
@@ -152,7 +154,7 @@ class ValidationResult:
     issues: List[str]
     warnings: List[str]
     healing_applied: bool = False
-    processing_tier: ProcessingTier = ProcessingTier.TIER_1_BREP
+    processing_tier: str = "tier_1_brep"  # Use string to match graceful_degradation module
 
 @dataclass
 class ProcessingError:
@@ -167,145 +169,14 @@ class ProcessingError:
     request_context: Dict[str, Any]
 
 # ============================================================================
-# CIRCUIT BREAKER PATTERN
+# CIRCUIT BREAKER - Using standalone module (circuit_breaker.py)
 # ============================================================================
-
-class CircuitBreakerState(Enum):
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Blocking requests
-    HALF_OPEN = "half_open"  # Testing recovery
-
-class CircuitBreaker:
-    """
-    Circuit breaker pattern to prevent cascade failures.
-    Uses Supabase for distributed state management.
-    """
-    
-    def __init__(self, service_name: str = "cad_analysis"):
-        self.service_name = service_name
-        self.state_key = f"circuit_breaker_{service_name}"
-        
-    def get_state(self) -> Dict[str, Any]:
-        """Get current circuit breaker state from Supabase"""
-        try:
-            result = supabase.table("system_state").select("*").eq("key", self.state_key).execute()
-            if result.data and len(result.data) > 0:
-                state_data = result.data[0]["value"]
-                return state_data
-            else:
-                # Initialize state
-                return {
-                    "state": CircuitBreakerState.CLOSED.value,
-                    "failure_count": 0,
-                    "last_failure_time": None,
-                    "half_open_successes": 0
-                }
-        except Exception as e:
-            logger.warning(f"Failed to get circuit breaker state: {e}, assuming CLOSED")
-            return {
-                "state": CircuitBreakerState.CLOSED.value,
-                "failure_count": 0,
-                "last_failure_time": None,
-                "half_open_successes": 0
-            }
-    
-    def update_state(self, state_data: Dict[str, Any]):
-        """Update circuit breaker state in Supabase"""
-        try:
-            supabase.table("system_state").upsert({
-                "key": self.state_key,
-                "value": state_data,
-                "updated_at": datetime.utcnow().isoformat()
-            }).execute()
-        except Exception as e:
-            logger.error(f"Failed to update circuit breaker state: {e}")
-    
-    def record_success(self):
-        """Record successful request"""
-        state_data = self.get_state()
-        
-        if state_data["state"] == CircuitBreakerState.HALF_OPEN.value:
-            state_data["half_open_successes"] += 1
-            if state_data["half_open_successes"] >= config.CIRCUIT_BREAKER_HALF_OPEN_REQUESTS:
-                # Recovery confirmed, close circuit
-                state_data["state"] = CircuitBreakerState.CLOSED.value
-                state_data["failure_count"] = 0
-                state_data["half_open_successes"] = 0
-                logger.info("🔄 Circuit breaker CLOSED - recovery confirmed")
-        elif state_data["state"] == CircuitBreakerState.CLOSED.value:
-            # Reset failure count on success
-            state_data["failure_count"] = 0
-        
-        self.update_state(state_data)
-    
-    def record_failure(self, error_type: ErrorType):
-        """Record failed request"""
-        # Only systemic errors affect circuit breaker
-        if error_type != ErrorType.SYSTEMIC:
-            return
-        
-        state_data = self.get_state()
-        state_data["failure_count"] += 1
-        state_data["last_failure_time"] = datetime.utcnow().isoformat()
-        
-        if state_data["failure_count"] >= config.CIRCUIT_BREAKER_FAILURE_THRESHOLD:
-            state_data["state"] = CircuitBreakerState.OPEN.value
-            logger.error(f"🔴 Circuit breaker OPENED after {state_data['failure_count']} failures")
-        
-        self.update_state(state_data)
-    
-    def can_proceed(self) -> Tuple[bool, str]:
-        """Check if request can proceed"""
-        state_data = self.get_state()
-        current_state = state_data["state"]
-        
-        if current_state == CircuitBreakerState.CLOSED.value:
-            return True, "Circuit breaker closed - processing normally"
-        
-        if current_state == CircuitBreakerState.OPEN.value:
-            # Check if timeout has elapsed
-            last_failure = datetime.fromisoformat(state_data["last_failure_time"])
-            if datetime.utcnow() - last_failure > timedelta(seconds=config.CIRCUIT_BREAKER_TIMEOUT_S):
-                # Move to half-open state
-                state_data["state"] = CircuitBreakerState.HALF_OPEN.value
-                state_data["half_open_successes"] = 0
-                self.update_state(state_data)
-                logger.info("🟡 Circuit breaker HALF-OPEN - testing recovery")
-                return True, "Circuit breaker half-open - testing recovery"
-            else:
-                return False, f"Circuit breaker open - try again in {config.CIRCUIT_BREAKER_TIMEOUT_S}s"
-        
-        if current_state == CircuitBreakerState.HALF_OPEN.value:
-            return True, "Circuit breaker half-open - testing recovery"
-        
-        return False, "Unknown circuit breaker state"
-
-circuit_breaker = CircuitBreaker()
+# Circuit breaker is now imported from circuit_breaker module as aagnet_circuit_breaker
 
 # ============================================================================
-# DEAD LETTER QUEUE
+# DEAD LETTER QUEUE - Using standalone module (dead_letter_queue.py)
 # ============================================================================
-
-def send_to_dead_letter_queue(error: ProcessingError):
-    """
-    Store failed request in dead letter queue for later analysis.
-    Enables root cause analysis and reprocessing.
-    """
-    try:
-        supabase.table(config.DLQ_TABLE).insert({
-            "request_id": error.request_id,
-            "timestamp": error.timestamp.isoformat(),
-            "error_type": error.error_type.value,
-            "error_message": error.error_message,
-            "file_hash": error.file_hash,
-            "retry_count": error.retry_count,
-            "stack_trace": error.stack_trace,
-            "request_context": error.request_context,
-            "created_at": datetime.utcnow().isoformat()
-        }).execute()
-        logger.info(f"📮 Sent request {error.request_id} to dead letter queue")
-    except Exception as e:
-        logger.error(f"Failed to send to DLQ: {e}")
+# Dead letter queue is now imported from dead_letter_queue module as dlq
 
 # ============================================================================
 # ISO COMPLIANCE AUDIT LOGGING
@@ -1535,19 +1406,16 @@ def analyze_cad():
     except TimeoutError as e:
         # Transient error - can retry
         logger.error(f"⏱️ Timeout: {e}")
-        circuit_breaker.record_failure(ErrorType.TRANSIENT)
         
-        error = ProcessingError(
-            request_id=request_id,
-            timestamp=datetime.utcnow(),
-            error_type=ErrorType.TRANSIENT,
+        # Store in DLQ using standalone module
+        dlq.store_failure(
+            correlation_id=request_id,
+            file_path=tmp_path if os.path.exists(tmp_path) else "unknown",
+            error_type="transient",
             error_message=str(e),
-            file_hash=file_hash or "unknown",
-            retry_count=0,
-            stack_trace=None,
-            request_context={"timeout": True}
+            error_details={"timeout": True},
+            retry_count=0
         )
-        send_to_dead_letter_queue(error)
         
         return jsonify({
             "error": "Processing timeout",
@@ -1566,31 +1434,29 @@ def analyze_cad():
         # Classify error type
         error_str = str(e).lower()
         if any(keyword in error_str for keyword in ['timeout', 'connection', 'network']):
-            error_type = ErrorType.TRANSIENT
+            error_type_str = "transient"
         elif any(keyword in error_str for keyword in ['invalid', 'corrupt', 'malformed']):
-            error_type = ErrorType.PERMANENT
+            error_type_str = "permanent"
         else:
-            error_type = ErrorType.SYSTEMIC
+            error_type_str = "systemic"
         
-        circuit_breaker.record_failure(error_type)
-        
-        error = ProcessingError(
-            request_id=request_id,
-            timestamp=datetime.utcnow(),
-            error_type=error_type,
+        # Store in DLQ using standalone module
+        dlq.store_failure(
+            correlation_id=request_id,
+            file_path=tmp_path if os.path.exists(tmp_path) else "unknown",
+            error_type=error_type_str,
             error_message=str(e),
-            file_hash=file_hash or "unknown",
-            retry_count=0,
-            stack_trace=stack_trace if os.getenv("DEBUG") else None,
-            request_context={}
+            error_details={
+                "traceback": stack_trace if os.getenv("DEBUG") else None
+            },
+            retry_count=0
         )
-        send_to_dead_letter_queue(error)
         
         return jsonify({
             "error": str(e),
             "request_id": request_id,
-            "error_type": error_type.value,
-            "retry_recommended": error_type == ErrorType.TRANSIENT,
+            "error_type": error_type_str,
+            "retry_recommended": error_type_str == "transient",
             "traceback": stack_trace if os.getenv("DEBUG") else None
         }), 500
 
@@ -1632,10 +1498,10 @@ def root():
 @app.route("/health")
 def health():
     """Health check endpoint"""
-    circuit_state = circuit_breaker.get_state()
+    circuit_state = aagnet_circuit_breaker.get_state()
     
     health_status = {
-        "status": "healthy" if circuit_state["state"] == CircuitBreakerState.CLOSED.value else "degraded",
+        "status": "healthy" if circuit_state["state"] == "CLOSED" else "degraded",
         "circuit_breaker": circuit_state["state"],
         "aagnet_available": AAGNET_AVAILABLE,
         "timestamp": datetime.utcnow().isoformat()
@@ -1648,7 +1514,8 @@ def health():
 @app.route("/metrics")
 def metrics():
     """Production metrics endpoint for monitoring"""
-    circuit_state = circuit_breaker.get_state()
+    circuit_state = aagnet_circuit_breaker.get_state()
+    dlq_stats = dlq.get_failure_statistics()
     
     try:
         # Get recent processing stats from audit log
@@ -1669,20 +1536,12 @@ def metrics():
             
             recognized_count = sum(1 for e in processing_events 
                                  if e['details'].get('recognition_status') in ['fully_recognized', 'partially_recognized'])
-            recognition_rate = recognized_count / len(processing_events)
-        
-        # Get DLQ stats
-        dlq_count = supabase.table(config.DLQ_TABLE) \
-            .select("*", count='exact') \
-            .gte("created_at", (datetime.utcnow() - timedelta(hours=1)).isoformat()) \
-            .execute()
+            recognition_rate = recognized_count / len(processing_events) if processing_events else 0
         
         return jsonify({
             "timestamp": datetime.utcnow().isoformat(),
-            "circuit_breaker": {
-                "state": circuit_state["state"],
-                "failure_count": circuit_state["failure_count"]
-            },
+            "circuit_breaker": circuit_state,
+            "dead_letter_queue": dlq_stats,
             "performance": {
                 "avg_processing_time_sec": avg_processing_time,
                 "requests_last_hour": len(processing_events),
@@ -1693,9 +1552,6 @@ def metrics():
                 "avg_quality_score": avg_quality_score,
                 "min_quality_threshold": config.QUALITY_SCORE_MIN,
                 "recognition_rate": recognition_rate
-            },
-            "errors": {
-                "dlq_count_last_hour": dlq_count.count or 0
             }
         })
     
@@ -1705,6 +1561,40 @@ def metrics():
             "error": "Failed to fetch metrics",
             "message": str(e)
         }), 500
+
+@app.route("/circuit-breaker", methods=["GET"])
+def circuit_breaker_status():
+    """Get detailed circuit breaker status"""
+    return jsonify(aagnet_circuit_breaker.get_state())
+
+@app.route("/circuit-breaker/reset", methods=["POST"])
+def reset_circuit_breaker():
+    """Manually reset circuit breaker to CLOSED state"""
+    aagnet_circuit_breaker.reset()
+    return jsonify({
+        "status": "reset",
+        "message": "Circuit breaker manually reset to CLOSED state",
+        "new_state": aagnet_circuit_breaker.get_state()
+    })
+
+@app.route("/dlq/stats")
+def dlq_stats_endpoint():
+    """Get dead letter queue statistics"""
+    return jsonify(dlq.get_failure_statistics())
+
+@app.route("/dlq/failures")
+def dlq_failures():
+    """Get recent failures from dead letter queue"""
+    error_type = request.args.get('error_type')
+    limit = int(request.args.get('limit', 100))
+    
+    failures = dlq.get_failures(error_type=error_type, limit=limit)
+    
+    return jsonify({
+        "failures": failures,
+        "count": len(failures),
+        "error_type_filter": error_type
+    })
 
 if __name__ == "__main__":
     # Create required Supabase tables if they don't exist
