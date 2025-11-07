@@ -1,0 +1,263 @@
+"""
+Graceful degradation handlers for AAGNet feature recognition
+Provides fallback processing tiers when full B-Rep processing fails
+"""
+
+import logging
+from typing import Dict, Any, Optional, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+class ProcessingTier:
+    """Processing tier with associated confidence level"""
+    TIER_1_BREP = "tier_1_brep"          # Full B-Rep + AAGNet (confidence: 0.95)
+    TIER_2_MESH = "tier_2_mesh"          # Mesh-based processing (confidence: 0.75)
+    TIER_3_POINT_CLOUD = "tier_3_point"  # Point cloud fallback (confidence: 0.60)
+    TIER_4_BASIC = "tier_4_basic"        # Basic mesh only (confidence: 0.40)
+
+
+class GracefulDegradation:
+    """
+    Handles graceful degradation through processing tiers.
+    
+    Tier 1 (confidence 0.95): Full B-Rep processing with AAGNet
+    Tier 2 (confidence 0.75): Mesh-based feature detection
+    Tier 3 (confidence 0.60): Point cloud processing
+    Tier 4 (confidence 0.40): Basic mesh data only
+    """
+    
+    @staticmethod
+    def classify_confidence(confidence: float) -> str:
+        """
+        Classify recognition confidence level.
+        
+        Args:
+            confidence: Confidence score (0.0 to 1.0)
+            
+        Returns:
+            'high' (>0.9), 'medium' (0.7-0.9), or 'low' (<0.7)
+        """
+        if confidence >= 0.9:
+            return 'high'
+        elif confidence >= 0.7:
+            return 'medium'
+        else:
+            return 'low'
+    
+    @staticmethod
+    def tier_1_brep_processing(
+        aagnet_recognizer,
+        step_file_path: str,
+        shape
+    ) -> Tuple[Optional[Dict[str, Any]], float, str]:
+        """
+        Tier 1: Full B-Rep processing with AAGNet.
+        
+        Returns:
+            (ml_features, confidence, tier)
+        """
+        try:
+            logger.info("Attempting Tier 1: Full B-Rep + AAGNet processing")
+            
+            aagnet_result = aagnet_recognizer.recognize_features(step_file_path)
+            
+            if aagnet_result.get('success'):
+                ml_features = {
+                    'feature_instances': [
+                        {
+                            'feature_type': inst['type'],
+                            'face_ids': inst['face_indices'],
+                            'bottom_faces': inst['bottom_faces'],
+                            'confidence': inst['confidence']
+                        }
+                        for inst in aagnet_result.get('instances', [])
+                    ],
+                    'num_features_detected': aagnet_result.get('num_instances', 0),
+                    'num_faces_analyzed': aagnet_result.get('num_faces', 0),
+                    'inference_time_sec': aagnet_result.get('processing_time', 0),
+                    'recognition_method': 'AAGNet',
+                    'processing_tier': ProcessingTier.TIER_1_BREP,
+                    'confidence_level': 'high'
+                }
+                
+                logger.info(f"✅ Tier 1 successful: {ml_features['num_features_detected']} features detected")
+                return ml_features, 0.95, ProcessingTier.TIER_1_BREP
+            else:
+                logger.warning(f"⚠️ Tier 1 failed: {aagnet_result.get('error')}")
+                return None, 0.0, ProcessingTier.TIER_1_BREP
+                
+        except Exception as e:
+            logger.warning(f"⚠️ Tier 1 exception: {str(e)}")
+            return None, 0.0, ProcessingTier.TIER_1_BREP
+    
+    @staticmethod
+    def tier_2_mesh_processing(
+        mesh_data: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], float, str]:
+        """
+        Tier 2: Mesh-based feature heuristics.
+        
+        Fallback when AAGNet fails but mesh generation succeeded.
+        Uses geometric heuristics to detect basic features.
+        
+        Returns:
+            (ml_features, confidence, tier)
+        """
+        try:
+            logger.info("Attempting Tier 2: Mesh-based heuristic processing")
+            
+            # Simple heuristics from mesh data
+            feature_instances = []
+            
+            # Detect cylindrical surfaces (potential holes)
+            cylindrical_faces = [
+                i for i, cls in enumerate(mesh_data.get('face_classifications', []))
+                if cls == 'cylindrical'
+            ]
+            
+            if cylindrical_faces:
+                feature_instances.append({
+                    'feature_type': 'potential_hole',
+                    'face_ids': cylindrical_faces,
+                    'bottom_faces': [],
+                    'confidence': 0.75
+                })
+            
+            # Detect planar pockets (groups of coplanar faces below stock)
+            planar_faces = [
+                i for i, cls in enumerate(mesh_data.get('face_classifications', []))
+                if cls == 'planar'
+            ]
+            
+            if len(planar_faces) > 2:
+                feature_instances.append({
+                    'feature_type': 'potential_pocket',
+                    'face_ids': planar_faces[:5],  # Limit to first 5
+                    'bottom_faces': [],
+                    'confidence': 0.70
+                })
+            
+            ml_features = {
+                'feature_instances': feature_instances,
+                'num_features_detected': len(feature_instances),
+                'num_faces_analyzed': len(mesh_data.get('face_classifications', [])),
+                'inference_time_sec': 0,
+                'recognition_method': 'mesh_heuristics',
+                'processing_tier': ProcessingTier.TIER_2_MESH,
+                'confidence_level': 'medium',
+                'warning': 'Reduced accuracy: mesh-based heuristics only'
+            }
+            
+            logger.info(f"✅ Tier 2 successful: {len(feature_instances)} potential features detected")
+            return ml_features, 0.75, ProcessingTier.TIER_2_MESH
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Tier 2 exception: {str(e)}")
+            return None, 0.0, ProcessingTier.TIER_2_MESH
+    
+    @staticmethod
+    def tier_3_point_cloud_processing(
+        mesh_data: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], float, str]:
+        """
+        Tier 3: Point cloud-based basic detection.
+        
+        Last resort before returning mesh-only data.
+        
+        Returns:
+            (ml_features, confidence, tier)
+        """
+        try:
+            logger.info("Attempting Tier 3: Point cloud processing")
+            
+            ml_features = {
+                'feature_instances': [],
+                'num_features_detected': 0,
+                'num_faces_analyzed': len(mesh_data.get('face_classifications', [])),
+                'inference_time_sec': 0,
+                'recognition_method': 'point_cloud_basic',
+                'processing_tier': ProcessingTier.TIER_3_POINT_CLOUD,
+                'confidence_level': 'low',
+                'warning': 'Very limited accuracy: point cloud analysis only'
+            }
+            
+            logger.info("✅ Tier 3 complete: No features detected, returning mesh data only")
+            return ml_features, 0.60, ProcessingTier.TIER_3_POINT_CLOUD
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Tier 3 exception: {str(e)}")
+            return None, 0.0, ProcessingTier.TIER_3_POINT_CLOUD
+    
+    @staticmethod
+    def tier_4_basic_mesh(
+        mesh_data: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], float, str]:
+        """
+        Tier 4: Return mesh data only without feature recognition.
+        
+        Returns:
+            (ml_features, confidence, tier)
+        """
+        logger.info("Using Tier 4: Basic mesh only (no feature recognition)")
+        
+        ml_features = {
+            'feature_instances': [],
+            'num_features_detected': 0,
+            'num_faces_analyzed': 0,
+            'inference_time_sec': 0,
+            'recognition_method': 'none',
+            'processing_tier': ProcessingTier.TIER_4_BASIC,
+            'confidence_level': 'none',
+            'warning': 'Feature recognition failed, mesh visualization only'
+        }
+        
+        return ml_features, 0.40, ProcessingTier.TIER_4_BASIC
+    
+    @staticmethod
+    def process_with_fallback(
+        aagnet_recognizer,
+        step_file_path: str,
+        shape,
+        mesh_data: Dict[str, Any]
+    ) -> Tuple[Optional[Dict[str, Any]], float, str]:
+        """
+        Execute processing with graceful degradation through tiers.
+        
+        Args:
+            aagnet_recognizer: AAGNet recognizer instance
+            step_file_path: Path to STEP file
+            shape: OpenCascade shape object
+            mesh_data: Generated mesh data
+            
+        Returns:
+            (ml_features, confidence, processing_tier)
+        """
+        
+        # Try Tier 1: Full B-Rep + AAGNet
+        ml_features, confidence, tier = GracefulDegradation.tier_1_brep_processing(
+            aagnet_recognizer, step_file_path, shape
+        )
+        
+        if ml_features:
+            return ml_features, confidence, tier
+        
+        # Tier 1 failed, try Tier 2: Mesh-based
+        logger.warning("⚠️ Tier 1 failed, falling back to Tier 2 (mesh-based)")
+        ml_features, confidence, tier = GracefulDegradation.tier_2_mesh_processing(mesh_data)
+        
+        if ml_features:
+            return ml_features, confidence, tier
+        
+        # Tier 2 failed, try Tier 3: Point cloud
+        logger.warning("⚠️ Tier 2 failed, falling back to Tier 3 (point cloud)")
+        ml_features, confidence, tier = GracefulDegradation.tier_3_point_cloud_processing(mesh_data)
+        
+        if ml_features:
+            return ml_features, confidence, tier
+        
+        # All recognition failed, return Tier 4: mesh only
+        logger.error("❌ All feature recognition tiers failed, returning mesh only")
+        ml_features, confidence, tier = GracefulDegradation.tier_4_basic_mesh(mesh_data)
+        
+        return ml_features, confidence, tier
