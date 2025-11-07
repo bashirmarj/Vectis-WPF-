@@ -3,6 +3,11 @@
 AAGNet Feature Recognition Service for Vectis Machining
 Integrates AAGNet graph neural network for multi-task machining feature recognition
 """
+# aagnet_recognizer.py
+# === CRITICAL: Add these 3 lines at the VERY TOP ===
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+import os; os.environ['PYTHONWARNINGS'] = 'ignore::DeprecationWarning'
 
 import os
 import sys
