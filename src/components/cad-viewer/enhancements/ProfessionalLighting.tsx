@@ -46,7 +46,7 @@ export function ProfessionalLighting({
       {/* Key Light - Main illumination (front-top-right) - SOFTER with improved shadow bias */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={0.8 * intensity}
+        intensity={0.6 * intensity}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
@@ -61,7 +61,7 @@ export function ProfessionalLighting({
       />
 
       {/* Fill Light - Softens shadows (front-left) - BRIGHTER */}
-      <directionalLight position={[-4, 4, 4]} intensity={0.7 * intensity} castShadow={false} />
+      <directionalLight position={[-4, 4, 4]} intensity={0.8 * intensity} castShadow={false} />
 
       {/* Rim Light 1 - Edge definition (back-left-top) - with improved shadow settings */}
       <directionalLight

@@ -356,6 +356,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             vertexColors={topologyColors}
             flatShading={false}
             toneMapped={false}
+            metalness={0.0}
+            roughness={0.95}
           />
         </mesh>
 
