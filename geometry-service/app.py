@@ -2006,7 +2006,7 @@ def recognize_features_ml(shape, correlation_id):
         
         # Transform to expected format
         features = {
-            'feature_instances': result.get('instances', []),
+            'instances': result.get('instances', []),  # ✅ FIXED: Changed from 'feature_instances' to 'instances'
             'num_features_detected': result.get('num_instances', 0),
             'num_faces_analyzed': result.get('num_faces', 0),
             'confidence_score': result.get('confidence', 0.0),
@@ -2015,6 +2015,7 @@ def recognize_features_ml(shape, correlation_id):
         }
         
         logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={features['confidence_score']:.2f}")
+        logger.info(f"[{correlation_id}] 📊 Feature instances count: {len(features['instances'])}")
         
         return features
     
@@ -2206,20 +2207,27 @@ def analyze_cad():
             if ml_features:
                 logger.info(f"[{request_id}] ✅ ML features: {ml_features.get('num_features_detected', 0)} features detected")
                 logger.info(f"[{request_id}] 📊 ML feature data keys: {list(ml_features.keys())}")
-                if ml_features.get('feature_instances'):
-                    logger.info(f"[{request_id}] 🔍 Sample ML feature: {ml_features['feature_instances'][0]}")
+                if ml_features.get('instances'):
+                    logger.info(f"[{request_id}] 🔍 Sample ML feature: {ml_features['instances'][0]}")
+                    logger.info(f"[{request_id}] 🔍 Total instances in array: {len(ml_features['instances'])}")
             else:
                 logger.warning(f"[{request_id}] ⚠️ ML feature recognition returned None")
             
+            # ✅ IMPORTANT: Pass features to frontend REGARDLESS of confidence score
+            # Features with low/zero confidence are still valuable for visualization
             if ml_features and ml_features['num_features_detected'] > 0:
                 confidence = ml_features.get('confidence_score', 0.0)
+                
+                logger.info(f"[{request_id}] 📊 Confidence score: {confidence:.2f} - Features WILL be sent to frontend")
                 
                 if confidence >= config.CONFIDENCE_FULLY_RECOGNIZED:
                     recognition_status = "fully_recognized"
                 elif confidence >= config.CONFIDENCE_PARTIALLY_RECOGNIZED:
                     recognition_status = "partially_recognized"
                 else:
+                    # ✅ Still send features even with low confidence
                     recognition_status = "low_confidence"
+                    logger.info(f"[{request_id}] ⚠️ Low confidence ({confidence:.2f}), but features will still be displayed")
             else:
                 recognition_status = "no_features_detected"
         
