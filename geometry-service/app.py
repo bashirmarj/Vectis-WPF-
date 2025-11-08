@@ -2004,18 +2004,28 @@ def recognize_features_ml(shape, correlation_id):
             logger.warning(f"[{correlation_id}] AAGNet recognition failed: {result.get('error', 'Unknown error')}")
             return None
         
+        # ✅ Calculate overall confidence from individual instance confidences
+        instances = result.get('instances', [])
+        if instances:
+            # Average confidence across all detected features
+            avg_confidence = sum(inst.get('confidence', 0.0) for inst in instances) / len(instances)
+        else:
+            avg_confidence = 0.0
+        
         # Transform to expected format
         features = {
-            'instances': result.get('instances', []),  # ✅ FIXED: Changed from 'feature_instances' to 'instances'
+            'instances': instances,
             'num_features_detected': result.get('num_instances', 0),
             'num_faces_analyzed': result.get('num_faces', 0),
-            'confidence_score': result.get('confidence', 0.0),
+            'confidence_score': avg_confidence,  # ✅ FIXED: Average of instance confidences
             'inference_time_sec': result.get('processing_time', 0.0),
             'recognition_method': 'AAGNet'
         }
         
-        logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={features['confidence_score']:.2f}")
-        logger.info(f"[{correlation_id}] 📊 Feature instances count: {len(features['instances'])}")
+        logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={avg_confidence:.2f}")
+        logger.info(f"[{correlation_id}] 📊 Confidence breakdown: avg={avg_confidence:.2f}, "
+                    f"range=[{min((i.get('confidence', 0) for i in instances), default=0):.2f}-"
+                    f"{max((i.get('confidence', 0) for i in instances), default=0):.2f}], instances={len(instances)}")
         
         return features
     
