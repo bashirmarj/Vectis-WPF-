@@ -116,8 +116,9 @@ export const PartUploadForm = () => {
       // Step 3: Call edge function
       const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
         body: {
-          fileUrl: urlData.signedUrl,        // ✅ Using signed URL for bucket
+          fileUrl: urlData.signedUrl,
           fileName: fileWithQty.file.name,
+          fileSize: fileWithQty.file.size,   // ✅ Add file size
           fileType: fileExt,
           material: fileWithQty.material,
         },
