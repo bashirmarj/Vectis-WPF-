@@ -362,17 +362,30 @@ serve(async (req) => {
               method: flaskResult.method || 'flask_backend'
             };
           } else {
-            console.warn(JSON.stringify({
+            // Capture detailed error from Flask service
+            let flaskError = 'Unknown error';
+            try {
+              const errorBody = await flaskResponse.json();
+              flaskError = errorBody.error || errorBody.message || JSON.stringify(errorBody);
+            } catch {
+              flaskError = `HTTP ${flaskResponse.status}: ${flaskResponse.statusText}`;
+            }
+
+            console.error(JSON.stringify({
               timestamp: new Date().toISOString(),
-              level: 'WARN',
+              level: 'ERROR',
               correlation_id: correlationId,
               tier: 'EDGE',
-              message: 'Flask backend unavailable',
+              message: 'Geometry service processing failed',
               context: { 
                 status: flaskResponse.status,
-                statusText: flaskResponse.statusText
+                statusText: flaskResponse.statusText,
+                error: flaskError
               }
             }));
+
+            // Throw error to halt processing and return to client
+            throw new Error(`Geometry processing failed: ${flaskError}`);
           }
 
         } catch (error: any) {
