@@ -17,7 +17,15 @@ interface PartDetailCustomerProps {
     quantity: number;
     material?: string;
     process?: string;
-    meshId?: string;
+    meshData?: {
+      vertices: number[];
+      indices: number[];
+      normals: number[];
+      vertex_colors?: string[];
+      triangle_count: number;
+      face_types?: string[];
+      feature_edges?: number[][][];
+    };
     analysis?: {
       volume_cm3: number;
       surface_area_cm2: number;
@@ -167,7 +175,7 @@ export function PartDetailCustomer({
               <div className="space-y-4">
                 <MaterialSelector value={file.material} materials={materials} onSelect={onUpdateMaterial} compact />
                 {/* ✅ FIXED: Removed invalid props (file and detectedFeatures) */}
-                <CADViewer fileName={file.file.name} meshId={file.meshId} />
+                <CADViewer fileName={file.file.name} meshData={file.meshData} />
               </div>
             </TabsContent>
 

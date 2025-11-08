@@ -528,110 +528,43 @@ serve(async (req) => {
     const normals = analysisResult?.mesh_data?.normals || analysisResult?.normals;
     
     if (supabaseClient && vertices && vertices.length > 0) {
-      try {
-        console.log(JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: 'DEBUG',
-          correlation_id: correlationId,
-          tier: 'EDGE',
-          message: 'Attempting to store mesh data',
-          context: { 
-            vertexCount: vertices.length,
-            indexCount: indices?.length || 0,
-            normalCount: normals?.length || 0,
-            triangleCount: analysisResult.mesh_data?.triangle_count || (indices?.length / 3) || 0
-          }
-        }));
-
-        // ALWAYS generate file hash with fallback
-        let fileHash: string;
-        try {
-          if (fileData && fileData.byteLength > 0) {
-            const hashBuffer = await crypto.subtle.digest('SHA-256', fileData);
-            fileHash = Array.from(new Uint8Array(hashBuffer))
-              .map(b => b.toString(16).padStart(2, '0'))
-              .join('');
-            console.log(JSON.stringify({
-              timestamp: new Date().toISOString(),
-              level: 'DEBUG',
-              correlation_id: correlationId,
-              tier: 'EDGE',
-              message: 'Generated SHA-256 file hash',
-              context: { hashLength: fileHash.length }
-            }));
-          } else {
-            throw new Error('No file data available for hashing');
-          }
-        } catch (hashError) {
-          // Fallback hash generation
-          fileHash = `fallback_${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}_${correlationId.substring(0, 8)}`;
-          console.log(JSON.stringify({
-            timestamp: new Date().toISOString(),
-            level: 'WARN',
-            correlation_id: correlationId,
-            tier: 'EDGE',
-            message: 'Using fallback file hash',
-            context: { reason: (hashError as Error).message, fallbackHash: fileHash }
-          }));
+      console.log(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'DEBUG',
+        correlation_id: correlationId,
+        tier: 'EDGE',
+        message: 'Attempting to store mesh data',
+        context: { 
+          vertexCount: vertices.length,
+          indexCount: indices?.length || 0,
+          normalCount: normals?.length || 0,
+          triangleCount: analysisResult.mesh_data?.triangle_count || (indices?.length / 3) || 0
         }
+      }));
 
-        const { data: mesh, error } = await supabaseClient
-          .from('cad_meshes')
-          .insert({
-            file_name: fileName,
-            file_hash: fileHash,
-            vertices: vertices,
-            indices: indices || [],
-            normals: normals || [],
-            triangle_count: analysisResult.mesh_data?.triangle_count || (indices ? Math.floor(indices.length / 3) : 0),
-            recognition_method: analysisResult.ml_features?.model_info?.architecture || analysisResult.ml_features?.recognition_method || 'geometric_only',
-            instance_features: analysisResult.ml_features?.feature_instances ? {
-              instances: analysisResult.ml_features.feature_instances,
-              summary: analysisResult.ml_features.feature_summary
-            } : null
-          })
-          .select('id')
-          .single();
-
-        if (error) {
-          console.error(JSON.stringify({
-            timestamp: new Date().toISOString(),
-            level: 'ERROR',
-            correlation_id: correlationId,
-            tier: 'EDGE',
-            message: 'Database insertion failed',
-            context: { error: error.message }
-          }));
-        } else {
-          meshId = mesh?.id;
-          console.log(JSON.stringify({
-            timestamp: new Date().toISOString(),
-            level: 'INFO',
-            correlation_id: correlationId,
-            tier: 'EDGE',
-            message: 'Mesh stored successfully',
-            context: { meshId }
-          }));
+      // ✅ No longer storing mesh in database - will return mesh_data directly
+      console.log(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'INFO',
+        correlation_id: correlationId,
+        tier: 'EDGE',
+        message: 'Mesh data prepared for direct response (no caching)',
+        context: { 
+          hasVertices: !!vertices,
+          hasIndices: !!indices,
+          hasNormals: !!normals,
+          triangleCount: indices ? Math.floor(indices.length / 3) : 0
         }
-      } catch (dbError) {
-        console.error(JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: 'ERROR',
-          correlation_id: correlationId,
-          tier: 'EDGE',
-          message: 'Database storage error',
-          context: { error: (dbError as Error).message }
-        }));
-      }
+      }));
     }
 
-    // Final response
+    // Final response - include mesh_data directly (no caching)
     const processingTime = (Date.now() - startTime) / 1000;
     const response = {
       success: true,
       correlation_id: correlationId,
       ...analysisResult,
-      mesh_id: meshId,
+      mesh_data: analysisResult.mesh_data, // ✅ Return mesh data directly
       processing_time: Number(processingTime.toFixed(3)),
       timestamp: new Date().toISOString()
     };

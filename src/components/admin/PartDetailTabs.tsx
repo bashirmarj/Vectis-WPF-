@@ -96,7 +96,6 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
             <div className="h-[600px] border rounded-lg overflow-hidden">
               <CADViewer
                 fileName={lineItem.file_name}
-                meshId={lineItem.mesh_id || undefined}
                 fileUrl={lineItem.file_path}
               />
             </div>

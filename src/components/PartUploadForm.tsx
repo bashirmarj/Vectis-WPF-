@@ -15,7 +15,6 @@ interface FileWithQuantity {
   quantity: number;
   material?: string;
   process?: string;
-  meshId?: string; // ✅ This needs to be populated!
   meshData?: {
     vertices: number[];
     indices: number[];
@@ -133,17 +132,7 @@ export const PartUploadForm = () => {
       console.log("🏭 Manufacturing features:", result.manufacturing_features);
       console.log("📋 Feature summary:", result.feature_summary);
 
-      // ✅ CRITICAL FIX: Extract meshId from response
-      const meshId = result.mesh_id || result.meshId;
-
-      if (!meshId) {
-        console.warn("⚠️ No meshId in response! Available keys:", Object.keys(result));
-        console.warn("⚠️ Full response:", result);
-      } else {
-        console.log("✅ Extracted meshId:", meshId);
-      }
-
-      // Extract mesh data
+      // ✅ Extract mesh data directly from response (no meshId)
       const meshData = result.mesh_data || result.meshData || {};
 
       // Add vertex_colors to meshData if available
@@ -151,10 +140,13 @@ export const PartUploadForm = () => {
         meshData.vertex_colors = result.vertex_colors || meshData.vertex_colors;
       }
 
-      console.log("🎨 Mesh data:", {
+      console.log("🎨 Mesh data received:", {
         hasVertexColors: !!meshData.vertex_colors,
         vertexColorCount: meshData.vertex_colors?.length,
         triangleCount: result.triangle_count || meshData.triangle_count,
+        hasVertices: !!meshData.vertices,
+        hasIndices: !!meshData.indices,
+        hasNormals: !!meshData.normals,
       });
 
       // Extract analysis data
@@ -175,20 +167,17 @@ export const PartUploadForm = () => {
       };
 
       console.log("💾 Storing analysis data:", {
-        hasMeshId: !!meshId,
-        meshId,
         hasAnalysis: !!analysis,
         hasMeshData: !!meshData,
       });
 
-      // ✅ CRITICAL FIX: Store meshId, meshData, AND analysis
+      // ✅ Store meshData and analysis directly (no meshId caching)
       setFiles((prev) =>
         prev.map((f, i) =>
           i === index
             ? {
                 ...f,
-                meshId, // ✅ CRITICAL: This was missing!
-                meshData, // For 3D viewer
+                meshData, // ✅ Direct mesh data for 3D viewer
                 analysis, // For FeatureTree and analysis display
                 isAnalyzing: false,
               }
@@ -196,15 +185,7 @@ export const PartUploadForm = () => {
         ),
       );
 
-      console.log("✅ File updated with meshId:", meshId);
-
-      // Invalidate the mesh cache to force fresh data fetch
-      if (meshId) {
-        queryClient.invalidateQueries({ 
-          queryKey: ['cad_meshes', meshId] 
-        });
-        console.log(`🔄 Invalidated cache for mesh ID: ${meshId}`);
-      }
+      console.log("✅ File updated with fresh mesh data (no caching)");
 
       toast({
         title: "✅ CAD Analysis Complete",
@@ -312,8 +293,7 @@ export const PartUploadForm = () => {
       "📋 Continuing with files:",
       files.map((f) => ({
         name: f.file.name,
-        hasMeshId: !!f.meshId,
-        meshId: f.meshId,
+        hasMeshData: !!f.meshData,
         hasAnalysis: !!f.analysis,
       })),
     );

@@ -25,7 +25,7 @@ import { type MarkerValues } from "@/lib/faceMeasurementUtils";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
-  meshId?: string;
+  meshData?: MeshData; // ✅ Accept mesh data directly instead of meshId
   fileUrl?: string;
   fileName?: string;
   isSidebarCollapsed?: boolean;
@@ -72,7 +72,7 @@ interface MeshData {
   }>;
 }
 
-export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
+export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [meshData, setMeshData] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,98 +105,28 @@ export function CADViewer({ meshId, fileUrl, fileName, isSidebarCollapsed = fals
     return ["step", "stp", "iges", "igs", "stl"].includes(fileExtension);
   }, [fileExtension]);
 
-  // Load mesh data from Supabase
+  // ✅ Use mesh data directly from props (no database fetch)
   useEffect(() => {
-    if (!meshId || !isRenderableFormat) {
+    if (!isRenderableFormat) {
       setIsLoading(false);
       return;
     }
 
-    const loadMeshData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const { data: mesh, error: meshError } = await supabase
-          .from("cad_meshes")
-          .select("*")
-          .eq("id", meshId)
-          .single();
-
-        if (meshError) throw meshError;
-        if (!mesh) throw new Error("Mesh not found");
-
-        const vertices = Array.isArray(mesh.vertices) ? mesh.vertices : JSON.parse(mesh.vertices as string);
-        const indices = Array.isArray(mesh.indices) ? mesh.indices : JSON.parse(mesh.indices as string);
-        const normals = Array.isArray(mesh.normals) ? mesh.normals : JSON.parse(mesh.normals as string);
-        const vertex_colors = mesh.vertex_colors
-          ? Array.isArray(mesh.vertex_colors)
-            ? mesh.vertex_colors
-            : JSON.parse(mesh.vertex_colors as string)
-          : undefined;
-        const feature_edges = mesh.feature_edges
-          ? Array.isArray(mesh.feature_edges)
-            ? mesh.feature_edges
-            : JSON.parse(mesh.feature_edges as string)
-          : undefined;
-        
-        const edge_classifications = mesh.edge_classifications
-          ? Array.isArray(mesh.edge_classifications)
-            ? mesh.edge_classifications
-            : JSON.parse(mesh.edge_classifications as string)
-          : undefined;
-
-        const tagged_edges = mesh.tagged_feature_edges
-          ? Array.isArray(mesh.tagged_feature_edges)
-            ? mesh.tagged_feature_edges
-            : JSON.parse(mesh.tagged_feature_edges as string)
-          : undefined;
-
-        console.log("✅ Tagged edges received from backend:", tagged_edges?.length || 0);
-
-        const meshAny = mesh as any;
-        const vertex_face_ids = meshAny.vertex_face_ids
-          ? Array.isArray(meshAny.vertex_face_ids)
-            ? meshAny.vertex_face_ids
-            : JSON.parse(meshAny.vertex_face_ids as string)
-          : undefined;
-
-        const face_classifications = meshAny.face_classifications
-          ? Array.isArray(meshAny.face_classifications)
-            ? meshAny.face_classifications
-            : JSON.parse(meshAny.face_classifications as string)
-          : undefined;
-
-        // Log face data loading once
-        if (face_classifications) {
-          console.log(`✅ Loaded ${face_classifications.length} face classifications`);
-        }
-
-        const loadedMeshData: MeshData = {
-          vertices,
-          indices,
-          normals,
-          vertex_colors,
-          triangle_count: indices.length / 3,
-          feature_edges,
-          edge_classifications,
-          tagged_edges,
-          vertex_face_ids,
-          face_classifications,
-        };
-
-        setMeshData(loadedMeshData);
-        onMeshLoaded?.(loadedMeshData);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading mesh:", error);
-        setError(error instanceof Error ? error.message : "Failed to load mesh");
-        setIsLoading(false);
-      }
-    };
-
-    loadMeshData();
-  }, [meshId, isRenderableFormat, onMeshLoaded]);
+    if (propMeshData) {
+      console.log("✅ Using mesh data from props (no caching):", {
+        hasVertices: !!propMeshData.vertices,
+        hasIndices: !!propMeshData.indices,
+        hasNormals: !!propMeshData.normals,
+        triangleCount: propMeshData.triangle_count,
+      });
+      
+      setMeshData(propMeshData);
+      onMeshLoaded?.(propMeshData);
+      setIsLoading(false);
+    } else {
+      setIsLoading(false);
+    }
+  }, [propMeshData, isRenderableFormat, onMeshLoaded]);
 
   // Calculate bounding box
   const boundingBox = useMemo(() => {

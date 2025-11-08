@@ -18,7 +18,6 @@ interface FileWithData {
   quantity: number;
   material?: string;
   process?: string;
-  meshId?: string;
   meshData?: {
     vertices: number[];
     indices: number[];
@@ -86,8 +85,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
   React.useEffect(() => {
     console.log("🔍 Selected file debug:", {
       fileName: selectedFile.file.name,
-      hasMeshId: !!selectedFile.meshId,
-      meshId: selectedFile.meshId,
+      hasMeshData: !!selectedFile.meshData,
       isAnalyzing: selectedFile.isAnalyzing,
       hasAnalysis: !!selectedFile.analysis,
     });
@@ -158,7 +156,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     <div className="text-xs text-gray-500 mt-1">
                       Qty: {file.quantity} | {file.material || "No material"}
                       {/* ✅ Debug indicator */}
-                      {file.meshId && <span className="ml-2 text-green-600">● 3D Ready</span>}
+                      {file.meshData && <span className="ml-2 text-green-600">● 3D Ready</span>}
                     </div>
                   </button>
                 ))}
@@ -406,11 +404,11 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     </TooltipProvider>
                   )}
                   <div className="h-[calc(100vh-200px)]">
-                    {selectedFile.meshId ? (
+                    {selectedFile.meshData ? (
                       <>
-                        {console.log("✅ Rendering CADViewer with meshId:", selectedFile.meshId)}
+                        {console.log("✅ Rendering CADViewer with meshData")}
                         <CADViewer
-                          meshId={selectedFile.meshId}
+                          meshData={selectedFile.meshData}
                           fileName={selectedFile.file.name}
                           isSidebarCollapsed={isSidebarCollapsed}
                           onMeshLoaded={(meshData) => {
@@ -419,15 +417,12 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                               hasColors: !!meshData.vertex_colors,
                               colorCount: meshData.vertex_colors?.length,
                             });
-                            if (!selectedFile.meshData) {
-                              onUpdateFile(selectedFileIndex, { meshData });
-                            }
                           }}
                         />
                       </>
                     ) : (
                       <>
-                        {console.log("⚠️ No meshId available:", {
+                        {console.log("⚠️ No meshData available:", {
                           fileName: selectedFile.file.name,
                           isAnalyzing: selectedFile.isAnalyzing,
                           hasAnalysis: !!selectedFile.analysis,
