@@ -81,7 +81,18 @@ logger = logging.getLogger("app")
 # === Supabase setup ===
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Initialize Supabase client only if credentials are available
+supabase: Client | None = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info("✅ Supabase client initialized")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to initialize Supabase client: {e}")
+        supabase = None
+else:
+    logger.warning("⚠️ Supabase credentials not configured - audit logging disabled")
 
 # === Production Configuration ===
 class ProductionConfig:
@@ -187,6 +198,10 @@ def log_audit_trail(event_type: str, request_id: str, details: Dict[str, Any]):
     ISO 9001 compliance: Log all processing decisions with audit trail.
     Enables traceability and reproducibility.
     """
+    # Skip logging if Supabase client is not available
+    if supabase is None:
+        return
+    
     try:
         supabase.table(config.AUDIT_LOG_TABLE).insert({
             "event_type": event_type,
