@@ -721,7 +721,7 @@ def propagate_classification_to_neighbors(face_classifications, face_centers, fa
     # Build adjacency graph
     adjacency = {}
     
-    for edge_idx in range(1, face_edge_map.Extent() + 1):
+    for edge_idx in range(1, face_edge_map.Size() + 1):
         edge = face_edge_map.FindKey(edge_idx)
         adjacent_faces = face_edge_map.FindFromKey(edge)
         
