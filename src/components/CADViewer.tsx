@@ -300,9 +300,17 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
     [boundingBox],
   );
 
-  // ✅ CRITICAL FIX: Empty dependency array since function only uses refs
+  // ✅ Throttled camera rotation for performance
+  const lastRotateTime = useRef(0);
+  const THROTTLE_MS = 16; // 60fps
+  
   const handleRotateCamera = useCallback(
     (direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
+      // Throttle camera updates
+      const now = performance.now();
+      if (now - lastRotateTime.current < THROTTLE_MS) return;
+      lastRotateTime.current = now;
+      
       if (!cameraRef.current || !controlsRef.current) return;
 
       console.log("🎯 Rotating camera:", direction);

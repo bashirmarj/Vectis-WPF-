@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, forwardRef } from "react";
+import { useEffect, useRef, forwardRef } from "react";
 import * as React from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
@@ -73,7 +73,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     // Create single unified geometry - ALWAYS USE INDEXED GEOMETRY
     // This is critical for smooth shading and vertex normal sharing
-    const geometry = useMemo(() => {
+    const geometry = (() => {
       const geo = new THREE.BufferGeometry();
 
       // ALWAYS use indexed geometry (vertices shared across triangles)
@@ -87,7 +87,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
       geo.computeBoundingSphere();
       return geo;
-    }, [meshData]);
+    })();
 
     // Apply vertex colors to indexed geometry
     useEffect(() => {
@@ -131,28 +131,17 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           geometry.deleteAttribute("color");
         }
       }
-    }, [geometry, topologyColors, meshData]);
+    }, [topologyColors]);
 
-    // Pre-compute feature edges ONCE at load time (for solid mode)
-    const featureEdgesGeometry = useMemo(() => {
+    // Pre-compute feature edges (for solid mode) - NO CACHING
+    const featureEdgesGeometry = (() => {
       // PRIORITY: Use tagged_edges with iso_type filtering to remove UIso/VIso construction lines
       if (meshData.tagged_edges && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
-        let totalEdges = 0;
-        let uisoCount = 0;
-        let visoCount = 0;
 
         meshData.tagged_edges.forEach((edge) => {
-          totalEdges++;
-          
           // FILTER: Skip UIso/VIso parametric surface curves (interior construction lines)
-          // Backend sends lowercase: "uiso" and "viso"
-          if (edge.iso_type === "uiso") {
-            uisoCount++;
-            return;
-          }
-          if (edge.iso_type === "viso") {
-            visoCount++;
+          if (edge.iso_type === "uiso" || edge.iso_type === "viso") {
             return;
           }
           
@@ -166,10 +155,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
         geo.computeBoundingSphere();
-        console.log(
-          `✅ Tagged edges filtering: kept ${featureEdgePositions.length / 6}/${totalEdges} edges | Filtered: ${uisoCount} UIso + ${visoCount} VIso construction lines`
-        );
-
         return geo;
       }
 
@@ -188,20 +173,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
         geo.computeBoundingSphere();
-        console.log(
-          "✅ Rendering backend feature_edges:",
-          meshData.feature_edges.length,
-          "polylines,",
-          featureEdgePositions.length / 6,
-          "segments"
-        );
-
         return geo;
       }
 
       // FALLBACK: Compute from mesh triangles (for STL files without BREP data)
-      console.warn("⚠️ Backend feature_edges not available, computing from mesh triangles");
-
       const edgeMap = new Map<
         string,
         {
@@ -278,15 +253,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         }
 
         // Feature edges: angle between adjacent faces > 20° (lowered from 45°)
-        // This catches more edges including cylindrical surface boundaries
         if (edgeData.normals.length === 2) {
           const n1 = edgeData.normals[0];
           const n2 = edgeData.normals[1];
           const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
           const normalAngleDeg = normalAngle * (180 / Math.PI);
 
-          // Sharp feature edge (>20°) - show it
-          // Lower threshold ensures cylindrical surface edges are visible
           if (normalAngleDeg > 20) {
             featureEdgePositions.push(
               edgeData.v1.x,
@@ -304,20 +276,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
       return geo;
-    }, [meshData.vertices, meshData.indices, meshData.feature_edges]);
+    })();
 
 
-    // Clean edge geometry for both solid and wireframe modes
-    const cleanEdgesGeometry = useMemo(() => {
-      // Three.js EdgesGeometry automatically extracts all edges with a threshold angle
-      // Using threshold of 1 degree will show nearly all edges including smooth surfaces
-      const edgesGeo = new THREE.EdgesGeometry(geometry, 1); // 1 degree threshold
-      console.log("✅ Generated clean edges:", edgesGeo.attributes.position.count / 2, "edges");
-      return edgesGeo;
-    }, [geometry]);
+    // Clean edge geometry for both solid and wireframe modes - NO CACHING
+    const cleanEdgesGeometry = new THREE.EdgesGeometry(geometry, 1);
 
-    // Section plane
-    const clippingPlane = useMemo(() => {
+    // Section plane - NO CACHING
+    const clippingPlane = (() => {
       if (sectionPlane === "none") return undefined;
 
       let normal: THREE.Vector3;
@@ -336,7 +302,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       }
 
       return [new THREE.Plane(normal, -sectionPosition)];
-    }, [sectionPlane, sectionPosition]);
+    })();
 
     const { gl } = useThree();
 
@@ -345,10 +311,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       gl.clippingPlanes = [];
     }, [sectionPlane, gl]);
 
-    const materialProps = useMemo(() => {
+    const materialProps = (() => {
       const base = {
         color: SOLID_COLOR,
-        side: THREE.DoubleSide,  // Render all faces regardless of orientation
+        side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
         clipIntersection: true,
         metalness: 0.1,
@@ -357,14 +323,22 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       };
 
       if (displayStyle === "wireframe") {
-        // In wireframe mode, hide the mesh surface completely
         return { ...base, opacity: 0, transparent: true, wireframe: false };
       } else if (displayStyle === "translucent") {
         return { ...base, transparent: true, opacity: 0.4, wireframe: false };
       }
 
       return { ...base, transparent: false, opacity: 1, wireframe: false };
-    }, [displayStyle, clippingPlane]);
+    })();
+
+    // Cleanup geometries on unmount to prevent memory leaks
+    useEffect(() => {
+      return () => {
+        geometry.dispose();
+        if (featureEdgesGeometry) featureEdgesGeometry.dispose();
+        cleanEdgesGeometry.dispose();
+      };
+    }, []);
 
     // Expose mesh and feature edges for external access
     React.useImperativeHandle(ref, () => ({
@@ -407,7 +381,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
           <lineSegments 
             geometry={featureEdgesGeometry}
-            frustumCulled={false}
+            frustumCulled={true}
           >
             <lineBasicMaterial 
               color="#000000" 
