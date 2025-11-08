@@ -36,7 +36,7 @@ interface MeshModelProps {
 }
 
 // Professional solid color for CAD rendering
-const SOLID_COLOR = "#FF6B6B"; // Red color matching old working version
+const SOLID_COLOR = "#5b9bd5"; // Professional blue-gray (matches Meviy/Fusion 360)
 
 // Fusion 360 Analysis colors
 const TOPOLOGY_COLORS = {
@@ -348,7 +348,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     const materialProps = useMemo(() => {
       const base = {
         color: "#5b9bd5",
-        side: THREE.FrontSide,
+        side: THREE.DoubleSide,  // Render all faces regardless of orientation
         clippingPlanes: clippingPlane,
         clipIntersection: true,
         metalness: 0.1,
