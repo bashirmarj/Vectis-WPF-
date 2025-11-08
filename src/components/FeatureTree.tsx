@@ -133,6 +133,24 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
   featureSummary,
   onFeatureSelect 
 }) => {
+  // ✅ Add null check
+  if (!features || !features.instances || features.instances.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Feature Recognition</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>No features detected yet.</p>
+            <p className="text-sm mt-2">Features will appear here after CAD analysis completes.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // ✅ FIXED: Proper state management with useMemo
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(
     new Set(Object.keys(CATEGORY_NAMES))

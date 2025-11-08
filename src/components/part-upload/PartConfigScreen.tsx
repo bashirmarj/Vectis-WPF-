@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen, Box } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 import FeatureTree from "@/components/FeatureTree";
 import { RoutingEditor } from "./RoutingEditor";
@@ -457,18 +457,27 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
                 {/* Features Tab */}
                 <TabsContent value="features" className="m-0 p-6">
-                {selectedFile.analysis?.ml_features ? (
+                  {selectedFile.analysis?.ml_features ? (
                     <FeatureTree
-                      features={selectedFile.analysis?.ml_features}
+                      features={selectedFile.analysis.ml_features}
+                      featureSummary={selectedFile.analysis.feature_summary}
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-12">
-                      <div className="text-4xl mb-2">🔍</div>
-                      <p className="text-sm font-medium text-muted-foreground">No features detected yet</p>
-                      <p className="text-xs text-gray-400 max-w-md">
-                        Features will appear here after the CAD file analysis is complete
-                      </p>
-                    </div>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Feature Recognition</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>
+                            {selectedFile.isAnalyzing 
+                              ? "Analyzing features..." 
+                              : "No feature analysis available yet."}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   )}
                 </TabsContent>
               </div>

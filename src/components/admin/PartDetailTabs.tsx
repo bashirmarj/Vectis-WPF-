@@ -103,9 +103,23 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
 
           {/* Features Tab - ML Only */}
           <TabsContent value="features" className="mt-4">
-            <FeatureTree
-              features={featureTree?.ml_features}
-            />
+            {featureTree?.ml_features ? (
+              <FeatureTree
+                features={featureTree.ml_features}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Feature Recognition</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No feature analysis available for this part.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Analysis Tab */}
