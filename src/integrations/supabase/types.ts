@@ -104,6 +104,33 @@ export type Database = {
           },
         ]
       }
+      cad_processing_audit: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: number
+          request_id: string
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: number
+          request_id: string
+          timestamp: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: number
+          request_id?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
       contact_submissions: {
         Row: {
           created_at: string | null
@@ -1166,9 +1193,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      recent_processing_events: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          event_type: string | null
+          feature_count: number | null
+          file_hash: string | null
+          id: number | null
+          processing_time_sec: number | null
+          quality_score: number | null
+          recognition_status: string | null
+          request_id: string | null
+          timestamp: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string | null
+          feature_count?: never
+          file_hash?: never
+          id?: number | null
+          processing_time_sec?: never
+          quality_score?: never
+          recognition_status?: never
+          request_id?: string | null
+          timestamp?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string | null
+          feature_count?: never
+          file_hash?: never
+          id?: number | null
+          processing_time_sec?: never
+          quality_score?: never
+          recognition_status?: never
+          request_id?: string | null
+          timestamp?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      cleanup_old_audit_logs: { Args: never; Returns: undefined }
       generate_quote_number: { Args: never; Returns: string }
       has_role: {
         Args: {
