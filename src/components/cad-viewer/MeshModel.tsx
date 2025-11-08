@@ -348,12 +348,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     const materialProps = useMemo(() => {
       const base = {
         color: "#5b9bd5",
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
         clippingPlanes: clippingPlane,
         clipIntersection: true,
-        metalness: 0.0,
-        roughness: 0.9,
-        envMapIntensity: 0.3,
+        metalness: 0.1,
+        roughness: 0.6,
+        envMapIntensity: 0.5,
       };
 
       if (displayStyle === "wireframe") {

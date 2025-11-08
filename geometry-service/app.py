@@ -485,9 +485,9 @@ def attempt_healing(shape) -> Tuple[Any, bool]:
 # MESH GENERATION
 # ============================================================================
 
-def generate_mesh(shape, correlation_id: str, deflection=0.1, angular_deflection=12):
+def generate_mesh(shape, correlation_id: str, deflection=0.01, angular_deflection=5):
     """Generate triangulated mesh from B-Rep shape with professional quality"""
-    logger.info(f"[{correlation_id}] 🔨 Tessellating shape (deflection={deflection}, angular={angular_deflection}°)...")
+    logger.info(f"[{correlation_id}] 🔨 Tessellating shape (deflection={deflection:.3f}, angular={angular_deflection}°)...")
     
     start_time = time.time()
     
@@ -527,7 +527,7 @@ def generate_mesh(shape, correlation_id: str, deflection=0.1, angular_deflection
                 adaptor = None
             
             # Build vertex map for this face
-            face_vertex_offset = len(vertices)
+            face_vertex_offset = len(vertices) // 3
             
             for i in range(1, triangulation.NbNodes() + 1):
                 pnt = triangulation.Node(i)
