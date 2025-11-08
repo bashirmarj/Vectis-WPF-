@@ -138,9 +138,11 @@ logging.getLogger('occwl').setLevel(logging.ERROR)
 # === AAGNet Integration ===
 try:
     from aagnet_recognizer import AAGNetRecognizer, create_flask_endpoint
+    aagnet_recognizer = AAGNetRecognizer(device='cpu')
     AAGNET_AVAILABLE = True
-    logger.info("✅ AAGNet recognizer loaded")
-except ImportError as e:
+    logger.info("✅ AAGNet recognizer initialized")
+except Exception as e:
+    aagnet_recognizer = None
     AAGNET_AVAILABLE = False
     logger.warning(f"⚠️ AAGNet not available: {e}")
 
@@ -939,18 +941,6 @@ def recognize_features_ml(shape, correlation_id):
                 os.unlink(tmp_path)
             except Exception as e:
                 logger.warning(f"[{correlation_id}] Failed to clean up temp file: {e}")
-        
-        logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={features['confidence_score']:.2f}")
-        
-        return features
-    
-    except CircuitBreakerError as e:
-        logger.warning(f"[{correlation_id}] Circuit breaker open, falling back to mesh-based detection: {e}")
-        return None
-    
-    except Exception as e:
-        logger.error(f"[{correlation_id}] AAGNet recognition failed: {e}")
-        return None
 
 # ============================================================================
 # MAIN ANALYSIS ENDPOINT
