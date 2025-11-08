@@ -875,24 +875,70 @@ def extract_feature_edges_professional(shape, correlation_id: str, dihedral_angl
 # ML FEATURE RECOGNITION (AAGNet Integration)
 # ============================================================================
 
-def recognize_features_ml(shape, correlation_id: str):
+def recognize_features_ml(shape, correlation_id):
     """
-    Recognize machining features using AAGNet neural network.
+    AAGNet-based ML feature recognition.
     Protected by circuit breaker pattern.
     """
-    if not AAGNET_AVAILABLE:
+    if not AAGNET_AVAILABLE or aagnet_recognizer is None:
         logger.warning(f"[{correlation_id}] AAGNet not available, skipping ML recognition")
         return None
     
+    tmp_path = None
     try:
         logger.info(f"[{correlation_id}] 🤖 Running AAGNet feature recognition...")
         
-        # Call AAGNet via circuit breaker
-        features = aagnet_circuit_breaker.call(
-            AAGNetRecognizer.recognize_from_shape,
-            shape,
-            correlation_id
+        # Create temporary STEP file for AAGNet
+        fd, tmp_path = tempfile.mkstemp(suffix='.step')
+        os.close(fd)
+        
+        # Export shape to STEP
+        writer = STEPControl_Writer()
+        writer.Transfer(shape, 1)
+        writer.Write(tmp_path)
+        
+        # ✅ CORRECT: Call instance method with file path
+        result = aagnet_circuit_breaker.call(
+            aagnet_recognizer.recognize_features,  # ✅ Instance method
+            tmp_path  # ✅ File path
         )
+        
+        # Check if recognition succeeded
+        if not result or not result.get('success'):
+            logger.warning(f"[{correlation_id}] AAGNet recognition failed: {result.get('error', 'Unknown error')}")
+            return None
+        
+        # Transform to expected format
+        features = {
+            'feature_instances': result.get('instances', []),
+            'num_features_detected': result.get('num_instances', 0),
+            'num_faces_analyzed': result.get('num_faces', 0),
+            'confidence_score': result.get('confidence', 0.0),
+            'inference_time_sec': result.get('processing_time', 0.0),
+            'recognition_method': 'AAGNet'
+        }
+        
+        logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={features['confidence_score']:.2f}")
+        
+        return features
+    
+    except CircuitBreakerError as e:
+        logger.warning(f"[{correlation_id}] Circuit breaker open, falling back to mesh-based detection: {e}")
+        return None
+    
+    except Exception as e:
+        logger.error(f"[{correlation_id}] AAGNet recognition failed: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+    
+    finally:
+        # Clean up temp file
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception as e:
+                logger.warning(f"[{correlation_id}] Failed to clean up temp file: {e}")
         
         logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={features['confidence_score']:.2f}")
         
