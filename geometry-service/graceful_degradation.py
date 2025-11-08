@@ -4,12 +4,13 @@ Provides fallback processing tiers when full B-Rep processing fails
 """
 
 import logging
+from enum import Enum
 from typing import Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-class ProcessingTier:
+class ProcessingTier(Enum):
     """Processing tier with associated confidence level"""
     TIER_1_BREP = "tier_1_brep"          # Full B-Rep + AAGNet (confidence: 0.95)
     TIER_2_MESH = "tier_2_mesh"          # Mesh-based processing (confidence: 0.75)
@@ -26,6 +27,55 @@ class GracefulDegradation:
     Tier 3 (confidence 0.60): Point cloud processing
     Tier 4 (confidence 0.40): Basic mesh data only
     """
+    
+    # Confidence multipliers for each tier
+    tier_confidence_multipliers = {
+        ProcessingTier.TIER_1_BREP: 0.95,
+        ProcessingTier.TIER_2_MESH: 0.75,
+        ProcessingTier.TIER_3_POINT_CLOUD: 0.60,
+        ProcessingTier.TIER_4_BASIC: 0.40
+    }
+    
+    @staticmethod
+    def select_tier(
+        aagnet_available: bool,
+        quality_score: float,
+        circuit_breaker_state: str
+    ) -> ProcessingTier:
+        """
+        Select appropriate processing tier based on system state.
+        
+        Args:
+            aagnet_available: Whether AAGNet model is loaded
+            quality_score: CAD file quality score (0.0 to 1.0)
+            circuit_breaker_state: Circuit breaker state ("CLOSED", "OPEN", "HALF_OPEN")
+            
+        Returns:
+            ProcessingTier enum value
+        """
+        
+        # If AAGNet unavailable or circuit breaker open, skip to Tier 2
+        if not aagnet_available:
+            logger.info("⚠️ AAGNet not available, selecting Tier 2 (mesh-based)")
+            return ProcessingTier.TIER_2_MESH
+        
+        if circuit_breaker_state == "OPEN":
+            logger.warning("⚠️ Circuit breaker OPEN, selecting Tier 2 (mesh-based)")
+            return ProcessingTier.TIER_2_MESH
+        
+        # If quality score is very low, go directly to Tier 2
+        if quality_score < 0.5:
+            logger.warning(f"⚠️ Low quality score ({quality_score:.2f}), selecting Tier 2 (mesh-based)")
+            return ProcessingTier.TIER_2_MESH
+        
+        # If circuit breaker is HALF_OPEN, be cautious - use Tier 2
+        if circuit_breaker_state == "HALF_OPEN":
+            logger.info("⚠️ Circuit breaker testing recovery, selecting Tier 2 (mesh-based)")
+            return ProcessingTier.TIER_2_MESH
+        
+        # Default: Use Tier 1 (full B-Rep + AAGNet)
+        logger.info("✅ System healthy, selecting Tier 1 (B-Rep + AAGNet)")
+        return ProcessingTier.TIER_1_BREP
     
     @staticmethod
     def classify_confidence(confidence: float) -> str:
@@ -77,19 +127,19 @@ class GracefulDegradation:
                     'num_faces_analyzed': aagnet_result.get('num_faces', 0),
                     'inference_time_sec': aagnet_result.get('processing_time', 0),
                     'recognition_method': 'AAGNet',
-                    'processing_tier': ProcessingTier.TIER_1_BREP,
+                    'processing_tier': ProcessingTier.TIER_1_BREP.value,
                     'confidence_level': 'high'
                 }
                 
                 logger.info(f"✅ Tier 1 successful: {ml_features['num_features_detected']} features detected")
-                return ml_features, 0.95, ProcessingTier.TIER_1_BREP
+                return ml_features, 0.95, ProcessingTier.TIER_1_BREP.value
             else:
                 logger.warning(f"⚠️ Tier 1 failed: {aagnet_result.get('error')}")
-                return None, 0.0, ProcessingTier.TIER_1_BREP
+                return None, 0.0, ProcessingTier.TIER_1_BREP.value
                 
         except Exception as e:
             logger.warning(f"⚠️ Tier 1 exception: {str(e)}")
-            return None, 0.0, ProcessingTier.TIER_1_BREP
+            return None, 0.0, ProcessingTier.TIER_1_BREP.value
     
     @staticmethod
     def tier_2_mesh_processing(
@@ -144,17 +194,17 @@ class GracefulDegradation:
                 'num_faces_analyzed': len(mesh_data.get('face_classifications', [])),
                 'inference_time_sec': 0,
                 'recognition_method': 'mesh_heuristics',
-                'processing_tier': ProcessingTier.TIER_2_MESH,
+                'processing_tier': ProcessingTier.TIER_2_MESH.value,
                 'confidence_level': 'medium',
                 'warning': 'Reduced accuracy: mesh-based heuristics only'
             }
             
             logger.info(f"✅ Tier 2 successful: {len(feature_instances)} potential features detected")
-            return ml_features, 0.75, ProcessingTier.TIER_2_MESH
+            return ml_features, 0.75, ProcessingTier.TIER_2_MESH.value
             
         except Exception as e:
             logger.warning(f"⚠️ Tier 2 exception: {str(e)}")
-            return None, 0.0, ProcessingTier.TIER_2_MESH
+            return None, 0.0, ProcessingTier.TIER_2_MESH.value
     
     @staticmethod
     def tier_3_point_cloud_processing(
@@ -177,17 +227,17 @@ class GracefulDegradation:
                 'num_faces_analyzed': len(mesh_data.get('face_classifications', [])),
                 'inference_time_sec': 0,
                 'recognition_method': 'point_cloud_basic',
-                'processing_tier': ProcessingTier.TIER_3_POINT_CLOUD,
+                'processing_tier': ProcessingTier.TIER_3_POINT_CLOUD.value,
                 'confidence_level': 'low',
                 'warning': 'Very limited accuracy: point cloud analysis only'
             }
             
             logger.info("✅ Tier 3 complete: No features detected, returning mesh data only")
-            return ml_features, 0.60, ProcessingTier.TIER_3_POINT_CLOUD
+            return ml_features, 0.60, ProcessingTier.TIER_3_POINT_CLOUD.value
             
         except Exception as e:
             logger.warning(f"⚠️ Tier 3 exception: {str(e)}")
-            return None, 0.0, ProcessingTier.TIER_3_POINT_CLOUD
+            return None, 0.0, ProcessingTier.TIER_3_POINT_CLOUD.value
     
     @staticmethod
     def tier_4_basic_mesh(
@@ -207,12 +257,12 @@ class GracefulDegradation:
             'num_faces_analyzed': 0,
             'inference_time_sec': 0,
             'recognition_method': 'none',
-            'processing_tier': ProcessingTier.TIER_4_BASIC,
+            'processing_tier': ProcessingTier.TIER_4_BASIC.value,
             'confidence_level': 'none',
             'warning': 'Feature recognition failed, mesh visualization only'
         }
         
-        return ml_features, 0.40, ProcessingTier.TIER_4_BASIC
+        return ml_features, 0.40, ProcessingTier.TIER_4_BASIC.value
     
     @staticmethod
     def process_with_fallback(
