@@ -584,7 +584,7 @@ serve(async (req) => {
             indices: indices || [],
             normals: normals || [],
             triangle_count: analysisResult.mesh_data?.triangle_count || (indices ? Math.floor(indices.length / 3) : 0),
-            ml_model_version: analysisResult.ml_features?.model_info?.architecture || analysisResult.ml_features?.recognition_method || 'geometric_only',
+            recognition_method: analysisResult.ml_features?.model_info?.architecture || analysisResult.ml_features?.recognition_method || 'geometric_only',
             instance_features: analysisResult.ml_features?.feature_instances ? {
               instances: analysisResult.ml_features.feature_instances,
               summary: analysisResult.ml_features.feature_summary
