@@ -9,7 +9,6 @@ import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 import os; os.environ['PYTHONWARNINGS'] = 'ignore::DeprecationWarning'
 
-import os
 import sys
 import time
 import json
