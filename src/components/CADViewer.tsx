@@ -519,7 +519,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
               <Suspense fallback={null}>
-                <ProfessionalLighting intensity={0.75} enableShadows={shadowsEnabled} shadowQuality="high" />
+                <ProfessionalLighting intensity={0.85} enableShadows={shadowsEnabled} shadowQuality="high" />
 
               <MeshModel
                 ref={meshRef}

@@ -21,7 +21,7 @@ interface ProfessionalLightingProps {
  * FIXED VERSION: Improved shadow settings to prevent self-shadowing artifacts
  */
 export function ProfessionalLighting({
-  intensity = 1.0,
+  intensity = 1.1,
   enableShadows = true,
   shadowQuality = "high",
 }: ProfessionalLightingProps) {
@@ -39,14 +39,14 @@ export function ProfessionalLighting({
         args={[
           "#ffffff", // Sky color (cool white)
           "#444444", // Ground color (warm gray)
-          0.4 * intensity, // Increased from 0.3 to reduce shadow contrast
+          0.5 * intensity, // Increased from 0.4 to reduce shadow contrast
         ]}
       />
 
       {/* Key Light - Main illumination (front-top-right) - SOFTER with improved shadow bias */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={0.6 * intensity}
+        intensity={0.7 * intensity}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}

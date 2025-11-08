@@ -344,7 +344,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     React.useImperativeHandle(ref, () => ({
       mesh: meshRef.current!,
       featureEdgesGeometry: featureEdgesGeometry,
-    }));
+    }), [featureEdgesGeometry]);
 
     return (
       <group>
