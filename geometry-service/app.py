@@ -1967,360 +1967,6 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0, total_surf
     return iso_curves
 
 
-def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_degrees=20, include_uiso=True, num_uiso_lines=2, total_surface_area=None):
-    """
-    UNIFIED single-pass edge extraction: tessellate once, classify, and tag segments.
-    
-    This replaces the old three-step process (extract → classify → tag) with a single pass
-    that guarantees perfect matching between visual edges and measurement segments.
-    
-    Only extracts edges that are:
-    1. Boundary edges (belong to only 1 face) - always significant
-    2. Sharp edges (dihedral angle between faces > threshold)
-    3. UIso/VIso parametric curves (industry-standard cylinder height lines)
-    
-    Args:
-        shape: OpenCascade shape
-        max_edges: Maximum number of edges to extract
-        angle_threshold_degrees: Minimum dihedral angle to consider edge "sharp" (default: 20°)
-        include_uiso: Whether to include UIso/VIso parametric curves (default: True)
-        num_uiso_lines: Number of UIso lines per curved surface (default: 2, CATIA standard)
-    
-    Returns:
-        {
-            "feature_edges": List of polylines for rendering (same as old extract_feature_edges),
-            "edge_classifications": List of metadata dicts (same as old classify_feature_edges),
-            "tagged_edges": List of tagged segments for measurement matching (same as old tag_feature_edges_for_frontend)
-        }
-    """
-    logger.info(f"📐 Extracting and classifying BREP edges (angle threshold: {angle_threshold_degrees}°)...")
-    
-    feature_edges = []
-    edge_classifications = []
-    tagged_edges = []
-    
-    edge_count = 0
-    feature_id_counter = 0
-    angle_threshold_rad = math.radians(angle_threshold_degrees)
-    
-    # Extract isoparametric curves for curved surfaces
-    iso_curves = []
-    if include_uiso:
-        iso_curves = extract_isoparametric_curves(
-            shape, 
-            num_u_lines=num_uiso_lines,
-            num_v_lines=0,  # Disable VIso curves to reduce memory usage
-            total_surface_area=total_surface_area
-        )
-    
-    # Build edge-to-faces map using TopTools
-    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-    
-    try:
-        edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-        
-        stats = {
-            'boundary_edges': 0,
-            'sharp_edges': 0,
-            'geometric_features': 0,
-            'smooth_edges_skipped': 0,
-            'internal_edges_skipped': 0,
-            'total_processed': 0,
-            'iso_curves': 0
-        }
-        
-        debug_logged = 0
-        max_debug_logs = 10
-        
-        while edge_explorer.More() and edge_count < max_edges:
-            edge = topods.Edge(edge_explorer.Current())
-            stats['total_processed'] += 1
-            
-            try:
-                # Get curve geometry
-                curve_result = BRep_Tool.Curve(edge)
-                
-                if not curve_result or len(curve_result) < 3 or curve_result[0] is None:
-                    edge_explorer.Next()
-                    continue
-                
-                curve = curve_result[0]
-                first_param = curve_result[1]
-                last_param = curve_result[2]
-                
-                # Determine if this edge is significant
-                is_significant = False
-                edge_type = "unknown"
-                
-                # Get faces adjacent to this edge
-                if edge_face_map.Contains(edge):
-                    face_list = edge_face_map.FindFromKey(edge)
-                    num_adjacent_faces = face_list.Size()
-                    
-                    if debug_logged < max_debug_logs:
-                        logger.debug(f"🔍 Edge #{stats['total_processed']}: {num_adjacent_faces} adjacent faces")
-                        debug_logged += 1
-                    
-                    if num_adjacent_faces == 1:
-                        # BOUNDARY EDGE - always show
-                        is_significant = True
-                        edge_type = "boundary"
-                        stats['boundary_edges'] += 1
-                        
-                    elif num_adjacent_faces == 2:
-                        # INTERIOR EDGE - check geometry, orientation, then angle
-                        face1 = topods.Face(face_list.First())
-                        face2 = topods.Face(face_list.Last())
-                        
-                        # Check if this is a special geometric edge
-                        is_geometric_feature = is_cylinder_to_planar_edge(face1, face2)
-                        
-                        if is_geometric_feature:
-                            # GEOMETRIC FEATURE EDGE - always include
-                            is_significant = True
-                            edge_type = "geometric_feature"
-                            stats['geometric_features'] += 1
-                            stats['sharp_edges'] += 1
-                        else:
-                            # Check if at least one face is external
-                            has_external_face = is_external_facing_edge(edge, face1, face2, shape)
-                            
-                            if has_external_face:
-                                # Calculate dihedral angle
-                                dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
-                                
-                                if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
-                                    # SHARP EDGE on external surface
-                                    is_significant = True
-                                    edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
-                                    stats['sharp_edges'] += 1
-                                else:
-                                    stats['smooth_edges_skipped'] += 1
-                            else:
-                                stats['internal_edges_skipped'] += 1
-                else:
-                    # Orphan edge - include it
-                    is_significant = True
-                    edge_type = "orphan"
-                
-                # Only process significant edges
-                if not is_significant:
-                    edge_explorer.Next()
-                    continue
-                
-                # Get curve adaptor for type detection
-                curve_adaptor = BRepAdaptor_Curve(edge)
-                curve_type = curve_adaptor.GetType()
-                
-                # Get start and end points
-                start_point = curve_adaptor.Value(first_param)
-                end_point = curve_adaptor.Value(last_param)
-                
-                # Adaptive sampling based on curve type
-                if curve_type == GeomAbs_Line:
-                    num_samples = 2
-                elif curve_type == GeomAbs_Circle:
-                    num_samples = 64
-                elif curve_type in [GeomAbs_BSplineCurve, GeomAbs_BezierCurve]:
-                    num_samples = 24
-                else:
-                    num_samples = 20
-                
-                # ===== TESSELLATE ONCE =====
-                points = []
-                for i in range(num_samples + 1):
-                    param = first_param + (last_param - first_param) * i / num_samples
-                    point = curve.Value(param)
-                    points.append([point.X(), point.Y(), point.Z()])
-                
-                if len(points) < 2:
-                    edge_explorer.Next()
-                    continue
-                
-                # ===== OUTPUT 1: Feature edges for rendering =====
-                feature_edges.append(points)
-                
-                # ===== OUTPUT 2: Edge classification metadata =====
-                classification = {
-                    "id": edge_count,
-                    "type": "line",
-                    "start_point": [start_point.X(), start_point.Y(), start_point.Z()],
-                    "end_point": [end_point.X(), end_point.Y(), end_point.Z()],
-                    "feature_id": feature_id_counter
-                }
-                
-                if curve_type == GeomAbs_Circle:
-                    circle = curve_adaptor.Circle()
-                    center = circle.Location()
-                    radius = circle.Radius()
-                    axis = circle.Axis()
-                    
-                    # Check if full circle or arc
-                    angular_extent = abs(last_param - first_param)
-                    if abs(angular_extent - 2 * math.pi) < 0.01:
-                        # Full circle
-                        classification["type"] = "circle"
-                        classification["diameter"] = radius * 2
-                        classification["radius"] = radius
-                        classification["length"] = 2 * math.pi * radius
-                        classification["segment_count"] = num_samples
-                    else:
-                        # Arc
-                        classification["type"] = "arc"
-                        classification["radius"] = radius
-                        classification["length"] = radius * angular_extent
-                        classification["segment_count"] = num_samples
-                        classification["start_angle"] = first_param
-                        classification["end_angle"] = last_param
-                    
-                    classification["center"] = [center.X(), center.Y(), center.Z()]
-                    classification["normal"] = [axis.Direction().X(), axis.Direction().Y(), axis.Direction().Z()]
-                
-                elif curve_type == GeomAbs_Line:
-                    length = start_point.Distance(end_point)
-                    classification["type"] = "line"
-                    classification["length"] = length
-                    classification["segment_count"] = num_samples
-                
-                else:
-                    # For BSpline, Bezier - calculate approximate length
-                    total_length = 0
-                    for i in range(len(points) - 1):
-                        p1 = np.array(points[i])
-                        p2 = np.array(points[i + 1])
-                        total_length += np.linalg.norm(p2 - p1)
-                    
-                    classification["type"] = "arc"
-                    classification["length"] = total_length
-                    classification["segment_count"] = num_samples
-                
-                edge_classifications.append(classification)
-                
-                # ===== OUTPUT 3: Tagged segments for measurement matching =====
-                for i in range(len(points) - 1):
-                    tagged_segment = {
-                        'feature_id': feature_id_counter,
-                        'start': points[i],
-                        'end': points[i + 1],
-                        'type': classification["type"]
-                    }
-                    
-                    # Copy measurement data
-                    if classification.get('diameter'):
-                        tagged_segment['diameter'] = classification['diameter']
-                    if classification.get('radius'):
-                        tagged_segment['radius'] = classification['radius']
-                    if classification.get('length'):
-                        tagged_segment['length'] = classification['length']
-                    
-                    tagged_edges.append(tagged_segment)
-                
-                edge_count += 1
-                feature_id_counter += 1
-                    
-            except Exception as e:
-                logger.debug(f"Error processing edge: {e}")
-                pass
-            
-            edge_explorer.Next()
-        
-        # Process ISO curves through same pipeline
-        for start, end, curve_type in iso_curves:
-            try:
-                # Determine curve type for adaptive sampling
-                if curve_type == "uiso":
-                    num_samples = 2
-                    classification_type = "line"
-                elif curve_type == "viso":
-                    num_samples = 64
-                    classification_type = "arc"
-                else:
-                    num_samples = 20
-                    classification_type = "line"
-                
-                # ===== TESSELLATE =====
-                start_vec = np.array(start)
-                end_vec = np.array(end)
-                points = []
-                
-                for i in range(num_samples + 1):
-                    t = i / num_samples
-                    point = start_vec + t * (end_vec - start_vec)
-                    points.append(point.tolist())
-                
-                if len(points) < 2:
-                    continue
-                
-                # ===== OUTPUT 1: Feature edges for rendering =====
-                feature_edges.append(points)
-                
-                # ===== OUTPUT 2: Edge classification metadata =====
-                classification = {
-                    "id": edge_count,
-                    "type": classification_type,
-                    "start_point": list(start),
-                    "end_point": list(end),
-                    "feature_id": feature_id_counter,
-                    "iso_type": curve_type,
-                    "segment_count": num_samples
-                }
-                
-                # Calculate length
-                length = np.linalg.norm(end_vec - start_vec)
-                classification["length"] = length
-                
-                # For VIso circles, add radius/diameter
-                if curve_type == "viso":
-                    estimated_radius = length * num_samples / (2 * math.pi)
-                    classification["radius"] = estimated_radius
-                    classification["diameter"] = estimated_radius * 2
-                
-                edge_classifications.append(classification)
-                
-                # ===== OUTPUT 3: Tagged segments for measurement matching =====
-                for i in range(len(points) - 1):
-                    tagged_segment = {
-                        'feature_id': feature_id_counter,
-                        'start': points[i],
-                        'end': points[i + 1],
-                        'type': classification_type,
-                        'iso_type': curve_type
-                    }
-                    
-                    # Copy measurement data
-                    if classification.get('diameter'):
-                        tagged_segment['diameter'] = classification['diameter']
-                    if classification.get('radius'):
-                        tagged_segment['radius'] = classification['radius']
-                    if classification.get('length'):
-                        tagged_segment['length'] = classification['length']
-                    
-                    tagged_edges.append(tagged_segment)
-                
-                stats['iso_curves'] += 1
-                edge_count += 1
-                feature_id_counter += 1
-                
-            except Exception as e:
-                logger.debug(f"Error processing ISO curve: {e}")
-                pass
-        
-        logger.info(f"✅ Extracted {len(feature_edges)} significant edges:")
-        logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
-        logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
-        logger.info(f"   - ISO curves: {stats['iso_curves']}")
-        logger.info(f"   - Tagged segments: {len(tagged_edges)}")
-        
-    except Exception as e:
-        logger.error(f"Error extracting edges: {e}")
-    
-    return {
-        "feature_edges": feature_edges,
-        "edge_classifications": edge_classifications,
-        "tagged_edges": tagged_edges
-    }
-
 # ============================================================================
 # ML FEATURE RECOGNITION (AAGNet Integration)
 # ============================================================================
@@ -2522,9 +2168,21 @@ def analyze_cad():
                 num_uiso_lines=2,
                 total_surface_area=mesh_data.get('surface_area')
             )
-            logger.info(f"[{request_id}] ✅ Using unified edge extraction with tagged_edges")
+            logger.info(f"[{request_id}] ✅ Edge extraction SUCCESS")
+            logger.info(f"[{request_id}] 📊 Edge data: feature_edges={len(edge_data.get('feature_edges', []))}, "
+                        f"edge_classifications={len(edge_data.get('edge_classifications', []))}, "
+                        f"tagged_edges={len(edge_data.get('tagged_edges', []))}")
+            
+            # Log a sample tagged edge for debugging
+            if edge_data.get('tagged_edges'):
+                sample_edge = edge_data['tagged_edges'][0]
+                logger.info(f"[{request_id}] 🔍 Sample tagged edge: feature_id={sample_edge.get('feature_id')}, "
+                           f"type={sample_edge.get('type')}, diameter={sample_edge.get('diameter')}, "
+                           f"radius={sample_edge.get('radius')}, length={sample_edge.get('length')}")
         except Exception as e:
-            logger.warning(f"[{request_id}] ⚠️ Unified edge extraction failed, falling back to basic: {e}")
+            logger.error(f"[{request_id}] ❌ Edge extraction FAILED: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             # Fallback to old method (no tagged_edges, but won't break)
             edge_data = extract_feature_edges_professional(shape, request_id)
             # Add empty arrays for missing data
@@ -2544,6 +2202,14 @@ def analyze_cad():
         
         if processing_tier == ProcessingTier.TIER_1_BREP:
             ml_features = recognize_features_ml(shape, request_id)
+            
+            if ml_features:
+                logger.info(f"[{request_id}] ✅ ML features: {ml_features.get('num_features_detected', 0)} features detected")
+                logger.info(f"[{request_id}] 📊 ML feature data keys: {list(ml_features.keys())}")
+                if ml_features.get('feature_instances'):
+                    logger.info(f"[{request_id}] 🔍 Sample ML feature: {ml_features['feature_instances'][0]}")
+            else:
+                logger.warning(f"[{request_id}] ⚠️ ML feature recognition returned None")
             
             if ml_features and ml_features['num_features_detected'] > 0:
                 confidence = ml_features.get('confidence_score', 0.0)

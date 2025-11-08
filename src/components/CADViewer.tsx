@@ -70,6 +70,10 @@ interface MeshData {
     surface_type: "cylinder" | "plane" | "other";
     radius?: number;
   }>;
+  ml_features?: {
+    instances?: any[];
+    [key: string]: any;
+  };
 }
 
 export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
@@ -118,6 +122,22 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
         hasIndices: !!propMeshData.indices,
         hasNormals: !!propMeshData.normals,
         triangleCount: propMeshData.triangle_count,
+      });
+      
+      // 🔍 DIAGNOSTIC: Check edge and feature data
+      console.log("🔍 Backend mesh data received:", {
+        hasTaggedEdges: !!propMeshData.tagged_edges,
+        taggedEdgesCount: propMeshData.tagged_edges?.length || 0,
+        taggedEdgesSample: propMeshData.tagged_edges?.[0],
+        
+        hasMLFeatures: !!propMeshData.ml_features,
+        mlFeaturesKeys: propMeshData.ml_features ? Object.keys(propMeshData.ml_features) : [],
+        mlInstancesCount: propMeshData.ml_features?.instances?.length || 0,
+        
+        hasEdgeClassifications: !!propMeshData.edge_classifications,
+        edgeClassificationsCount: propMeshData.edge_classifications?.length || 0,
+        
+        allKeys: Object.keys(propMeshData)
       });
       
       setMeshData(propMeshData);
