@@ -196,7 +196,10 @@ def log_audit_trail(event_type: str, request_id: str, details: Dict[str, Any]):
             "created_at": datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
-        logger.warning(f"Failed to log audit trail: {e}")
+        # Silently ignore if audit table doesn't exist (non-critical)
+        error_str = str(e)
+        if "PGRST205" not in error_str and "Could not find the table" not in error_str:
+            logger.warning(f"Failed to log audit trail: {e}")
 
 # ============================================================================
 # TIMEOUT UTILITIES
@@ -955,7 +958,7 @@ def extract_and_classify_feature_edges(
         
         if face_map.Contains(edge):
             face_list = face_map.FindFromKey(edge)
-            num_adjacent = face_list.Extent()
+            num_adjacent = face_list.Size()
             
             if num_adjacent == 2:
                 edge_type = "smooth"
