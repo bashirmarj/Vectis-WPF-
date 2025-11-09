@@ -141,7 +141,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
       // PRIORITY: Use tagged_edges with iso_type filtering to remove UIso/VIso construction lines
-      if (meshData.tagged_edges && meshData.tagged_edges.length > 0) {
+      if (meshData?.tagged_edges && Array.isArray(meshData.tagged_edges) && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
 
         meshData.tagged_edges.forEach((edge) => {
@@ -151,17 +151,21 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           }
 
           // Render all other edges (boundary, feature edges, fillets, etc.)
-          featureEdgePositions.push(edge.start[0], edge.start[1], edge.start[2], edge.end[0], edge.end[1], edge.end[2]);
+          if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
+            featureEdgePositions.push(edge.start[0], edge.start[1], edge.start[2], edge.end[0], edge.end[1], edge.end[2]);
+          }
         });
 
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
-        geo.computeBoundingSphere();
-        return geo;
+        if (featureEdgePositions.length > 0) {
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
+          geo.computeBoundingSphere();
+          return geo;
+        }
       }
 
       // FALLBACK: Use feature_edges if tagged_edges not available
-      if (meshData.feature_edges && meshData.feature_edges.length > 0) {
+      if (meshData?.feature_edges && Array.isArray(meshData.feature_edges) && meshData.feature_edges.length > 0) {
         const featureEdgePositions: number[] = [];
 
         meshData.feature_edges.forEach((polyline) => {
@@ -179,6 +183,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       }
 
       // FALLBACK: Compute from mesh triangles (for STL files without BREP data)
+      if (!meshData?.indices || !meshData?.vertices) {
+        return null;
+      }
+
       const edgeMap = new Map<
         string,
         {
