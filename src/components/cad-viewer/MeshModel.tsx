@@ -314,8 +314,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         clippingPlanes: clippingPlane,
         clipIntersection: true,
         metalness: 0.1,
-        roughness: 0.6,
-        envMapIntensity: 0.3,
+        roughness: 0.3,
+        envMapIntensity: 0.5,
       };
 
       if (displayStyle === "wireframe") {
