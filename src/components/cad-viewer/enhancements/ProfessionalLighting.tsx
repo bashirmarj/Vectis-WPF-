@@ -78,7 +78,7 @@ export function ProfessionalLighting({
       <directionalLight position={[5, 6, -5]} intensity={0.6 * intensity} castShadow={false} />
 
       {/* Subtle ambient light to prevent pure black shadows - INCREASED */}
-      <ambientLight intensity={0.2 * intensity} />
+      <ambientLight intensity={0.02 * intensity} />
     </>
   );
 }
