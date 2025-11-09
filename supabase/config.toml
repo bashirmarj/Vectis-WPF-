@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.delete-training]
 verify_jwt = true
+
+[functions.explain-features]
+verify_jwt = false

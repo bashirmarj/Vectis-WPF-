@@ -191,6 +191,71 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_recognition_logs: {
+        Row: {
+          accuracy_rating: number | null
+          avg_confidence: number | null
+          backend_error: string | null
+          correlation_id: string
+          crashed: boolean | null
+          created_at: string | null
+          customer_feedback: string | null
+          feature_summary: Json | null
+          id: string
+          num_duplicates_removed: number | null
+          num_features_detected: number | null
+          num_features_validated: number | null
+          part_id: string | null
+          processing_time_sec: number | null
+          recognition_method: string | null
+          was_accurate: boolean | null
+        }
+        Insert: {
+          accuracy_rating?: number | null
+          avg_confidence?: number | null
+          backend_error?: string | null
+          correlation_id: string
+          crashed?: boolean | null
+          created_at?: string | null
+          customer_feedback?: string | null
+          feature_summary?: Json | null
+          id?: string
+          num_duplicates_removed?: number | null
+          num_features_detected?: number | null
+          num_features_validated?: number | null
+          part_id?: string | null
+          processing_time_sec?: number | null
+          recognition_method?: string | null
+          was_accurate?: boolean | null
+        }
+        Update: {
+          accuracy_rating?: number | null
+          avg_confidence?: number | null
+          backend_error?: string | null
+          correlation_id?: string
+          crashed?: boolean | null
+          created_at?: string | null
+          customer_feedback?: string | null
+          feature_summary?: Json | null
+          id?: string
+          num_duplicates_removed?: number | null
+          num_features_detected?: number | null
+          num_features_validated?: number | null
+          part_id?: string | null
+          processing_time_sec?: number | null
+          recognition_method?: string | null
+          was_accurate?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_recognition_logs_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_validations: {
         Row: {
           confidence_scores: Json | null

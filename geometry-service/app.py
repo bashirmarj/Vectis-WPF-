@@ -138,10 +138,10 @@ logging.getLogger('occwl').setLevel(logging.ERROR)
 # === Feature Recognition Integration ===
 # Updated to use rule-based recognition for better memory efficiency and reliability
 try:
-    from rule_based_recognizer import RuleBasedFeatureRecognizer
-    feature_recognizer = RuleBasedFeatureRecognizer(time_limit=30.0, memory_limit_mb=2000)
+    from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
+    feature_recognizer = FlaskCrashFreeRecognizer(time_limit=30.0, memory_limit_mb=2000)
     FEATURE_RECOGNITION_AVAILABLE = True
-    logger.info("✅ Rule-based feature recognizer initialized")
+    logger.info("✅ Crash-free geometric recognizer with validation initialized (NO AAG)")
 except Exception as e:
     feature_recognizer = None
     FEATURE_RECOGNITION_AVAILABLE = False

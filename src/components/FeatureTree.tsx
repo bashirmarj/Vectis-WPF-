@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,8 +10,10 @@ import {
   Square, 
   Triangle,
   Layers,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 // Feature instance interface supporting both AAGNet and rule-based formats
 interface FeatureInstance {
@@ -154,6 +156,46 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
   featureSummary,
   onFeatureSelect 
 }) => {
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
+
+  // Fetch AI explanation when features load
+  useEffect(() => {
+    if (features && features.instances && features.instances.length > 0 && !aiExplanation && !loadingExplanation) {
+      fetchAIExplanation();
+    }
+  }, [features]);
+
+  const fetchAIExplanation = async () => {
+    setLoadingExplanation(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('explain-features', {
+        body: {
+          features: features.instances.map(f => ({
+            type: f.type,
+            subtype: f.subtype,
+            dimensions: f.parameters
+          })),
+          material: 'Aluminum 6061',
+          volume_cm3: 0,
+          part_name: 'CAD Part'
+        }
+      });
+
+      if (error) {
+        console.error('AI explanation failed:', error);
+        return;
+      }
+      
+      setAiExplanation(data.explanation);
+    } catch (err) {
+      console.error('AI explanation error:', err);
+    } finally {
+      setLoadingExplanation(false);
+    }
+  };
+
+  
   // ✅ Add null check
   if (!features || !features.instances || features.instances.length === 0) {
     return (
@@ -240,6 +282,35 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* AI Analysis Insights */}
+      {aiExplanation && (
+        <Card className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-1 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-purple-900 dark:text-purple-100 mb-2 flex items-center gap-2">
+                AI Manufacturing Analysis
+                <span className="text-xs font-normal text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded">
+                  Powered by Gemini
+                </span>
+              </h3>
+              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {aiExplanation}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {loadingExplanation && (
+        <Card className="p-4 border-purple-200 dark:border-purple-800">
+          <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            Generating AI manufacturing insights...
+          </div>
+        </Card>
+      )}
+
       {/* Summary Statistics */}
       <Card>
         <CardHeader>
