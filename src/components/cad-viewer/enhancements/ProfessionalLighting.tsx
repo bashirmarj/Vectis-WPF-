@@ -46,7 +46,7 @@ export function ProfessionalLighting({
       {/* Key Light - Main illumination (front-top-right) - SOFTER with improved shadow bias */}
       <directionalLight
         position={[5, 8, 5]}
-        intensity={0.7 * intensity}
+        intensity={0.1 * intensity}
         castShadow={enableShadows}
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
@@ -78,7 +78,7 @@ export function ProfessionalLighting({
       <directionalLight position={[5, 6, -5]} intensity={0.6 * intensity} castShadow={false} />
 
       {/* Subtle ambient light to prevent pure black shadows - INCREASED */}
-      <ambientLight intensity={0.02 * intensity} />
+      <ambientLight intensity={0.2 * intensity} />
     </>
   );
 }
