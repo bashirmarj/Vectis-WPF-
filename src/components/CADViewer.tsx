@@ -126,7 +126,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
       
       // 🔍 DIAGNOSTIC: Check edge and feature data
       const mlFeatures = propMeshData?.ml_features;
-      const instances = mlFeatures?.instances;
+      const featureInstances = mlFeatures?.feature_instances;
       
       console.log("🔍 Backend mesh data received:", {
         hasTaggedEdges: !!propMeshData?.tagged_edges,
@@ -135,7 +135,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
         
         hasMLFeatures: !!mlFeatures,
         mlFeaturesKeys: mlFeatures ? Object.keys(mlFeatures) : [],
-        mlInstancesCount: Array.isArray(instances) ? instances.length : 0,
+        mlInstancesCount: Array.isArray(featureInstances) ? featureInstances.length : 0,
         
         hasEdgeClassifications: !!propMeshData?.edge_classifications,
         edgeClassificationsCount: propMeshData?.edge_classifications?.length || 0,
