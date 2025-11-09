@@ -1,4 +1,4 @@
-FROM ghcr.io/YOUR_GITHUB_USERNAME/vectis-geometry-base:latest
+FROM ghcr.io/bashirmarj/vectis-geometry-base:latest
 
 WORKDIR /app
 
