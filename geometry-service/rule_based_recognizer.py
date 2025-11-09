@@ -143,13 +143,13 @@ class AttributedAdjacencyGraph:
             # Get normal for face1
             surf1 = BRepAdaptor_Surface(face1, True)
             u1, v1 = self._get_uv_at_point(surf1, edge_point)
-            props1 = GeomLProp_SLProps(surf1.Surface().Surface(), u1, v1, 1, 0.01)
+            props1 = GeomLProp_SLProps(surf1.Surface(), u1, v1, 1, 0.01)
             normal1 = props1.Normal()
             
             # Get normal for face2
             surf2 = BRepAdaptor_Surface(face2, True)
             u2, v2 = self._get_uv_at_point(surf2, edge_point)
-            props2 = GeomLProp_SLProps(surf2.Surface().Surface(), u2, v2, 1, 0.01)
+            props2 = GeomLProp_SLProps(surf2.Surface(), u2, v2, 1, 0.01)
             normal2 = props2.Normal()
             
             # Calculate angle
@@ -202,11 +202,11 @@ class RuleBasedFeatureRecognizer:
         """
         self.time_limit = time_limit
         self.memory_limit_mb = memory_limit_mb
-        self.start_time = None
         self.shape = None
         self.aag = None
         self.features = []
-        
+        self.start_time = None
+    
     def recognize_features(self, step_file_path: str) -> Dict[str, Any]:
         """
         Main entry point for feature recognition
@@ -279,13 +279,16 @@ class RuleBasedFeatureRecognizer:
             
         except Exception as e:
             logger.error(f"Feature recognition failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {
                 'status': 'failed',
                 'error': str(e),
                 'features': []
             }
         finally:
-            self._cleanup()
+            # Clean up memory
+            gc.collect()
     
     def _load_step_file(self, file_path: str):
         """Load STEP file and return shape"""
@@ -318,416 +321,280 @@ class RuleBasedFeatureRecognizer:
     
     def _recognize_holes(self):
         """Detect cylindrical holes (through and blind)"""
-        logger.info("Detecting holes...")
+        logger.info("Recognizing holes...")
         
-        for face_idx, face in enumerate(self.aag.faces):
-            surf = BRepAdaptor_Surface(face, True)
-            
-            if surf.GetType() == GeomAbs_Cylinder:
-                # Extract cylinder parameters
-                gp_cyl = surf.Cylinder()
-                radius = gp_cyl.Radius()
-                axis = gp_cyl.Axis().Direction()
-                location = gp_cyl.Location()
+        for idx, face in enumerate(self.aag.faces):
+            try:
+                surf_adaptor = BRepAdaptor_Surface(face, True)
                 
-                # Calculate face area
-                props = GProp_GProps()
-                brepgprop_SurfaceProperties(face, props)
-                area = props.Mass()
-                
-                # Classify hole type
-                hole_type = self._classify_hole(face_idx)
-                
-                # Calculate confidence
-                confidence = self._calculate_hole_confidence(face, radius, area)
-                
-                # Create feature
-                feature = RecognizedFeature(
-                    feature_type='hole',
-                    subtype=hole_type,
-                    face_indices=[face_idx],
-                    confidence=confidence,
-                    parameters={
-                        'radius': radius,
-                        'diameter': radius * 2,
-                        'axis': (axis.X(), axis.Y(), axis.Z()),
-                        'location': (location.X(), location.Y(), location.Z()),
-                        'area': area
-                    }
-                )
-                
-                self.features.append(feature)
-                logger.debug(f"Found {hole_type}: diameter={radius*2:.2f}mm, confidence={confidence:.2f}")
-    
-    def _classify_hole(self, cylindrical_face_idx: int) -> str:
-        """Classify hole as through, blind, or partial"""
-        neighbors = self.aag.get_neighbors(cylindrical_face_idx)
-        planar_neighbors = 0
-        
-        for neighbor_idx in neighbors:
-            neighbor_face = self.aag.faces[neighbor_idx]
-            surf = BRepAdaptor_Surface(neighbor_face, True)
-            
-            if surf.GetType() == GeomAbs_Plane:
-                # Check if perpendicular to cylinder axis
-                # Simplified check - could be improved
-                planar_neighbors += 1
-        
-        if planar_neighbors >= 2:
-            return 'through_hole'
-        elif planar_neighbors == 1:
-            return 'blind_hole'
-        else:
-            return 'partial_cylindrical'
-    
-    def _calculate_hole_confidence(self, face, radius: float, area: float) -> float:
-        """Calculate confidence score for hole detection"""
-        # Estimate expected area for a standard hole depth
-        expected_area = 2 * math.pi * radius * radius * 5  # Assume depth = 5*radius
-        
-        if area > 0:
-            area_ratio = min(area, expected_area) / max(area, expected_area)
-        else:
-            area_ratio = 0.5
-        
-        # Base confidence on geometric regularity
-        base_confidence = 0.7
-        
-        # Adjust based on area match
-        confidence = base_confidence + (0.3 * area_ratio)
-        
-        return min(0.95, confidence)
+                # Check if surface is cylindrical
+                if surf_adaptor.GetType() == GeomAbs_Cylinder:
+                    cylinder = surf_adaptor.Cylinder()
+                    radius = cylinder.Radius()
+                    
+                    # Determine if through or blind hole
+                    # This is simplified - real implementation would check connectivity
+                    is_through = self._is_through_feature(idx)
+                    
+                    feature = RecognizedFeature(
+                        feature_type='hole',
+                        subtype='through' if is_through else 'blind',
+                        face_indices=[idx],
+                        confidence=0.85,
+                        parameters={
+                            'diameter': radius * 2,
+                            'radius': radius,
+                            'axis': [
+                                cylinder.Axis().Direction().X(),
+                                cylinder.Axis().Direction().Y(),
+                                cylinder.Axis().Direction().Z()
+                            ],
+                            'center': [
+                                cylinder.Location().X(),
+                                cylinder.Location().Y(),
+                                cylinder.Location().Z()
+                            ]
+                        }
+                    )
+                    self.features.append(feature)
+                    
+            except Exception as e:
+                logger.debug(f"Failed to process face {idx} for holes: {e}")
     
     def _recognize_pockets(self):
         """Detect pocket features"""
-        logger.info("Detecting pockets...")
+        logger.info("Recognizing pockets...")
         
-        for face_idx, face in enumerate(self.aag.faces):
-            surf = BRepAdaptor_Surface(face, True)
-            
-            if surf.GetType() == GeomAbs_Plane:
-                # Check for pocket topology pattern
-                neighbors = self.aag.get_neighbors(face_idx)
-                vertical_walls = self._count_vertical_walls(face_idx, neighbors)
-                
-                if vertical_walls >= 3:
-                    width = self._measure_feature_width(face, neighbors)
-                    
-                    if width >= 20.0:  # Pocket width threshold
-                        confidence = self._calculate_pocket_confidence(vertical_walls)
-                        
-                        feature = RecognizedFeature(
-                            feature_type='pocket',
-                            subtype='rectangular_pocket' if vertical_walls == 4 else 'general_pocket',
-                            face_indices=[face_idx] + neighbors,
-                            confidence=confidence,
-                            parameters={
-                                'base_face': face_idx,
-                                'wall_count': vertical_walls,
-                                'width': width
-                            }
-                        )
-                        
-                        self.features.append(feature)
-                        logger.debug(f"Found pocket: width={width:.2f}mm, walls={vertical_walls}, confidence={confidence:.2f}")
-    
-    def _count_vertical_walls(self, base_face_idx: int, neighbor_indices: List[int]) -> int:
-        """Count vertical walls around a base face"""
-        base_face = self.aag.faces[base_face_idx]
-        base_surf = BRepAdaptor_Surface(base_face, True)
+        # Find groups of connected faces with concave edges
+        visited = set()
         
-        # Get base plane normal
-        u_mid = (base_surf.FirstUParameter() + base_surf.LastUParameter()) / 2.0
-        v_mid = (base_surf.FirstVParameter() + base_surf.LastVParameter()) / 2.0
-        props = GeomLProp_SLProps(base_surf.Surface().Surface(), u_mid, v_mid, 1, 0.01)
-        base_normal = props.Normal()
-        
-        vertical_count = 0
-        
-        for neighbor_idx in neighbor_indices:
-            # Check if edge is concave
-            if self.aag.is_concave_edge(base_face_idx, neighbor_idx):
-                neighbor_face = self.aag.faces[neighbor_idx]
-                neighbor_surf = BRepAdaptor_Surface(neighbor_face, True)
-                
-                # Check if neighbor is approximately perpendicular
-                u_mid = (neighbor_surf.FirstUParameter() + neighbor_surf.LastUParameter()) / 2.0
-                v_mid = (neighbor_surf.FirstVParameter() + neighbor_surf.LastVParameter()) / 2.0
-                props = GeomLProp_SLProps(neighbor_surf.Surface().Surface(), u_mid, v_mid, 1, 0.01)
-                neighbor_normal = props.Normal()
-                
-                # Calculate dot product
-                dot = abs(base_normal.X() * neighbor_normal.X() + 
-                         base_normal.Y() * neighbor_normal.Y() + 
-                         base_normal.Z() * neighbor_normal.Z())
-                
-                if dot < 0.1:  # Nearly perpendicular
-                    vertical_count += 1
-        
-        return vertical_count
-    
-    def _measure_feature_width(self, base_face, neighbor_indices: List[int]) -> float:
-        """Measure width of a feature"""
-        try:
-            # Get bounding box of base face
-            bbox = Bnd_Box()
-            brepbndlib.Add(base_face, bbox)
+        for face_idx in range(len(self.aag.faces)):
+            if face_idx in visited:
+                continue
             
-            xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+            pocket_faces = self._find_pocket_faces(face_idx, visited)
             
-            # Calculate dimensions
-            dx = xmax - xmin
-            dy = ymax - ymin
-            dz = zmax - zmin
-            
-            # Return smallest horizontal dimension as width
-            return min(dx, dy)
-            
-        except Exception as e:
-            logger.debug(f"Failed to measure width: {e}")
-            return 0.0
-    
-    def _calculate_pocket_confidence(self, wall_count: int) -> float:
-        """Calculate confidence for pocket detection"""
-        if wall_count == 4:
-            return 0.85  # High confidence for rectangular pockets
-        elif wall_count == 3:
-            return 0.75  # Good confidence for triangular pockets
-        elif wall_count >= 5:
-            return 0.70  # Complex pocket
-        else:
-            return 0.60
+            if len(pocket_faces) >= 3:  # Minimum faces for a pocket
+                # Verify it's actually a pocket (has planar bottom)
+                if self._has_planar_bottom(pocket_faces):
+                    feature = RecognizedFeature(
+                        feature_type='pocket',
+                        subtype='general_pocket',
+                        face_indices=list(pocket_faces),
+                        confidence=0.75,
+                        parameters={
+                            'num_faces': len(pocket_faces)
+                        }
+                    )
+                    self.features.append(feature)
     
     def _recognize_slots(self):
         """Detect slot features"""
-        logger.info("Detecting slots...")
+        logger.info("Recognizing slots...")
         
-        for face_idx, face in enumerate(self.aag.faces):
-            surf = BRepAdaptor_Surface(face, True)
-            
-            if surf.GetType() == GeomAbs_Plane:
-                neighbors = self.aag.get_neighbors(face_idx)
-                
-                # Look for parallel wall pairs
-                parallel_walls = self._find_parallel_walls(face_idx, neighbors)
-                
-                if parallel_walls:
-                    width = parallel_walls['width']
-                    length = parallel_walls['length']
-                    
-                    if width < 15.0 and length / width > 3.0:  # Slot criteria
-                        confidence = 0.75
-                        
-                        feature = RecognizedFeature(
-                            feature_type='slot',
-                            subtype='rectangular_slot',
-                            face_indices=[face_idx] + parallel_walls['wall_indices'],
-                            confidence=confidence,
-                            parameters={
-                                'width': width,
-                                'length': length,
-                                'aspect_ratio': length / width
-                            }
-                        )
-                        
-                        self.features.append(feature)
-                        logger.debug(f"Found slot: width={width:.2f}mm, length={length:.2f}mm, confidence={confidence:.2f}")
-    
-    def _find_parallel_walls(self, base_face_idx: int, neighbor_indices: List[int]) -> Optional[Dict]:
-        """Find parallel wall pairs around a base face"""
-        # Simplified implementation - checks for opposite walls
-        if len(neighbor_indices) < 2:
-            return None
-        
-        # This is a simplified check - full implementation would verify parallelism
-        base_face = self.aag.faces[base_face_idx]
-        bbox = Bnd_Box()
-        brepbndlib.Add(base_face, bbox)
-        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-        
-        width = min(xmax - xmin, ymax - ymin)
-        length = max(xmax - xmin, ymax - ymin)
-        
-        if width > 0 and length > 0:
-            return {
-                'wall_indices': neighbor_indices[:2],  # Simplified
-                'width': width,
-                'length': length
-            }
-        
-        return None
+        # Look for elongated pocket-like features
+        for feature in self.features:
+            if feature.feature_type == 'pocket':
+                # Check if pocket is slot-like (elongated)
+                if self._is_slot_shape(feature.face_indices):
+                    feature.feature_type = 'slot'
+                    feature.subtype = 'rectangular_slot'
+                    feature.confidence *= 0.9  # Slight confidence reduction
     
     def _recognize_fillets(self):
         """Detect fillet features"""
-        logger.info("Detecting fillets...")
+        logger.info("Recognizing fillets...")
         
-        for face_idx, face in enumerate(self.aag.faces):
-            surf = BRepAdaptor_Surface(face, True)
-            surf_type = surf.GetType()
-            
-            # Fillets are typically cylindrical or toroidal
-            if surf_type in [GeomAbs_Cylinder, GeomAbs_Torus]:
-                # Check if it's a narrow blending surface
-                if self._is_small_width_face(face):
-                    # Check for tangent continuity with neighbors
-                    if self._has_tangent_neighbors(face_idx):
-                        radius = self._extract_fillet_radius(face, surf, surf_type)
-                        confidence = 0.85
-                        
-                        feature = RecognizedFeature(
-                            feature_type='fillet',
-                            subtype='constant_radius' if surf_type == GeomAbs_Cylinder else 'variable_radius',
-                            face_indices=[face_idx],
-                            confidence=confidence,
-                            parameters={
-                                'radius': radius
-                            }
-                        )
-                        
-                        self.features.append(feature)
-                        logger.debug(f"Found fillet: radius={radius:.2f}mm, confidence={confidence:.2f}")
-    
-    def _is_small_width_face(self, face) -> bool:
-        """Check if face has small width (characteristic of fillets/chamfers)"""
-        try:
-            bbox = Bnd_Box()
-            brepbndlib.Add(face, bbox)
-            xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-            
-            dimensions = sorted([xmax - xmin, ymax - ymin, zmax - zmin])
-            smallest = dimensions[0]
-            
-            return smallest < 20.0  # Small width threshold
-            
-        except:
-            return False
-    
-    def _has_tangent_neighbors(self, face_idx: int) -> bool:
-        """Check if face has tangent continuity with neighbors"""
-        neighbors = self.aag.get_neighbors(face_idx)
-        
-        for neighbor_idx in neighbors:
-            angle = self.aag.get_dihedral_angle(face_idx, neighbor_idx)
-            # Check for near-tangent continuity (close to 180 degrees)
-            if abs(angle - math.pi) < 0.3:  # Within ~17 degrees of tangent
-                return True
-        
-        return False
-    
-    def _extract_fillet_radius(self, face, surf, surf_type) -> float:
-        """Extract radius from fillet surface"""
-        try:
-            if surf_type == GeomAbs_Cylinder:
-                return surf.Cylinder().Radius()
-            elif surf_type == GeomAbs_Torus:
-                return surf.Torus().MinorRadius()
-            else:
-                return 5.0  # Default
-        except:
-            return 5.0
+        for idx, face in enumerate(self.aag.faces):
+            try:
+                surf_adaptor = BRepAdaptor_Surface(face, True)
+                
+                # Check for cylindrical or toroidal surfaces with specific connectivity
+                if surf_adaptor.GetType() in [GeomAbs_Cylinder, GeomAbs_Torus]:
+                    neighbors = self.aag.get_neighbors(idx)
+                    
+                    # Fillets typically connect two faces at ~90 degrees
+                    if len(neighbors) == 2:
+                        angle = self.aag.get_dihedral_angle(neighbors[0], neighbors[1])
+                        if abs(angle - math.pi/2) < 0.2:  # Close to 90 degrees
+                            feature = RecognizedFeature(
+                                feature_type='fillet',
+                                subtype='constant_radius',
+                                face_indices=[idx],
+                                confidence=0.70,
+                                parameters={}
+                            )
+                            
+                            if surf_adaptor.GetType() == GeomAbs_Cylinder:
+                                cylinder = surf_adaptor.Cylinder()
+                                feature.parameters['radius'] = cylinder.Radius()
+                            
+                            self.features.append(feature)
+                            
+            except Exception as e:
+                logger.debug(f"Failed to process face {idx} for fillets: {e}")
     
     def _recognize_chamfers(self):
         """Detect chamfer features"""
-        logger.info("Detecting chamfers...")
+        logger.info("Recognizing chamfers...")
         
-        for face_idx, face in enumerate(self.aag.faces):
-            surf = BRepAdaptor_Surface(face, True)
-            
-            if surf.GetType() == GeomAbs_Plane:
-                # Chamfers are planar faces at angles
-                if self._is_small_width_face(face):
-                    # Check for C0 continuity (sharp edges)
-                    if self._has_sharp_neighbors(face_idx):
-                        width = self._measure_chamfer_width(face)
-                        angle = self._estimate_chamfer_angle(face_idx)
-                        confidence = 0.80
+        for idx, face in enumerate(self.aag.faces):
+            try:
+                surf_adaptor = BRepAdaptor_Surface(face, True)
+                
+                # Chamfers are typically planar faces connecting two other faces
+                if surf_adaptor.GetType() == GeomAbs_Plane:
+                    neighbors = self.aag.get_neighbors(idx)
+                    
+                    if len(neighbors) == 2:
+                        # Check if this plane connects two faces at an angle
+                        angle1 = self.aag.get_dihedral_angle(idx, neighbors[0])
+                        angle2 = self.aag.get_dihedral_angle(idx, neighbors[1])
                         
-                        feature = RecognizedFeature(
-                            feature_type='chamfer',
-                            subtype='45_degree' if abs(angle - 45) < 5 else 'angled',
-                            face_indices=[face_idx],
-                            confidence=confidence,
-                            parameters={
-                                'width': width,
-                                'angle': angle
-                            }
-                        )
-                        
-                        self.features.append(feature)
-                        logger.debug(f"Found chamfer: width={width:.2f}mm, angle={angle:.1f}°, confidence={confidence:.2f}")
-    
-    def _has_sharp_neighbors(self, face_idx: int) -> bool:
-        """Check if face has C0 continuity (sharp edges) with neighbors"""
-        neighbors = self.aag.get_neighbors(face_idx)
-        
-        sharp_count = 0
-        for neighbor_idx in neighbors:
-            angle = self.aag.get_dihedral_angle(face_idx, neighbor_idx)
-            # Check for sharp edge (not tangent)
-            if abs(angle - math.pi) > 0.5:  # More than ~28 degrees from tangent
-                sharp_count += 1
-        
-        return sharp_count >= 2
-    
-    def _measure_chamfer_width(self, face) -> float:
-        """Measure chamfer width"""
-        try:
-            props = GProp_GProps()
-            brepgprop_SurfaceProperties(face, props)
-            area = props.Mass()
-            
-            # Estimate width from area (simplified)
-            return math.sqrt(area) / 10.0  # Rough estimate
-            
-        except:
-            return 2.0  # Default
-    
-    def _estimate_chamfer_angle(self, face_idx: int) -> float:
-        """Estimate chamfer angle from neighbors"""
-        neighbors = self.aag.get_neighbors(face_idx)
-        
-        if len(neighbors) >= 2:
-            # Get angle between neighbors
-            angle1 = self.aag.get_dihedral_angle(face_idx, neighbors[0])
-            angle2 = self.aag.get_dihedral_angle(face_idx, neighbors[1])
-            
-            # Estimate chamfer angle (simplified)
-            avg_angle = (angle1 + angle2) / 2.0
-            return math.degrees(math.pi - avg_angle)
-        
-        return 45.0  # Default
+                        # Chamfers typically have specific angle relationships
+                        if abs(angle1 - math.pi/4) < 0.3 or abs(angle2 - math.pi/4) < 0.3:
+                            feature = RecognizedFeature(
+                                feature_type='chamfer',
+                                subtype='45_degree' if abs(angle1 - math.pi/4) < 0.1 else 'angled',
+                                face_indices=[idx],
+                                confidence=0.65,
+                                parameters={
+                                    'angle1_deg': math.degrees(angle1),
+                                    'angle2_deg': math.degrees(angle2)
+                                }
+                            )
+                            self.features.append(feature)
+                            
+            except Exception as e:
+                logger.debug(f"Failed to process face {idx} for chamfers: {e}")
     
     def _recognize_bosses(self):
-        """Detect boss features (raised cylindrical features)"""
-        logger.info("Detecting bosses...")
+        """Detect boss features (protrusions)"""
+        logger.info("Recognizing bosses...")
         
-        # Bosses are external cylindrical features
-        # Similar to holes but with external classification
-        # Simplified implementation here
-        pass
+        # Bosses are typically cylindrical protrusions
+        for idx, face in enumerate(self.aag.faces):
+            try:
+                surf_adaptor = BRepAdaptor_Surface(face, True)
+                
+                if surf_adaptor.GetType() == GeomAbs_Cylinder:
+                    # Check if already classified as hole
+                    is_hole = any(
+                        idx in f.face_indices and f.feature_type == 'hole'
+                        for f in self.features
+                    )
+                    
+                    if not is_hole:
+                        # Check if it's a protrusion (boss) rather than cavity (hole)
+                        if self._is_protrusion(idx):
+                            cylinder = surf_adaptor.Cylinder()
+                            
+                            feature = RecognizedFeature(
+                                feature_type='boss',
+                                subtype='cylindrical',
+                                face_indices=[idx],
+                                confidence=0.70,
+                                parameters={
+                                    'diameter': cylinder.Radius() * 2,
+                                    'radius': cylinder.Radius()
+                                }
+                            )
+                            self.features.append(feature)
+                            
+            except Exception as e:
+                logger.debug(f"Failed to process face {idx} for bosses: {e}")
     
-    def _cleanup(self):
-        """Memory cleanup"""
-        self.shape = None
-        self.aag = None
-        self.features = []
-        gc.collect()
+    # Helper methods
+    
+    def _is_through_feature(self, face_idx: int) -> bool:
+        """Determine if a cylindrical face is a through feature"""
+        # Simplified check - real implementation would analyze connectivity
+        neighbors = self.aag.get_neighbors(face_idx)
+        return len(neighbors) <= 2  # Through features typically have fewer connections
+    
+    def _find_pocket_faces(self, start_idx: int, visited: set) -> set:
+        """Find connected faces forming a pocket"""
+        pocket_faces = set()
+        stack = [start_idx]
+        
+        while stack:
+            idx = stack.pop()
+            if idx in visited:
+                continue
+            
+            visited.add(idx)
+            neighbors = self.aag.get_neighbors(idx)
+            
+            # Look for concave connections
+            for neighbor in neighbors:
+                if self.aag.is_concave_edge(idx, neighbor):
+                    pocket_faces.add(idx)
+                    pocket_faces.add(neighbor)
+                    if neighbor not in visited:
+                        stack.append(neighbor)
+        
+        return pocket_faces
+    
+    def _has_planar_bottom(self, face_indices: set) -> bool:
+        """Check if a set of faces has a planar bottom (pocket characteristic)"""
+        for idx in face_indices:
+            face = self.aag.faces[idx]
+            surf_adaptor = BRepAdaptor_Surface(face, True)
+            if surf_adaptor.GetType() == GeomAbs_Plane:
+                # Additional checks could verify it's actually a bottom face
+                return True
+        return False
+    
+    def _is_slot_shape(self, face_indices: List[int]) -> bool:
+        """Determine if a pocket is slot-shaped (elongated)"""
+        # Simplified check - real implementation would analyze bounding box aspect ratio
+        return len(face_indices) >= 4  # Slots typically have more faces than simple pockets
+    
+    def _is_protrusion(self, face_idx: int) -> bool:
+        """Determine if a cylindrical face is a protrusion (boss) or cavity (hole)"""
+        # Simplified check based on connectivity patterns
+        # Real implementation would use volume analysis or ray casting
+        neighbors = self.aag.get_neighbors(face_idx)
+        
+        # Bosses typically connect to a base plane
+        for neighbor in neighbors:
+            face = self.aag.faces[neighbor]
+            surf_adaptor = BRepAdaptor_Surface(face, True)
+            if surf_adaptor.GetType() == GeomAbs_Plane:
+                # Check if connection is at the "bottom" of the cylinder
+                # This is simplified - real implementation would be more sophisticated
+                return True
+        
+        return False
 
 
-def create_flask_endpoint(recognizer_instance):
-    """
-    Create Flask endpoint handler for the recognizer
-    Maintains API compatibility with AAGNet implementation
-    """
-    def recognize_endpoint(step_file_path: str) -> Dict[str, Any]:
-        try:
-            return recognizer_instance.recognize_features(step_file_path)
-        except Exception as e:
-            logger.error(f"Recognition endpoint error: {e}")
-            return {
-                'status': 'failed',
-                'error': str(e),
-                'features': []
-            }
+# Test function for development
+if __name__ == "__main__":
+    import sys
     
-    return recognize_endpoint
+    if len(sys.argv) > 1:
+        recognizer = RuleBasedFeatureRecognizer()
+        result = recognizer.recognize_features(sys.argv[1])
+        
+        print("\n=== Feature Recognition Results ===")
+        print(f"Status: {result.get('status')}")
+        print(f"Features detected: {result.get('num_features_detected', 0)}")
+        print(f"Faces analyzed: {result.get('num_faces_analyzed', 0)}")
+        print(f"Processing time: {result.get('inference_time_sec', 0):.2f}s")
+        print(f"Average confidence: {result.get('avg_confidence', 0):.2%}")
+        
+        if result.get('feature_summary'):
+            print("\n=== Feature Summary ===")
+            for feature_type, count in result['feature_summary'].items():
+                print(f"  {feature_type}: {count}")
+        
+        if result.get('instances'):
+            print("\n=== Feature Details ===")
+            for i, feature in enumerate(result['instances'][:5]):  # Show first 5
+                print(f"\nFeature {i+1}:")
+                print(f"  Type: {feature.get('type')}")
+                print(f"  Subtype: {feature.get('subtype')}")
+                print(f"  Confidence: {feature.get('confidence'):.2%}")
+                print(f"  Faces: {feature.get('face_indices')}")
+    else:
+        print("Usage: python rule_based_recognizer.py <step_file_path>")
