@@ -9,6 +9,9 @@ COPY . .
 RUN find . -type d -name __pycache__ -exec rm -r {} + || true && \
     find . -type f -name '*.pyc' -delete || true
 
+# Pre-compile Python bytecode for faster startup
+RUN python -m compileall -b -q .
+
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
