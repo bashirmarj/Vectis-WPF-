@@ -125,17 +125,20 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
       });
       
       // 🔍 DIAGNOSTIC: Check edge and feature data
+      const mlFeatures = propMeshData?.ml_features;
+      const instances = mlFeatures?.instances;
+      
       console.log("🔍 Backend mesh data received:", {
-        hasTaggedEdges: !!propMeshData.tagged_edges,
-        taggedEdgesCount: propMeshData.tagged_edges?.length || 0,
-        taggedEdgesSample: propMeshData.tagged_edges?.[0],
+        hasTaggedEdges: !!propMeshData?.tagged_edges,
+        taggedEdgesCount: propMeshData?.tagged_edges?.length || 0,
+        taggedEdgesSample: propMeshData?.tagged_edges?.[0],
         
-        hasMLFeatures: !!propMeshData.ml_features,
-        mlFeaturesKeys: propMeshData.ml_features ? Object.keys(propMeshData.ml_features) : [],
-        mlInstancesCount: propMeshData.ml_features?.instances?.length || 0,
+        hasMLFeatures: !!mlFeatures,
+        mlFeaturesKeys: mlFeatures ? Object.keys(mlFeatures) : [],
+        mlInstancesCount: Array.isArray(instances) ? instances.length : 0,
         
-        hasEdgeClassifications: !!propMeshData.edge_classifications,
-        edgeClassificationsCount: propMeshData.edge_classifications?.length || 0,
+        hasEdgeClassifications: !!propMeshData?.edge_classifications,
+        edgeClassificationsCount: propMeshData?.edge_classifications?.length || 0,
         
         allKeys: propMeshData ? Object.keys(propMeshData) : []
       });
