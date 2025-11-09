@@ -431,6 +431,28 @@ serve(async (req) => {
       else if (isCylindrical) primaryFeature = 'round';
       else if (hasThreads) primaryFeature = 'thread';
       
+      // ✅ Generate placeholder mesh data for visualization
+      const size = Math.pow(estimatedVolume, 1/3) * 10; // Convert to mm
+      const vertices = new Float32Array([
+        -size, -size, -size,  size, -size, -size,  size,  size, -size, -size,  size, -size, // Front
+        -size, -size,  size,  size, -size,  size,  size,  size,  size, -size,  size,  size, // Back
+        -size, -size, -size, -size,  size, -size, -size,  size,  size, -size, -size,  size, // Left
+         size, -size, -size,  size,  size, -size,  size,  size,  size,  size, -size,  size, // Right
+        -size,  size, -size,  size,  size, -size,  size,  size,  size, -size,  size,  size, // Top
+        -size, -size, -size,  size, -size, -size,  size, -size,  size, -size, -size,  size  // Bottom
+      ]);
+      
+      const indices = new Uint32Array([
+        0,1,2, 0,2,3,   4,6,5, 4,7,6,   8,9,10, 8,10,11,
+        12,14,13, 12,15,14,   16,17,18, 16,18,19,   20,22,21, 20,23,22
+      ]);
+      
+      const normals = new Float32Array([
+        0,0,-1, 0,0,-1, 0,0,-1, 0,0,-1,  0,0,1, 0,0,1, 0,0,1, 0,0,1,
+        -1,0,0, -1,0,0, -1,0,0, -1,0,0,  1,0,0, 1,0,0, 1,0,0, 1,0,0,
+        0,1,0, 0,1,0, 0,1,0, 0,1,0,  0,-1,0, 0,-1,0, 0,-1,0, 0,-1,0
+      ]);
+      
       analysisResult = {
         ...analysisResult,
         volume_cm3: Number(estimatedVolume.toFixed(2)),
@@ -453,6 +475,15 @@ serve(async (req) => {
           hasThreads ? 'Threading' : null,
           'VMC Machining'
         ].filter(Boolean),
+        
+        // ✅ Add mesh_data for visualization
+        mesh_data: {
+          vertices: Array.from(vertices),
+          indices: Array.from(indices),
+          normals: Array.from(normals),
+          triangle_count: indices.length / 3,
+          vertex_count: vertices.length / 3
+        },
         
         // ✅ ENHANCED ML features for FeatureTree
         ml_features: {
