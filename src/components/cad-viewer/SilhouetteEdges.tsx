@@ -259,6 +259,12 @@ export function SilhouetteEdges({
  */
 function buildEdgeMap(geometry: THREE.BufferGeometry): Map<string, EdgeData> {
   const edgeMap = new Map<string, EdgeData>();
+  
+  if (!geometry?.attributes?.position) {
+    console.warn("SilhouetteEdges: No position attribute found in geometry");
+    return edgeMap;
+  }
+  
   const positions = geometry.attributes.position.array as Float32Array;
   const indices = geometry.index?.array;
 
