@@ -135,16 +135,17 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*brepto
 logging.getLogger('occwl').propagate = False
 logging.getLogger('occwl').setLevel(logging.ERROR)
 
-# === AAGNet Integration ===
+# === Feature Recognition Integration ===
+# Updated to use rule-based recognition for better memory efficiency and reliability
 try:
-    from aagnet_recognizer import AAGNetRecognizer, create_flask_endpoint
-    aagnet_recognizer = AAGNetRecognizer(device='cpu')
-    AAGNET_AVAILABLE = True
-    logger.info("✅ AAGNet recognizer initialized")
+    from rule_based_recognizer import RuleBasedFeatureRecognizer
+    feature_recognizer = RuleBasedFeatureRecognizer(time_limit=30.0, memory_limit_mb=2000)
+    FEATURE_RECOGNITION_AVAILABLE = True
+    logger.info("✅ Rule-based feature recognizer initialized")
 except Exception as e:
-    aagnet_recognizer = None
-    AAGNET_AVAILABLE = False
-    logger.warning(f"⚠️ AAGNet not available: {e}")
+    feature_recognizer = None
+    FEATURE_RECOGNITION_AVAILABLE = False
+    logger.warning(f"⚠️ Feature recognition not available: {e}")
 
 # ============================================================================
 # ERROR CLASSIFICATION & HANDLING
@@ -1971,20 +1972,18 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0, total_surf
 # ML FEATURE RECOGNITION (AAGNet Integration)
 # ============================================================================
 
-def recognize_features_ml(shape, correlation_id):
-    """
-    AAGNet-based ML feature recognition.
-    Protected by circuit breaker pattern.
-    """
-    if not AAGNET_AVAILABLE or aagnet_recognizer is None:
-        logger.warning(f"[{correlation_id}] AAGNet not available, skipping ML recognition")
+def recognize_features_ml(shape, correlation_id: str):
+    """Run rule-based feature recognition if available"""
+    
+    if not FEATURE_RECOGNITION_AVAILABLE or feature_recognizer is None:
+        logger.warning(f"[{correlation_id}] Feature recognition not available, skipping ML recognition")
         return None
     
     tmp_path = None
     try:
-        logger.info(f"[{correlation_id}] 🤖 Running AAGNet feature recognition...")
+        logger.info(f"[{correlation_id}] 🤖 Running rule-based feature recognition...")
         
-        # Create temporary STEP file for AAGNet
+        # Create temporary STEP file for recognizer
         fd, tmp_path = tempfile.mkstemp(suffix='.step')
         os.close(fd)
         
@@ -1993,36 +1992,35 @@ def recognize_features_ml(shape, correlation_id):
         writer.Transfer(shape, 1)
         writer.Write(tmp_path)
         
-        # ✅ CORRECT: Call instance method with file path
+        # Call rule-based recognizer (with circuit breaker protection)
         result = aagnet_circuit_breaker.call(
-            aagnet_recognizer.recognize_features,  # ✅ Instance method
-            tmp_path  # ✅ File path
+            feature_recognizer.recognize_features,
+            tmp_path
         )
         
         # Check if recognition succeeded
-        if not result or not result.get('success'):
-            logger.warning(f"[{correlation_id}] AAGNet recognition failed: {result.get('error', 'Unknown error')}")
+        if not result or result.get('status') != 'success':
+            logger.warning(f"[{correlation_id}] Rule-based recognition failed: {result.get('error', 'Unknown error')}")
             return None
         
-        # ✅ Calculate overall confidence from individual instance confidences
+        # Extract data from result
         instances = result.get('instances', [])
-        if instances:
-            # Average confidence across all detected features
-            avg_confidence = sum(inst.get('confidence', 0.0) for inst in instances) / len(instances)
-        else:
-            avg_confidence = 0.0
+        avg_confidence = result.get('avg_confidence', 0.0)
+        feature_summary = result.get('feature_summary', {})
         
-        # Transform to expected format
+        # Transform to expected format (API-compatible)
         features = {
             'instances': instances,
-            'num_features_detected': result.get('num_instances', 0),
-            'num_faces_analyzed': result.get('num_faces', 0),
-            'confidence_score': avg_confidence,  # ✅ FIXED: Average of instance confidences
-            'inference_time_sec': result.get('processing_time', 0.0),
-            'recognition_method': 'AAGNet'
+            'num_features_detected': result.get('num_features_detected', 0),
+            'num_faces_analyzed': result.get('num_faces_analyzed', 0),
+            'confidence_score': avg_confidence,
+            'inference_time_sec': result.get('inference_time_sec', 0.0),
+            'recognition_method': 'rule_based',
+            'feature_summary': feature_summary  # ✅ NEW: Include feature breakdown
         }
         
-        logger.info(f"[{correlation_id}] ✅ AAGNet: {features['num_features_detected']} features, confidence={avg_confidence:.2f}")
+        logger.info(f"[{correlation_id}] ✅ Rule-based: {features['num_features_detected']} features, confidence={avg_confidence:.2f}")
+        logger.info(f"[{correlation_id}] 📊 Feature summary: {feature_summary}")
         logger.info(f"[{correlation_id}] 📊 Confidence breakdown: avg={avg_confidence:.2f}, "
                     f"range=[{min((i.get('confidence', 0) for i in instances), default=0):.2f}-"
                     f"{max((i.get('confidence', 0) for i in instances), default=0):.2f}], instances={len(instances)}")
@@ -2385,7 +2383,7 @@ def root():
         "endpoints": {
             "health": "/health",
             "analyze": "/analyze-cad",
-            "aagnet": "/api/aagnet/recognize" if AAGNET_AVAILABLE else "unavailable",
+            "feature_recognition": "/api/recognize" if FEATURE_RECOGNITION_AVAILABLE else "unavailable",
             "metrics": "/metrics"
         },
         "features": {
@@ -2395,9 +2393,10 @@ def root():
             "circuit_breaker": "Cascade failure prevention (auto success tracking)",
             "dead_letter_queue": "Failed request tracking",
             "classification": "Mesh-based with neighbor propagation",
-            "feature_detection": "AAGNet 24-class with instance segmentation" if AAGNET_AVAILABLE else "unavailable",
+            "feature_detection": "Rule-based with topology analysis" if FEATURE_RECOGNITION_AVAILABLE else "unavailable",
             "edge_extraction": "Professional smart filtering (20° dihedral angle)",
-            "aagnet_available": AAGNET_AVAILABLE,
+            "feature_recognition_available": FEATURE_RECOGNITION_AVAILABLE,
+            "recognition_method": "rule_based",
             "iso_compliance": "ISO 9001 audit logging"
         },
         "performance_targets": {
@@ -2415,7 +2414,8 @@ def health():
     health_status = {
         "status": "healthy" if circuit_state["state"] == "CLOSED" else "degraded",
         "circuit_breaker": circuit_state["state"],
-        "aagnet_available": AAGNET_AVAILABLE,
+        "feature_recognition_status": "available" if FEATURE_RECOGNITION_AVAILABLE else "unavailable",
+        "recognition_method": "rule_based",
         "timestamp": datetime.utcnow().isoformat()
     }
     

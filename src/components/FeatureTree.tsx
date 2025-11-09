@@ -13,34 +13,40 @@ import {
   Zap
 } from 'lucide-react';
 
-// ✅ FIXED: AAGNet multi-task output interface
-interface AAGNetFeatureInstance {
+// Feature instance interface supporting both AAGNet and rule-based formats
+interface FeatureInstance {
   type: string;
+  subtype?: string;  // For rule-based: through_hole, blind_hole, etc.
   face_indices: number[];
-  bottom_faces: number[];
+  bottom_faces?: number[];  // AAGNet specific
   confidence: number;
+  parameters?: Record<string, any>;  // Rule-based specific
 }
 
-interface AAGNetFeatures {
-  instances: AAGNetFeatureInstance[];
-  semantic_labels: number[];
+interface RecognizedFeatures {
+  instances: FeatureInstance[];
+  semantic_labels?: number[];  // AAGNet specific
   extended_attributes?: {
     face_attributes: number[][];
     edge_attributes: number[][];
   };
-  num_faces: number;
-  num_instances: number;
+  num_faces?: number;
+  num_instances?: number;
+  num_features_detected?: number;  // Rule-based specific
+  feature_summary?: Record<string, number>;  // Rule-based specific
   processing_time?: number;
+  recognition_method?: string;  // 'AAGNet' or 'rule_based'
 }
 
 interface FeatureTreeProps {
-  features: AAGNetFeatures;
+  features: RecognizedFeatures;
   featureSummary?: any;
-  onFeatureSelect?: (featureInstance: AAGNetFeatureInstance) => void;
+  onFeatureSelect?: (featureInstance: FeatureInstance) => void;
 }
 
-// Feature type to display name mapping
+// Feature type to display name mapping (supports both AAGNet and rule-based)
 const FEATURE_DISPLAY_NAMES: Record<string, string> = {
+  // AAGNet feature types
   'chamfer': 'Chamfer',
   'through_hole': 'Through Hole',
   'triangular_passage': 'Triangular Passage',
@@ -65,20 +71,35 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'circular_blind_step': 'Circular Blind Step',
   'rectangular_blind_step': 'Rectangular Blind Step',
   'round': 'Round',
-  'stock': 'Stock'
+  'stock': 'Stock',
+  // Rule-based feature types
+  'hole': 'Hole',
+  'pocket': 'Pocket',
+  'slot': 'Slot',
+  'fillet': 'Fillet',
+  'boss': 'Boss',
+  'general_pocket': 'General Pocket',
+  'rectangular_slot': 'Rectangular Slot',
+  'constant_radius': 'Constant Radius',
+  'variable_radius': 'Variable Radius',
+  '45_degree': '45° Chamfer',
+  'angled': 'Angled Chamfer',
+  'partial_cylindrical': 'Partial Cylindrical'
 };
 
-// Feature category classification
+// Feature category classification (works for both systems)
 const FEATURE_CATEGORIES = {
-  holes: ['through_hole', 'blind_hole'],
-  pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket'],
+  holes: ['through_hole', 'blind_hole', 'hole', 'partial_cylindrical'],
+  pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket', 'pocket', 'general_pocket'],
   slots: [
     'triangular_through_slot', 
     'rectangular_through_slot', 
     'circular_through_slot',
     'rectangular_blind_slot',
     'v_circular_end_blind_slot',
-    'h_circular_end_blind_slot'
+    'h_circular_end_blind_slot',
+    'slot',
+    'rectangular_slot'
   ],
   steps: [
     'rectangular_through_step',
@@ -89,8 +110,8 @@ const FEATURE_CATEGORIES = {
     'rectangular_blind_step'
   ],
   passages: ['triangular_passage', 'rectangular_passage', '6sides_passage'],
-  chamfers: ['chamfer', 'round'],
-  other: ['Oring']
+  chamfers: ['chamfer', 'round', 'fillet', 'constant_radius', 'variable_radius', '45_degree', 'angled'],
+  other: ['Oring', 'boss']
 };
 
 // Feature category display names
@@ -158,7 +179,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   // Group features by category
   const categorizedFeatures = useMemo(() => {
-    const grouped: Record<string, AAGNetFeatureInstance[]> = {
+    const grouped: Record<string, FeatureInstance[]> = {
       holes: [],
       pockets: [],
       slots: [],
@@ -189,8 +210,8 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   // Calculate summary statistics
   const stats = useMemo(() => {
-    const totalFeatures = features.num_instances;
-    const totalFaces = features.num_faces;
+    const totalFeatures = features.num_instances || features.num_features_detected || features.instances.length;
+    const totalFaces = features.num_faces || features.instances.reduce((sum, f) => sum + f.face_indices.length, 0);
     const avgConfidence = features.instances.length > 0
       ? features.instances.reduce((sum, f) => sum + f.confidence, 0) / features.instances.length
       : 0;
@@ -314,7 +335,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
                                   <span>
                                     {instance.face_indices.length} faces
                                   </span>
-                                  {instance.bottom_faces.length > 0 && (
+                                  {instance.bottom_faces && instance.bottom_faces.length > 0 && (
                                     <span>
                                       {instance.bottom_faces.length} bottom face{instance.bottom_faces.length !== 1 ? 's' : ''}
                                     </span>
@@ -346,7 +367,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       {/* Processing Info */}
       {features.processing_time && (
         <div className="text-xs text-gray-500 text-center">
-          Analysis completed in {features.processing_time.toFixed(2)}s using AAGNet
+          Analysis completed in {features.processing_time.toFixed(2)}s using {features.recognition_method === 'rule_based' ? 'Rule-Based Recognition' : features.recognition_method || 'Feature Recognition'}
         </div>
       )}
     </div>
