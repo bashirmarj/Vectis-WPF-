@@ -376,7 +376,7 @@ serve(async (req) => {
               level: 'ERROR',
               correlation_id: correlationId,
               tier: 'EDGE',
-              message: 'Geometry service processing failed',
+              message: 'Geometry service processing failed - falling back to heuristic',
               context: { 
                 status: flaskResponse.status,
                 statusText: flaskResponse.statusText,
@@ -384,8 +384,9 @@ serve(async (req) => {
               }
             }));
 
-            // Throw error to halt processing and return to client
-            throw new Error(`Geometry processing failed: ${flaskError}`);
+            // Don't throw - fall through to heuristic mode instead
+            analysisResult.backend_error = flaskError;
+            analysisResult.method = 'heuristic_fallback';
           }
 
         } catch (error: any) {

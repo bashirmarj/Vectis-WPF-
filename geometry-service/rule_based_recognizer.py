@@ -234,8 +234,21 @@ class RuleBasedFeatureRecognizer:
             
             # Build AAG for topology analysis
             logger.info("Building Attributed Adjacency Graph...")
-            self.aag = AttributedAdjacencyGraph(self.shape)
-            logger.info(f"AAG built with {len(self.aag.faces)} faces")
+            try:
+                self.aag = AttributedAdjacencyGraph(self.shape)
+                logger.info(f"AAG built with {len(self.aag.faces)} faces")
+            except Exception as e:
+                logger.error(f"⚠️ AAG construction failed: {e}")
+                logger.info("Continuing without topology analysis...")
+                self.aag = None
+                # Return partial results with just mesh data
+                return {
+                    'status': 'partial',
+                    'error': f'Feature recognition failed: {e}',
+                    'features': [],
+                    'num_features_detected': 0,
+                    'recognition_method': 'failed_aag'
+                }
             
             # Recognize features in priority order
             self._recognize_holes()

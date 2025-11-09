@@ -312,15 +312,57 @@ export const PartUploadForm = () => {
     setUploading(true);
 
     try {
-      // Your existing submit logic here
+      // Convert files to base64 for transmission
+      const filesWithContent = await Promise.all(
+        files.map(async (f) => {
+          const reader = new FileReader();
+          return new Promise<any>((resolve) => {
+            reader.onload = () => {
+              const base64 = (reader.result as string).split(',')[1];
+              resolve({
+                name: f.file.name,
+                content: base64,
+                size: f.file.size,
+                quantity: f.quantity,
+              });
+            };
+            reader.readAsDataURL(f.file);
+          });
+        })
+      );
+
+      const { data: submission, error } = await supabase.functions.invoke(
+        'send-quotation-request',
+        {
+          body: {
+            name: formData.name,
+            company: formData.company || '',
+            email: formData.email,
+            phone: formData.phone,
+            shippingAddress: formData.shippingAddress,
+            message: formData.message || '',
+            files: filesWithContent,
+            drawingFiles: [],
+          }
+        }
+      );
+
+      if (error) throw error;
+
       toast({
         title: "✅ Quote Submitted",
-        description: "We'll get back to you soon!",
+        description: `Quote request ${submission?.quote_number || ''} submitted successfully!`,
       });
+      
+      // Reset form and return to upload screen
+      setFiles([]);
+      setCurrentScreen("upload");
+      
     } catch (error: any) {
+      console.error("Submission error:", error);
       toast({
         title: "❌ Submission Failed",
-        description: error.message,
+        description: error.message || "Failed to submit quote request",
         variant: "destructive",
       });
     } finally {
