@@ -2150,7 +2150,7 @@ def analyze_cad():
         
         degradation = GracefulDegradation()
         processing_tier = degradation.select_tier(
-            aagnet_available=AAGNET_AVAILABLE,
+            feature_recognition_available=FEATURE_RECOGNITION_AVAILABLE,
             quality_score=validation_result.quality_score,
             circuit_breaker_state=aagnet_circuit_breaker.get_state()["state"]
         )

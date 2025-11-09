@@ -1,5 +1,5 @@
 """
-Graceful degradation handlers for AAGNet feature recognition
+Graceful degradation handlers for feature recognition
 Provides fallback processing tiers when full B-Rep processing fails
 """
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class ProcessingTier(Enum):
     """Processing tier with associated confidence level"""
-    TIER_1_BREP = "tier_1_brep"          # Full B-Rep + AAGNet (confidence: 0.95)
+    TIER_1_BREP = "tier_1_brep"          # Full B-Rep + rule-based recognition (confidence: 0.95)
     TIER_2_MESH = "tier_2_mesh"          # Mesh-based processing (confidence: 0.75)
     TIER_3_POINT_CLOUD = "tier_3_point"  # Point cloud fallback (confidence: 0.60)
     TIER_4_BASIC = "tier_4_basic"        # Basic mesh only (confidence: 0.40)
@@ -22,7 +22,7 @@ class GracefulDegradation:
     """
     Handles graceful degradation through processing tiers.
     
-    Tier 1 (confidence 0.95): Full B-Rep processing with AAGNet
+    Tier 1 (confidence 0.95): Full B-Rep processing with rule-based recognition
     Tier 2 (confidence 0.75): Mesh-based feature detection
     Tier 3 (confidence 0.60): Point cloud processing
     Tier 4 (confidence 0.40): Basic mesh data only
@@ -38,7 +38,7 @@ class GracefulDegradation:
     
     @staticmethod
     def select_tier(
-        aagnet_available: bool,
+        feature_recognition_available: bool,
         quality_score: float,
         circuit_breaker_state: str
     ) -> ProcessingTier:
@@ -46,7 +46,7 @@ class GracefulDegradation:
         Select appropriate processing tier based on system state.
         
         Args:
-            aagnet_available: Whether AAGNet model is loaded
+            feature_recognition_available: Whether feature recognizer is loaded
             quality_score: CAD file quality score (0.0 to 1.0)
             circuit_breaker_state: Circuit breaker state ("CLOSED", "OPEN", "HALF_OPEN")
             
@@ -54,9 +54,9 @@ class GracefulDegradation:
             ProcessingTier enum value
         """
         
-        # If AAGNet unavailable or circuit breaker open, skip to Tier 2
-        if not aagnet_available:
-            logger.info("⚠️ AAGNet not available, selecting Tier 2 (mesh-based)")
+        # If feature recognition unavailable or circuit breaker open, skip to Tier 2
+        if not feature_recognition_available:
+            logger.info("⚠️ Feature recognition not available, selecting Tier 2 (mesh-based)")
             return ProcessingTier.TIER_2_MESH
         
         if circuit_breaker_state == "OPEN":
@@ -73,8 +73,8 @@ class GracefulDegradation:
             logger.info("⚠️ Circuit breaker testing recovery, selecting Tier 2 (mesh-based)")
             return ProcessingTier.TIER_2_MESH
         
-        # Default: Use Tier 1 (full B-Rep + AAGNet)
-        logger.info("✅ System healthy, selecting Tier 1 (B-Rep + AAGNet)")
+        # Default: Use Tier 1 (full B-Rep + rule-based recognition)
+        logger.info("✅ System healthy, selecting Tier 1 (B-Rep + rule-based recognition)")
         return ProcessingTier.TIER_1_BREP
     
     @staticmethod
@@ -97,36 +97,30 @@ class GracefulDegradation:
     
     @staticmethod
     def tier_1_brep_processing(
-        aagnet_recognizer,
+        feature_recognizer,
         step_file_path: str,
         shape
     ) -> Tuple[Optional[Dict[str, Any]], float, str]:
         """
-        Tier 1: Full B-Rep processing with AAGNet.
+        Tier 1: Full B-Rep processing with rule-based recognition.
         
         Returns:
             (ml_features, confidence, tier)
         """
         try:
-            logger.info("Attempting Tier 1: Full B-Rep + AAGNet processing")
+            logger.info("Attempting Tier 1: Full B-Rep + rule-based processing")
             
-            aagnet_result = aagnet_recognizer.recognize_features(step_file_path)
+            result = feature_recognizer.recognize_features(step_file_path)
             
-            if aagnet_result.get('success'):
+            if result and result.get('status') == 'success':
                 ml_features = {
-                    'feature_instances': [
-                        {
-                            'feature_type': inst['type'],
-                            'face_ids': inst['face_indices'],
-                            'bottom_faces': inst['bottom_faces'],
-                            'confidence': inst['confidence']
-                        }
-                        for inst in aagnet_result.get('instances', [])
-                    ],
-                    'num_features_detected': aagnet_result.get('num_instances', 0),
-                    'num_faces_analyzed': aagnet_result.get('num_faces', 0),
-                    'inference_time_sec': aagnet_result.get('processing_time', 0),
-                    'recognition_method': 'AAGNet',
+                    'instances': result.get('instances', []),
+                    'num_features_detected': result.get('num_features_detected', 0),
+                    'num_faces_analyzed': result.get('num_faces_analyzed', 0),
+                    'inference_time_sec': result.get('inference_time_sec', 0),
+                    'confidence_score': result.get('avg_confidence', 0.0),
+                    'recognition_method': 'rule_based',
+                    'feature_summary': result.get('feature_summary', {}),
                     'processing_tier': ProcessingTier.TIER_1_BREP.value,
                     'confidence_level': 'high'
                 }
@@ -134,7 +128,7 @@ class GracefulDegradation:
                 logger.info(f"✅ Tier 1 successful: {ml_features['num_features_detected']} features detected")
                 return ml_features, 0.95, ProcessingTier.TIER_1_BREP.value
             else:
-                logger.warning(f"⚠️ Tier 1 failed: {aagnet_result.get('error')}")
+                logger.warning(f"⚠️ Tier 1 failed: {result.get('error') if result else 'No result'}")
                 return None, 0.0, ProcessingTier.TIER_1_BREP.value
                 
         except Exception as e:
@@ -148,7 +142,7 @@ class GracefulDegradation:
         """
         Tier 2: Mesh-based feature heuristics.
         
-        Fallback when AAGNet fails but mesh generation succeeded.
+        Fallback when rule-based recognition fails but mesh generation succeeded.
         Uses geometric heuristics to detect basic features.
         
         Returns:
@@ -266,7 +260,7 @@ class GracefulDegradation:
     
     @staticmethod
     def process_with_fallback(
-        aagnet_recognizer,
+        feature_recognizer,
         step_file_path: str,
         shape,
         mesh_data: Dict[str, Any]
@@ -275,7 +269,7 @@ class GracefulDegradation:
         Execute processing with graceful degradation through tiers.
         
         Args:
-            aagnet_recognizer: AAGNet recognizer instance
+            feature_recognizer: Feature recognizer instance
             step_file_path: Path to STEP file
             shape: OpenCascade shape object
             mesh_data: Generated mesh data
@@ -284,9 +278,9 @@ class GracefulDegradation:
             (ml_features, confidence, processing_tier)
         """
         
-        # Try Tier 1: Full B-Rep + AAGNet
+        # Try Tier 1: Full B-Rep + rule-based recognition
         ml_features, confidence, tier = GracefulDegradation.tier_1_brep_processing(
-            aagnet_recognizer, step_file_path, shape
+            feature_recognizer, step_file_path, shape
         )
         
         if ml_features:
