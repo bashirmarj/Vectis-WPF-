@@ -137,7 +137,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
         hasEdgeClassifications: !!propMeshData.edge_classifications,
         edgeClassificationsCount: propMeshData.edge_classifications?.length || 0,
         
-        allKeys: Object.keys(propMeshData)
+        allKeys: propMeshData ? Object.keys(propMeshData) : []
       });
       
       setMeshData(propMeshData);
