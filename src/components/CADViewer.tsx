@@ -153,7 +153,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
 
   // Calculate bounding box
   const boundingBox = useMemo(() => {
-    if (!meshData) {
+    if (!meshData || !meshData.vertices || meshData.vertices.length === 0) {
       return {
         min: new THREE.Vector3(-1, -1, -1),
         max: new THREE.Vector3(1, 1, 1),
