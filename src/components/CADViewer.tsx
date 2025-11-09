@@ -124,6 +124,14 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
         triangleCount: propMeshData.triangle_count,
       });
       
+      // CRITICAL: Validate mesh data has required fields before proceeding
+      if (!propMeshData.vertices || !propMeshData.indices || !propMeshData.normals) {
+        console.error("❌ CADViewer: Invalid mesh data - missing vertices, indices, or normals");
+        setError("CAD file analysis incomplete - mesh data not available. The backend encountered an error during processing.");
+        setIsLoading(false);
+        return;
+      }
+      
       // 🔍 DIAGNOSTIC: Check edge and feature data
       const mlFeatures = propMeshData?.ml_features;
       const featureInstances = mlFeatures?.feature_instances;

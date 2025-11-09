@@ -67,14 +67,19 @@ export function SilhouetteEdges({
   }, [displayMode]);
 
   // Build edge-to-triangle adjacency map (computed once)
+  // Add null safety check for geometry
   const edgeMap = useMemo(() => {
+    if (!geometry?.attributes?.position) {
+      return new Map();
+    }
     return buildEdgeMap(geometry);
   }, [geometry]);
 
   // Build a Set of all static feature edge keys for fast duplicate detection
   const staticEdgeKeys = useMemo(() => {
     const keys = new Set<string>();
-    const positions = staticFeatureEdges.attributes.position?.array as Float32Array;
+    // Add null safety check for staticFeatureEdges
+    const positions = staticFeatureEdges?.attributes?.position?.array as Float32Array;
     
     if (positions) {
       // staticFeatureEdges is a LineSegments geometry (pairs of vertices)
@@ -85,7 +90,7 @@ export function SilhouetteEdges({
       }
     }
     
-  console.log("🔑 Static edge keys built:", keys.size, "edges");
+    console.log("🔑 Static edge keys built:", keys.size, "edges");
     return keys;
   }, [staticFeatureEdges]);
 
@@ -210,24 +215,32 @@ export function SilhouetteEdges({
     }
   }, [dynamicSilhouetteGeometry]);
 
+  // Null safety check - don't render if no valid data
+  if (!geometry?.attributes?.position) {
+    console.warn("⚠️ SilhouetteEdges: No valid geometry data available");
+    return null;
+  }
+
   return (
     <group>
       {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
-      <lineSegments 
-        geometry={staticFeatureEdges} 
-        frustumCulled={false}
-        key={`static-edges-${showHiddenEdges}`}
-      >
-        <lineBasicMaterial 
-          color="#000000" 
-          toneMapped={false}
-          polygonOffset={true}
-          polygonOffsetFactor={-2}
-          polygonOffsetUnits={-2}
-          depthTest={!showHiddenEdges}
-          depthWrite={false}
-        />
-      </lineSegments>
+      {staticFeatureEdges?.attributes?.position && (
+        <lineSegments 
+          geometry={staticFeatureEdges} 
+          frustumCulled={false}
+          key={`static-edges-${showHiddenEdges}`}
+        >
+          <lineBasicMaterial 
+            color="#000000" 
+            toneMapped={false}
+            polygonOffset={true}
+            polygonOffsetFactor={-2}
+            polygonOffsetUnits={-2}
+            depthTest={!showHiddenEdges}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
       
       {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
       {dynamicSilhouetteGeometry && (

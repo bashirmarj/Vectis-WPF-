@@ -1973,7 +1973,7 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0, total_surf
 # ============================================================================
 
 def recognize_features_ml(shape, correlation_id: str):
-    """Run rule-based feature recognition if available"""
+    """Run rule-based feature recognition if available, with graceful degradation"""
     
     if not FEATURE_RECOGNITION_AVAILABLE or feature_recognizer is None:
         logger.warning(f"[{correlation_id}] Feature recognition not available, skipping ML recognition")
@@ -1993,10 +1993,17 @@ def recognize_features_ml(shape, correlation_id: str):
         writer.Write(tmp_path)
         
         # Call rule-based recognizer (with circuit breaker protection)
-        result = aagnet_circuit_breaker.call(
-            feature_recognizer.recognize_features,
-            tmp_path
-        )
+        # CRITICAL FIX: Wrap in additional try-except to catch graph building crashes
+        try:
+            result = aagnet_circuit_breaker.call(
+                feature_recognizer.recognize_features,
+                tmp_path
+            )
+        except (RuntimeError, MemoryError, OSError) as graph_error:
+            # Handle AAG graph building failures (memory corruption, OCC crashes)
+            logger.error(f"[{correlation_id}] ❌ CRITICAL: AAG graph build failed - {type(graph_error).__name__}: {graph_error}")
+            logger.warning(f"[{correlation_id}] ⚠️ Degrading to mesh-only mode (no feature recognition)")
+            return None
         
         # Check if recognition succeeded
         if not result or result.get('status') != 'success':
@@ -2032,7 +2039,7 @@ def recognize_features_ml(shape, correlation_id: str):
         return None
     
     except Exception as e:
-        logger.error(f"[{correlation_id}] AAGNet recognition failed: {e}")
+        logger.error(f"[{correlation_id}] ❌ Unexpected error in feature recognition: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return None

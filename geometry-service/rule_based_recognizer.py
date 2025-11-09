@@ -86,51 +86,58 @@ class AttributedAdjacencyGraph:
     
     def _build_graph(self):
         """Build adjacency graph from B-Rep topology"""
-        # Index all faces
-        explorer = TopExp_Explorer(self.shape, TopAbs_FACE)
-        face_idx = 0
-        
-        while explorer.More():
-            face = topods.Face(explorer.Current())
-            self.faces.append(face)
-            self.face_map[face_idx] = face
-            self.adjacency[face_idx] = set()
-            face_idx += 1
-            explorer.Next()
-        
-        # Build edge-to-face map
-        edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-        topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-        
-        # Build adjacency relationships
-        for edge_idx in range(1, edge_face_map.Size() + 1):
-            edge = edge_face_map.FindKey(edge_idx)
-            faces = edge_face_map.FindFromIndex(edge_idx)
+        try:
+            # Index all faces
+            explorer = TopExp_Explorer(self.shape, TopAbs_FACE)
+            face_idx = 0
             
-            face_indices = []
-            iterator = TopTools_ListIteratorOfListOfShape(faces)
-            while iterator.More():
-                face = topods.Face(iterator.Value())
-                # Find face index
-                for idx, f in enumerate(self.faces):
-                    if f.IsSame(face):
-                        face_indices.append(idx)
-                        break
-                iterator.Next()
+            while explorer.More():
+                face = topods.Face(explorer.Current())
+                self.faces.append(face)
+                self.face_map[face_idx] = face
+                self.adjacency[face_idx] = set()
+                face_idx += 1
+                explorer.Next()
             
-            # Connect adjacent faces
-            if len(face_indices) == 2:
-                self.adjacency[face_indices[0]].add(face_indices[1])
-                self.adjacency[face_indices[1]].add(face_indices[0])
+            # Build edge-to-face map
+            edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+            topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+            
+            # Build adjacency relationships
+            for edge_idx in range(1, edge_face_map.Size() + 1):
+                edge = edge_face_map.FindKey(edge_idx)
+                faces = edge_face_map.FindFromIndex(edge_idx)
                 
-                # Calculate dihedral angle
-                angle = self._calculate_dihedral_angle(
-                    self.faces[face_indices[0]],
-                    self.faces[face_indices[1]],
-                    edge
-                )
-                self.dihedral_angles[(face_indices[0], face_indices[1])] = angle
-                self.dihedral_angles[(face_indices[1], face_indices[0])] = angle
+                face_indices = []
+                iterator = TopTools_ListIteratorOfListOfShape(faces)
+                while iterator.More():
+                    face = topods.Face(iterator.Value())
+                    # Find face index
+                    for idx, f in enumerate(self.faces):
+                        if f.IsSame(face):
+                            face_indices.append(idx)
+                            break
+                    iterator.Next()
+                
+                # Connect adjacent faces
+                if len(face_indices) == 2:
+                    self.adjacency[face_indices[0]].add(face_indices[1])
+                    self.adjacency[face_indices[1]].add(face_indices[0])
+                    
+                    # Calculate dihedral angle
+                    angle = self._calculate_dihedral_angle(
+                        self.faces[face_indices[0]],
+                        self.faces[face_indices[1]],
+                        edge
+                    )
+                    self.dihedral_angles[(face_indices[0], face_indices[1])] = angle
+                    self.dihedral_angles[(face_indices[1], face_indices[0])] = angle
+        
+        except Exception as e:
+            logger.error(f"❌ Error building AAG graph: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise RuntimeError(f"Failed to build Attributed Adjacency Graph: {str(e)}")
     
     def _calculate_dihedral_angle(self, face1, face2, edge):
         """Calculate dihedral angle between two faces along an edge"""
