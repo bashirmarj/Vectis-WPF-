@@ -289,7 +289,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     })();
 
     // Clean edge geometry for both solid and wireframe modes - NO CACHING
-    const cleanEdgesGeometry = new THREE.EdgesGeometry(geometry, 1);
+    const cleanEdgesGeometry = geometry?.attributes?.position ? new THREE.EdgesGeometry(geometry, 1) : new THREE.BufferGeometry();
 
     // Section plane - NO CACHING
     const clippingPlane = (() => {
