@@ -27,8 +27,8 @@ interface MeshModelProps {
   meshData: MeshData;
   sectionPlane: "none" | "xy" | "xz" | "yz";
   sectionPosition: number;
-  showEdges: boolean;              // For solid mode feature edges
-  showHiddenEdges?: boolean;       // For wireframe mode occlusion control
+  showEdges: boolean; // For solid mode feature edges
+  showHiddenEdges?: boolean; // For wireframe mode occlusion control
   displayStyle?: "solid" | "wireframe" | "translucent";
   topologyColors?: boolean;
   useSilhouetteEdges?: boolean;
@@ -144,12 +144,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           if (edge.iso_type === "uiso" || edge.iso_type === "viso") {
             return;
           }
-          
+
           // Render all other edges (boundary, feature edges, fillets, etc.)
-          featureEdgePositions.push(
-            edge.start[0], edge.start[1], edge.start[2],
-            edge.end[0], edge.end[1], edge.end[2]
-          );
+          featureEdgePositions.push(edge.start[0], edge.start[1], edge.start[2], edge.end[0], edge.end[1], edge.end[2]);
         });
 
         const geo = new THREE.BufferGeometry();
@@ -278,7 +275,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     })();
 
-
     // Clean edge geometry for both solid and wireframe modes - NO CACHING
     const cleanEdgesGeometry = new THREE.EdgesGeometry(geometry, 1);
 
@@ -319,7 +315,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         clipIntersection: true,
         metalness: 0.1,
         roughness: 0.6,
-        envMapIntensity: 0.5,
+        envMapIntensity: 0.3,
       };
 
       if (displayStyle === "wireframe") {
@@ -341,10 +337,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     }, []);
 
     // Expose mesh and feature edges for external access
-    React.useImperativeHandle(ref, () => ({
-      mesh: meshRef.current!,
-      featureEdgesGeometry: featureEdgesGeometry,
-    }), [featureEdgesGeometry]);
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        mesh: meshRef.current!,
+        featureEdgesGeometry: featureEdgesGeometry,
+      }),
+      [featureEdgesGeometry],
+    );
 
     return (
       <group>
@@ -363,10 +363,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* Invisible depth-writing mesh for wireframe occlusion */}
         {displayStyle === "wireframe" && !showHiddenEdges && (
-          <mesh 
-            geometry={geometry}
-            key={`depth-mesh-${showHiddenEdges}`}
-          >
+          <mesh geometry={geometry} key={`depth-mesh-${showHiddenEdges}`}>
             <meshBasicMaterial
               colorWrite={false}
               depthWrite={true}
@@ -381,12 +378,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* Show only backend feature edges in solid mode (no tessellation lines) */}
         {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
-          <lineSegments 
-            geometry={featureEdgesGeometry}
-            frustumCulled={true}
-          >
-            <lineBasicMaterial 
-              color="#000000" 
+          <lineSegments geometry={featureEdgesGeometry} frustumCulled={true}>
+            <lineBasicMaterial
+              color="#000000"
               toneMapped={false}
               polygonOffset={true}
               polygonOffsetFactor={-10}
@@ -400,25 +394,17 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         {/* Wireframe mode - use clean edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
-              <SilhouetteEdges 
-                geometry={geometry} 
-                mesh={meshRef.current} 
-                staticFeatureEdges={featureEdgesGeometry} 
-                showHiddenEdges={showHiddenEdges}
-                controlsRef={controlsRef}
-                displayMode={displayStyle}
-              />
+            <SilhouetteEdges
+              geometry={geometry}
+              mesh={meshRef.current}
+              staticFeatureEdges={featureEdgesGeometry}
+              showHiddenEdges={showHiddenEdges}
+              controlsRef={controlsRef}
+              displayMode={displayStyle}
+            />
           ) : (
-            <lineSegments 
-              geometry={cleanEdgesGeometry}
-              key={`wireframe-edges-${showHiddenEdges}`}
-            >
-              <lineBasicMaterial 
-                color="#000000" 
-                toneMapped={false}
-                depthTest={!showHiddenEdges}
-                depthWrite={false}
-              />
+            <lineSegments geometry={cleanEdgesGeometry} key={`wireframe-edges-${showHiddenEdges}`}>
+              <lineBasicMaterial color="#000000" toneMapped={false} depthTest={!showHiddenEdges} depthWrite={false} />
             </lineSegments>
           ))}
       </group>
