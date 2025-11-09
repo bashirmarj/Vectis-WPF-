@@ -38,6 +38,10 @@ interface FileWithQuantity {
   };
   quote?: any;
   isAnalyzing?: boolean;
+  uploadProgress?: number; // 0-100 for storage upload phase
+  analysisProgress?: number; // 0-100 for analysis phase
+  uploadSpeed?: number; // bytes per second
+  analysisStatus?: string; // Status message for analysis phase
 }
 
 export const PartUploadForm = () => {
@@ -76,52 +80,125 @@ export const PartUploadForm = () => {
     fetchProcesses();
   }, []);
 
-  // ✅ FIXED: Analyze file using Supabase Edge Function
+  // ✅ FIXED: Analyze file using Supabase Edge Function with progress tracking
   const analyzeFile = async (fileWithQty: FileWithQuantity, index: number) => {
     try {
-      setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, isAnalyzing: true } : f)));
+      setFiles((prev) => prev.map((f, i) => (i === index ? { 
+        ...f, 
+        isAnalyzing: true, 
+        uploadProgress: 0,
+        analysisProgress: 0,
+        analysisStatus: 'Preparing upload...'
+      } : f)));
 
       console.log(`📤 Sending ${fileWithQty.file.name} to edge function (may take 30-60s on first use)...`);
 
-      // Step 1: Upload to Supabase Storage first
+      // Step 1: Upload to Supabase Storage with progress tracking using XMLHttpRequest
       const fileExt = fileWithQty.file.name.split('.').pop()?.toLowerCase() || 'step';
       const fileName = `${Date.now()}_${fileWithQty.file.name}`;
       const filePath = `uploads/${fileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Get the upload URL from Supabase
+      const { data: uploadUrlData, error: uploadUrlError } = await supabase.storage
         .from('cad-files')
-        .upload(filePath, fileWithQty.file, {
-          contentType: 'model/step', // ✅ Explicitly set correct MIME type
-          upsert: true
+        .createSignedUploadUrl(filePath);
+
+      if (uploadUrlError) throw new Error(`Failed to create upload URL: ${uploadUrlError.message}`);
+
+      // Upload with progress tracking using XMLHttpRequest
+      const uploadStartTime = Date.now();
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let lastLoaded = 0;
+        let lastTime = uploadStartTime;
+
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            const currentTime = Date.now();
+            const timeDiff = (currentTime - lastTime) / 1000; // seconds
+            const bytesDiff = event.loaded - lastLoaded;
+            const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+
+            setFiles((prev) => prev.map((f, i) => (i === index ? { 
+              ...f, 
+              uploadProgress: progress,
+              uploadSpeed: speed,
+              analysisStatus: `Uploading... ${progress}%`
+            } : f)));
+
+            lastLoaded = event.loaded;
+            lastTime = currentTime;
+          }
         });
 
-      if (uploadError) {
-        // Check if it's a MIME type error
-        if (uploadError.message.includes('mime') || uploadError.message.includes('MIME')) {
-          throw new Error(`File type not supported. Please ensure you're uploading a valid STEP (.step, .stp) or IGES (.iges, .igs) file. Error: ${uploadError.message}`);
-        }
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setFiles((prev) => prev.map((f, i) => (i === index ? { 
+              ...f, 
+              uploadProgress: 100,
+              analysisStatus: 'Upload complete, preparing analysis...'
+            } : f)));
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        });
 
-      // Step 2: Create signed URL (for public bucket, this could be a simple public URL too)
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+
+        xhr.open('PUT', uploadUrlData.signedUrl);
+        xhr.setRequestHeader('Content-Type', 'model/step');
+        xhr.send(fileWithQty.file);
+      });
+
+      // Step 2: Create signed URL for analysis
       const { data: urlData, error: urlError } = await supabase.storage
-        .from('cad-files') // ✅ FIXED: Changed from 'trained-models' to 'cad-files'
+        .from('cad-files')
         .createSignedUrl(filePath, 3600); // 1 hour expiry
 
       if (urlError) {
         throw new Error(`Failed to create signed URL: ${urlError.message}`);
       }
 
-      // Step 3: Call edge function
+      // Step 3: Call edge function with simulated progress updates
+      // Simulate analysis progress updates (estimated based on typical processing time)
+      const progressInterval = setInterval(() => {
+        setFiles((prev) => prev.map((f, i) => {
+          if (i !== index) return f;
+          const currentProgress = f.analysisProgress || 0;
+          if (currentProgress >= 95) return f; // Cap at 95% until complete
+          
+          // Increment progress gradually
+          const newProgress = Math.min(95, currentProgress + 5);
+          const status = 
+            newProgress < 30 ? 'Processing geometry...' :
+            newProgress < 60 ? 'Extracting features...' :
+            newProgress < 80 ? 'Running ML analysis...' :
+            'Finalizing results...';
+          
+          return { ...f, analysisProgress: newProgress, analysisStatus: status };
+        }));
+      }, 1500); // Update every 1.5 seconds
+
+      setFiles((prev) => prev.map((f, i) => (i === index ? { 
+        ...f, 
+        analysisProgress: 0,
+        analysisStatus: 'Processing geometry...'
+      } : f)));
+
       const { data: result, error } = await supabase.functions.invoke("analyze-cad", {
         body: {
           fileUrl: urlData.signedUrl,
           fileName: fileWithQty.file.name,
-          fileSize: fileWithQty.file.size,   // ✅ Add file size
+          fileSize: fileWithQty.file.size,
           fileType: fileExt,
           material: fileWithQty.material,
         },
       });
+
+      clearInterval(progressInterval);
 
       if (error) {
         throw new Error(error.message || "Edge function error");
@@ -180,6 +257,9 @@ export const PartUploadForm = () => {
                 meshData, // ✅ Direct mesh data for 3D viewer
                 analysis, // For FeatureTree and analysis display
                 isAnalyzing: false,
+                uploadProgress: 100,
+                analysisProgress: 100,
+                analysisStatus: 'Complete',
               }
             : f,
         ),
@@ -193,7 +273,13 @@ export const PartUploadForm = () => {
       });
     } catch (error: any) {
       console.error("❌ Error analyzing file:", error);
-      setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, isAnalyzing: false } : f)));
+      setFiles((prev) => prev.map((f, i) => (i === index ? { 
+        ...f, 
+        isAnalyzing: false,
+        uploadProgress: 0,
+        analysisProgress: 0,
+        analysisStatus: 'Failed',
+      } : f)));
       toast({
         title: "Analysis Failed",
         description: error.message || "Backend may be waking up - please try again",
