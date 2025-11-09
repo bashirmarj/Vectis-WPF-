@@ -389,8 +389,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               color="#000000" 
               toneMapped={false}
               polygonOffset={true}
-              polygonOffsetFactor={-2}
-              polygonOffsetUnits={-2}
+              polygonOffsetFactor={-10}
+              polygonOffsetUnits={-10}
               depthTest={true}
               depthWrite={false}
             />
