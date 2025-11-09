@@ -25,7 +25,7 @@ import numpy as np
 # OpenCascade imports
 from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.TopExp import TopExp_Explorer, topexp_MapShapesAndAncestors
+from OCC.Core.TopExp import TopExp_Explorer, topexp
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.TopoDS import topods
@@ -100,10 +100,10 @@ class AttributedAdjacencyGraph:
         
         # Build edge-to-face map
         edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-        topexp_MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+        topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
         
         # Build adjacency relationships
-        for edge_idx in range(1, edge_face_map.Extent() + 1):
+        for edge_idx in range(1, edge_face_map.Size() + 1):
             edge = edge_face_map.FindKey(edge_idx)
             faces = edge_face_map.FindFromIndex(edge_idx)
             
