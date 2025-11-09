@@ -74,6 +74,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     // Create single unified geometry - ALWAYS USE INDEXED GEOMETRY
     // This is critical for smooth shading and vertex normal sharing
     const geometry = (() => {
+      if (!meshData?.vertices || !meshData?.indices || !meshData?.normals) {
+        console.warn("⚠️ Missing mesh data - creating fallback geometry");
+        return new THREE.BufferGeometry();
+      }
+
       const geo = new THREE.BufferGeometry();
 
       // ALWAYS use indexed geometry (vertices shared across triangles)
@@ -127,7 +132,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           geometry.attributes.color.needsUpdate = true;
         }
       } else {
-        if (geometry.attributes.color) {
+        if (geometry?.attributes?.color) {
           geometry.deleteAttribute("color");
         }
       }
