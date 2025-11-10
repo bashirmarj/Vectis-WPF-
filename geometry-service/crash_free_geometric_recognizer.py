@@ -961,15 +961,21 @@ class ExtendedCrashFreeRecognizer:
 
 
 # Flask wrapper
-class FlaskExtendedRecognizer:
-    """Flask-compatible wrapper"""
+class FlaskCrashFreeRecognizer:
+    """Flask-compatible wrapper for geometric feature recognition"""
     
-    def __init__(self, time_limit: float = 30.0):
+    def __init__(self, time_limit: float = 30.0, memory_limit_mb: int = 2000):
+        self.time_limit = time_limit
+        self.memory_limit_mb = memory_limit_mb  # Add for compatibility with app.py
         self.recognizer = ExtendedCrashFreeRecognizer(time_limit=time_limit)
     
     def recognize_features(self, step_file_path: str) -> Dict[str, Any]:
-        """Recognize features - Extended version"""
+        """Recognize features using extended geometric recognition"""
         return self.recognizer.recognize_features(step_file_path)
+
+
+# Backward compatibility alias (in case anything else references the old name)
+FlaskExtendedRecognizer = FlaskCrashFreeRecognizer
 
 
 # CLI testing
