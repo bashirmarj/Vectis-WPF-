@@ -9,7 +9,7 @@ interface DimensionAnnotationProps {
 
 export const DimensionAnnotation: React.FC<DimensionAnnotationProps> = ({ measurement }) => {
   const { geometries, labelPosition } = useMemo(() => {
-    if (measurement.type === 'edge-select' && measurement.metadata?.edgeStart && measurement.metadata?.edgeEnd) {
+    if (measurement.type === 'measure' && measurement.metadata?.edgeStart && measurement.metadata?.edgeEnd) {
       const start = new THREE.Vector3(
         measurement.metadata.edgeStart[0],
         measurement.metadata.edgeStart[1],

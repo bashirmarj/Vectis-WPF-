@@ -160,8 +160,8 @@ export function AdvancedMeasurementTool({
     let value = 0;
     let unit: 'mm' | 'deg' = 'mm';
     
-    // For edge-select, calculate distance between points
-    if (activeTool === 'edge-select' && points.length >= 2) {
+    // For measure tool, calculate distance between points
+    if (activeTool === 'measure' && points.length >= 2) {
       value = calculateDistance(points[0].position, points[1].position);
     }
     

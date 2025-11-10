@@ -59,7 +59,8 @@ export const MeasurementRenderer: React.FC = () => {
   const renderMeasurement = (measurement: Measurement) => {
     if (!measurement.visible || measurement.points.length === 0) return null;
 
-    if (measurement.type === "face-to-face") {
+    // Check measurement subtype for unified "measure" type
+    if (measurement.metadata?.measurementSubtype === "face-point") {
       return renderFaceToFaceMeasurement(measurement);
     }
     

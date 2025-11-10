@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import * as THREE from "three";
 
-export type MeasurementType = "edge-select" | "face-to-face" | "measure"; // Smart Edge Select: Auto-detect line/arc/circle | Face-to-face distance | Face measurement (reference implementation)
+export type MeasurementType = "measure"; // Unified measurement: Edge dimensions OR face point-to-point with angle
 
 export type SnapType = "vertex" | "edge" | "midpoint" | "center" | "intersection" | "face";
 
@@ -35,6 +35,7 @@ export interface Measurement {
   visible: boolean;
   createdAt: Date;
   metadata?: {
+    measurementSubtype?: "edge" | "face-point";
     deltaX?: number;
     deltaY?: number;
     deltaZ?: number;
@@ -49,7 +50,7 @@ export interface Measurement {
     axis?: THREE.Vector3;
     faceVertices?: number[];
     backendMatch: boolean;
-    // Face-to-face metadata
+    // Face-to-face metadata (legacy)
     faceId?: number;
     faceType?: "internal" | "external" | "through" | "planar";
     surfaceType?: "cylinder" | "plane" | "other";
@@ -59,6 +60,9 @@ export interface Measurement {
     face1Id?: number;
     face2Id?: number;
     distanceType?: "plane-to-plane" | "cylinder-to-cylinder" | "plane-to-cylinder" | "point-to-point";
+    // Face point-to-point metadata
+    facesAngle?: number;
+    parallelFacesDistance?: number | null;
   };
 }
 

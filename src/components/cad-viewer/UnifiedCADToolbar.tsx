@@ -8,11 +8,10 @@ import {
   Box,
   Grid3x3,
   Package,
-  Circle,
   ZoomIn,
   Layers,
   X,
-  Square,
+  Eye as EyeIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,9 +42,9 @@ interface UnifiedCADToolbarProps {
   showEdges: boolean;
   onToggleEdges: () => void;
 
-  // Measurement - Smart Edge Select, Face-to-Face, and Face Measurement
-  measurementMode: "edge-select" | "face-to-face" | "measure" | null;
-  onMeasurementModeChange: (mode: "edge-select" | "face-to-face" | "measure" | null) => void;
+  // Measurement - Unified measurement tool
+  measurementMode: "measure" | null;
+  onMeasurementModeChange: (mode: "measure" | null) => void;
   measurementCount?: number;
   onClearMeasurements?: () => void;
 
@@ -204,7 +203,7 @@ export function UnifiedCADToolbar({
                 onClick={() => onDisplayModeChange("translucent")}
                 className={cn(displayMode === "translucent" && "bg-accent")}
               >
-                <Circle className="mr-2 h-4 w-4" />
+                <EyeIcon className="mr-2 h-4 w-4" />
                 Translucent
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -220,51 +219,15 @@ export function UnifiedCADToolbar({
 
           <Separator orientation="vertical" className="h-6" />
 
-          {/* Measurement Tools */}
-          <Button
-            variant={measurementMode === "edge-select" ? "default" : "ghost"}
-            size="sm"
-            className="h-9 w-9 p-0 relative"
-            title="Edge Measurement (Click edges to measure)"
-            onClick={() => onMeasurementModeChange(measurementMode === "edge-select" ? null : "edge-select")}
-          >
-            <Ruler className="h-4 w-4" />
-            {measurementMode === "edge-select" && measurementCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-              >
-                {measurementCount}
-              </Badge>
-            )}
-          </Button>
-
-          <Button
-            variant={measurementMode === "face-to-face" ? "default" : "ghost"}
-            size="sm"
-            className="h-9 w-9 p-0 relative"
-            title="Face-to-Face Measurement (Click two faces)"
-            onClick={() => onMeasurementModeChange(measurementMode === "face-to-face" ? null : "face-to-face")}
-          >
-            <Square className="h-4 w-4" />
-            {measurementMode === "face-to-face" && measurementCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-              >
-                {measurementCount}
-              </Badge>
-            )}
-          </Button>
-
+          {/* Unified Measurement Tool */}
           <Button
             variant={measurementMode === "measure" ? "default" : "ghost"}
             size="sm"
             className="h-9 w-9 p-0 relative"
-            title="Face Measurement (Point-to-point with angle)"
+            title="Measure Tool (Click edge for dimensions, or click 2 points on faces for distance/angle)"
             onClick={() => onMeasurementModeChange(measurementMode === "measure" ? null : "measure")}
           >
-            <Circle className="h-4 w-4" />
+            <Ruler className="h-4 w-4" />
             {measurementMode === "measure" && measurementCount > 0 && (
               <Badge
                 variant="destructive"

@@ -16,12 +16,8 @@ import { OrientationCubeViewport } from "./cad-viewer/OrientationCubeViewport";
 import { AxisTriadInCanvas } from "./cad-viewer/AxisTriadInCanvas";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
-import { ProfessionalMeasurementTool } from "./cad-viewer/ProfessionalMeasurementTool";
-import { MeasurementRenderer } from "./cad-viewer/MeasurementRenderer";
+import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
-import { FaceMeasurementTool } from "./cad-viewer/FaceMeasurementTool";
-import { FaceMeasurementPanel } from "./cad-viewer/measurements/FaceMeasurementPanel";
-import { type MarkerValues } from "@/lib/faceMeasurementUtils";
 import { useMeasurementStore } from "@/stores/measurementStore";
 
 interface CADViewerProps {
@@ -96,9 +92,6 @@ export function CADViewer({
   const [sectionPosition, setSectionPosition] = useState(0);
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
-  const [faceMeasurements, setFaceMeasurements] = useState<MarkerValues | null>(null);
-  const [faceMarkerCount, setFaceMarkerCount] = useState(0);
-  const [faceResetTrigger, setFaceResetTrigger] = useState(0);
 
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
@@ -436,16 +429,6 @@ export function CADViewer({
     [], // ✅ CRITICAL FIX: Empty array - refs don't need dependencies
   );
 
-  // Handle new face measurement
-  const handleNewFaceMeasurement = useCallback(() => {
-    setFaceResetTrigger((prev) => prev + 1);
-  }, []);
-
-  // Handle face measurements change (stable reference)
-  const handleFaceMeasurementsChange = useCallback((measurements: MarkerValues | null, count: number) => {
-    setFaceMeasurements(measurements);
-    setFaceMarkerCount(count);
-  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -465,7 +448,7 @@ export function CADViewer({
           }
           break;
         case "m":
-          setActiveTool(activeTool ? null : "edge-select");
+          setActiveTool(activeTool ? null : "measure");
           break;
         case "escape":
           setActiveTool(null);
@@ -574,28 +557,17 @@ export function CADViewer({
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* Professional Measurement Tool (Edge & Face-to-Face) */}
-                <ProfessionalMeasurementTool
+                {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
+                <UnifiedMeasurementTool
                   meshData={meshData}
                   meshRef={meshRef.current?.mesh || null}
                   featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                  enabled={activeTool === "edge-select" || activeTool === "face-to-face"}
-                />
-
-                {/* Face Measurement Tool (Reference Implementation) */}
-                <FaceMeasurementTool
                   enabled={activeTool === "measure"}
-                  meshRef={meshRef.current?.mesh || null}
                   boundingSphere={{
                     center: boundingBox.center,
                     radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
                   }}
-                  onMeasurementsChange={handleFaceMeasurementsChange}
-                  resetTrigger={faceResetTrigger}
                 />
-
-                {/* Measurement Renderer */}
-                <MeasurementRenderer />
 
                 <TrackballControls
                   ref={controlsRef}
@@ -629,15 +601,6 @@ export function CADViewer({
               onRotateClockwise={() => handleRotateCamera("cw")}
               onRotateCounterClockwise={() => handleRotateCamera("ccw")}
             />
-
-            {/* ✅ Face Measurement Panel (outside Canvas) */}
-            {activeTool === "measure" && (
-              <FaceMeasurementPanel
-                markerCount={faceMarkerCount}
-                measurements={faceMeasurements}
-                onNewMeasurement={handleNewFaceMeasurement}
-              />
-            )}
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />

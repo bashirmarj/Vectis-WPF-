@@ -238,11 +238,19 @@ export function MeasurementPanel() {
                           </div>
                         )}
 
-                        {/* Show edge type metadata for edge-select measurements */}
-                        {measurement.type === "edge-select" && measurement.metadata?.edgeType && (
+                        {/* Show edge type or face-point metadata */}
+                        {measurement.type === "measure" && measurement.metadata?.measurementSubtype === "edge" && measurement.metadata?.edgeType && (
                           <div className="text-xs text-muted-foreground mt-1">
                             Type: {measurement.metadata.edgeType.toUpperCase()}
                             {measurement.metadata.arcRadius && ` | R: ${measurement.metadata.arcRadius.toFixed(2)}mm`}
+                          </div>
+                        )}
+                        
+                        {measurement.type === "measure" && measurement.metadata?.measurementSubtype === "face-point" && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Angle: {measurement.metadata.facesAngle?.toFixed(1)}°
+                            {measurement.metadata.parallelFacesDistance !== null && measurement.metadata.parallelFacesDistance !== undefined && 
+                              ` | ⊥: ${measurement.metadata.parallelFacesDistance.toFixed(2)}mm`}
                           </div>
                         )}
                       </div>
