@@ -450,7 +450,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
             <line key={idx}>
               <bufferGeometry>
                 <bufferAttribute
-                  attach="attributes-position"
+                  attach="position"
                   count={2}
                   array={new Float32Array([
                     ...segment.start.toArray(),
