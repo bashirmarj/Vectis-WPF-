@@ -2258,13 +2258,13 @@ def analyze_cad():
                 'indices': mesh_data['indices'],
                 'normals': mesh_data['normals'],
                 'vertex_count': mesh_data['vertex_count'],
-                'triangle_count': mesh_data['triangle_count']
+                'triangle_count': mesh_data['triangle_count'],
+                'tagged_edges': edge_data.get('tagged_edges', []),
+                'edge_classifications': edge_data.get('edge_classifications', []),
+                'feature_edges': edge_data.get('feature_edges', []),
+                'iso_curves': edge_data.get('iso_curves', [])
             },
             'vertex_colors': vertex_colors,
-            'feature_edges': edge_data.get('feature_edges', []),
-            'edge_classifications': edge_data.get('edge_classifications', []),
-            'tagged_edges': edge_data.get('tagged_edges', []),
-            'iso_curves': edge_data.get('iso_curves', []),
             'geometric_features': geometric_features,
             
             'processing_tier': processing_tier.value,
