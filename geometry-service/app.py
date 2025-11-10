@@ -185,7 +185,7 @@ class ProcessingError:
 # ============================================================================
 # CIRCUIT BREAKER - Using standalone module (circuit_breaker.py)
 # ============================================================================
-# Circuit breaker is now imported from circuit_breaker module as aagnet_circuit_breaker
+# Circuit breaker is now imported from circuit_breaker module as geometric_circuit_breaker
 
 # ============================================================================
 # DEAD LETTER QUEUE - Using standalone module (dead_letter_queue.py)
@@ -2159,7 +2159,7 @@ def analyze_cad():
         processing_tier = degradation.select_tier(
             feature_recognition_available=FEATURE_RECOGNITION_AVAILABLE,
             quality_score=validation_result.quality_score,
-            circuit_breaker_state=aagnet_circuit_breaker.get_state()["state"]
+            circuit_breaker_state=geometric_circuit_breaker.get_state()["state"]
         )
         
         logger.info(f"[{request_id}] Selected processing tier: {processing_tier.value}")
@@ -2206,7 +2206,7 @@ def analyze_cad():
             edge_data['tagged_edges'] = []
         
         # ====================================================================
-        # ML FEATURE RECOGNITION (Tier 1 only)
+        # GEOMETRIC FEATURE RECOGNITION (Tier 1 only)
         # ====================================================================
         
         geometric_features = None
@@ -2300,7 +2300,7 @@ def analyze_cad():
             "processing_time": processing_time,
             "quality_score": validation_result.quality_score,
             "recognition_status": recognition_status,
-            "feature_count": ml_features['num_features_detected'] if ml_features else 0
+            "feature_count": geometric_features['num_features_detected'] if geometric_features else 0
         })
         
         logger.info(f"✅ Analysis complete in {processing_time:.2f}s (request_id: {request_id})")
@@ -2416,7 +2416,7 @@ def root():
 @app.route("/health")
 def health():
     """Health check endpoint"""
-    circuit_state = aagnet_circuit_breaker.get_state()
+    circuit_state = geometric_circuit_breaker.get_state()
     
     health_status = {
         "status": "healthy" if circuit_state["state"] == "CLOSED" else "degraded",
@@ -2433,7 +2433,7 @@ def health():
 @app.route("/metrics")
 def metrics():
     """Production metrics endpoint for monitoring"""
-    circuit_state = aagnet_circuit_breaker.get_state()
+    circuit_state = geometric_circuit_breaker.get_state()
     dlq_stats = dlq.get_failure_statistics()
     
     try:
@@ -2493,16 +2493,16 @@ def metrics():
 @app.route("/circuit-breaker", methods=["GET"])
 def circuit_breaker_status():
     """Get detailed circuit breaker status"""
-    return jsonify(aagnet_circuit_breaker.get_state())
+    return jsonify(geometric_circuit_breaker.get_state())
 
 @app.route("/circuit-breaker/reset", methods=["POST"])
 def reset_circuit_breaker():
     """Manually reset circuit breaker to CLOSED state"""
-    aagnet_circuit_breaker.reset()
+    geometric_circuit_breaker.reset()
     return jsonify({
         "status": "reset",
         "message": "Circuit breaker manually reset to CLOSED state",
-        "new_state": aagnet_circuit_breaker.get_state()
+        "new_state": geometric_circuit_breaker.get_state()
     })
 
 @app.route("/dlq/stats")
