@@ -1304,21 +1304,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             'smooth_edges_skipped': 0,
             'internal_edges_skipped': 0,
             'total_processed': 0,
-            'iso_curves': 0,
-            'duplicate_edges_skipped': 0
+            'iso_curves': 0
         }
-        
-        # Deduplicate edges using geometric hash
-        edge_hash_map = {}  # hash -> edge data
-        
-        def edge_hash(start, end):
-            """Create geometric hash for edge deduplication"""
-            # Sort endpoints to ensure same edge has same hash regardless of direction
-            p1 = (round(start.X(), 6), round(start.Y(), 6), round(start.Z(), 6))
-            p2 = (round(end.X(), 6), round(end.Y(), 6), round(end.Z(), 6))
-            if p1 > p2:
-                p1, p2 = p2, p1
-            return (p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
         
         debug_logged = 0
         max_debug_logs = 10
@@ -1404,25 +1391,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     edge_explorer.Next()
                     continue
                 
-                # ===== DEDUPLICATION CHECK =====
-                # Skip deduplication for circles (closed curves have start == end)
-                is_closed_circle = (curve_type == GeomAbs_Circle and 
-                                    start_point.Distance(end_point) < 0.001)
-                
-                if not is_closed_circle:
-                    edge_key = edge_hash(start_point, end_point)
-                    
-                    if edge_key in edge_hash_map:
-                        # Duplicate edge - skip it
-                        stats['duplicate_edges_skipped'] += 1
-                        if debug_logged < max_debug_logs:
-                            logger.debug(f"⏭️  Skipping duplicate edge: {edge_key}")
-                            debug_logged += 1
-                        edge_explorer.Next()
-                        continue
-                    
-                    # Mark this edge as seen
-                    edge_hash_map[edge_key] = True
+                # Deduplication removed - handled in frontend for better circular edge support
                 
                 # ===== OUTPUT 1: Feature edges for rendering =====
                 feature_edges.append(points)

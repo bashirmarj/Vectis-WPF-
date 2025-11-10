@@ -140,16 +140,38 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
-      // PRIORITY: Use tagged_edges with iso_type filtering to remove UIso/VIso construction lines
+      // PRIORITY: Use tagged_edges with frontend deduplication
       if (meshData?.tagged_edges && Array.isArray(meshData.tagged_edges) && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
+        const edgeMap = new Map<string, boolean>(); // Hash map for deduplication
+        
+        // Helper function to create edge hash
+        const createEdgeHash = (start: number[], end: number[]) => {
+          // Round to 3 decimal places (0.001mm tolerance)
+          const s = start.map(v => v.toFixed(3));
+          const e = end.map(v => v.toFixed(3));
+          
+          // Sort endpoints to handle reversed edges
+          const [p1, p2] = s < e ? [s, e] : [e, s];
+          return `${p1.join(',')}_${p2.join(',')}`;
+        };
 
         meshData.tagged_edges.forEach((edge) => {
-          // Render ALL edges including UIso/VIso parametric curves (796 total segments)
           if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
-            featureEdgePositions.push(edge.start[0], edge.start[1], edge.start[2], edge.end[0], edge.end[1], edge.end[2]);
+            const hash = createEdgeHash(edge.start, edge.end);
+            
+            // Skip if we've already seen this exact segment
+            if (!edgeMap.has(hash)) {
+              edgeMap.set(hash, true);
+              featureEdgePositions.push(
+                edge.start[0], edge.start[1], edge.start[2],
+                edge.end[0], edge.end[1], edge.end[2]
+              );
+            }
           }
         });
+
+        console.log(`✅ Frontend dedupe: ${meshData.tagged_edges.length} backend segments → ${edgeMap.size} unique segments`);
 
         if (featureEdgePositions.length > 0) {
           const geo = new THREE.BufferGeometry();
