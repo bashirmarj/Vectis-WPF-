@@ -1304,6 +1304,84 @@ class ExtendedCrashFreeRecognizer:
         # Placeholder - to be implemented
         logger.info("    ⚠️ Countersink detection not yet implemented")
     
+    def _detect_counterbore_countersink(self):
+        """
+        Detect counterbore and countersink features.
+
+        Counterbore (cylindrical):
+        - Larger diameter cylindrical recess at hole entrance
+        - Used for socket head cap screws
+        - Two coaxial cylinders (hole + counterbore)
+
+        Countersink (conical):
+        - Conical enlargement at hole entrance  
+        - Used for flathead screws
+        - Cone + cylinder coaxial
+
+        Common in: Fastener applications, mechanical assemblies
+        """
+        logger.info("  🔍 Counterbore/Countersink features...")
+        logger.info("    ⚠️ Counterbore/countersink detection not yet implemented")
+        
+        # TODO: Implementation plan:
+        # 1. Find coaxial features (cylinder-cylinder or cone-cylinder)
+        # 2. Check diameter relationship (larger on top for counterbore)
+        # 3. Validate depth ratios
+        # 4. Classify based on geometry (cylindrical = counterbore, conical = countersink)
+    
+    def _detect_threads(self):
+        """
+        Detect threaded features (internal and external).
+
+        Characteristics:
+        - Helical ridges on cylindrical surface
+        - Regular pitch (distance between threads)
+        - V-shaped or trapezoidal profile
+
+        Types:
+        - External threads (bolts, screws)
+        - Internal threads (tapped holes)
+        - Metric, UNC, UNF standards
+
+        Common in: Fasteners, threaded rods, tapped holes
+
+        Note: Thread geometry is often simplified in STEP files
+        """
+        logger.info("  🔍 Thread features...")
+        logger.info("    ⚠️ Thread detection not yet implemented")
+        
+        # TODO: Implementation plan:
+        # 1. Look for cylindrical faces with helical edges
+        # 2. Analyze edge patterns for regular pitch
+        # 3. Measure thread depth and profile
+        # 4. Classify as internal/external
+        # 5. Estimate thread standard (M, UNC, etc.)
+    
+    def _detect_grooves(self):
+        """
+        Detect groove features.
+
+        Types:
+        - O-ring grooves (rectangular or trapezoidal)
+        - Retaining ring grooves (C-clip grooves)
+        - V-grooves (for belts, sealing)
+
+        Characteristics:
+        - Narrow rectangular or shaped recess
+        - Typically on cylindrical surfaces
+        - Regular cross-section profile
+
+        Common in: Sealing applications, assembly retention
+        """
+        logger.info("  🔍 Groove features...")
+        logger.info("    ⚠️ Groove detection not yet implemented")
+        
+        # TODO: Implementation plan:
+        # 1. Find narrow rectangular pockets on cylinders
+        # 2. Check width-to-depth ratio (grooves are narrow)
+        # 3. Classify by profile (rectangular, trapezoidal, V)
+        # 4. Determine purpose (O-ring, retaining ring, etc.)
+    
     def _generate_summary(self) -> Dict[str, int]:
         """Feature summary"""
         summary = defaultdict(int)
