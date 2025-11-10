@@ -42,7 +42,7 @@ interface MeshData {
   feature_edges?: number[][][];
   edge_classifications?: Array<{
     id: number;
-    type: 'line' | 'circle' | 'arc';
+    type: "line" | "circle" | "arc";
     start_point: [number, number, number];
     end_point: [number, number, number];
     diameter?: number;
@@ -55,7 +55,7 @@ interface MeshData {
     feature_id: number;
     start: [number, number, number];
     end: [number, number, number];
-    type: 'line' | 'circle' | 'arc';
+    type: "line" | "circle" | "arc";
     diameter?: number;
     radius?: number;
     length?: number;
@@ -76,14 +76,20 @@ interface MeshData {
   };
 }
 
-export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebarCollapsed = false, onMeshLoaded }: CADViewerProps) {
+export function CADViewer({
+  meshData: propMeshData,
+  fileUrl,
+  fileName,
+  isSidebarCollapsed = false,
+  onMeshLoaded,
+}: CADViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [meshData, setMeshData] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
   const [showSolidEdges, setShowSolidEdges] = useState(true);
   const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
-  
+
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
@@ -93,7 +99,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
   const [faceMeasurements, setFaceMeasurements] = useState<MarkerValues | null>(null);
   const [faceMarkerCount, setFaceMarkerCount] = useState(0);
   const [faceResetTrigger, setFaceResetTrigger] = useState(0);
-  
+
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);
@@ -123,34 +129,36 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
         hasNormals: !!propMeshData.normals,
         triangleCount: propMeshData.triangle_count,
       });
-      
+
       // CRITICAL: Validate mesh data has required fields before proceeding
       if (!propMeshData.vertices || !propMeshData.indices || !propMeshData.normals) {
         console.error("❌ CADViewer: Invalid mesh data - missing vertices, indices, or normals");
-        setError("CAD file analysis incomplete - mesh data not available. The backend encountered an error during processing.");
+        setError(
+          "CAD file analysis incomplete - mesh data not available. The backend encountered an error during processing.",
+        );
         setIsLoading(false);
         return;
       }
-      
+
       // 🔍 DIAGNOSTIC: Check edge and feature data
       const geometricFeatures = propMeshData?.geometric_features;
       const featureInstances = geometricFeatures?.feature_instances;
-      
+
       console.log("🔍 Backend mesh data received:", {
         hasTaggedEdges: !!propMeshData?.tagged_edges,
         taggedEdgesCount: propMeshData?.tagged_edges?.length || 0,
         taggedEdgesSample: propMeshData?.tagged_edges?.[0],
-        
+
         hasGeometricFeatures: !!geometricFeatures,
         geometricFeaturesKeys: geometricFeatures ? Object.keys(geometricFeatures) : [],
         geometricInstancesCount: Array.isArray(featureInstances) ? featureInstances.length : 0,
-        
+
         hasEdgeClassifications: !!propMeshData?.edge_classifications,
         edgeClassificationsCount: propMeshData?.edge_classifications?.length || 0,
-        
-        allKeys: propMeshData ? Object.keys(propMeshData) : []
+
+        allKeys: propMeshData ? Object.keys(propMeshData) : [],
       });
-      
+
       setMeshData(propMeshData);
       onMeshLoaded?.(propMeshData);
       setIsLoading(false);
@@ -334,14 +342,14 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
   // ✅ Throttled camera rotation for performance
   const lastRotateTime = useRef(0);
   const THROTTLE_MS = 16; // 60fps
-  
+
   const handleRotateCamera = useCallback(
     (direction: "up" | "down" | "left" | "right" | "cw" | "ccw") => {
       // Throttle camera updates
       const now = performance.now();
       if (now - lastRotateTime.current < THROTTLE_MS) return;
       lastRotateTime.current = now;
-      
+
       if (!cameraRef.current || !controlsRef.current) return;
 
       console.log("🎯 Rotating camera:", direction);
@@ -430,7 +438,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
 
   // Handle new face measurement
   const handleNewFaceMeasurement = useCallback(() => {
-    setFaceResetTrigger(prev => prev + 1);
+    setFaceResetTrigger((prev) => prev + 1);
   }, []);
 
   // Handle face measurements change (stable reference)
@@ -523,7 +531,7 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
             />
 
             <Canvas
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: "100%", height: "100%" }}
               shadows
               gl={{
                 antialias: true,
@@ -550,37 +558,37 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
               <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
               <Suspense fallback={null}>
-                <ProfessionalLighting intensity={0.85} enableShadows={shadowsEnabled} shadowQuality="high" />
+                <ProfessionalLighting intensity={1.85} enableShadows={shadowsEnabled} shadowQuality="high" />
 
-              <MeshModel
-                ref={meshRef}
-                meshData={meshData}
-                displayStyle={displayMode}
-                showEdges={showSolidEdges}
-                showHiddenEdges={showWireframeHiddenEdges}
-                sectionPlane={sectionPlane || "none"}
-                sectionPosition={sectionPosition}
-                useSilhouetteEdges={displayMode === "wireframe"}
-                controlsRef={controlsRef}
-              />
+                <MeshModel
+                  ref={meshRef}
+                  meshData={meshData}
+                  displayStyle={displayMode}
+                  showEdges={showSolidEdges}
+                  showHiddenEdges={showWireframeHiddenEdges}
+                  sectionPlane={sectionPlane || "none"}
+                  sectionPosition={sectionPosition}
+                  useSilhouetteEdges={displayMode === "wireframe"}
+                  controlsRef={controlsRef}
+                />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
                 {/* Professional Measurement Tool (Edge & Face-to-Face) */}
-                <ProfessionalMeasurementTool 
-                  meshData={meshData} 
-                  meshRef={meshRef.current?.mesh || null} 
+                <ProfessionalMeasurementTool
+                  meshData={meshData}
+                  meshRef={meshRef.current?.mesh || null}
                   featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                  enabled={activeTool === 'edge-select' || activeTool === 'face-to-face'} 
+                  enabled={activeTool === "edge-select" || activeTool === "face-to-face"}
                 />
 
                 {/* Face Measurement Tool (Reference Implementation) */}
-                <FaceMeasurementTool 
-                  enabled={activeTool === 'measure'}
+                <FaceMeasurementTool
+                  enabled={activeTool === "measure"}
                   meshRef={meshRef.current?.mesh || null}
                   boundingSphere={{
                     center: boundingBox.center,
-                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2
+                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
                   }}
                   onMeasurementsChange={handleFaceMeasurementsChange}
                   resetTrigger={faceResetTrigger}
@@ -623,8 +631,8 @@ export function CADViewer({ meshData: propMeshData, fileUrl, fileName, isSidebar
             />
 
             {/* ✅ Face Measurement Panel (outside Canvas) */}
-            {activeTool === 'measure' && (
-              <FaceMeasurementPanel 
+            {activeTool === "measure" && (
+              <FaceMeasurementPanel
                 markerCount={faceMarkerCount}
                 measurements={faceMeasurements}
                 onNewMeasurement={handleNewFaceMeasurement}
