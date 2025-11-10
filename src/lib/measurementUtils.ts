@@ -11,6 +11,7 @@ export interface MeshData {
   triangle_count: number;
   feature_edges?: number[][][];
   edge_classifications?: BackendEdgeClassification[];  // Backend ground truth
+  tagged_edges?: BackendTaggedEdge[];  // Exact BREP edges from CAD
 }
 
 export interface SnapResult {
@@ -26,6 +27,10 @@ export interface SnapResult {
     center?: THREE.Vector3;
     startPoint?: THREE.Vector3;
     endPoint?: THREE.Vector3;
+    backendFeatureId?: number;
+    backendLength?: number;
+    backendDiameter?: number;
+    backendMatch?: boolean;
   };
 }
 
@@ -52,6 +57,17 @@ export interface BackendEdgeClassification {
   diameter?: number;
   center?: [number, number, number];
   segment_count: number;
+}
+
+export interface BackendTaggedEdge {
+  feature_id: number;
+  start: [number, number, number];
+  end: [number, number, number];
+  type: "line" | "arc" | "circle";
+  diameter?: number;
+  radius?: number;
+  length?: number;
+  iso_type?: string;
 }
 
 // Backend face classification with ground truth  
@@ -390,7 +406,94 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
   };
 }
 
+/**
+ * Snap to backend-provided tagged edges (exact CAD geometry)
+ * This uses BREP edges from backend, not mesh approximation
+ */
+export function snapToBackendEdge(
+  point: THREE.Vector3,
+  taggedEdges: BackendTaggedEdge[],
+  snapDistance: number = 2
+): SnapResult | null {
+  let closestPoint: THREE.Vector3 | null = null;
+  let minDistance = snapDistance;
+  let closestEdge: BackendTaggedEdge | null = null;
+
+  // Find closest tagged edge segment
+  for (const edge of taggedEdges) {
+    const start = new THREE.Vector3(edge.start[0], edge.start[1], edge.start[2]);
+    const end = new THREE.Vector3(edge.end[0], edge.end[1], edge.end[2]);
+    const line = new THREE.Line3(start, end);
+
+    const closestOnEdge = new THREE.Vector3();
+    line.closestPointToPoint(point, true, closestOnEdge);
+
+    const distance = point.distanceTo(closestOnEdge);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestPoint = closestOnEdge;
+      closestEdge = edge;
+    }
+  }
+
+  if (closestPoint && closestEdge) {
+    const start = new THREE.Vector3(closestEdge.start[0], closestEdge.start[1], closestEdge.start[2]);
+    const end = new THREE.Vector3(closestEdge.end[0], closestEdge.end[1], closestEdge.end[2]);
+
+    // Calculate center for arcs/circles
+    let center: THREE.Vector3 | undefined;
+    if ((closestEdge.type === "arc" || closestEdge.type === "circle") && closestEdge.radius) {
+      // Estimate center (midpoint perpendicular to chord)
+      const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+      const direction = new THREE.Vector3().subVectors(end, start).normalize();
+
+      // Perpendicular vector (simplified - assumes planar arc)
+      const perpendicular = new THREE.Vector3(-direction.y, direction.x, 0).normalize();
+
+      // For shallow arcs, center is approximately at midpoint + radius*perpendicular
+      const chordLength = start.distanceTo(end);
+      const sagitta = closestEdge.radius - Math.sqrt(closestEdge.radius**2 - (chordLength/2)**2);
+      center = midpoint.clone().add(perpendicular.multiplyScalar(sagitta));
+    }
+
+    return {
+      position: closestPoint,
+      normal: new THREE.Vector3(0, 1, 0),
+      surfaceType: "edge",
+      confidence: 1 - minDistance / snapDistance,
+      metadata: {
+        edgeType: closestEdge.type,
+        radius: closestEdge.radius,
+        center: center,
+        startPoint: start,
+        endPoint: end,
+        backendFeatureId: closestEdge.feature_id,
+        backendLength: closestEdge.length,
+        backendDiameter: closestEdge.diameter,
+        backendMatch: true,
+      },
+    };
+  }
+
+  return null;
+}
+
 export function snapToEdge(point: THREE.Vector3, meshData: MeshData, snapDistance: number = 2): SnapResult | null {
+  // ✅ PRIORITY: Use backend tagged edges if available (exact CAD geometry)
+  if (meshData.tagged_edges && meshData.tagged_edges.length > 0) {
+    console.log(`[Snap] Using ${meshData.tagged_edges.length} backend tagged edges`);
+    const backendResult = snapToBackendEdge(point, meshData.tagged_edges, snapDistance);
+
+    if (backendResult) {
+      console.log(`[Snap] Backend edge matched: type=${backendResult.metadata?.edgeType}, ` +
+                  `feature_id=${backendResult.metadata?.backendFeatureId}, ` +
+                  `radius=${backendResult.metadata?.radius?.toFixed(2)}`);
+      return backendResult;
+    }
+  }
+
+  // ❌ FALLBACK: Extract edges from mesh triangles (less accurate)
+  console.log('[Snap] No backend edges available, falling back to mesh extraction');
   const edges = extractEdges(meshData);
   let closestPoint: THREE.Vector3 | null = null;
   let minDistance = snapDistance;
@@ -425,6 +528,7 @@ export function snapToEdge(point: THREE.Vector3, meshData: MeshData, snapDistanc
         center: classification.center,
         startPoint: classification.start,
         endPoint: classification.end,
+        backendMatch: false,
       },
     };
   }
