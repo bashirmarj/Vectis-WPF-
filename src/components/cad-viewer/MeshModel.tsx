@@ -156,104 +156,22 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           return `${p1.join(',')}_${p2.join(',')}`;
         };
 
-        // Helper function to calculate dihedral angle from mesh faces
-        const calculateDihedralAngle = (edgeStart: number[], edgeEnd: number[]): number => {
-          if (!meshData?.indices || !meshData?.vertices) return 90; // Default to show edge
-
-          const edgeVec = new THREE.Vector3(
-            edgeEnd[0] - edgeStart[0],
-            edgeEnd[1] - edgeStart[1],
-            edgeEnd[2] - edgeStart[2]
-          ).normalize();
-
-          const adjacentFaces: THREE.Vector3[] = [];
-
-          // Find triangles that share this edge
-          for (let i = 0; i < meshData.indices.length; i += 3) {
-            const i0 = meshData.indices[i];
-            const i1 = meshData.indices[i + 1];
-            const i2 = meshData.indices[i + 2];
-
-            const v0 = new THREE.Vector3(
-              meshData.vertices[i0 * 3],
-              meshData.vertices[i0 * 3 + 1],
-              meshData.vertices[i0 * 3 + 2]
-            );
-            const v1 = new THREE.Vector3(
-              meshData.vertices[i1 * 3],
-              meshData.vertices[i1 * 3 + 1],
-              meshData.vertices[i1 * 3 + 2]
-            );
-            const v2 = new THREE.Vector3(
-              meshData.vertices[i2 * 3],
-              meshData.vertices[i2 * 3 + 1],
-              meshData.vertices[i2 * 3 + 2]
-            );
-
-            // Check if this triangle contains the edge (with tolerance)
-            const tolerance = 0.01;
-            const edgeStartVec = new THREE.Vector3(...edgeStart);
-            const edgeEndVec = new THREE.Vector3(...edgeEnd);
-
-            const hasEdge = 
-              (v0.distanceTo(edgeStartVec) < tolerance && v1.distanceTo(edgeEndVec) < tolerance) ||
-              (v1.distanceTo(edgeStartVec) < tolerance && v0.distanceTo(edgeEndVec) < tolerance) ||
-              (v1.distanceTo(edgeStartVec) < tolerance && v2.distanceTo(edgeEndVec) < tolerance) ||
-              (v2.distanceTo(edgeStartVec) < tolerance && v1.distanceTo(edgeEndVec) < tolerance) ||
-              (v2.distanceTo(edgeStartVec) < tolerance && v0.distanceTo(edgeEndVec) < tolerance) ||
-              (v0.distanceTo(edgeStartVec) < tolerance && v2.distanceTo(edgeEndVec) < tolerance);
-
-            if (hasEdge) {
-              // Calculate face normal
-              const e1 = new THREE.Vector3().subVectors(v1, v0);
-              const e2 = new THREE.Vector3().subVectors(v2, v0);
-              const normal = new THREE.Vector3().crossVectors(e1, e2).normalize();
-              adjacentFaces.push(normal);
-            }
-
-            if (adjacentFaces.length >= 2) break; // Found both faces
-          }
-
-          // Calculate angle between normals
-          if (adjacentFaces.length === 2) {
-            const dotProduct = Math.max(-1, Math.min(1, adjacentFaces[0].dot(adjacentFaces[1])));
-            const angleRad = Math.acos(dotProduct);
-            const angleDeg = angleRad * (180 / Math.PI);
-            return angleDeg;
-          }
-
-          return 90; // Default to showing edge if we can't determine angle
-        };
-
-        const ANGLE_THRESHOLD = 20; // Skip edges with angle < 20 degrees (smooth/seam edges)
-        let skippedSmooth = 0;
-        let totalEdges = 0;
-
         meshData.tagged_edges.forEach((edge) => {
           if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
-            totalEdges++;
             const hash = createEdgeHash(edge.start, edge.end);
             
-            // Skip if we've already seen this exact segment
+            // Simple deduplication - backend already filtered by angle
             if (!edgeMap.has(hash)) {
-              // Calculate dihedral angle for this edge
-              const angle = calculateDihedralAngle(edge.start, edge.end);
-              
-              // Only add edges with significant angle (skip smooth/seam edges)
-              if (angle > ANGLE_THRESHOLD) {
-                edgeMap.set(hash, true);
-                featureEdgePositions.push(
-                  edge.start[0], edge.start[1], edge.start[2],
-                  edge.end[0], edge.end[1], edge.end[2]
-                );
-              } else {
-                skippedSmooth++;
-              }
+              edgeMap.set(hash, true);
+              featureEdgePositions.push(
+                edge.start[0], edge.start[1], edge.start[2],
+                edge.end[0], edge.end[1], edge.end[2]
+              );
             }
           }
         });
 
-        console.log(`✅ Frontend filter: ${totalEdges} backend segments → ${edgeMap.size} sharp edges (skipped ${skippedSmooth} smooth/seam)`);
+        console.log(`✅ Rendering ${edgeMap.size} backend-filtered edges (deduplicated from ${meshData.tagged_edges.length} segments)`);
 
         if (featureEdgePositions.length > 0) {
           const geo = new THREE.BufferGeometry();

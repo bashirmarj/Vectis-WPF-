@@ -66,7 +66,7 @@ from OCC.Core.BRepGProp import brepgprop, BRepGProp_Face
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.gp import gp_Vec, gp_Pnt, gp_Dir
 from OCC.Core.ShapeFix import ShapeFix_Shape, ShapeFix_Solid
-from OCC.Core.ShapeAnalysis import ShapeAnalysis_Shell
+from OCC.Core.ShapeAnalysis import ShapeAnalysis_Shell, ShapeAnalysis_Surface
 
 # === CONFIG ===
 app = Flask(__name__)
@@ -1290,6 +1290,58 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             total_surface_area=total_surface_area
         )
     
+    def calculate_dihedral_angle(edge, face1, face2):
+        """
+        Calculate the dihedral angle between two faces at their shared edge.
+        Returns angle in degrees (0-180).
+        
+        Args:
+            edge: TopoDS_Edge - The shared edge
+            face1: TopoDS_Face - First adjacent face
+            face2: TopoDS_Face - Second adjacent face
+        
+        Returns:
+            float: Angle in degrees, or 0.0 on error
+        """
+        try:
+            # Get curve adaptor for edge midpoint
+            curve_adaptor = BRepAdaptor_Curve(edge)
+            mid_param = (curve_adaptor.FirstParameter() + curve_adaptor.LastParameter()) / 2.0
+            mid_point = curve_adaptor.Value(mid_param)
+            
+            # Get UV parameters on both faces
+            sas1 = ShapeAnalysis_Surface(BRep_Tool.Surface(face1))
+            sas2 = ShapeAnalysis_Surface(BRep_Tool.Surface(face2))
+            
+            uv1 = sas1.ValueOfUV(mid_point, 0.01)
+            uv2 = sas2.ValueOfUV(mid_point, 0.01)
+            
+            # Get surface properties (normals) at UV coordinates
+            props1 = GeomLProp_SLProps(BRep_Tool.Surface(face1), uv1.X(), uv1.Y(), 1, 0.01)
+            props2 = GeomLProp_SLProps(BRep_Tool.Surface(face2), uv2.X(), uv2.Y(), 1, 0.01)
+            
+            if props1.IsNormalDefined() and props2.IsNormalDefined():
+                normal1 = props1.Normal()
+                normal2 = props2.Normal()
+                
+                # Account for face orientations (reversed faces have flipped normals)
+                if face1.Orientation() == TopAbs_REVERSED:
+                    normal1.Reverse()
+                if face2.Orientation() == TopAbs_REVERSED:
+                    normal2.Reverse()
+                
+                # Calculate angle between normals
+                angle_rad = normal1.Angle(normal2)
+                angle_deg = math.degrees(angle_rad)
+                
+                return angle_deg
+            
+            return 0.0  # Default to smooth edge if normals undefined
+            
+        except Exception as e:
+            # Silently return 0.0 for problematic edges (safer than crashing)
+            return 0.0
+    
     # Build edge-to-faces map using TopTools
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
@@ -1340,18 +1392,39 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         debug_logged += 1
                     
                     # ANY edge with adjacent faces is a valid face intersection
-                    if num_adjacent_faces >= 1:
+                    if num_adjacent_faces == 1:
+                        # Boundary edge - always show
                         is_significant = True
+                        edge_type = "boundary"
+                        stats['boundary_edges'] += 1
                         
-                        if num_adjacent_faces == 1:
-                            edge_type = "boundary"
-                            stats['boundary_edges'] += 1
-                        elif num_adjacent_faces == 2:
-                            edge_type = "interior"
+                    elif num_adjacent_faces == 2:
+                        # Interior edge - check dihedral angle
+                        face1 = topods.Face(face_list.FindFromIndex(1))
+                        face2 = topods.Face(face_list.FindFromIndex(2))
+                        
+                        dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                        
+                        # THRESHOLD: Only show edges with angle > 20 degrees
+                        ANGLE_THRESHOLD_DEG = 20.0
+                        
+                        if dihedral_angle > ANGLE_THRESHOLD_DEG:
+                            is_significant = True
+                            edge_type = f"sharp_{dihedral_angle:.1f}deg"
                             stats['sharp_edges'] += 1
                         else:
-                            edge_type = f"non_manifold_{num_adjacent_faces}"
-                            stats['sharp_edges'] += 1
+                            # Smooth or seam edge - skip it
+                            is_significant = False
+                            stats['smooth_edges_skipped'] += 1
+                            if debug_logged < max_debug_logs:
+                                logger.debug(f"⏭️  Skipping smooth/seam edge (angle={dihedral_angle:.1f}°)")
+                                debug_logged += 1
+                    
+                    elif num_adjacent_faces > 2:
+                        # Non-manifold edge - show it
+                        is_significant = True
+                        edge_type = f"non_manifold_{num_adjacent_faces}"
+                        stats['sharp_edges'] += 1
                 else:
                     # Orphan edge - include it anyway
                     is_significant = True
