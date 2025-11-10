@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen, Box } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 import FeatureTree from "@/components/FeatureTree";
@@ -162,6 +163,36 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                 ))}
               </CardContent>
             </Card>
+
+            {/* Feature Tree - Collapsible */}
+            {selectedFile.analysis?.geometric_features && (
+              <Collapsible defaultOpen={true} className="space-y-2">
+                <Card>
+                  <CollapsibleTrigger className="w-full">
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Box className="w-5 h-5" />
+                          Detected Features ({selectedFile.analysis.geometric_features.instances?.length || 0})
+                        </CardTitle>
+                        <ChevronDown className="w-5 h-5 transition-transform duration-200 data-[state=open]:rotate-180" />
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0">
+                      <FeatureTree 
+                        features={selectedFile.analysis.geometric_features}
+                        featureSummary={selectedFile.analysis.feature_summary}
+                        onFeatureSelect={(feature) => {
+                          console.log('Feature selected:', feature);
+                        }}
+                      />
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            )}
 
             {/* Part Configuration */}
             <Card>
@@ -374,9 +405,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                   <TabsTrigger value="3d-model" className="flex-1">
                     3D Model
                   </TabsTrigger>
-                  <TabsTrigger value="features" className="flex-1">
-                    Features
-                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -453,32 +481,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                       </>
                     )}
                   </div>
-                </TabsContent>
-
-                {/* Features Tab */}
-                <TabsContent value="features" className="m-0 p-6">
-                  {selectedFile.analysis?.geometric_features ? (
-                    <FeatureTree
-                      features={selectedFile.analysis.geometric_features}
-                      featureSummary={selectedFile.analysis.feature_summary}
-                    />
-                  ) : (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Feature Recognition</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                          <p>
-                            {selectedFile.isAnalyzing 
-                              ? "Analyzing features..." 
-                              : "No feature analysis available yet."}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
                 </TabsContent>
               </div>
             </Tabs>
