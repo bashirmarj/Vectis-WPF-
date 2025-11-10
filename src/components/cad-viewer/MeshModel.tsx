@@ -145,12 +145,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         const featureEdgePositions: number[] = [];
 
         meshData.tagged_edges.forEach((edge) => {
-          // FILTER: Skip UIso/VIso parametric surface curves (interior construction lines)
-          if (edge.iso_type === "uiso" || edge.iso_type === "viso") {
-            return;
-          }
-
-          // Render all other edges (boundary, feature edges, fillets, etc.)
+          // Render ALL edges including UIso/VIso parametric curves (796 total segments)
           if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
             featureEdgePositions.push(edge.start[0], edge.start[1], edge.start[2], edge.end[0], edge.end[1], edge.end[2]);
           }
@@ -398,7 +393,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               polygonOffset={true}
               polygonOffsetFactor={-10}
               polygonOffsetUnits={-10}
-              depthTest={true}
+              depthTest={false}
               depthWrite={false}
             />
           </lineSegments>
