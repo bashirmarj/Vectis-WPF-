@@ -393,7 +393,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               polygonOffset={true}
               polygonOffsetFactor={-10}
               polygonOffsetUnits={-10}
-              depthTest={false}
+              depthTest={true}
               depthWrite={false}
             />
           </lineSegments>
