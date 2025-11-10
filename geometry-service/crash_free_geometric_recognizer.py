@@ -671,6 +671,7 @@ class ExtendedCrashFreeRecognizer:
             # Direct face analysis (holes, bosses, fillets)
             logger.info(f"\n🔍 Stage 3: Direct face geometry...")
             self._detect_cylindrical_features()
+            self._detect_conical_features()
             self._detect_curved_features()
             logger.info(f"  ✅ {len(self.features)} features from direct analysis")
             
@@ -804,7 +805,15 @@ class ExtendedCrashFreeRecognizer:
         return (time.time() - self.start_time) < self.time_limit
     
     def _detect_cylindrical_features(self):
-        """Detect holes and bosses from cylinders"""
+        """
+        Detect holes and bosses from cylindrical faces
+        IMPROVED: Uses orientation and part topology to distinguish boss from hole
+        """
+        logger.info("  🔍 Detecting cylindrical features...")
+        
+        # First pass: collect all cylinders with metadata
+        cylinders = []
+        
         for face_data in self.faces:
             if face_data['surf_type'] != GeomAbs_Cylinder:
                 continue
@@ -817,25 +826,190 @@ class ExtendedCrashFreeRecognizer:
                 radius = cylinder.Radius()
                 axis_dir = cylinder.Axis().Direction()
                 location = cylinder.Location()
-                
-                # Improved heuristic: combine radius and area
                 area = face_data['area']
-                is_hole = radius < 25 or area < 2000
                 
-                feature = FeatureInstance(
-                    feature_type='hole' if is_hole else 'boss',
-                    subtype='cylindrical',
-                    confidence=0.80,
-                    face_indices=[face_data['index']],
-                    dimensions={'diameter': radius * 2, 'radius': radius},
-                    location=(location.X(), location.Y(), location.Z()),
-                    orientation=(axis_dir.X(), axis_dir.Y(), axis_dir.Z()),
-                    detection_method='direct_cylinder'
-                )
+                # Check if axis is vertical (Z-dominant)
+                axis_z = abs(axis_dir.Z())
+                is_vertical = axis_z > 0.9
                 
-                self.features.append(feature)
-            except:
-                pass
+                # Check if axis is horizontal
+                is_horizontal = axis_z < 0.1
+                
+                cylinders.append({
+                    'face_data': face_data,
+                    'radius': radius,
+                    'area': area,
+                    'axis': (axis_dir.X(), axis_dir.Y(), axis_dir.Z()),
+                    'location': (location.X(), location.Y(), location.Z()),
+                    'is_vertical': is_vertical,
+                    'is_horizontal': is_horizontal
+                })
+                
+            except Exception as e:
+                logger.debug(f"Cylinder analysis failed: {e}")
+        
+        if not cylinders:
+            return
+        
+        # Sort cylinders by size (area) to identify main body
+        cylinders.sort(key=lambda c: c['area'], reverse=True)
+        
+        # Heuristic: Largest cylinder is likely the main body (boss/shaft)
+        # Smaller cylinders are likely holes OR small bosses
+        
+        for idx, cyl_data in enumerate(cylinders):
+            radius = cyl_data['radius']
+            area = cyl_data['area']
+            is_vertical = cyl_data['is_vertical']
+            
+            # Classification logic (improved):
+            
+            # 1. Main body detection (largest vertical cylinder)
+            if idx == 0 and is_vertical and area > 5000:
+                # This is likely the main cylindrical body (pin, shaft, boss)
+                feature_type = 'boss'
+                subtype = 'cylindrical_shaft'
+                confidence = 0.85
+                detection_method = 'main_body_vertical_cylinder'
+            
+            # 2. Small vertical cylinders = holes
+            elif is_vertical and radius < 20:
+                feature_type = 'hole'
+                subtype = 'cylindrical'
+                confidence = 0.85
+                detection_method = 'small_vertical_cylinder'
+            
+            # 3. Horizontal cylinders on pins = likely bosses/features
+            elif cyl_data['is_horizontal']:
+                # Horizontal cylinders are usually bosses or features
+                if radius < 10:
+                    feature_type = 'fillet'  # Small horizontal = edge blend
+                    subtype = 'cylindrical'
+                    confidence = 0.65
+                    detection_method = 'small_horizontal_cylinder'
+                else:
+                    feature_type = 'boss'
+                    subtype = 'cylindrical'
+                    confidence = 0.75
+                    detection_method = 'horizontal_cylinder'
+            
+            # 4. Ambiguous cases - use size heuristic
+            else:
+                # Use ratio of this cylinder to largest
+                size_ratio = area / cylinders[0]['area']
+                
+                if size_ratio > 0.3:
+                    # Significant size = likely boss
+                    feature_type = 'boss'
+                    subtype = 'cylindrical'
+                    confidence = 0.70
+                    detection_method = 'large_cylinder_ratio'
+                else:
+                    # Small relative size = likely hole
+                    feature_type = 'hole'
+                    subtype = 'cylindrical'
+                    confidence = 0.75
+                    detection_method = 'small_cylinder_ratio'
+            
+            # Create feature instance
+            feature = FeatureInstance(
+                feature_type=feature_type,
+                subtype=subtype,
+                confidence=confidence,
+                face_indices=[cyl_data['face_data']['index']],
+                dimensions={
+                    'diameter': radius * 2,
+                    'radius': radius,
+                    'surface_area': area
+                },
+                location=cyl_data['location'],
+                orientation=cyl_data['axis'],
+                detection_method=detection_method
+            )
+            
+            self.features.append(feature)
+            
+            logger.info(f"    {'🔵' if feature_type == 'hole' else '🟢'} {feature_type.upper()}: "
+                       f"Ø{radius*2:.1f}mm, area={area:.0f}mm², {detection_method}")
+    
+    def _detect_conical_features(self):
+        """
+        Detect chamfers and conical features from conical faces
+        NEW METHOD - detects the chamfers on your pin!
+        """
+        logger.info("  🔍 Detecting conical features (chamfers)...")
+        
+        for face_data in self.faces:
+            if face_data['surf_type'] != GeomAbs_Cone:
+                continue
+            
+            try:
+                face = face_data['face']
+                adaptor = BRepAdaptor_Surface(face, True)
+                cone = adaptor.Cone()
+                
+                # Get cone parameters
+                apex_angle_rad = cone.SemiAngle()
+                apex_angle_deg = apex_angle_rad * 180 / np.pi
+                
+                apex = cone.Apex()
+                axis_dir = cone.Axis().Direction()
+                area = face_data['area']
+                
+                # Chamfer detection: small conical surfaces (typically < 500mm²)
+                # Common chamfer angles: 30°, 45°, 60°
+                is_chamfer = area < 1000  # Small conical surface
+                
+                if is_chamfer:
+                    # Classify chamfer type by angle
+                    if abs(apex_angle_deg - 45) < 5:
+                        subtype = '45_degree'
+                    elif abs(apex_angle_deg - 30) < 5:
+                        subtype = '30_degree'
+                    elif abs(apex_angle_deg - 60) < 5:
+                        subtype = '60_degree'
+                    else:
+                        subtype = f'{apex_angle_deg:.0f}_degree'
+                    
+                    feature = FeatureInstance(
+                        feature_type='chamfer',
+                        subtype=subtype,
+                        confidence=0.85,
+                        face_indices=[face_data['index']],
+                        dimensions={
+                            'angle_degrees': apex_angle_deg,
+                            'surface_area': area
+                        },
+                        location=(apex.X(), apex.Y(), apex.Z()),
+                        orientation=(axis_dir.X(), axis_dir.Y(), axis_dir.Z()),
+                        detection_method='conical_surface_small_area'
+                    )
+                    
+                    self.features.append(feature)
+                    
+                    logger.info(f"    ⚡ CHAMFER: {apex_angle_deg:.0f}°, area={area:.0f}mm²")
+                else:
+                    # Large conical surface = cone boss or taper
+                    feature = FeatureInstance(
+                        feature_type='boss',
+                        subtype='conical',
+                        confidence=0.75,
+                        face_indices=[face_data['index']],
+                        dimensions={
+                            'angle_degrees': apex_angle_deg,
+                            'surface_area': area
+                        },
+                        location=(apex.X(), apex.Y(), apex.Z()),
+                        orientation=(axis_dir.X(), axis_dir.Y(), axis_dir.Z()),
+                        detection_method='conical_surface_large_area'
+                    )
+                    
+                    self.features.append(feature)
+                    
+                    logger.info(f"    🔺 CONICAL BOSS: {apex_angle_deg:.0f}°, area={area:.0f}mm²")
+            
+            except Exception as e:
+                logger.debug(f"Cone analysis failed: {e}")
     
     def _detect_curved_features(self):
         """Detect fillets from small curved faces"""
