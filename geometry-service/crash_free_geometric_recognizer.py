@@ -1,16 +1,12 @@
 # crash_free_geometric_recognizer.py
 """
-CRASH-FREE Geometric Feature Recognition System v2.0
-Production-Ready with ALL Improvements:
-
-✅ NO AAG construction (no crashes)
-✅ ADAPTIVE slicing based on part dimensions  
-✅ IMPROVED contour extraction (handles simple & complex)
-✅ TOPOLOGY-AWARE boss/hole distinction (fixes pin issue!)
-✅ Chamfer detection from conical surfaces
-✅ IMPROVED fillet detection (constant/variable/corner)
-✅ Step detection (multi-level)
-✅ Countersink detection (cone+cylinder)
+CRASH-FREE Geometric Feature Recognition System - COMPLETE v2.0
+Production-ready with:
+1. NO AAG construction (no crashes)
+2. ADAPTIVE slicing based on part dimensions
+3. IMPROVED contour extraction (handles simple and complex parts)
+4. Boss/hole distinction using topology
+5. Chamfer detection from conical surfaces
 """
 
 import os
@@ -29,7 +25,7 @@ from OCC.Core.STEPControl import STEPControl_Reader
 from OCC.Core.IFSelect import IFSelect_RetDone
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_WIRE, TopAbs_REVERSED, TopAbs_OUT, TopAbs_IN
+from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_WIRE
 from OCC.Core.TopoDS import topods, TopoDS_Shape
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.GeomAbs import (GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone,
@@ -41,8 +37,6 @@ from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.gp import gp_Pnt, gp_Dir, gp_Pln
 from OCC.Core.ShapeFix import ShapeFix_Shape
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Section
-from OCC.Core.BRepClass3d import BRepClass3d_SolidClassifier
-from OCC.Core.GeomLProp import GeomLProp_SLProps
 
 logger = logging.getLogger(__name__)
 
@@ -1064,3 +1058,44 @@ class ExtendedCrashFreeRecognizer:
                         logger.info(f"    🌊 CORNER: R{sphere_radius:.1f}mm")
             except:
                 pass
+    
+    def _generate_summary(self) -> Dict[str, int]:
+        """Feature summary"""
+        summary = defaultdict(int)
+        for feature in self.features:
+            key = feature.feature_type
+            if feature.subtype:
+                key = f"{key}_{feature.subtype}"
+            summary[key] += 1
+        return dict(summary)
+    
+    def _error_response(self, correlation_id: str, error: str) -> Dict[str, Any]:
+        return {
+            'status': 'failed',
+            'correlation_id': correlation_id,
+            'error': error,
+            'features': [],
+            'num_features_detected': 0
+        }
+
+
+class FlaskCrashFreeRecognizer:
+    """Flask wrapper - MATCHING name expected by app.py"""
+    
+    def __init__(self, time_limit: float = 30.0, memory_limit_mb: int = 2000, 
+                 slice_density_mm: float = 2.0):
+        self.time_limit = time_limit
+        self.memory_limit_mb = memory_limit_mb
+        self.slice_density_mm = slice_density_mm
+        self.recognizer = ExtendedCrashFreeRecognizer(
+            time_limit=time_limit,
+            slice_density_mm=slice_density_mm
+        )
+    
+    def recognize_features(self, step_file_path: str) -> Dict[str, Any]:
+        """Recognize features - v2.0"""
+        return self.recognizer.recognize_features(step_file_path)
+
+
+# Backward compatibility
+FlaskExtendedRecognizer = FlaskCrashFreeRecognizer
