@@ -1405,19 +1405,24 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     continue
                 
                 # ===== DEDUPLICATION CHECK =====
-                edge_key = edge_hash(start_point, end_point)
+                # Skip deduplication for circles (closed curves have start == end)
+                is_closed_circle = (curve_type == GeomAbs_Circle and 
+                                    start_point.Distance(end_point) < 0.001)
                 
-                if edge_key in edge_hash_map:
-                    # Duplicate edge - skip it
-                    stats['duplicate_edges_skipped'] += 1
-                    if debug_logged < max_debug_logs:
-                        logger.debug(f"⏭️  Skipping duplicate edge: {edge_key}")
-                        debug_logged += 1
-                    edge_explorer.Next()
-                    continue
-                
-                # Mark this edge as seen
-                edge_hash_map[edge_key] = True
+                if not is_closed_circle:
+                    edge_key = edge_hash(start_point, end_point)
+                    
+                    if edge_key in edge_hash_map:
+                        # Duplicate edge - skip it
+                        stats['duplicate_edges_skipped'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.debug(f"⏭️  Skipping duplicate edge: {edge_key}")
+                            debug_logged += 1
+                        edge_explorer.Next()
+                        continue
+                    
+                    # Mark this edge as seen
+                    edge_hash_map[edge_key] = True
                 
                 # ===== OUTPUT 1: Feature edges for rendering =====
                 feature_edges.append(points)
