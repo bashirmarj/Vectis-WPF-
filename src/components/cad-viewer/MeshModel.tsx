@@ -395,6 +395,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               polygonOffsetUnits={-10}
               depthTest={true}
               depthWrite={false}
+              depthFunc={THREE.LessEqualDepth}
             />
           </lineSegments>
         )}
