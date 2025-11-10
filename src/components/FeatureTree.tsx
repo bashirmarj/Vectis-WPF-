@@ -86,7 +86,8 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'variable_radius': 'Variable Radius',
   '45_degree': '45° Chamfer',
   'angled': 'Angled Chamfer',
-  'partial_cylindrical': 'Partial Cylindrical'
+  'partial_cylindrical': 'Partial Cylindrical',
+  'cylindrical_shaft': 'Cylindrical Shaft'
 };
 
 // Feature category classification (works for both systems)

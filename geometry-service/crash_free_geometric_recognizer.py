@@ -91,6 +91,176 @@ class FeatureInstance:
 
 
 # ============================================================================
+# FEATURE DEDUPLICATOR - Merges Split CAD Faces
+# ============================================================================
+
+class FeatureDeduplicator:
+    """Merges split CAD faces into single features"""
+
+    def deduplicate(self, features):
+        """
+        Main entry point - merges duplicate features
+
+        Args:
+            features: List of FeatureInstance objects
+
+        Returns:
+            List of deduplicated FeatureInstance objects
+        """
+        if len(features) <= 1:
+            return features
+
+        logger.info(f"\n🔗 Deduplication: {len(features)} features")
+
+        # Group by feature type
+        by_type = {}
+        for f in features:
+            if f.feature_type not in by_type:
+                by_type[f.feature_type] = []
+            by_type[f.feature_type].append(f)
+
+        # Merge each type separately
+        result = []
+        for feature_type, feature_list in by_type.items():
+            if feature_type in ['hole', 'boss']:
+                result.extend(self._merge_cylinders(feature_list))
+            elif feature_type == 'chamfer':
+                result.extend(self._merge_chamfers(feature_list))
+            else:
+                result.extend(feature_list)
+
+        removed = len(features) - len(result)
+        logger.info(f"   → {len(result)} unique features (-{removed} duplicates)")
+
+        return result
+
+    def _merge_cylinders(self, features):
+        """Merge cylindrical features (holes/bosses) with same radius"""
+        merged = []
+        used = set()
+
+        for i in range(len(features)):
+            if i in used:
+                continue
+
+            # Start a group with this feature
+            group = [features[i]]
+            radius1 = features[i].dimensions.get('radius', 0)
+            location1 = features[i].location or [0, 0, 0]
+
+            # Find other cylinders with same radius nearby
+            for j in range(i + 1, len(features)):
+                if j in used:
+                    continue
+
+                radius2 = features[j].dimensions.get('radius', 0)
+                location2 = features[j].location or [0, 0, 0]
+
+                # Check if same cylinder (split faces)
+                radius_match = abs(radius1 - radius2) < 0.5  # Within 0.5mm
+                distance = sum((a - b)**2 for a, b in zip(location1, location2)) ** 0.5
+                location_match = distance < 50  # Within 50mm
+
+                if radius_match and location_match:
+                    group.append(features[j])
+                    used.add(j)
+
+            # Merge group or keep single
+            if len(group) > 1:
+                logger.info(f"    🔗 Merged {len(group)} cylinder faces → 1")
+                merged.append(self._combine_group(group))
+            else:
+                merged.append(features[i])
+
+            used.add(i)
+
+        return merged
+
+    def _merge_chamfers(self, features):
+        """Merge chamfer features with same angle at same height"""
+        merged = []
+        used = set()
+
+        for i in range(len(features)):
+            if i in used:
+                continue
+
+            # Start a group with this feature
+            group = [features[i]]
+            angle1 = features[i].dimensions.get('angle_degrees', 0)
+            z_height1 = features[i].location[2] if features[i].location else 0
+
+            # Find other chamfers with same angle at same Z-height
+            for j in range(i + 1, len(features)):
+                if j in used:
+                    continue
+
+                angle2 = features[j].dimensions.get('angle_degrees', 0)
+                z_height2 = features[j].location[2] if features[j].location else 0
+
+                # Check if same chamfer ring (split faces)
+                angle_match = abs(angle1 - angle2) < 2  # Within 2 degrees
+                z_match = abs(z_height1 - z_height2) < 5  # Within 5mm Z
+
+                if angle_match and z_match:
+                    group.append(features[j])
+                    used.add(j)
+
+            # Merge group or keep single
+            if len(group) > 1:
+                logger.info(f"    🔗 Merged {len(group)} chamfer faces → 1")
+                merged.append(self._combine_group(group))
+            else:
+                merged.append(features[i])
+
+            used.add(i)
+
+        return merged
+
+    def _combine_group(self, group):
+        """Combine multiple feature faces into single feature"""
+        # Combine all face indices
+        all_faces = []
+        for feature in group:
+            all_faces.extend(feature.face_indices)
+
+        # Merge dimensions
+        merged_dimensions = {}
+        for feature in group:
+            for key, value in feature.dimensions.items():
+                if key not in merged_dimensions:
+                    merged_dimensions[key] = []
+                merged_dimensions[key].append(value)
+
+        # Sum surface areas, average everything else
+        for key in merged_dimensions:
+            if key == 'surface_area':
+                merged_dimensions[key] = sum(merged_dimensions[key])
+            else:
+                merged_dimensions[key] = sum(merged_dimensions[key]) / len(merged_dimensions[key])
+
+        # Average locations
+        locations = [f.location for f in group if f.location]
+        if locations:
+            avg_location = tuple(sum(coord) / len(locations) for coord in zip(*locations))
+        else:
+            avg_location = group[0].location
+
+        # Create merged feature
+        return FeatureInstance(
+            feature_type=group[0].feature_type,
+            subtype=group[0].subtype,
+            confidence=max(f.confidence for f in group),
+            face_indices=sorted(set(all_faces)),
+            dimensions=merged_dimensions,
+            location=avg_location,
+            orientation=group[0].orientation,
+            detection_method="merged",
+            slice_span=group[0].slice_span
+        )
+
+
+# ============================================================================
 # SAFE TOPOLOGY ANALYZER - Internal/External Detection WITHOUT AAG
 # ============================================================================
 
@@ -792,6 +962,12 @@ class ExtendedCrashFreeRecognizer:
                 self.features.extend(self.slicer.detect_holes_from_slices())
                 self.features.extend(self.slicer.detect_pockets_from_slices())
                 self.features.extend(self.slicer.detect_slots_from_slices())
+
+            # Stage 6: Deduplicate features (merge split faces)
+            if self.features:
+                logger.info(f"\n🔗 Stage 6: Deduplication...")
+                deduplicator = FeatureDeduplicator()
+                self.features = deduplicator.deduplicate(self.features)
 
             # Finalize
             elapsed = time.time() - self.start_time
