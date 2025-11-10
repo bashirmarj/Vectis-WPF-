@@ -1326,9 +1326,9 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 first_param = curve_result[1]
                 last_param = curve_result[2]
                 
-                # Determine if this edge is significant
+                # SIMPLIFIED: Trust BREP topology - edges ARE face intersections
                 is_significant = False
-                edge_type = "unknown"
+                edge_type = "brep_edge"
                 
                 # Get faces adjacent to this edge
                 if edge_face_map.Contains(edge):
@@ -1339,45 +1339,21 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         logger.debug(f"🔍 Edge #{stats['total_processed']}: {num_adjacent_faces} adjacent faces")
                         debug_logged += 1
                     
-                    if num_adjacent_faces == 1:
-                        # BOUNDARY EDGE - always show
+                    # ANY edge with adjacent faces is a valid face intersection
+                    if num_adjacent_faces >= 1:
                         is_significant = True
-                        edge_type = "boundary"
-                        stats['boundary_edges'] += 1
                         
-                    elif num_adjacent_faces == 2:
-                        # INTERIOR EDGE - check geometry, orientation, then angle
-                        face1 = topods.Face(face_list.First())
-                        face2 = topods.Face(face_list.Last())
-                        
-                        # Check if this is a special geometric edge
-                        is_geometric_feature = is_cylinder_to_planar_edge(face1, face2)
-                        
-                        if is_geometric_feature:
-                            # GEOMETRIC FEATURE EDGE - always include
-                            is_significant = True
-                            edge_type = "geometric_feature"
-                            stats['geometric_features'] += 1
+                        if num_adjacent_faces == 1:
+                            edge_type = "boundary"
+                            stats['boundary_edges'] += 1
+                        elif num_adjacent_faces == 2:
+                            edge_type = "interior"
                             stats['sharp_edges'] += 1
                         else:
-                            # Check if at least one face is external
-                            has_external_face = is_external_facing_edge(edge, face1, face2, shape)
-                            
-                            if has_external_face:
-                                # Calculate dihedral angle
-                                dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
-                                
-                                if dihedral_angle is not None and dihedral_angle > angle_threshold_rad:
-                                    # SHARP EDGE on external surface
-                                    is_significant = True
-                                    edge_type = f"sharp({math.degrees(dihedral_angle):.1f}°)"
-                                    stats['sharp_edges'] += 1
-                                else:
-                                    stats['smooth_edges_skipped'] += 1
-                            else:
-                                stats['internal_edges_skipped'] += 1
+                            edge_type = f"non_manifold_{num_adjacent_faces}"
+                            stats['sharp_edges'] += 1
                 else:
-                    # Orphan edge - include it
+                    # Orphan edge - include it anyway
                     is_significant = True
                     edge_type = "orphan"
                 
