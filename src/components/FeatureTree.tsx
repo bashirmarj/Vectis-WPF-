@@ -281,165 +281,115 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     });
   };
 
+  // Auto-number features by type for SolidWorks-style display
+  const numberedFeatures = useMemo(() => {
+    const counters: Record<string, number> = {};
+    const numbered: Array<{
+      instance: FeatureInstance;
+      displayName: string;
+      icon: React.ComponentType<any>;
+      category: string;
+    }> = [];
+
+    Object.entries(categorizedFeatures).forEach(([category, instances]) => {
+      instances.forEach(instance => {
+        const baseType = FEATURE_DISPLAY_NAMES[instance.type] || instance.type;
+        
+        if (!counters[baseType]) {
+          counters[baseType] = 0;
+        }
+        counters[baseType]++;
+        
+        numbered.push({
+          instance,
+          displayName: `${baseType}-${counters[baseType]}`,
+          icon: CategoryIcon[category],
+          category
+        });
+      });
+    });
+
+    return numbered;
+  }, [categorizedFeatures]);
+
+  const [showAI, setShowAI] = useState(false);
+
   return (
-    <div className="space-y-4">
-      {/* AI Analysis Insights */}
+    <div className="space-y-0">
+      {/* Compact Summary Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
+        <div className="flex items-center gap-4 text-sm">
+          <span className="font-medium text-foreground">{stats.totalFeatures} Features</span>
+          <span className="text-muted-foreground">•</span>
+          <span className="text-muted-foreground">{stats.totalFaces} Faces</span>
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {(stats.avgConfidence * 100).toFixed(0)}% Avg
+        </Badge>
+      </div>
+
+      {/* Compact Feature List */}
+      <ScrollArea className="h-[500px]">
+        <div className="divide-y divide-border">
+          {numberedFeatures.map(({ instance, displayName, icon: Icon }, idx) => (
+            <div
+              key={`${displayName}-${idx}`}
+              onClick={() => onFeatureSelect?.(instance)}
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/50 cursor-pointer transition-colors"
+            >
+              <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm font-medium text-foreground flex-1">
+                {displayName}
+              </span>
+              {/* Space reserved for future dimensions */}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+
+      {/* Collapsible AI Analysis */}
       {aiExplanation && (
-        <Card className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800">
-          <div className="flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-1 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-purple-900 dark:text-purple-100 mb-2 flex items-center gap-2">
-                AI Manufacturing Analysis
-                <span className="text-xs font-normal text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded">
-                  Powered by Gemini
-                </span>
-              </h3>
+        <>
+          <div className="border-t">
+            <button
+              onClick={() => setShowAI(!showAI)}
+              className="w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span className="font-medium">AI Manufacturing Analysis</span>
+              </div>
+              {showAI ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+          
+          {showAI && (
+            <div className="px-4 py-3 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-t border-purple-200 dark:border-purple-800">
               <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                 {aiExplanation}
               </div>
             </div>
-          </div>
-        </Card>
+          )}
+        </>
       )}
 
       {loadingExplanation && (
-        <Card className="p-4 border-purple-200 dark:border-purple-800">
+        <div className="px-4 py-3 border-t">
           <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
             <Sparkles className="w-4 h-4 animate-pulse" />
-            Generating AI manufacturing insights...
+            Generating AI insights...
           </div>
-        </Card>
+        </div>
       )}
-
-      {/* Summary Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Recognition Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{stats.totalFeatures}</div>
-              <div className="text-xs text-gray-600">Features</div>
-            </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-gray-600">{stats.totalFaces}</div>
-              <div className="text-xs text-gray-600">Total Faces</div>
-            </div>
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {(stats.avgConfidence * 100).toFixed(0)}%
-              </div>
-              <div className="text-xs text-gray-600">Avg Confidence</div>
-            </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-xs text-gray-600 mb-1">Confidence</div>
-              <div className="flex gap-1 justify-center">
-                <span className="text-xs text-green-600">{stats.highConfidence}H</span>
-                <span className="text-xs text-yellow-600">{stats.mediumConfidence}M</span>
-                <span className="text-xs text-red-600">{stats.lowConfidence}L</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Feature Tree by Category */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Detected Features</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[500px]">
-            <div className="p-4 space-y-2">
-              {Object.entries(categorizedFeatures).map(([category, instances]) => {
-                if (instances.length === 0) return null;
-
-                const isExpanded = expandedCategories.has(category);
-                const Icon = CategoryIcon[category];
-
-                return (
-                  <div key={category} className="border rounded-lg">
-                    {/* Category Header */}
-                    <button
-                      onClick={() => toggleCategory(category)}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 text-gray-600" />
-                        <span className="font-medium">
-                          {CATEGORY_NAMES[category as keyof typeof CATEGORY_NAMES]}
-                        </span>
-                        <Badge variant="secondary">{instances.length}</Badge>
-                      </div>
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      )}
-                    </button>
-
-                    {/* Feature Instances */}
-                    {isExpanded && (
-                      <div className="border-t">
-                        {instances.map((instance, idx) => (
-                          <div
-                            key={`${instance.type}-${idx}`}
-                            onClick={() => onFeatureSelect?.(instance)}
-                            className="p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-sm">
-                                    {FEATURE_DISPLAY_NAMES[instance.type] || instance.type}
-                                  </span>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={getConfidenceColor(instance.confidence)}
-                                  >
-                                    {getConfidenceBadge(instance.confidence)}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                                  <span>
-                                    {instance.face_indices.length} faces
-                                  </span>
-                                  {instance.bottom_faces && instance.bottom_faces.length > 0 && (
-                                    <span>
-                                      {instance.bottom_faces.length} bottom face{instance.bottom_faces.length !== 1 ? 's' : ''}
-                                    </span>
-                                  )}
-                                  <span>
-                                    {(instance.confidence * 100).toFixed(1)}% confidence
-                                  </span>
-                                </div>
-
-                                {/* Face indices (collapsed) */}
-                                <div className="mt-2 text-xs text-gray-400">
-                                  Faces: [{instance.face_indices.slice(0, 5).join(', ')}
-                                  {instance.face_indices.length > 5 && ` +${instance.face_indices.length - 5} more`}]
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
 
       {/* Processing Info */}
       {features.processing_time && (
-        <div className="text-xs text-gray-500 text-center">
-          Analysis completed in {features.processing_time.toFixed(2)}s using {features.recognition_method === 'rule_based' ? 'Rule-Based Recognition' : features.recognition_method || 'Feature Recognition'}
+        <div className="px-4 py-2 text-xs text-muted-foreground text-center border-t">
+          Analysis: {features.processing_time.toFixed(2)}s • {features.recognition_method === 'rule_based' ? 'Rule-Based' : features.recognition_method || 'Feature Recognition'}
         </div>
       )}
     </div>
