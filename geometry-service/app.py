@@ -1406,8 +1406,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         
                         dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
                         
-                        # THRESHOLD: Only show edges with angle > 20 degrees
-                        ANGLE_THRESHOLD_DEG = 20.0
+                        # THRESHOLD: Only show edges with angle > 5 degrees (catches cylinder-plane intersections)
+                        ANGLE_THRESHOLD_DEG = 5.0
                         
                         if dihedral_angle > ANGLE_THRESHOLD_DEG:
                             is_significant = True
@@ -2236,7 +2236,7 @@ def analyze_cad():
                 shape,
                 max_edges=500,
                 angle_threshold_degrees=20,
-                include_uiso=True,
+                include_uiso=False,  # Disable UIso curves to prevent centerlines through holes
                 num_uiso_lines=2,
                 total_surface_area=mesh_data.get('surface_area')
             )
