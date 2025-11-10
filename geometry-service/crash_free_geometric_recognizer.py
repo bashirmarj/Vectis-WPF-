@@ -992,14 +992,14 @@ class ExtendedCrashFreeRecognizer:
             self._detect_cylindrical_features()  # Topology-aware
             self._detect_conical_features()      # Chamfers
             self._detect_curved_features()       # Improved fillets
-            self._detect_steps()                 # NEW - steps
+            self._detect_steps()                 # Steps
             logger.info(f"  ✅ {len(self.features)} features")
 
             # Coaxial
             if self._check_time():
                 logger.info(f"\n🎯 Stage 4: Coaxial grouping...")
                 self._detect_counterbore_countersink()
-                self._detect_countersink()       # NEW - countersink
+                self._detect_countersink()       # Countersink
 
             # Adaptive slicing
             if self._check_time():
@@ -1285,6 +1285,24 @@ class ExtendedCrashFreeRecognizer:
                         logger.info(f"    🌊 CORNER: R{sphere_radius:.1f}mm")
             except:
                 pass
+    
+    def _detect_steps(self):
+        """
+        Detect step features (planar transitions at different heights)
+        TODO: Implement step feature detection algorithm
+        """
+        logger.info("  🔍 Step features...")
+        # Placeholder - to be implemented
+        logger.info("    ⚠️ Step detection not yet implemented")
+    
+    def _detect_countersink(self):
+        """
+        Detect countersink features (conical holes for screw heads)
+        TODO: Implement countersink detection using conical face analysis
+        """
+        logger.info("  🔍 Countersink features...")
+        # Placeholder - to be implemented
+        logger.info("    ⚠️ Countersink detection not yet implemented")
     
     def _generate_summary(self) -> Dict[str, int]:
         """Feature summary"""
