@@ -446,22 +446,18 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
       {/* Edge hover highlight */}
       {enabled && hoverInfo && hoverInfo.allSegments && (
         <group>
-          {hoverInfo.allSegments.map((segment, idx) => (
-            <line key={idx}>
-              <bufferGeometry>
-                <bufferAttribute
-                  attach="position"
-                  count={2}
-                  array={new Float32Array([
-                    ...segment.start.toArray(),
-                    ...segment.end.toArray(),
-                  ])}
-                  itemSize={3}
-                />
-              </bufferGeometry>
-              <lineBasicMaterial color="#ff8800" linewidth={3} />
-            </line>
-          ))}
+          {hoverInfo.allSegments.map((segment, idx) => {
+            const positions = new Float32Array([
+              ...segment.start.toArray(),
+              ...segment.end.toArray(),
+            ]);
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            return (
+              <primitive key={idx} object={new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: "#ff8800", linewidth: 3 }))} />
+            );
+          })}
         </group>
       )}
 
