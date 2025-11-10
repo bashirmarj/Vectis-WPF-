@@ -95,167 +95,218 @@ class FeatureInstance:
 # ============================================================================
 
 class FeatureDeduplicator:
-    """Merges split CAD faces into single features"""
+    """
+    POST-PROCESSING: Merge split faces into single features
+    Solves: 2 cylinder faces → 1 boss, 4 chamfer faces → 2 chamfers
+    """
 
-    def deduplicate(self, features):
-        """
-        Main entry point - merges duplicate features
+    def __init__(self, tolerance_mm: float = 0.5, angle_tolerance_deg: float = 2.0):
+        self.tolerance_mm = tolerance_mm
+        self.angle_tolerance_deg = angle_tolerance_deg
 
-        Args:
-            features: List of FeatureInstance objects
+    def deduplicate_features(self, features: List[FeatureInstance]) -> List[FeatureInstance]:
+        if not features:
+            return features
 
-        Returns:
-            List of deduplicated FeatureInstance objects
-        """
+        logger.info(f"\n🔗 Deduplication: {len(features)} raw features")
+
+        by_type = defaultdict(list)
+        for f in features:
+            by_type[f.feature_type].append(f)
+
+        merged_features = []
+
+        for ftype, flist in by_type.items():
+            if ftype in ['hole', 'boss']:
+                merged = self._merge_cylindrical(flist)
+            elif ftype == 'chamfer':
+                merged = self._merge_chamfers(flist)
+            elif ftype == 'fillet':
+                merged = self._merge_fillets(flist)
+            elif ftype in ['pocket', 'slot']:
+                merged = self._merge_spatial(flist)
+            else:
+                merged = flist
+
+            merged_features.extend(merged)
+
+        removed = len(features) - len(merged_features)
+        if removed > 0:
+            logger.info(f"   → {len(merged_features)} unique features (-{removed} duplicates)")
+
+        return merged_features
+
+    def _merge_cylindrical(self, features: List[FeatureInstance]) -> List[FeatureInstance]:
+        """Merge cylinders: same radius+axis"""
         if len(features) <= 1:
             return features
 
-        logger.info(f"\n🔗 Deduplication: {len(features)} features")
+        merged, used = [], set()
 
-        # Group by feature type
-        by_type = {}
-        for f in features:
-            if f.feature_type not in by_type:
-                by_type[f.feature_type] = []
-            by_type[f.feature_type].append(f)
-
-        # Merge each type separately
-        result = []
-        for feature_type, feature_list in by_type.items():
-            if feature_type in ['hole', 'boss']:
-                result.extend(self._merge_cylinders(feature_list))
-            elif feature_type == 'chamfer':
-                result.extend(self._merge_chamfers(feature_list))
-            else:
-                result.extend(feature_list)
-
-        removed = len(features) - len(result)
-        logger.info(f"   → {len(result)} unique features (-{removed} duplicates)")
-
-        return result
-
-    def _merge_cylinders(self, features):
-        """Merge cylindrical features (holes/bosses) with same radius"""
-        merged = []
-        used = set()
-
-        for i in range(len(features)):
+        for i, f1 in enumerate(features):
             if i in used:
                 continue
 
-            # Start a group with this feature
-            group = [features[i]]
-            radius1 = features[i].dimensions.get('radius', 0)
-            location1 = features[i].location or [0, 0, 0]
+            group = [f1]
+            r1 = f1.dimensions.get('radius', 0)
+            axis1 = np.array(f1.orientation or [0, 0, 1])
+            loc1 = np.array(f1.location or [0, 0, 0])
 
-            # Find other cylinders with same radius nearby
             for j in range(i + 1, len(features)):
                 if j in used:
                     continue
 
-                radius2 = features[j].dimensions.get('radius', 0)
-                location2 = features[j].location or [0, 0, 0]
+                f2 = features[j]
+                r2 = f2.dimensions.get('radius', 0)
+                axis2 = np.array(f2.orientation or [0, 0, 1])
+                loc2 = np.array(f2.location or [0, 0, 0])
 
                 # Check if same cylinder (split faces)
-                radius_match = abs(radius1 - radius2) < 0.5  # Within 0.5mm
-                distance = sum((a - b)**2 for a, b in zip(location1, location2)) ** 0.5
-                location_match = distance < 50  # Within 50mm
+                radius_match = abs(r1 - r2) < self.tolerance_mm
+                axis_parallel = abs(np.dot(axis1, axis2)) > 0.99
+                location_close = np.linalg.norm(loc1 - loc2) < 50.0  # Same cylinder
 
-                if radius_match and location_match:
-                    group.append(features[j])
+                if radius_match and axis_parallel and location_close:
+                    group.append(f2)
                     used.add(j)
 
-            # Merge group or keep single
+            merged.append(self._merge_group(group) if len(group) > 1 else f1)
             if len(group) > 1:
-                logger.info(f"    🔗 Merged {len(group)} cylinder faces → 1")
-                merged.append(self._combine_group(group))
-            else:
-                merged.append(features[i])
-
+                logger.info(f"    🔗 Merged {len(group)} {f1.feature_type} faces → 1")
             used.add(i)
 
         return merged
 
-    def _merge_chamfers(self, features):
-        """Merge chamfer features with same angle at same height"""
-        merged = []
-        used = set()
+    def _merge_chamfers(self, features: List[FeatureInstance]) -> List[FeatureInstance]:
+        """Merge chamfers: same angle at same Z-height"""
+        if len(features) <= 1:
+            return features
 
-        for i in range(len(features)):
+        merged, used = [], set()
+
+        for i, f1 in enumerate(features):
             if i in used:
                 continue
 
-            # Start a group with this feature
-            group = [features[i]]
-            angle1 = features[i].dimensions.get('angle_degrees', 0)
-            z_height1 = features[i].location[2] if features[i].location else 0
+            group = [f1]
+            angle1 = f1.dimensions.get('angle_degrees', 0)
+            loc1 = np.array(f1.location or [0, 0, 0])
 
-            # Find other chamfers with same angle at same Z-height
             for j in range(i + 1, len(features)):
                 if j in used:
                     continue
 
-                angle2 = features[j].dimensions.get('angle_degrees', 0)
-                z_height2 = features[j].location[2] if features[j].location else 0
+                f2 = features[j]
+                angle2 = f2.dimensions.get('angle_degrees', 0)
+                loc2 = np.array(f2.location or [0, 0, 0])
 
-                # Check if same chamfer ring (split faces)
-                angle_match = abs(angle1 - angle2) < 2  # Within 2 degrees
-                z_match = abs(z_height1 - z_height2) < 5  # Within 5mm Z
+                # Same angle + same Z-height = same chamfer ring
+                angle_match = abs(angle1 - angle2) < self.angle_tolerance_deg
+                same_z_ring = abs(loc1[2] - loc2[2]) < 5.0
 
-                if angle_match and z_match:
-                    group.append(features[j])
+                if angle_match and same_z_ring:
+                    group.append(f2)
                     used.add(j)
 
-            # Merge group or keep single
+            merged.append(self._merge_group(group) if len(group) > 1 else f1)
             if len(group) > 1:
                 logger.info(f"    🔗 Merged {len(group)} chamfer faces → 1")
-                merged.append(self._combine_group(group))
-            else:
-                merged.append(features[i])
-
             used.add(i)
 
         return merged
 
-    def _combine_group(self, group):
-        """Combine multiple feature faces into single feature"""
-        # Combine all face indices
+    def _merge_fillets(self, features: List[FeatureInstance]) -> List[FeatureInstance]:
+        """Merge fillets: same radius"""
+        if len(features) <= 1:
+            return features
+
+        merged, used = [], set()
+
+        for i, f1 in enumerate(features):
+            if i in used:
+                continue
+
+            group = [f1]
+            r1 = f1.dimensions.get('radius', f1.dimensions.get('minor_radius', 0))
+
+            for j in range(i + 1, len(features)):
+                if j in used:
+                    continue
+
+                f2 = features[j]
+                r2 = f2.dimensions.get('radius', f2.dimensions.get('minor_radius', 0))
+
+                if abs(r1 - r2) < self.tolerance_mm:
+                    group.append(f2)
+                    used.add(j)
+
+            merged.append(self._merge_group(group) if len(group) > 1 else f1)
+            used.add(i)
+
+        return merged
+
+    def _merge_spatial(self, features: List[FeatureInstance]) -> List[FeatureInstance]:
+        """Merge features at same location"""
+        if len(features) <= 1:
+            return features
+
+        merged, used = [], set()
+
+        for i, f1 in enumerate(features):
+            if i in used:
+                continue
+
+            group = [f1]
+            loc1 = np.array(f1.location or [0, 0, 0])
+
+            for j in range(i + 1, len(features)):
+                if j in used:
+                    continue
+
+                f2 = features[j]
+                loc2 = np.array(f2.location or [0, 0, 0])
+
+                if np.linalg.norm(loc1 - loc2) < 10.0:
+                    group.append(f2)
+                    used.add(j)
+
+            merged.append(self._merge_group(group) if len(group) > 1 else f1)
+            used.add(i)
+
+        return merged
+
+    def _merge_group(self, group: List[FeatureInstance]) -> FeatureInstance:
+        """Merge multiple instances into one"""
+        if len(group) == 1:
+            return group[0]
+
         all_faces = []
-        for feature in group:
-            all_faces.extend(feature.face_indices)
+        for f in group:
+            all_faces.extend(f.face_indices)
 
-        # Merge dimensions
-        merged_dimensions = {}
-        for feature in group:
-            for key, value in feature.dimensions.items():
-                if key not in merged_dimensions:
-                    merged_dimensions[key] = []
-                merged_dimensions[key].append(value)
+        merged_dims = {}
+        all_keys = set()
+        for f in group:
+            all_keys.update(f.dimensions.keys())
 
-        # Sum surface areas, average everything else
-        for key in merged_dimensions:
-            if key == 'surface_area':
-                merged_dimensions[key] = sum(merged_dimensions[key])
-            else:
-                merged_dimensions[key] = sum(merged_dimensions[key]) / len(merged_dimensions[key])
+        for key in all_keys:
+            values = [f.dimensions.get(key, 0) for f in group if key in f.dimensions]
+            if values:
+                # Sum surface areas, average everything else
+                merged_dims[key] = sum(values) if key == 'surface_area' else np.mean(values)
 
-        # Average locations
-        locations = [f.location for f in group if f.location]
-        if locations:
-            avg_location = tuple(sum(coord) / len(locations) for coord in zip(*locations))
-        else:
-            avg_location = group[0].location
+        locs = [np.array(f.location) for f in group if f.location]
+        avg_loc = tuple(np.mean(locs, axis=0)) if locs else group[0].location
 
-        # Create merged feature
         return FeatureInstance(
             feature_type=group[0].feature_type,
             subtype=group[0].subtype,
             confidence=max(f.confidence for f in group),
             face_indices=sorted(set(all_faces)),
-            dimensions=merged_dimensions,
-            location=avg_location,
+            dimensions=merged_dims,
+            location=avg_loc,
             orientation=group[0].orientation,
-            detection_method="merged",
+            detection_method=f"merged_{group[0].detection_method}",
             slice_span=group[0].slice_span
         )
 
@@ -967,7 +1018,7 @@ class ExtendedCrashFreeRecognizer:
             if self.features:
                 logger.info(f"\n🔗 Stage 6: Deduplication...")
                 deduplicator = FeatureDeduplicator()
-                self.features = deduplicator.deduplicate(self.features)
+                self.features = deduplicator.deduplicate_features(self.features)
 
             # Finalize
             elapsed = time.time() - self.start_time
