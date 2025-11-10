@@ -36,7 +36,7 @@ interface FileWithData {
     detected_features?: Record<string, boolean>;
     manufacturing_features?: any;
     feature_summary?: any;
-    ml_features?: any;
+    geometric_features?: any;
     recommended_processes?: string[];
     routing_reasoning?: string[];
     machining_summary?: any[];
@@ -457,9 +457,9 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
                 {/* Features Tab */}
                 <TabsContent value="features" className="m-0 p-6">
-                  {selectedFile.analysis?.ml_features ? (
+                  {selectedFile.analysis?.geometric_features ? (
                     <FeatureTree
-                      features={selectedFile.analysis.ml_features}
+                      features={selectedFile.analysis.geometric_features}
                       featureSummary={selectedFile.analysis.feature_summary}
                     />
                   ) : (

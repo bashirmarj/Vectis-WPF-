@@ -163,8 +163,8 @@ class CircuitBreaker:
         }
 
 
-# Global circuit breaker instance for AAGNet
-aagnet_circuit_breaker = CircuitBreaker(
+# Global circuit breaker instance for geometric feature recognition
+geometric_circuit_breaker = CircuitBreaker(
     failure_threshold=5,
     timeout_seconds=60,
     expected_exception=Exception

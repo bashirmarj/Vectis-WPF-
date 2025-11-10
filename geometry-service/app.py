@@ -37,7 +37,7 @@ from contextlib import contextmanager
 from functools import wraps
 
 # Import production hardening modules
-from circuit_breaker import aagnet_circuit_breaker, CircuitBreakerError
+from circuit_breaker import geometric_circuit_breaker, CircuitBreakerError
 from retry_utils import exponential_backoff_retry, TransientError, PermanentError, SystemicError
 from dead_letter_queue import dlq
 from graceful_degradation import GracefulDegradation, ProcessingTier
@@ -1969,19 +1969,19 @@ def extract_isoparametric_curves(shape, num_u_lines=2, num_v_lines=0, total_surf
 
 
 # ============================================================================
-# ML FEATURE RECOGNITION (AAGNet Integration)
+# GEOMETRIC FEATURE RECOGNITION (Rule-Based Methods)
 # ============================================================================
 
-def recognize_features_ml(shape, correlation_id: str):
-    """Run rule-based feature recognition if available, with graceful degradation"""
+def recognize_features_geometric(shape, correlation_id: str):
+    """Run geometric feature recognition if available, with graceful degradation"""
     
     if not FEATURE_RECOGNITION_AVAILABLE or feature_recognizer is None:
-        logger.warning(f"[{correlation_id}] Feature recognition not available, skipping ML recognition")
+        logger.warning(f"[{correlation_id}] Feature recognition not available, skipping geometric recognition")
         return None
     
     tmp_path = None
     try:
-        logger.info(f"[{correlation_id}] 🤖 Running rule-based feature recognition...")
+        logger.info(f"[{correlation_id}] 🤖 Running geometric feature recognition...")
         
         # Create temporary STEP file for recognizer
         fd, tmp_path = tempfile.mkstemp(suffix='.step')
@@ -1992,10 +1992,10 @@ def recognize_features_ml(shape, correlation_id: str):
         writer.Transfer(shape, 1)
         writer.Write(tmp_path)
         
-        # Call rule-based recognizer (with circuit breaker protection)
+        # Call geometric recognizer (with circuit breaker protection)
         # CRITICAL FIX: Wrap in additional try-except to catch graph building crashes
         try:
-            result = aagnet_circuit_breaker.call(
+            result = geometric_circuit_breaker.call(
                 feature_recognizer.recognize_features,
                 tmp_path
             )
@@ -2209,29 +2209,29 @@ def analyze_cad():
         # ML FEATURE RECOGNITION (Tier 1 only)
         # ====================================================================
         
-        ml_features = None
-        recognition_status = "no_ml"
+        geometric_features = None
+        recognition_status = "no_geometric"
         confidence_multiplier = degradation.tier_confidence_multipliers.get(
             processing_tier,
             0.4
         )
         
         if processing_tier == ProcessingTier.TIER_1_BREP:
-            ml_features = recognize_features_ml(shape, request_id)
+            geometric_features = recognize_features_geometric(shape, request_id)
             
-            if ml_features:
-                logger.info(f"[{request_id}] ✅ ML features: {ml_features.get('num_features_detected', 0)} features detected")
-                logger.info(f"[{request_id}] 📊 ML feature data keys: {list(ml_features.keys())}")
-                if ml_features.get('instances'):
-                    logger.info(f"[{request_id}] 🔍 Sample ML feature: {ml_features['instances'][0]}")
-                    logger.info(f"[{request_id}] 🔍 Total instances in array: {len(ml_features['instances'])}")
+            if geometric_features:
+                logger.info(f"[{request_id}] ✅ Geometric features: {geometric_features.get('num_features_detected', 0)} features detected")
+                logger.info(f"[{request_id}] 📊 Geometric feature data keys: {list(geometric_features.keys())}")
+                if geometric_features.get('instances'):
+                    logger.info(f"[{request_id}] 🔍 Sample geometric feature: {geometric_features['instances'][0]}")
+                    logger.info(f"[{request_id}] 🔍 Total instances in array: {len(geometric_features['instances'])}")
             else:
-                logger.warning(f"[{request_id}] ⚠️ ML feature recognition returned None")
+                logger.warning(f"[{request_id}] ⚠️ Geometric feature recognition returned None")
             
             # ✅ IMPORTANT: Pass features to frontend REGARDLESS of confidence score
             # Features with low/zero confidence are still valuable for visualization
-            if ml_features and ml_features['num_features_detected'] > 0:
-                confidence = ml_features.get('confidence_score', 0.0)
+            if geometric_features and geometric_features['num_features_detected'] > 0:
+                confidence = geometric_features.get('confidence_score', 0.0)
                 
                 logger.info(f"[{request_id}] 📊 Confidence score: {confidence:.2f} - Features WILL be sent to frontend")
                 
@@ -2265,7 +2265,7 @@ def analyze_cad():
             'edge_classifications': edge_data.get('edge_classifications', []),
             'tagged_edges': edge_data.get('tagged_edges', []),
             'iso_curves': edge_data.get('iso_curves', []),
-            'ml_features': ml_features,
+            'geometric_features': geometric_features,
             
             'processing_tier': processing_tier.value,
             'confidence_score': confidence_multiplier,

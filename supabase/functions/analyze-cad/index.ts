@@ -454,8 +454,8 @@ serve(async (req) => {
           'VMC Machining'
         ].filter(Boolean),
         
-        // ✅ ENHANCED ML features for FeatureTree
-        ml_features: {
+        // ✅ ENHANCED geometric features for FeatureTree
+        geometric_features: {
           feature_instances: [
             {
               instance_id: 1,

@@ -19,8 +19,6 @@ import Admin from "./pages/Admin";
 import QuotationDetails from "./pages/admin/QuotationDetails";
 import PricingSettings from "./pages/admin/PricingSettings";
 import AdminSetup from "./pages/admin/AdminSetup";
-import DatasetUpload from "./pages/admin/DatasetUpload";
-import TrainingDashboard from "./pages/admin/TrainingDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,8 +46,6 @@ const App = () => (
             <Route path="/admin/quotations/:id" element={<QuotationDetails />} />
             <Route path="/admin/pricing-settings" element={<PricingSettings />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
-            <Route path="/admin/dataset-upload" element={<DatasetUpload />} />
-            <Route path="/admin/training" element={<TrainingDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

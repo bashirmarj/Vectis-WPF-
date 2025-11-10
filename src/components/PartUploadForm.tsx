@@ -31,7 +31,7 @@ interface FileWithQuantity {
     confidence?: number;
     method?: string;
     triangle_count?: number;
-    ml_features?: any;
+    geometric_features?: any;
     recommended_processes?: string[];
     routing_reasoning?: string[];
     machining_summary?: any[];
@@ -237,7 +237,7 @@ export const PartUploadForm = () => {
         detected_features: result.detected_features,
         manufacturing_features: result.manufacturing_features,
         feature_summary: result.feature_summary,
-        ml_features: result.ml_features,
+        geometric_features: result.geometric_features,
         recommended_processes: result.recommended_processes,
         routing_reasoning: result.routing_reasoning,
         machining_summary: result.machining_summary,

@@ -47,7 +47,7 @@ interface PartDetailCustomerProps {
         }>;
       };
       feature_summary?: any;
-      ml_features?: any;
+      geometric_features?: any;
       recommended_routings?: string[];
       routing_reasoning?: string[];
       machining_summary?: Array<{
@@ -211,7 +211,7 @@ export function PartDetailCustomer({
 
                   {hasFeatures ? (
                   <FeatureTree
-                    features={file.analysis?.ml_features}
+                    features={file.analysis?.geometric_features}
                   />
                   ) : (
                     <Card className="border-dashed">

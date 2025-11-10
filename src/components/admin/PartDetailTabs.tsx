@@ -36,7 +36,7 @@ interface LineItem {
 }
 
 interface FeatureTree {
-  ml_features?: any;
+  geometric_features?: any;
 }
 
 interface PartDetailTabsProps {
@@ -101,11 +101,11 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
             </div>
           </TabsContent>
 
-          {/* Features Tab - ML Only */}
+          {/* Features Tab - Geometric Recognition */}
           <TabsContent value="features" className="mt-4">
-            {featureTree?.ml_features ? (
+            {featureTree?.geometric_features ? (
               <FeatureTree
-                features={featureTree.ml_features}
+                features={featureTree.geometric_features}
               />
             ) : (
               <Card>
