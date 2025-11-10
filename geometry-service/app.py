@@ -1355,6 +1355,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             'geometric_features': 0,
             'smooth_edges_skipped': 0,
             'internal_edges_skipped': 0,
+            'orphan_edges_skipped': 0,
             'total_processed': 0,
             'iso_curves': 0
         }
@@ -1426,9 +1427,12 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         edge_type = f"non_manifold_{num_adjacent_faces}"
                         stats['sharp_edges'] += 1
                 else:
-                    # Orphan edge - include it anyway
-                    is_significant = True
-                    edge_type = "orphan"
+                    # Orphan edge (construction geometry, not part of solid faces) - SKIP
+                    is_significant = False
+                    stats['orphan_edges_skipped'] += 1
+                    if debug_logged < max_debug_logs:
+                        logger.debug(f"⏭️  Skipping orphan edge (construction geometry, not attached to faces)")
+                        debug_logged += 1
                 
                 # Only process significant edges
                 if not is_significant:
