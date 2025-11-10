@@ -308,7 +308,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return [new THREE.Plane(normal, -sectionPosition)];
     })();
 
-    const { gl, size } = useThree();
+    const { gl } = useThree();
 
     useEffect(() => {
       gl.localClippingEnabled = sectionPlane !== "none";
@@ -384,31 +384,21 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* Show only backend feature edges in solid mode using Line2 for continuous lines */}
-        {displayStyle === "solid" && showEdges && featureEdgesGeometry && (() => {
-          // Convert BufferGeometry to LineGeometry for Line2
-          const lineGeometry = new LineGeometry();
-          const positions = featureEdgesGeometry.attributes.position.array as Float32Array;
-          lineGeometry.setPositions(positions);
-          
-          // Create LineMaterial with professional CAD settings
-          const lineMaterial = new LineMaterial({
-            color: 0x000000,
-            linewidth: 1.5, // pixels - professional CAD width
-            resolution: new THREE.Vector2(size.width, size.height),
-            toneMapped: false,
-            polygonOffset: true,
-            polygonOffsetFactor: -10,
-            polygonOffsetUnits: -10,
-            depthTest: true,
-            depthWrite: false,
-          });
-          
-          const line = new Line2(lineGeometry, lineMaterial);
-          line.frustumCulled = true;
-          
-          return <primitive object={line} key="feature-edges-line2" />;
-        })()}
+        {/* Show only backend feature edges in solid mode (no tessellation lines) */}
+        {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
+          <lineSegments geometry={featureEdgesGeometry} frustumCulled={true}>
+            <lineBasicMaterial
+              color="#000000"
+              toneMapped={false}
+              polygonOffset={true}
+              polygonOffsetFactor={-15}
+              polygonOffsetUnits={-10}
+              depthTest={true}
+              depthWrite={false}
+              depthFunc={THREE.LessEqualDepth}
+            />
+          </lineSegments>
+        )}
 
         {/* Wireframe mode - use clean edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
