@@ -87,13 +87,35 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   '45_degree': '45° Chamfer',
   'angled': 'Angled Chamfer',
   'partial_cylindrical': 'Partial Cylindrical',
-  'cylindrical_shaft': 'Cylindrical Shaft'
+  'cylindrical_shaft': 'Cylindrical Shaft',
+  // Production recognizer subtypes - HOLES
+  'counterbore': 'Counterbored Hole',
+  'countersink': 'Countersunk Hole',
+  'tapped': 'Tapped Hole',
+  'through': 'Through Hole',
+  'blind': 'Blind Hole',
+  // Production recognizer subtypes - POCKETS
+  'rectangular': 'Rectangular Pocket',
+  'circular': 'Circular Pocket',
+  'complex_contour': 'Complex Pocket',
+  'with_islands': 'Pocket with Islands',
+  // Production recognizer subtypes - SLOTS
+  'through_slot': 'Through Slot',
+  'blind_slot': 'Blind Slot',
+  't_slot': 'T-Slot',
+  'keyway': 'Keyway',
+  // Production recognizer subtypes - TURNING
+  'base_cylinder': 'Base Cylinder',
+  'step': 'Step',
+  'groove': 'Groove',
+  'taper': 'Taper',
+  'turning_feature': 'Turning Feature'
 };
 
 // Feature category classification (works for both systems)
 const FEATURE_CATEGORIES = {
-  holes: ['through_hole', 'blind_hole', 'hole', 'partial_cylindrical'],
-  pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket', 'pocket', 'general_pocket'],
+  holes: ['through_hole', 'blind_hole', 'hole', 'partial_cylindrical', 'counterbore', 'countersink', 'tapped', 'through', 'blind'],
+  pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket', 'pocket', 'general_pocket', 'rectangular', 'circular', 'complex_contour', 'with_islands'],
   slots: [
     'triangular_through_slot', 
     'rectangular_through_slot', 
@@ -102,7 +124,11 @@ const FEATURE_CATEGORIES = {
     'v_circular_end_blind_slot',
     'h_circular_end_blind_slot',
     'slot',
-    'rectangular_slot'
+    'rectangular_slot',
+    'through_slot',
+    'blind_slot',
+    't_slot',
+    'keyway'
   ],
   steps: [
     'rectangular_through_step',
@@ -114,6 +140,7 @@ const FEATURE_CATEGORIES = {
   ],
   passages: ['triangular_passage', 'rectangular_passage', '6sides_passage'],
   chamfers: ['chamfer', 'round', 'fillet', 'constant_radius', 'variable_radius', '45_degree', 'angled'],
+  turning: ['base_cylinder', 'step', 'groove', 'taper', 'turning_feature'],
   other: ['Oring', 'boss']
 };
 
@@ -125,6 +152,7 @@ const CATEGORY_NAMES = {
   steps: 'Steps',
   passages: 'Passages',
   chamfers: 'Chamfers & Rounds',
+  turning: 'Turning Features',
   other: 'Other Features'
 };
 
@@ -136,6 +164,7 @@ const CategoryIcon: Record<string, React.ComponentType<any>> = {
   steps: Layers,
   passages: Triangle,
   chamfers: Zap,
+  turning: Circle,
   other: Box
 };
 
@@ -229,6 +258,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       steps: [],
       passages: [],
       chamfers: [],
+      turning: [],
       other: []
     };
 

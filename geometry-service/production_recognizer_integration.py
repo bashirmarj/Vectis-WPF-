@@ -78,10 +78,10 @@ class ProductionRecognizerIntegration:
         # Convert holes
         for hole in result.get('holes', []):
             instance = {
-                'feature_type': 'hole',
+                'type': 'hole',
                 'subtype': hole.get('subtype', 'unknown'),
                 'confidence': hole.get('confidence', 0.0),
-                'dimensions': hole.get('dimensions', {}),
+                'parameters': hole.get('dimensions', {}),
                 'location': hole.get('location', [0, 0, 0]),
                 'axis': hole.get('axis', [0, 0, 1]),
                 'is_through': hole.get('is_through', False),
@@ -95,10 +95,10 @@ class ProductionRecognizerIntegration:
         # Convert pockets
         for pocket in result.get('pockets', []):
             instance = {
-                'feature_type': 'pocket',
+                'type': 'pocket',
                 'subtype': pocket.get('subtype', 'unknown'),
                 'confidence': pocket.get('confidence', 0.0),
-                'dimensions': pocket.get('dimensions', {}),
+                'parameters': pocket.get('dimensions', {}),
                 'location': pocket.get('location', [0, 0, 0]),
                 'normal': pocket.get('normal', [0, 0, 1]),
                 'has_islands': pocket.get('has_islands', False),
@@ -110,10 +110,10 @@ class ProductionRecognizerIntegration:
         # Convert slots
         for slot in result.get('slots', []):
             instance = {
-                'feature_type': 'slot',
+                'type': 'slot',
                 'subtype': slot.get('subtype', 'unknown'),
                 'confidence': slot.get('confidence', 0.0),
-                'dimensions': slot.get('dimensions', {}),
+                'parameters': slot.get('dimensions', {}),
                 'location': slot.get('location', [0, 0, 0]),
                 'direction': slot.get('direction', [1, 0, 0]),
                 'is_through': slot.get('is_through', False),
@@ -137,10 +137,10 @@ class ProductionRecognizerIntegration:
                 feature_type = 'turning_feature'
 
             instance = {
-                'feature_type': feature_type,
+                'type': feature_type,
                 'subtype': subtype,
                 'confidence': turning.get('confidence', 0.0),
-                'dimensions': turning.get('dimensions', {}),
+                'parameters': turning.get('dimensions', {}),
                 'location': turning.get('location', [0, 0, 0]),
                 'axis': turning.get('axis', [1, 0, 0]),
                 'face_indices': turning.get('face_indices', []),
