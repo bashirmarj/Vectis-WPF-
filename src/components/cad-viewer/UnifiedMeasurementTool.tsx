@@ -165,8 +165,17 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
               allSegments: allSegmentLines,
             });
           } else {
-            setHoverInfo(null);
-            setLabelText("");
+            // Fallback: Local edge detection without backend data
+            const edgeLength = closestEdge.distance();
+            const label = `📏 Length: ${edgeLength.toFixed(2)} mm`;
+            
+            setLabelText(label);
+            setHoverInfo({
+              position: point,
+              classification: { type: "line", length: edgeLength },
+              edge: closestEdge,
+              allSegments: [closestEdge],
+            });
           }
         } else {
           setHoverInfo(null);
@@ -253,10 +262,11 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
       // Priority 1: Check if clicking on an edge
       if (hoverInfo && hoverInfo.classification) {
-        const taggedEdge = hoverInfo.classification as TaggedFeatureEdge;
+        const classification = hoverInfo.classification as any;
+        const isBackendMatch = "feature_id" in classification;
         
         // Create edge measurement
-        if (taggedEdge.type === "circle" && taggedEdge.diameter) {
+        if (classification.type === "circle" && classification.diameter) {
           addMeasurement({
             id: generateMeasurementId(),
             type: "measure",
@@ -268,24 +278,24 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 surfaceType: "edge",
               },
             ],
-            value: taggedEdge.diameter,
+            value: classification.diameter,
             unit: "mm",
-            label: `Ø ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+            label: `Ø ${formatMeasurement(classification.diameter, "mm")}`,
             color: "#0066CC",
             visible: true,
             createdAt: new Date(),
             metadata: {
               measurementSubtype: "edge",
               edgeType: "circle",
-              backendMatch: true,
+              backendMatch: isBackendMatch,
             },
           });
           
           toast({
             title: "Edge Measured",
-            description: `Circle diameter: ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+            description: `Circle diameter: ${formatMeasurement(classification.diameter, "mm")}`,
           });
-        } else if (taggedEdge.type === "arc" && taggedEdge.radius) {
+        } else if (classification.type === "arc" && classification.radius) {
           addMeasurement({
             id: generateMeasurementId(),
             type: "measure",
@@ -297,24 +307,24 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 surfaceType: "edge",
               },
             ],
-            value: taggedEdge.radius,
+            value: classification.radius,
             unit: "mm",
-            label: `R ${formatMeasurement(taggedEdge.radius, "mm")}`,
+            label: `R ${formatMeasurement(classification.radius, "mm")}`,
             color: "#0066CC",
             visible: true,
             createdAt: new Date(),
             metadata: {
               measurementSubtype: "edge",
               edgeType: "arc",
-              backendMatch: true,
+              backendMatch: isBackendMatch,
             },
           });
           
           toast({
             title: "Edge Measured",
-            description: `Arc radius: ${formatMeasurement(taggedEdge.radius, "mm")}`,
+            description: `Arc radius: ${formatMeasurement(classification.radius, "mm")}`,
           });
-        } else if (taggedEdge.type === "line" && taggedEdge.length) {
+        } else if (classification.type === "line" && classification.length) {
           addMeasurement({
             id: generateMeasurementId(),
             type: "measure",
@@ -326,22 +336,22 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 surfaceType: "edge",
               },
             ],
-            value: taggedEdge.length,
+            value: classification.length,
             unit: "mm",
-            label: `📏 ${formatMeasurement(taggedEdge.length, "mm")}`,
+            label: `📏 ${formatMeasurement(classification.length, "mm")}`,
             color: "#0066CC",
             visible: true,
             createdAt: new Date(),
             metadata: {
               measurementSubtype: "edge",
               edgeType: "line",
-              backendMatch: true,
+              backendMatch: isBackendMatch,
             },
           });
           
           toast({
             title: "Edge Measured",
-            description: `Line length: ${formatMeasurement(taggedEdge.length, "mm")}`,
+            description: `Line length: ${formatMeasurement(classification.length, "mm")}`,
           });
         }
 
