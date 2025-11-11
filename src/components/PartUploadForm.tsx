@@ -224,6 +224,10 @@ export const PartUploadForm = () => {
         hasVertices: !!meshData.vertices,
         hasIndices: !!meshData.indices,
         hasNormals: !!meshData.normals,
+        hasTaggedEdges: !!meshData.tagged_edges,
+        taggedEdgesCount: meshData.tagged_edges?.length || 0,
+        hasEdgeClassifications: !!meshData.edge_classifications,
+        edgeClassificationsCount: meshData.edge_classifications?.length || 0,
       });
 
       // Extract analysis data
