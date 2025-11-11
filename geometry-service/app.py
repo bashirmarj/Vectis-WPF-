@@ -1348,6 +1348,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
     
     try:
+        edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+        
         stats = {
             'boundary_edges': 0,
             'sharp_edges': 0,
@@ -1362,12 +1364,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         debug_logged = 0
         max_debug_logs = 10
         
-        # Iterate using indexed access (proven pattern from rule_based_recognizer.py)
-        for edge_idx in range(1, edge_face_map.Size() + 1):
-            if edge_count >= max_edges:
-                break
-                
-            edge = edge_face_map.FindKey(edge_idx)  # Get edge FROM the map
+        while edge_explorer.More() and edge_count < max_edges:
+            edge = topods.Edge(edge_explorer.Current())
             stats['total_processed'] += 1
             
             try:
@@ -1375,15 +1373,17 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 curve_result = BRep_Tool.Curve(edge)
                 
                 if not curve_result or len(curve_result) < 3 or curve_result[0] is None:
-                    edge_explorer.Next()
                     continue
                 
                 curve = curve_result[0]
                 first_param = curve_result[1]
                 last_param = curve_result[2]
                 
-                # Get faces adjacent to this edge (guaranteed to work - edge is from the map)
-                face_list = edge_face_map.FindFromIndex(edge_idx)
+                # Get faces adjacent to this edge
+                if not edge_face_map.Contains(edge):
+                    continue
+                
+                face_list = edge_face_map.FindFromKey(edge)
                 num_adjacent_faces = face_list.Size()
                 
                 if debug_logged < max_debug_logs:
@@ -1553,6 +1553,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             except Exception as e:
                 logger.debug(f"Error processing edge: {e}")
                 pass
+            
+            edge_explorer.Next()
         
         # Process ISO curves through same pipeline
         for start, end, curve_type in iso_curves:
