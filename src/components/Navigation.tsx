@@ -17,9 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checkingRole, setCheckingRole] = useState(true);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin, checkingRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,34 +37,6 @@ const Navigation = () => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
-
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setCheckingRole(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
-
-        setIsAdmin(!error && !!data);
-      } catch (error) {
-        setIsAdmin(false);
-      } finally {
-        setCheckingRole(false);
-      }
-    };
-
-    checkAdminRole();
-  }, [user]);
   const navItems = [{
     name: "Home",
     path: "/"

@@ -25,34 +25,25 @@ interface QuotationSubmission {
 }
 
 const Admin = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin, checkingRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [submissions, setSubmissions] = useState<QuotationSubmission[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<QuotationSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
-    const checkAdminAndFetchData = async () => {
-      if (authLoading) return;
+    const fetchSubmissions = async () => {
+      if (authLoading || checkingRole) return;
 
       if (!user) {
         navigate('/auth');
         return;
       }
 
-      // Check if user has admin role
-      const { data: roles, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .single();
-
-      if (roleError || !roles) {
+      if (!isAdmin) {
         toast({
           title: 'Access Denied',
           description: 'You do not have permission to access this page.',
@@ -61,8 +52,6 @@ const Admin = () => {
         navigate('/');
         return;
       }
-
-      setIsAdmin(true);
 
       // Fetch quotation submissions
       const { data, error } = await supabase
@@ -84,8 +73,8 @@ const Admin = () => {
       setLoading(false);
     };
 
-    checkAdminAndFetchData();
-  }, [user, authLoading, navigate, toast]);
+    fetchSubmissions();
+  }, [user, authLoading, isAdmin, checkingRole, navigate, toast]);
 
   useEffect(() => {
     let filtered = submissions;
@@ -109,7 +98,7 @@ const Admin = () => {
     setFilteredSubmissions(filtered);
   }, [submissions, searchQuery, statusFilter]);
 
-  if (authLoading || loading) {
+  if (authLoading || checkingRole || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
