@@ -881,12 +881,15 @@ def extract_feature_edges_professional(shape, correlation_id: str, dihedral_angl
 
 def is_cylinder_to_planar_edge(face1, face2):
     """
-    Detect if an edge connects a cylindrical/conical face to a planar face.
-    These edges should always be included (cylinder height lines, cone base circles).
+    Detect if an edge connects different surface types (geometry transitions).
+    These edges should always be included as they represent significant feature boundaries:
+    - Cylinder-to-plane (hole edges, shaft shoulders)
+    - Cylinder-to-cylinder (tangent blends, inner fillet walls)
+    - Curved-to-plane (cone bases, sphere tangents)
     
     Uses GeomAbs surface type enums instead of string names for reliability.
     
-    Returns: True if one face is cylindrical/conical and the other is planar
+    Returns: True if faces have different surface types or both are curved
     """
     try:
         # Use BRepAdaptor instead of BRep_Tool for type detection
@@ -905,21 +908,30 @@ def is_cylinder_to_planar_edge(face1, face2):
             GeomAbs_Torus        # Toroidal surfaces
         }
         
-        # Check if one is curved and the other is planar
+        # Check if one is curved and the other is planar (original detection)
         is_curved_to_plane = (
             (type1 in curved_types and type2 == GeomAbs_Plane) or
             (type2 in curved_types and type1 == GeomAbs_Plane)
         )
         
-        # Debug logging for first few detections
-        if is_curved_to_plane:
-            logger.debug(f"🎯 GEOMETRIC FEATURE DETECTED: type1={type1}, type2={type2}")
+        # NEW: Check if BOTH are curved (cylinder-to-cylinder tangent blends, fillet walls)
+        is_curved_to_curved = (type1 in curved_types and type2 in curved_types)
         
-        return is_curved_to_plane
+        # Geometry transition detected
+        is_transition = is_curved_to_plane or is_curved_to_curved
+        
+        # Debug logging for first few detections
+        if is_transition:
+            transition_type = "curved→curved" if is_curved_to_curved else "curved→plane"
+            logger.debug(f"🎯 GEOMETRIC TRANSITION: {transition_type} (type1={type1}, type2={type2})")
+        
+        return is_transition
         
     except Exception as e:
-        logger.debug(f"Error detecting cylinder-to-plane edge: {e}")
+        logger.debug(f"Error detecting geometry transition: {e}")
         return False
+
+
 
 
 def is_external_facing_edge(edge, face1, face2, shape):
@@ -1694,12 +1706,15 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
 
 def is_cylinder_to_planar_edge(face1, face2):
     """
-    Detect if an edge connects a cylindrical/conical face to a planar face.
-    These edges should always be included (cylinder height lines, cone base circles).
+    Detect if an edge connects different surface types (geometry transitions).
+    These edges should always be included as they represent significant feature boundaries:
+    - Cylinder-to-plane (hole edges, shaft shoulders)
+    - Cylinder-to-cylinder (tangent blends, inner fillet walls)
+    - Curved-to-plane (cone bases, sphere tangents)
     
     Uses GeomAbs surface type enums instead of string names for reliability.
     
-    Returns: True if one face is cylindrical/conical and the other is planar
+    Returns: True if faces have different surface types or both are curved
     """
     try:
         # Use BRepAdaptor instead of BRep_Tool for type detection
@@ -1718,21 +1733,30 @@ def is_cylinder_to_planar_edge(face1, face2):
             GeomAbs_Torus        # Toroidal surfaces
         }
         
-        # Check if one is curved and the other is planar
+        # Check if one is curved and the other is planar (original detection)
         is_curved_to_plane = (
             (type1 in curved_types and type2 == GeomAbs_Plane) or
             (type2 in curved_types and type1 == GeomAbs_Plane)
         )
         
-        # Debug logging for first few detections
-        if is_curved_to_plane:
-            logger.debug(f"🎯 GEOMETRIC FEATURE DETECTED: type1={type1}, type2={type2}")
+        # NEW: Check if BOTH are curved (cylinder-to-cylinder tangent blends, fillet walls)
+        is_curved_to_curved = (type1 in curved_types and type2 in curved_types)
         
-        return is_curved_to_plane
+        # Geometry transition detected
+        is_transition = is_curved_to_plane or is_curved_to_curved
+        
+        # Debug logging for first few detections
+        if is_transition:
+            transition_type = "curved→curved" if is_curved_to_curved else "curved→plane"
+            logger.debug(f"🎯 GEOMETRIC TRANSITION: {transition_type} (type1={type1}, type2={type2})")
+        
+        return is_transition
         
     except Exception as e:
-        logger.debug(f"Error detecting cylinder-to-plane edge: {e}")
+        logger.debug(f"Error detecting geometry transition: {e}")
         return False
+
+
 
 
 def is_external_facing_edge(edge, face1, face2, shape):
