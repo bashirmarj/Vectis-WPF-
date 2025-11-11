@@ -136,16 +136,24 @@ logging.getLogger('occwl').propagate = False
 logging.getLogger('occwl').setLevel(logging.ERROR)
 
 # === Feature Recognition Integration ===
-# Updated to use rule-based recognition for better memory efficiency and reliability
+# Production Feature Recognizer v2.0 with fallback to crash-free recognizer
 try:
-    from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
-    feature_recognizer = FlaskCrashFreeRecognizer(time_limit=30.0, memory_limit_mb=2000)
+    from production_recognizer_integration import ProductionRecognizerIntegration
+    feature_recognizer = ProductionRecognizerIntegration()
     FEATURE_RECOGNITION_AVAILABLE = True
-    logger.info("✅ Crash-free geometric recognizer with validation initialized (NO AAG)")
+    logger.info("✅ Production Feature Recognizer v2.0 initialized (Holes, Pockets, Slots, Turning)")
 except Exception as e:
-    feature_recognizer = None
-    FEATURE_RECOGNITION_AVAILABLE = False
-    logger.warning(f"⚠️ Feature recognition not available: {e}")
+    # Fallback to crash-free recognizer if production recognizer fails to load
+    logger.warning(f"⚠️ Production recognizer unavailable, falling back: {e}")
+    try:
+        from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
+        feature_recognizer = FlaskCrashFreeRecognizer(time_limit=30.0, memory_limit_mb=2000)
+        FEATURE_RECOGNITION_AVAILABLE = True
+        logger.info("✅ Crash-free geometric recognizer initialized (fallback mode)")
+    except Exception as fallback_error:
+        feature_recognizer = None
+        FEATURE_RECOGNITION_AVAILABLE = False
+        logger.warning(f"⚠️ All feature recognition unavailable: {fallback_error}")
 
 # ============================================================================
 # ERROR CLASSIFICATION & HANDLING
@@ -2127,22 +2135,40 @@ def recognize_features_geometric(shape, correlation_id: str):
         writer.Transfer(shape, 1)
         writer.Write(tmp_path)
         
-        # Call geometric recognizer (with circuit breaker protection)
-        # CRITICAL FIX: Wrap in additional try-except to catch graph building crashes
+        # Call production recognizer (with circuit breaker protection)
         try:
             result = geometric_circuit_breaker.call(
                 feature_recognizer.recognize_features,
                 tmp_path
             )
+            
+            # Log production recognizer results
+            if result and result.get('status') == 'success':
+                num_features = result.get('num_features_detected', 0)
+                confidence = result.get('overall_confidence', 0.0)
+                part_family = result.get('part_family', 'unknown')
+                proc_time = result.get('processing_time_seconds', 0.0)
+                
+                logger.info(f"[{correlation_id}] 🚀 Production recognizer completed:")
+                logger.info(f"[{correlation_id}]    Features: {num_features}, Family: {part_family}")
+                logger.info(f"[{correlation_id}]    Confidence: {confidence*100:.1f}%, Time: {proc_time:.2f}s")
+                
+                # Fallback if confidence is too low
+                if num_features == 0 or confidence < 0.2:
+                    logger.warning(f"[{correlation_id}] ⚠️ Low confidence result, using fallback recognizer")
+                    from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
+                    fallback = FlaskCrashFreeRecognizer(time_limit=30.0, memory_limit_mb=2000)
+                    result = geometric_circuit_breaker.call(fallback.recognize_features, tmp_path)
+            
         except (RuntimeError, MemoryError, OSError) as graph_error:
-            # Handle AAG graph building failures (memory corruption, OCC crashes)
-            logger.error(f"[{correlation_id}] ❌ CRITICAL: AAG graph build failed - {type(graph_error).__name__}: {graph_error}")
+            # Handle critical failures (memory corruption, OCC crashes)
+            logger.error(f"[{correlation_id}] ❌ CRITICAL: Feature recognition failed - {type(graph_error).__name__}: {graph_error}")
             logger.warning(f"[{correlation_id}] ⚠️ Degrading to mesh-only mode (no feature recognition)")
             return None
         
         # Check if recognition succeeded
         if not result or result.get('status') != 'success':
-            logger.warning(f"[{correlation_id}] Rule-based recognition failed: {result.get('error', 'Unknown error')}")
+            logger.warning(f"[{correlation_id}] Feature recognition failed: {result.get('error', 'Unknown error')}")
             return None
         
         # Extract data from result
