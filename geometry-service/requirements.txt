@@ -13,3 +13,4 @@ requests==2.31.0
 gunicorn==21.2.0
 deprecate==1.0.5
 numpy==1.24.3
+psutil==5.9.5
