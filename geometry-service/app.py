@@ -1642,7 +1642,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
         logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
         logger.info(f"   - ISO curves: {stats['iso_curves']}")
-        logger.info(f"   - Duplicate edges skipped: {stats['duplicate_edges_skipped']}")
         logger.info(f"   - Tagged segments: {len(tagged_edges)}")
         
     except Exception as e:
