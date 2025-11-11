@@ -1380,6 +1380,10 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 first_param = curve_result[1]
                 last_param = curve_result[2]
                 
+                # Get curve adaptor for type detection (BEFORE significance check!)
+                curve_adaptor = BRepAdaptor_Curve(edge)
+                curve_type = curve_adaptor.GetType()
+                
                 # Get faces adjacent to this edge
                 if not edge_face_map.Contains(edge):
                     edge_explorer.Next()
@@ -1420,8 +1424,16 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         logger.info(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold={angle_threshold_degrees}°")
                         debug_logged += 1
                     
-                    # Use the configurable threshold (not hardcoded 5.0)
-                    if dihedral_angle > angle_threshold_degrees:
+                    # CRITICAL: Always include circular arcs (fillets) regardless of angle
+                    if curve_type == GeomAbs_Circle:
+                        is_significant = True
+                        edge_type = "fillet_arc"
+                        stats['sharp_edges'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.info(f"✅ Including circular arc (likely fillet) despite smooth angle={dihedral_angle:.1f}°")
+                            debug_logged += 1
+                    # Use the configurable threshold for non-circular edges
+                    elif dihedral_angle > angle_threshold_degrees:
                         is_significant = True
                         edge_type = f"sharp_{dihedral_angle:.1f}deg"
                         stats['sharp_edges'] += 1
@@ -1448,11 +1460,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     edge_explorer.Next()
                     continue
                 
-                # Get curve adaptor for type detection
-                curve_adaptor = BRepAdaptor_Curve(edge)
-                curve_type = curve_adaptor.GetType()
-                
-                # Get start and end points
+                # Get start and end points (curve_adaptor already initialized above)
                 start_point = curve_adaptor.Value(first_param)
                 end_point = curve_adaptor.Value(last_param)
                 
