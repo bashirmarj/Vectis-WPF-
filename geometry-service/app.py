@@ -1373,6 +1373,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 curve_result = BRep_Tool.Curve(edge)
                 
                 if not curve_result or len(curve_result) < 3 or curve_result[0] is None:
+                    edge_explorer.Next()
                     continue
                 
                 curve = curve_result[0]
@@ -1381,6 +1382,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 
                 # Get faces adjacent to this edge
                 if not edge_face_map.Contains(edge):
+                    edge_explorer.Next()
                     continue
                 
                 face_list = edge_face_map.FindFromKey(edge)
@@ -1437,6 +1439,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 
                 # Only process significant edges
                 if not is_significant:
+                    edge_explorer.Next()
                     continue
                 
                 # Get curve adaptor for type detection
@@ -1465,6 +1468,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     points.append([point.X(), point.Y(), point.Z()])
                 
                 if len(points) < 2:
+                    edge_explorer.Next()
                     continue
                 
                 # Deduplication removed - handled in frontend for better circular edge support
