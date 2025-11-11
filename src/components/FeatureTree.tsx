@@ -25,23 +25,19 @@ interface FeatureInstance {
   parameters?: Record<string, any>;  // Rule-based specific
 }
 
-interface RecognizedFeatures {
+// Backend geometric_features structure
+interface GeometricFeatures {
   instances: FeatureInstance[];
-  semantic_labels?: number[];  // AAGNet specific
-  extended_attributes?: {
-    face_attributes: number[][];
-    edge_attributes: number[][];
-  };
-  num_faces?: number;
-  num_instances?: number;
-  num_features_detected?: number;  // Rule-based specific
-  feature_summary?: Record<string, number>;  // Rule-based specific
-  processing_time?: number;
-  recognition_method?: string;  // 'AAGNet' or 'rule_based'
+  num_features_detected: number;
+  num_faces_analyzed: number;
+  confidence_score: number;
+  inference_time_sec: number;
+  recognition_method: string;
+  feature_summary?: Record<string, number>;
 }
 
 interface FeatureTreeProps {
-  features: RecognizedFeatures;
+  features: GeometricFeatures | null | undefined;
   featureSummary?: any;
   onFeatureSelect?: (featureInstance: FeatureInstance) => void;
 }
@@ -283,11 +279,9 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   // Calculate summary statistics
   const stats = useMemo(() => {
-    const totalFeatures = features.num_instances || features.num_features_detected || features.instances.length;
-    const totalFaces = features.num_faces || features.instances.reduce((sum, f) => sum + f.face_indices.length, 0);
-    const avgConfidence = features.instances.length > 0
-      ? features.instances.reduce((sum, f) => sum + f.confidence, 0) / features.instances.length
-      : 0;
+    const totalFeatures = features.num_features_detected;
+    const totalFaces = features.num_faces_analyzed;
+    const avgConfidence = features.confidence_score;
     
     return {
       totalFeatures,
@@ -417,11 +411,9 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       )}
 
       {/* Processing Info */}
-      {features.processing_time && (
-        <div className="px-4 py-2 text-xs text-muted-foreground text-center border-t">
-          Analysis: {features.processing_time.toFixed(2)}s • {features.recognition_method === 'rule_based' ? 'Rule-Based' : features.recognition_method || 'Feature Recognition'}
-        </div>
-      )}
+      <div className="px-4 py-2 text-xs text-muted-foreground text-center border-t">
+        Analysis: {features.inference_time_sec.toFixed(2)}s • {features.recognition_method || 'Feature Recognition'}
+      </div>
     </div>
   );
 };
