@@ -1346,21 +1346,9 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     # Build edge-to-faces map using TopTools
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-    logger.info(f"📊 MapShapesAndAncestors result: {edge_face_map.Size()} edges mapped to faces")
     
     try:
         edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-        
-        # Count total edges for diagnostics
-        total_edge_count = 0
-        temp_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-        while temp_explorer.More():
-            total_edge_count += 1
-            temp_explorer.Next()
-        logger.info(f"📊 TopExp_Explorer found {total_edge_count} total edges in shape")
-        
-        if total_edge_count == 0:
-            logger.warning("⚠️ No edges found in shape! Shape may be invalid or empty.")
         
         stats = {
             'boundary_edges': 0,
@@ -1394,9 +1382,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 
                 # Get faces adjacent to this edge
                 if not edge_face_map.Contains(edge):
-                    stats['orphan_edges_skipped'] += 1
-                    if stats['orphan_edges_skipped'] <= 5:  # Log first 5 occurrences
-                        logger.warning(f"⚠️ Edge #{stats['total_processed']} not in edge_face_map (skipped)")
                     edge_explorer.Next()
                     continue
                 
@@ -1667,12 +1652,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
         logger.info(f"   - ISO curves: {stats['iso_curves']}")
         logger.info(f"   - Tagged segments: {len(tagged_edges)}")
-        logger.info(f"📊 Processing summary:")
-        logger.info(f"   - Total edges in shape: {total_edge_count}")
-        logger.info(f"   - Edges in edge_face_map: {edge_face_map.Size()}")
-        logger.info(f"   - Edges processed: {stats['total_processed']}")
-        logger.info(f"   - Orphan edges skipped: {stats['orphan_edges_skipped']}")
-        logger.info(f"   - Smooth edges skipped: {stats['smooth_edges_skipped']}")
         
     except Exception as e:
         logger.error(f"Error extracting edges: {e}")
