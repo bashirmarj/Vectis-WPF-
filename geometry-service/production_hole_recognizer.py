@@ -31,7 +31,7 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane, GeomAbs_Cone, GeomAbs_Sphere
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX
-from OCC.Core.TopoDS import topods_Face, topods_Edge, topods_Vertex, TopoDS_Face, TopoDS_Shape
+from OCC.Core.TopoDS import topods, TopoDS_Face, TopoDS_Shape
 from OCC.Core.BRepTools import breptools
 from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Ax1, gp_Dir, gp_Lin
 from OCC.Core.BRep import BRep_Tool
@@ -229,7 +229,7 @@ class ProductionHoleRecognizer:
         idx = 0
 
         while explorer.More():
-            face = topods_Face(explorer.Current())
+            face = topods.Face(explorer.Current())
 
             try:
                 surf = BRepAdaptor_Surface(face)
@@ -446,12 +446,12 @@ class ProductionHoleRecognizer:
             edge_exp = TopExp_Explorer(cylinder_face, TopAbs_EDGE)
             
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
 
                 # Find faces sharing this edge
                 face_exp = TopExp_Explorer(shape, TopAbs_FACE)
                 while face_exp.More():
-                    adj_face = topods_Face(face_exp.Current())
+                    adj_face = topods.Face(face_exp.Current())
 
                     if not adj_face.IsSame(cylinder_face):
                         try:
@@ -524,12 +524,12 @@ class ProductionHoleRecognizer:
 
             edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
 
                 # Find bottom face
                 face_exp = TopExp_Explorer(shape, TopAbs_FACE)
                 while face_exp.More():
-                    adj_face = topods_Face(face_exp.Current())
+                    adj_face = topods.Face(face_exp.Current())
 
                     if not adj_face.IsSame(face):
                         try:
@@ -620,11 +620,11 @@ class ProductionHoleRecognizer:
             edge_exp = TopExp_Explorer(cylinder_face, TopAbs_EDGE)
             
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
 
                 face_exp = TopExp_Explorer(shape, TopAbs_FACE)
                 while face_exp.More():
-                    adj_face = topods_Face(face_exp.Current())
+                    adj_face = topods.Face(face_exp.Current())
 
                     if not adj_face.IsSame(cylinder_face):
                         try:

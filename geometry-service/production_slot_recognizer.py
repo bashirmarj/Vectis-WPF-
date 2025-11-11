@@ -28,7 +28,7 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Line, GeomAbs_Circle
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
-from OCC.Core.TopoDS import topods_Face, topods_Edge, TopoDS_Face, TopoDS_Shape
+from OCC.Core.TopoDS import topods, TopoDS_Face, TopoDS_Shape
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop_SurfaceProperties, brepgprop_LinearProperties
@@ -200,7 +200,7 @@ class ProductionSlotRecognizer:
         idx = 0
 
         while explorer.More():
-            face = topods_Face(explorer.Current())
+            face = topods.Face(explorer.Current())
 
             try:
                 surf = BRepAdaptor_Surface(face)
@@ -234,7 +234,7 @@ class ProductionSlotRecognizer:
             edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
 
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
 
                 # Get edge length
                 edge_props = GProp_GProps()
@@ -394,7 +394,7 @@ class ProductionSlotRecognizer:
 
             edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
 
                 edge_props = GProp_GProps()
                 brepgprop_LinearProperties(edge, edge_props)
@@ -451,7 +451,7 @@ class ProductionSlotRecognizer:
             # Build list of edges
             face_edges = []
             while edge_exp.More():
-                face_edges.append(topods_Edge(edge_exp.Current()))
+                face_edges.append(topods.Edge(edge_exp.Current()))
                 edge_exp.Next()
 
             # Find all faces sharing these edges
@@ -461,7 +461,7 @@ class ProductionSlotRecognizer:
             wall_indices = []
 
             while all_face_exp.More():
-                other_face = topods_Face(all_face_exp.Current())
+                other_face = topods.Face(all_face_exp.Current())
 
                 if not other_face.IsSame(face):
                     # Check if shares edge
@@ -469,7 +469,7 @@ class ProductionSlotRecognizer:
                     shares_edge = False
 
                     while other_edge_exp.More():
-                        other_edge = topods_Edge(other_edge_exp.Current())
+                        other_edge = topods.Edge(other_edge_exp.Current())
 
                         for face_edge in face_edges:
                             if face_edge.IsSame(other_edge):
@@ -573,7 +573,7 @@ class ProductionSlotRecognizer:
             all_face_exp = TopExp_Explorer(shape, TopAbs_FACE)
 
             while all_face_exp.More():
-                other_face = topods_Face(all_face_exp.Current())
+                other_face = topods.Face(all_face_exp.Current())
 
                 if not other_face.IsSame(face):
                     try:
@@ -652,7 +652,7 @@ class ProductionSlotRecognizer:
             all_face_exp = TopExp_Explorer(shape, TopAbs_FACE)
 
             while all_face_exp.More():
-                other_face = topods_Face(all_face_exp.Current())
+                other_face = topods.Face(all_face_exp.Current())
 
                 if not other_face.IsSame(face):
                     try:
@@ -713,14 +713,14 @@ class ProductionSlotRecognizer:
 
             face_edges = []
             while edge_exp.More():
-                face_edges.append(topods_Edge(edge_exp.Current()))
+                face_edges.append(topods.Edge(edge_exp.Current()))
                 edge_exp.Next()
 
             # Check all faces
             face_exp = TopExp_Explorer(shape, TopAbs_FACE)
 
             while face_exp.More():
-                adj_face = topods_Face(face_exp.Current())
+                adj_face = topods.Face(face_exp.Current())
 
                 if not adj_face.IsSame(face):
                     # Check if shares edge
@@ -728,7 +728,7 @@ class ProductionSlotRecognizer:
                     shares_edge = False
 
                     while adj_edge_exp.More():
-                        adj_edge = topods_Edge(adj_edge_exp.Current())
+                        adj_edge = topods.Edge(adj_edge_exp.Current())
 
                         for face_edge in face_edges:
                             if face_edge.IsSame(adj_edge):
@@ -765,7 +765,7 @@ class ProductionSlotRecognizer:
             has_arcs = False
 
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
 
                 try:
                     curve = BRepAdaptor_Curve(edge)

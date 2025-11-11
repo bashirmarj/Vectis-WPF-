@@ -29,7 +29,7 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Line, GeomAbs_Circle
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_WIRE, TopAbs_VERTEX
-from OCC.Core.TopoDS import topods_Face, topods_Edge, topods_Wire, topods_Vertex, TopoDS_Face, TopoDS_Shape
+from OCC.Core.TopoDS import topods, TopoDS_Face, TopoDS_Shape
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import (brepgprop_SurfaceProperties, 
@@ -208,7 +208,7 @@ class ProductionPocketRecognizer:
         idx = 0
 
         while explorer.More():
-            face = topods_Face(explorer.Current())
+            face = topods.Face(explorer.Current())
 
             try:
                 surf = BRepAdaptor_Surface(face)
@@ -287,19 +287,19 @@ class ProductionPocketRecognizer:
         face_edges = set()
         edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
         while edge_exp.More():
-            edge = topods_Edge(edge_exp.Current())
+            edge = topods.Edge(edge_exp.Current())
             face_edges.add(edge)
             edge_exp.Next()
 
         # Find faces sharing these edges
         all_face_exp = TopExp_Explorer(shape, TopAbs_FACE)
         while all_face_exp.More():
-            other_face = topods_Face(all_face_exp.Current())
+            other_face = topods.Face(all_face_exp.Current())
 
             if not other_face.IsSame(face):
                 other_edge_exp = TopExp_Explorer(other_face, TopAbs_EDGE)
                 while other_edge_exp.More():
-                    other_edge = topods_Edge(other_edge_exp.Current())
+                    other_edge = topods.Edge(other_edge_exp.Current())
                     
                     # Check if shares edge
                     for face_edge in face_edges:
@@ -401,7 +401,7 @@ class ProductionPocketRecognizer:
             if not wire_exp.More():
                 return 10.0, 10.0, PocketType.COMPLEX, None
 
-            outer_wire = topods_Wire(wire_exp.Current())
+            outer_wire = topods.Wire(wire_exp.Current())
 
             # Analyze edges
             edges = []
@@ -410,7 +410,7 @@ class ProductionPocketRecognizer:
 
             edge_exp = TopExp_Explorer(outer_wire, TopAbs_EDGE)
             while edge_exp.More():
-                edge = topods_Edge(edge_exp.Current())
+                edge = topods.Edge(edge_exp.Current())
                 
                 # Get edge length
                 edge_props = GProp_GProps()
@@ -518,7 +518,7 @@ class ProductionPocketRecognizer:
             all_face_exp = TopExp_Explorer(shape, TopAbs_FACE)
             idx = 0
             while all_face_exp.More():
-                face = topods_Face(all_face_exp.Current())
+                face = topods.Face(all_face_exp.Current())
 
                 if face in adjacent_faces:
                     try:
@@ -604,7 +604,7 @@ class ProductionPocketRecognizer:
 
             # Additional wires are islands
             while wire_exp.More():
-                island_wire = topods_Wire(wire_exp.Current())
+                island_wire = topods.Wire(wire_exp.Current())
                 island_count += 1
 
                 # Calculate island area (approximate)

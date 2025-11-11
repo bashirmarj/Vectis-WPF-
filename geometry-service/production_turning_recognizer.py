@@ -28,7 +28,7 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane, GeomAbs_Cone
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_FACE
-from OCC.Core.TopoDS import topods_Face, TopoDS_Face, TopoDS_Shape
+from OCC.Core.TopoDS import topods, TopoDS_Face, TopoDS_Shape
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
 from OCC.Core.Bnd import Bnd_Box
@@ -192,7 +192,7 @@ class ProductionTurningRecognizer:
             explorer = TopExp_Explorer(shape, TopAbs_FACE)
 
             while explorer.More():
-                face = topods_Face(explorer.Current())
+                face = topods.Face(explorer.Current())
 
                 try:
                     surf = BRepAdaptor_Surface(face)
@@ -237,7 +237,7 @@ class ProductionTurningRecognizer:
         idx = 0
 
         while explorer.More():
-            face = topods_Face(explorer.Current())
+            face = topods.Face(explorer.Current())
 
             try:
                 surf = BRepAdaptor_Surface(face)
@@ -389,7 +389,7 @@ class ProductionTurningRecognizer:
             idx = 0
 
             while explorer.More():
-                face = topods_Face(explorer.Current())
+                face = topods.Face(explorer.Current())
 
                 try:
                     surf = BRepAdaptor_Surface(face)
@@ -481,7 +481,7 @@ class ProductionTurningRecognizer:
         idx = 0
 
         while explorer.More():
-            face = topods_Face(explorer.Current())
+            face = topods.Face(explorer.Current())
 
             try:
                 surf = BRepAdaptor_Surface(face)
