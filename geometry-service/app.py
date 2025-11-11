@@ -1348,8 +1348,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
     
     try:
-        edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-        
         stats = {
             'boundary_edges': 0,
             'sharp_edges': 0,
@@ -1364,8 +1362,12 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
         debug_logged = 0
         max_debug_logs = 10
         
-        while edge_explorer.More() and edge_count < max_edges:
-            edge = topods.Edge(edge_explorer.Current())
+        # Iterate using indexed access (proven pattern from rule_based_recognizer.py)
+        for edge_idx in range(1, edge_face_map.Size() + 1):
+            if edge_count >= max_edges:
+                break
+                
+            edge = edge_face_map.FindKey(edge_idx)  # Get edge FROM the map
             stats['total_processed'] += 1
             
             try:
@@ -1380,68 +1382,61 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 first_param = curve_result[1]
                 last_param = curve_result[2]
                 
+                # Get faces adjacent to this edge (guaranteed to work - edge is from the map)
+                face_list = edge_face_map.FindFromIndex(edge_idx)
+                num_adjacent_faces = face_list.Size()
+                
+                if debug_logged < max_debug_logs:
+                    logger.debug(f"🔍 Edge #{stats['total_processed']}: {num_adjacent_faces} adjacent faces")
+                    debug_logged += 1
+                
                 # SIMPLIFIED: Trust BREP topology - edges ARE face intersections
                 is_significant = False
                 edge_type = "brep_edge"
                 
-                # Get faces adjacent to this edge
-                if edge_face_map.Contains(edge):
-                    face_list = edge_face_map.FindFromKey(edge)
-                    num_adjacent_faces = face_list.Size()
+                # ANY edge with adjacent faces is a valid face intersection
+                if num_adjacent_faces == 1:
+                    # Boundary edge - always show
+                    is_significant = True
+                    edge_type = "boundary"
+                    stats['boundary_edges'] += 1
                     
+                elif num_adjacent_faces == 2:
+                    # Interior edge - check dihedral angle
+                    face1 = topods.Face(face_list.FindFromIndex(1))
+                    face2 = topods.Face(face_list.FindFromIndex(2))
+                    
+                    dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                    
+                    # Log dihedral angle for first few edges to debug
                     if debug_logged < max_debug_logs:
-                        logger.debug(f"🔍 Edge #{stats['total_processed']}: {num_adjacent_faces} adjacent faces")
-                        debug_logged += 1
+                        logger.debug(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold={angle_threshold_degrees}°")
                     
-                    # ANY edge with adjacent faces is a valid face intersection
-                    if num_adjacent_faces == 1:
-                        # Boundary edge - always show
+                    # Use the configurable threshold (not hardcoded 5.0)
+                    if dihedral_angle > angle_threshold_degrees:
                         is_significant = True
-                        edge_type = "boundary"
-                        stats['boundary_edges'] += 1
-                        
-                    elif num_adjacent_faces == 2:
-                        # Interior edge - check dihedral angle
-                        face1 = topods.Face(face_list.FindFromIndex(1))
-                        face2 = topods.Face(face_list.FindFromIndex(2))
-                        
-                        dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
-                        
-                        # Log dihedral angle for first few edges to debug
-                        if debug_logged < max_debug_logs:
-                            logger.debug(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold=5.0°")
-                        
-                        # THRESHOLD: Only show edges with angle > 5 degrees (catches cylinder-plane intersections)
-                        ANGLE_THRESHOLD_DEG = 5.0
-                        
-                        if dihedral_angle > ANGLE_THRESHOLD_DEG:
-                            is_significant = True
-                            edge_type = f"sharp_{dihedral_angle:.1f}deg"
-                            stats['sharp_edges'] += 1
-                        else:
-                            # Smooth or seam edge - skip it
-                            is_significant = False
-                            stats['smooth_edges_skipped'] += 1
-                            if debug_logged < max_debug_logs:
-                                logger.debug(f"⏭️  Skipping smooth/seam edge (angle={dihedral_angle:.1f}°)")
-                                debug_logged += 1
-                    
-                    elif num_adjacent_faces > 2:
-                        # Non-manifold edge - show it
-                        is_significant = True
-                        edge_type = f"non_manifold_{num_adjacent_faces}"
+                        edge_type = f"sharp_{dihedral_angle:.1f}deg"
                         stats['sharp_edges'] += 1
+                    else:
+                        # Smooth or seam edge - skip it
+                        is_significant = False
+                        stats['smooth_edges_skipped'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.debug(f"⏭️  Skipping smooth/seam edge (angle={dihedral_angle:.1f}°)")
+                            debug_logged += 1
+                
+                elif num_adjacent_faces > 2:
+                    # Non-manifold edge - show it
+                    is_significant = True
+                    edge_type = f"non_manifold_{num_adjacent_faces}"
+                    stats['sharp_edges'] += 1
                 else:
-                    # Orphan edge (construction geometry, not part of solid faces) - SKIP
+                    # No adjacent faces (shouldn't happen since edge is FROM the map, but handle it)
                     is_significant = False
                     stats['orphan_edges_skipped'] += 1
-                    if debug_logged < max_debug_logs:
-                        logger.debug(f"⏭️  Skipping orphan edge (construction geometry, not attached to faces)")
-                        debug_logged += 1
                 
                 # Only process significant edges
                 if not is_significant:
-                    edge_explorer.Next()
                     continue
                 
                 # Get curve adaptor for type detection
@@ -1470,7 +1465,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     points.append([point.X(), point.Y(), point.Z()])
                 
                 if len(points) < 2:
-                    edge_explorer.Next()
                     continue
                 
                 # Deduplication removed - handled in frontend for better circular edge support
@@ -1559,8 +1553,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             except Exception as e:
                 logger.debug(f"Error processing edge: {e}")
                 pass
-            
-            edge_explorer.Next()
         
         # Process ISO curves through same pipeline
         for start, end, curve_type in iso_curves:
