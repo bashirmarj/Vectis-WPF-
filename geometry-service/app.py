@@ -1420,13 +1420,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     
                 elif num_adjacent_faces == 2:
                     # Interior edge - check dihedral angle
-                    # Use iterator pattern for linked list (FindFromIndex doesn't exist)
-                    from OCC.Core.TopTools import TopTools_ListIteratorOfListOfShape
-                    
-                    face_iter = TopTools_ListIteratorOfListOfShape(face_list)
-                    face1 = topods.Face(face_iter.Value())
-                    face_iter.Next()
-                    face2 = topods.Face(face_iter.Value())
+                    face1 = topods.Face(face_list.FindFromIndex(1))
+                    face2 = topods.Face(face_list.FindFromIndex(2))
                     
                     dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
                     
