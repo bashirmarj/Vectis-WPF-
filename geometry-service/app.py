@@ -1431,9 +1431,14 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     
                     dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
                     
+                    # Calculate edge length for short-edge heuristic
+                    start_point = curve_adaptor.Value(first_param)
+                    end_point = curve_adaptor.Value(last_param)
+                    edge_length = start_point.Distance(end_point)
+                    
                     # Log dihedral angle for first few edges to debug
                     if debug_logged < max_debug_logs:
-                        logger.info(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold={angle_threshold_degrees}°")
+                        logger.info(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, length={edge_length:.3f}mm, threshold={angle_threshold_degrees}°")
                         debug_logged += 1
                     
                     # CRITICAL: Always include circular arcs (fillets) regardless of angle
@@ -1443,6 +1448,23 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         stats['sharp_edges'] += 1
                         if debug_logged < max_debug_logs:
                             logger.info(f"✅ Including circular arc (likely fillet) despite angle={dihedral_angle:.1f}°")
+                            debug_logged += 1
+                    # NEW: Include B-spline curves (often used for fillet boundaries between curved surfaces)
+                    elif curve_type in [GeomAbs_BSplineCurve, GeomAbs_BezierCurve]:
+                        is_significant = True
+                        edge_type = "bspline_arc"
+                        stats['sharp_edges'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.info(f"✅ Including B-spline/Bezier curve (likely fillet boundary, length={edge_length:.3f}mm, angle={dihedral_angle:.1f}°)")
+                            debug_logged += 1
+                    # NEW: Include very short edges (< 10mm) - these are often blend/fillet boundaries
+                    elif edge_length < 10.0:
+                        is_significant = True
+                        edge_type = "short_blend"
+                        stats['geometric_features'] += 1
+                        stats['sharp_edges'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.info(f"✅ Including short edge (length={edge_length:.3f}mm, angle={dihedral_angle:.1f}°)")
                             debug_logged += 1
                     # Check for geometry transitions (cylinder→plane, etc.) - these are significant feature boundaries
                     elif is_cylinder_to_planar_edge(face1, face2):
