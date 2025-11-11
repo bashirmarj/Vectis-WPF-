@@ -387,9 +387,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* Show only backend feature edges in solid mode (no tessellation lines) */}
-        {/* Only render feature edges if SilhouetteEdges is NOT active to prevent z-fighting */}
-        {displayStyle === "solid" && showEdges && featureEdgesGeometry && !useSilhouetteEdges && (
+        {/* Solid mode: ONLY backend feature edges (SilhouetteEdges never active in solid) */}
+        {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
           <lineSegments geometry={featureEdgesGeometry} frustumCulled={true}>
             <lineBasicMaterial
               color="#000000"
