@@ -502,7 +502,7 @@ class ProductionTurningRecognizer:
                             angle = np.degrees(semi_angle)
 
                             # Get dimensions
-                            apex_radius = cone.Ref Radius()
+                            apex_radius = cone.RefRadius()
                             v_min = surf.FirstVParameter()
                             v_max = surf.LastVParameter()
                             
