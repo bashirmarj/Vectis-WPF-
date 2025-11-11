@@ -1662,11 +1662,18 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 logger.debug(f"Error processing ISO curve: {e}")
                 pass
         
-        logger.info(f"✅ Extracted {len(feature_edges)} significant edges:")
+        # ===== POST-PROCESSING: Merge split circular arcs into complete circles =====
+        merged_result = merge_split_circles(feature_edges, edge_classifications, tagged_edges)
+        feature_edges = merged_result['feature_edges']
+        edge_classifications = merged_result['edge_classifications']
+        tagged_edges = merged_result['tagged_edges']
+        
+        logger.info(f"✅ Extracted {len(feature_edges)} significant edges (after circle merging):")
         logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
         logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
         logger.info(f"   - ISO curves: {stats['iso_curves']}")
         logger.info(f"   - Tagged segments: {len(tagged_edges)}")
+        logger.info(f"   - Circles merged: {merged_result['circles_merged']}")
         logger.info(f"📊 Processing summary:")
         logger.info(f"   - Total edges in shape: {total_edge_count}")
         logger.info(f"   - Edges in edge_face_map: {edge_face_map.Size()}")
@@ -1687,6 +1694,167 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
 # ============================================================================
 # HELPER FUNCTIONS FOR UNIFIED EDGE EXTRACTION
 # ============================================================================
+
+def merge_split_circles(feature_edges, edge_classifications, tagged_edges):
+    """
+    Post-process extracted edges to merge split circular arcs into complete circles.
+    
+    Cylindrical surfaces have seam edges that split circles into 2 halves.
+    This function detects arc pairs that form complete circles and merges them.
+    
+    Args:
+        feature_edges: List of polylines [[x,y,z], ...]
+        edge_classifications: List of classification dicts
+        tagged_edges: List of tagged segment dicts
+    
+    Returns:
+        Dict with merged arrays and merge statistics
+    """
+    logger.info("🔄 Merging split circular arcs into complete circles...")
+    
+    # Separate circles/arcs from other edges
+    circle_indices = []
+    other_indices = []
+    
+    for i, classification in enumerate(edge_classifications):
+        if classification.get('type') in ['circle', 'arc'] and classification.get('center'):
+            circle_indices.append(i)
+        else:
+            other_indices.append(i)
+    
+    # Group arcs by center, radius, and normal (within tolerance)
+    arc_groups = {}
+    position_tolerance = 0.001  # 1 micron
+    radius_tolerance = 0.001
+    normal_tolerance = 0.01  # ~0.5 degree
+    
+    for idx in circle_indices:
+        classification = edge_classifications[idx]
+        center = tuple(classification['center'])
+        radius = classification.get('radius', 0)
+        normal = tuple(classification.get('normal', [0, 0, 1]))
+        
+        # Find matching group
+        matched_group = None
+        for group_key, group_indices in arc_groups.items():
+            group_center, group_radius, group_normal = group_key
+            
+            # Check if center, radius, and normal match
+            center_match = np.linalg.norm(np.array(center) - np.array(group_center)) < position_tolerance
+            radius_match = abs(radius - group_radius) < radius_tolerance
+            normal_match = abs(np.dot(np.array(normal), np.array(group_normal))) > (1.0 - normal_tolerance)
+            
+            if center_match and radius_match and normal_match:
+                matched_group = group_key
+                break
+        
+        if matched_group:
+            arc_groups[matched_group].append(idx)
+        else:
+            arc_groups[(center, radius, normal)] = [idx]
+    
+    # Merge arc groups that form complete circles
+    merged_edges = []
+    merged_classifications = []
+    merged_tagged = []
+    circles_merged = 0
+    indices_to_skip = set()
+    
+    for group_key, group_indices in arc_groups.items():
+        if len(group_indices) >= 2:
+            # Calculate total angular extent
+            total_angular_extent = 0
+            for idx in group_indices:
+                classification = edge_classifications[idx]
+                if classification['type'] == 'circle':
+                    total_angular_extent += 2 * math.pi
+                elif classification['type'] == 'arc':
+                    start_angle = classification.get('start_angle', 0)
+                    end_angle = classification.get('end_angle', 0)
+                    total_angular_extent += abs(end_angle - start_angle)
+            
+            # Check if arcs combine to form a complete circle
+            if abs(total_angular_extent - 2 * math.pi) < 0.1:  # Within ~6 degrees of full circle
+                # Merge into single complete circle
+                center, radius, normal = group_key
+                
+                # Combine all points from the arc segments
+                combined_points = []
+                for idx in group_indices:
+                    combined_points.extend(feature_edges[idx])
+                    indices_to_skip.add(idx)
+                
+                # Remove duplicate points (where arcs connect)
+                unique_points = []
+                for point in combined_points:
+                    is_duplicate = False
+                    for existing_point in unique_points:
+                        if np.linalg.norm(np.array(point) - np.array(existing_point)) < position_tolerance:
+                            is_duplicate = True
+                            break
+                    if not is_duplicate:
+                        unique_points.append(point)
+                
+                # Create merged circle classification
+                merged_classification = {
+                    "id": len(merged_classifications),
+                    "type": "circle",
+                    "center": list(center),
+                    "normal": list(normal),
+                    "radius": radius,
+                    "diameter": radius * 2,  # ✅ Now provides diameter!
+                    "length": 2 * math.pi * radius,
+                    "segment_count": len(unique_points),
+                    "feature_id": edge_classifications[group_indices[0]]['feature_id']
+                }
+                
+                merged_edges.append(unique_points)
+                merged_classifications.append(merged_classification)
+                
+                # Create tagged segments for the merged circle
+                for i in range(len(unique_points) - 1):
+                    merged_tagged.append({
+                        'feature_id': merged_classification['feature_id'],
+                        'start': unique_points[i],
+                        'end': unique_points[i + 1],
+                        'type': 'circle',
+                        'diameter': merged_classification['diameter'],
+                        'radius': merged_classification['radius'],
+                        'length': merged_classification['length']
+                    })
+                # Close the circle
+                merged_tagged.append({
+                    'feature_id': merged_classification['feature_id'],
+                    'start': unique_points[-1],
+                    'end': unique_points[0],
+                    'type': 'circle',
+                    'diameter': merged_classification['diameter'],
+                    'radius': merged_classification['radius'],
+                    'length': merged_classification['length']
+                })
+                
+                circles_merged += 1
+                logger.info(f"✅ Merged {len(group_indices)} arcs into circle: diameter={radius*2:.3f}mm")
+    
+    # Add non-merged edges
+    for i, classification in enumerate(edge_classifications):
+        if i not in indices_to_skip:
+            merged_edges.append(feature_edges[i])
+            merged_classifications.append(classification)
+            
+            # Add corresponding tagged segments
+            for segment in tagged_edges:
+                if segment.get('feature_id') == classification.get('feature_id'):
+                    merged_tagged.append(segment)
+    
+    logger.info(f"🔄 Circle merging complete: {circles_merged} circles created from split arcs")
+    
+    return {
+        'feature_edges': merged_edges,
+        'edge_classifications': merged_classifications,
+        'tagged_edges': merged_tagged,
+        'circles_merged': circles_merged
+    }
 
 def is_cylinder_to_planar_edge(face1, face2):
     """
