@@ -1430,9 +1430,26 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         edge_type = "fillet_arc"
                         stats['sharp_edges'] += 1
                         if debug_logged < max_debug_logs:
-                            logger.info(f"✅ Including circular arc (likely fillet) despite smooth angle={dihedral_angle:.1f}°")
+                            logger.info(f"✅ Including circular arc (likely fillet) despite angle={dihedral_angle:.1f}°")
                             debug_logged += 1
-                    # Use the configurable threshold for non-circular edges
+                    # Check for geometry transitions (cylinder→plane, etc.) - these are significant feature boundaries
+                    elif is_cylinder_to_planar_edge(face1, face2):
+                        is_significant = True
+                        edge_type = "geometry_transition"
+                        stats['geometric_features'] += 1
+                        stats['sharp_edges'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.info(f"✅ Including geometry transition edge (angle={dihedral_angle:.1f}°)")
+                            debug_logged += 1
+                    # Include 90° edges (common in machined parts - corners, steps)
+                    elif abs(dihedral_angle - 90.0) < 5.0:
+                        is_significant = True
+                        edge_type = "right_angle"
+                        stats['sharp_edges'] += 1
+                        if debug_logged < max_debug_logs:
+                            logger.info(f"✅ Including 90° edge (angle={dihedral_angle:.1f}°)")
+                            debug_logged += 1
+                    # Use the configurable threshold for other edges
                     elif dihedral_angle > angle_threshold_degrees:
                         is_significant = True
                         edge_type = f"sharp_{dihedral_angle:.1f}deg"
