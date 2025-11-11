@@ -1347,10 +1347,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
     
-    # Log edge-face topology size for debugging
-    total_edges_in_map = edge_face_map.Extent()
-    logger.info(f"📊 Edge-Face topology: {total_edges_in_map} edges mapped to faces")
-    
     try:
         edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
         
