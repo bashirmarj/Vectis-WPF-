@@ -1336,12 +1336,12 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 
                 return angle_deg
             
-            return 0.0  # Default to smooth edge if normals undefined
+            return 180.0  # Treat as sharp edge if normals undefined
             
         except Exception as e:
             # Log the error for debugging instead of silently failing
             logger.debug(f"⚠️  Error calculating dihedral angle: {e}")
-            return 0.0
+            return 180.0  # Treat as sharp edge on error
     
     # Build edge-to-faces map using TopTools
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
@@ -1412,7 +1412,8 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                     
                     # Log dihedral angle for first few edges to debug
                     if debug_logged < max_debug_logs:
-                        logger.debug(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold={angle_threshold_degrees}°")
+                        logger.info(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold={angle_threshold_degrees}°")
+                        debug_logged += 1
                     
                     # Use the configurable threshold (not hardcoded 5.0)
                     if dihedral_angle > angle_threshold_degrees:
@@ -1424,7 +1425,7 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         is_significant = False
                         stats['smooth_edges_skipped'] += 1
                         if debug_logged < max_debug_logs:
-                            logger.debug(f"⏭️  Skipping smooth/seam edge (angle={dihedral_angle:.1f}°)")
+                            logger.info(f"⏭️  Skipping smooth/seam edge (angle={dihedral_angle:.1f}°)")
                             debug_logged += 1
                 
                 elif num_adjacent_faces > 2:
