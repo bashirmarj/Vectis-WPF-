@@ -1339,12 +1339,17 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
             return 0.0  # Default to smooth edge if normals undefined
             
         except Exception as e:
-            # Silently return 0.0 for problematic edges (safer than crashing)
+            # Log the error for debugging instead of silently failing
+            logger.debug(f"⚠️  Error calculating dihedral angle: {e}")
             return 0.0
     
     # Build edge-to-faces map using TopTools
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    
+    # Log edge-face topology size for debugging
+    total_edges_in_map = edge_face_map.Extent()
+    logger.info(f"📊 Edge-Face topology: {total_edges_in_map} edges mapped to faces")
     
     try:
         edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
@@ -1405,6 +1410,10 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                         face2 = topods.Face(face_list.FindFromIndex(2))
                         
                         dihedral_angle = calculate_dihedral_angle(edge, face1, face2)
+                        
+                        # Log dihedral angle for first few edges to debug
+                        if debug_logged < max_debug_logs:
+                            logger.debug(f"🔍 Interior edge: dihedral={dihedral_angle:.2f}°, threshold=5.0°")
                         
                         # THRESHOLD: Only show edges with angle > 5 degrees (catches cylinder-plane intersections)
                         ANGLE_THRESHOLD_DEG = 5.0
