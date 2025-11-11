@@ -93,8 +93,8 @@ export function PartDetailCustomer({
   React.useEffect(() => {
     console.log("📊 Passing to CADViewer:", {
       hasGeometricFeatures: !!file.analysis?.geometric_features,
-      hasInstances: !!file.analysis?.geometric_features?.instances,
-      instanceCount: file.analysis?.geometric_features?.instances?.length || 0,
+      hasFeatureInstances: !!file.analysis?.geometric_features?.feature_instances,
+      instanceCount: file.analysis?.geometric_features?.feature_instances?.length || 0,
       structure: file.analysis?.geometric_features,
     });
   }, [file.analysis?.geometric_features]);
