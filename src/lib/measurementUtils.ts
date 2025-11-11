@@ -481,19 +481,13 @@ export function snapToBackendEdge(
 export function snapToEdge(point: THREE.Vector3, meshData: MeshData, snapDistance: number = 2): SnapResult | null {
   // ✅ PRIORITY: Use backend tagged edges if available (exact CAD geometry)
   if (meshData.tagged_edges && meshData.tagged_edges.length > 0) {
-    console.log(`[Snap] Using ${meshData.tagged_edges.length} backend tagged edges`);
     const backendResult = snapToBackendEdge(point, meshData.tagged_edges, snapDistance);
-
     if (backendResult) {
-      console.log(`[Snap] Backend edge matched: type=${backendResult.metadata?.edgeType}, ` +
-                  `feature_id=${backendResult.metadata?.backendFeatureId}, ` +
-                  `radius=${backendResult.metadata?.radius?.toFixed(2)}`);
       return backendResult;
     }
   }
 
   // ❌ FALLBACK: Extract edges from mesh triangles (less accurate)
-  console.log('[Snap] No backend edges available, falling back to mesh extraction');
   const edges = extractEdges(meshData);
   let closestPoint: THREE.Vector3 | null = null;
   let minDistance = snapDistance;

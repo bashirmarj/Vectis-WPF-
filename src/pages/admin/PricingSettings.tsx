@@ -248,8 +248,6 @@ const PricingSettings = () => {
         throw new Error('Failed to load material-process parameters');
       }
 
-      console.log('Loaded parameters:', materialProcessParamsResponse.data?.length || 0);
-
       setProcesses(processesResponse.data || []);
       setCategories(categoriesResponse.data || []);
       setTreatments((treatmentsResponse.data as SurfaceTreatment[]) || []);
@@ -606,8 +604,6 @@ const PricingSettings = () => {
             const diameter = col0;
             const weightPerFoot = col1;
             const weightPerBar = col2 > 0 ? col2 : weightPerFoot * 20; // Round bars often come in 20ft lengths
-
-            console.log(`Adding circular cross-section: diameter=${diameter}, wt/ft=${weightPerFoot}`);
             
             crossSections.push({
               width: diameter,
@@ -632,8 +628,6 @@ const PricingSettings = () => {
             const width = col0;
             const weightPerFoot = col1;
             const weightPerBar = col2 > 0 ? col2 : weightPerFoot * 12;
-
-            console.log(`Adding rectangular cross-section: thickness=${currentThickness}, width=${width}, wt/ft=${weightPerFoot}`);
             
             crossSections.push({
               thickness: currentThickness,
@@ -955,14 +949,11 @@ const PricingSettings = () => {
   };
 
   const updateCrossSection = (materialId: string, index: number, field: keyof CrossSection, value: number | string) => {
-    console.log(`[DEBUG updateCrossSection] Material: ${materialId}, Index: ${index}, Field: ${field}, Value:`, value);
     setMaterials(prev =>
       prev.map(m => {
         if (m.id === materialId && m.cross_sections) {
-          console.log(`[DEBUG] Current cross_sections:`, m.cross_sections.map((s, i) => ({ i, shape: s.shape, width: s.width, thickness: s.thickness })));
           const updated = [...m.cross_sections];
           const currentSection = updated[index];
-          console.log(`[DEBUG] Updating section at index ${index}:`, currentSection);
           
           // If changing to circular, set thickness to match width (diameter)
           if (field === 'shape' && value === 'circular') {
@@ -980,7 +971,6 @@ const PricingSettings = () => {
             updated[index] = { ...currentSection, [field]: value };
           }
           
-          console.log(`[DEBUG] After update at index ${index}:`, updated[index]);
           return { ...m, cross_sections: updated };
         }
         return m;
@@ -2089,10 +2079,6 @@ const PricingSettings = () => {
                                                     value={selectedCrossSections[material.id]?.toString() || '0'}
                                                     onValueChange={(value) => {
                                                       const newIdx = parseInt(value);
-                                                      console.log(`[DEBUG] Material ${material.id}: Selected cross-section index ${newIdx}`, {
-                                                        section: (material.cross_sections || [])[newIdx],
-                                                        allSections: material.cross_sections
-                                                      });
                                                       setSelectedCrossSections(prev => ({ ...prev, [material.id]: newIdx }));
                                                     }}
                                                   >
@@ -2116,7 +2102,6 @@ const PricingSettings = () => {
                                                             const thicknessDisplay = thickness > 0 ? decimalToFraction(thickness) : 'N/A';
                                                             const widthDisplay = width > 0 ? decimalToFraction(width) : 'N/A';
                                                             const costDisplay = costPerInch > 0 ? `$${costPerInch.toFixed(4)}/inch` : 'N/A';
-                                                            console.log(`[DEBUG] Rendering rectangular section ${originalIdx}:`, { thickness, width, costPerInch });
                                                             return (
                                                               <div key={`rect-${originalIdx}`} className="flex items-center group hover:bg-accent">
                                                                 <SelectItem value={originalIdx.toString()} className="flex-1 cursor-pointer">
@@ -2130,7 +2115,6 @@ const PricingSettings = () => {
                                                                   onClick={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
-                                                                    console.log(`[DEBUG] Deleting cross-section ${originalIdx}`);
                                                                     removeCrossSection(material.id, originalIdx);
                                                                     setSelectedCrossSections(prev => {
                                                                       const newVal = { ...prev };
@@ -2165,7 +2149,6 @@ const PricingSettings = () => {
                                                             const costPerInch = section.cost_per_inch || 0;
                                                             const diameterDisplay = diameter > 0 ? decimalToFraction(diameter) : 'N/A';
                                                             const costDisplay = costPerInch > 0 ? `$${costPerInch.toFixed(4)}/inch` : 'N/A';
-                                                            console.log(`[DEBUG] Rendering circular section ${originalIdx}:`, { diameter, costPerInch });
                                                             return (
                                                               <div key={`circ-${originalIdx}`} className="flex items-center group hover:bg-accent">
                                                                 <SelectItem value={originalIdx.toString()} className="flex-1 cursor-pointer">
@@ -2179,7 +2162,6 @@ const PricingSettings = () => {
                                                                   onClick={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
-                                                                    console.log(`[DEBUG] Deleting cross-section ${originalIdx}`);
                                                                     removeCrossSection(material.id, originalIdx);
                                                                     setSelectedCrossSections(prev => {
                                                                       const newVal = { ...prev };

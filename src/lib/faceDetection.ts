@@ -61,13 +61,6 @@ export function getFaceFromIntersection(
     }
   }
 
-  // Only log the final result
-  if (bestMatch) {
-    console.log(`✅ Face matched: ${bestMatch.face_id} (${bestMatch.surface_type}), score: ${bestScore.toFixed(3)}`);
-  } else {
-    console.warn("❌ No matching face found");
-  }
-
   return bestMatch;
 }
 

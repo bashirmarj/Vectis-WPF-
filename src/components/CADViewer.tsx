@@ -116,12 +116,6 @@ export function CADViewer({
     }
 
     if (propMeshData) {
-      console.log("✅ Using mesh data from props (no caching):", {
-        hasVertices: !!propMeshData.vertices,
-        hasIndices: !!propMeshData.indices,
-        hasNormals: !!propMeshData.normals,
-        triangleCount: propMeshData.triangle_count,
-      });
 
       // CRITICAL: Validate mesh data has required fields before proceeding
       if (!propMeshData.vertices || !propMeshData.indices || !propMeshData.normals) {
@@ -132,25 +126,6 @@ export function CADViewer({
         setIsLoading(false);
         return;
       }
-
-      // 🔍 DIAGNOSTIC: Check edge and feature data
-      const geometricFeatures = propMeshData?.geometric_features;
-      const featureInstances = geometricFeatures?.feature_instances;
-
-      console.log("🔍 Backend mesh data received:", {
-        hasTaggedEdges: !!propMeshData?.tagged_edges,
-        taggedEdgesCount: propMeshData?.tagged_edges?.length || 0,
-        taggedEdgesSample: propMeshData?.tagged_edges?.[0],
-
-        hasGeometricFeatures: !!geometricFeatures,
-        geometricFeaturesKeys: geometricFeatures ? Object.keys(geometricFeatures) : [],
-        geometricInstancesCount: Array.isArray(featureInstances) ? featureInstances.length : 0,
-
-        hasEdgeClassifications: !!propMeshData?.edge_classifications,
-        edgeClassificationsCount: propMeshData?.edge_classifications?.length || 0,
-
-        allKeys: propMeshData ? Object.keys(propMeshData) : [],
-      });
 
       setMeshData(propMeshData);
       onMeshLoaded?.(propMeshData);
@@ -323,11 +298,6 @@ export function CADViewer({
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      console.log("📍 Camera moved to:", {
-        direction: direction.toArray(),
-        position: newPosition.toArray(),
-      });
     },
     [boundingBox],
   );
@@ -344,8 +314,6 @@ export function CADViewer({
       lastRotateTime.current = now;
 
       if (!cameraRef.current || !controlsRef.current) return;
-
-      console.log("🎯 Rotating camera:", direction);
 
       const camera = cameraRef.current;
       const controls = controlsRef.current;
@@ -413,18 +381,6 @@ export function CADViewer({
       camera.lookAt(target);
       controls.target.copy(target);
       controls.update();
-
-      console.log("✅ Camera rotated successfully!");
-      console.log("   New position:", {
-        x: newPosition.x.toFixed(2),
-        y: newPosition.y.toFixed(2),
-        z: newPosition.z.toFixed(2),
-      });
-      console.log("   New up vector:", {
-        x: newUp.x.toFixed(2),
-        y: newUp.y.toFixed(2),
-        z: newUp.z.toFixed(2),
-      });
     },
     [], // ✅ CRITICAL FIX: Empty array - refs don't need dependencies
   );

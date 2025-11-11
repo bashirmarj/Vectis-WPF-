@@ -154,8 +154,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           }
         });
 
-        console.log(`✅ Rendering ${meshData.tagged_edges.length} backend-filtered edges`);
-
         if (featureEdgePositions.length > 0) {
           const geo = new THREE.BufferGeometry();
           geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));

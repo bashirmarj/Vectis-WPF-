@@ -35,10 +35,6 @@ export function findEdgeByFeatureId(
   const exactThreshold = 0.5; // For direct segment matches
   const midpointThreshold = 2.0; // For circular edge segment detection
 
-  console.log(
-    `🔍 Matching edge: start(${clickedEdge.start.x.toFixed(2)}, ${clickedEdge.start.y.toFixed(2)}, ${clickedEdge.start.z.toFixed(2)}) end(${clickedEdge.end.x.toFixed(2)}, ${clickedEdge.end.y.toFixed(2)}, ${clickedEdge.end.z.toFixed(2)})`,
-  );
-
   // STRATEGY 1: Direct endpoint matching (for line edges and exact segment matches)
   for (const tagged of taggedEdges) {
     const taggedStart = new THREE.Vector3(...tagged.start);
@@ -50,7 +46,6 @@ export function findEdgeByFeatureId(
     const endMatchReverse = clickedEdge.end.distanceTo(taggedStart) < exactThreshold;
 
     if ((startMatch && endMatch) || (startMatchReverse && endMatchReverse)) {
-      console.log(`✅ Exact match found: feature_id=${tagged.feature_id}, type=${tagged.type}`);
       return tagged;
     }
   }
@@ -79,13 +74,9 @@ export function findEdgeByFeatureId(
   }
 
   if (closestFeature) {
-    console.log(
-      `✅ Midpoint match found: feature_id=${closestFeature.feature_id}, type=${closestFeature.type}, distance=${closestDist.toFixed(2)}mm`,
-    );
     return closestFeature;
   }
 
-  console.warn(`❌ No match found for clicked edge`);
   return undefined;
 }
 
@@ -98,7 +89,5 @@ export function findEdgeByFeatureId(
  */
 export function getFeatureSegments(featureId: number, taggedEdges?: TaggedFeatureEdge[]): TaggedFeatureEdge[] {
   if (!taggedEdges) return [];
-  const segments = taggedEdges.filter((edge) => edge.feature_id === featureId);
-  console.log(`📊 Found ${segments.length} segments for feature_id=${featureId}`);
-  return segments;
+  return taggedEdges.filter((edge) => edge.feature_id === featureId);
 }

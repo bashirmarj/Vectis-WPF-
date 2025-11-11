@@ -95,16 +95,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
   const selectedFile = files[selectedFileIndex];
 
-  // ✅ Debug logging on mount and file selection
-  React.useEffect(() => {
-    console.log("🔍 Selected file debug:", {
-      fileName: selectedFile.file.name,
-      hasMeshData: !!selectedFile.meshData,
-      isAnalyzing: selectedFile.isAnalyzing,
-      hasAnalysis: !!selectedFile.analysis,
-    });
-  }, [selectedFile]);
-
   const handleSubmit = () => {
     onSubmit({
       files: files,
@@ -197,9 +187,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                       <FeatureTree 
                         features={selectedFile.analysis.geometric_features}
                         featureSummary={selectedFile.analysis.feature_summary}
-                        onFeatureSelect={(feature) => {
-                          console.log('Feature selected:', feature);
-                        }}
+                        onFeatureSelect={(feature) => {}}
                       />
                     </CardContent>
                   </CollapsibleContent>
