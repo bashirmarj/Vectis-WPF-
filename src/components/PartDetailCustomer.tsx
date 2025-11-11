@@ -89,6 +89,16 @@ export function PartDetailCustomer({
     (file.analysis.manufacturing_features || file.analysis.feature_tree || file.analysis.detected_features);
   const hasQuote = !!file.quote;
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log("📊 Passing to CADViewer:", {
+      hasGeometricFeatures: !!file.analysis?.geometric_features,
+      hasInstances: !!file.analysis?.geometric_features?.instances,
+      instanceCount: file.analysis?.geometric_features?.instances?.length || 0,
+      structure: file.analysis?.geometric_features,
+    });
+  }, [file.analysis?.geometric_features]);
+
   console.log("🔍 Checking for features:", {
     hasAnalysis,
     manufacturing_features: file.analysis?.manufacturing_features,

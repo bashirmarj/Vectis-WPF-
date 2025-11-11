@@ -111,6 +111,16 @@ export function CADViewer({
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);
 
+  // Debug logging for geometric features
+  useEffect(() => {
+    console.log('🔍 CADViewer received geometricFeatures:', {
+      exists: !!geometricFeatures,
+      hasInstances: !!geometricFeatures?.instances,
+      instanceCount: geometricFeatures?.instances?.length || 0,
+      data: geometricFeatures
+    });
+  }, [geometricFeatures]);
+
   // File extension detection
   const fileExtension = useMemo(() => {
     if (fileName) return fileName.split(".").pop()?.toLowerCase() || "";
@@ -453,7 +463,7 @@ export function CADViewer({
         ) : meshData && isRenderableFormat ? (
           <ResizablePanelGroup direction="horizontal" className="w-full h-full">
             {/* Feature Tree Sidebar */}
-            {geometricFeatures && sidebarOpen && (
+            {geometricFeatures?.instances?.length > 0 && sidebarOpen && (
               <>
                 <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
                   <div className="h-full overflow-hidden">
@@ -465,10 +475,10 @@ export function CADViewer({
             )}
 
             {/* Main 3D Viewer Panel */}
-            <ResizablePanel defaultSize={geometricFeatures && sidebarOpen ? 80 : 100}>
+            <ResizablePanel defaultSize={geometricFeatures?.instances?.length > 0 && sidebarOpen ? 80 : 100}>
               <div className="relative w-full h-full">
                 {/* Sidebar Toggle Button */}
-                {geometricFeatures && (
+                {geometricFeatures?.instances?.length > 0 && (
                   <Button
                     variant="outline"
                     size="icon"
