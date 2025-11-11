@@ -176,8 +176,8 @@ export function SilhouetteEdges({
 
   return (
     <group>
-      {/* Static feature edges (sharp angles, circles, boundaries) - ALWAYS visible */}
-      {staticFeatureEdges?.attributes?.position && (
+      {/* Static feature edges - ONLY in wireframe mode (solid mode uses MeshModel edges) */}
+      {displayMode === "wireframe" && staticFeatureEdges?.attributes?.position && (
         <lineSegments 
           geometry={staticFeatureEdges} 
           frustumCulled={true}
