@@ -31,6 +31,7 @@ class ProductionRecognizerIntegration:
 
         Returns format compatible with crash_free_geometric_recognizer.py:
         {
+            'status': 'success' | 'failed',  # ✅ CRITICAL: Required by app.py
             'instances': [...],  # List of feature dictionaries
             'num_features_detected': int,
             'overall_confidence': float,
@@ -49,14 +50,20 @@ class ProductionRecognizerIntegration:
             # Convert to vectismachining format
             instances = self._convert_to_instances(result)
 
+            # ✅ FIX: Add 'status' key that app.py expects
             return {
+                'status': 'success',  # ✅ CRITICAL: app.py checks for this
                 'instances': instances,
                 'num_features_detected': len(instances),
                 'overall_confidence': result['confidence'],
+                'avg_confidence': result['confidence'],  # ✅ Alias for compatibility
                 'part_family': result['part_family'],
                 'rotation_axis': result.get('rotation_axis'),
                 'recognition_method': 'production_feature_recognizer',
                 'processing_time_seconds': result['processing_time_seconds'],
+                'inference_time_sec': result['processing_time_seconds'],  # ✅ Alias for compatibility
+                'feature_summary': self._generate_feature_summary(instances),
+                'num_faces_analyzed': result.get('num_faces_analyzed', 0),
                 'raw_result': result  # Keep original for reference
             }
 
@@ -67,11 +74,12 @@ class ProductionRecognizerIntegration:
     def _convert_to_instances(self, result: Dict) -> List[Dict]:
         """
         Convert production recognizer output to instances format.
-
-        Transforms:
-          result['holes'] → instances with type='hole'
-          result['pockets'] → instances with type='pocket'
-          result['turning_features'] → instances with type='boss'/'step'
+        
+        Maps production recognizer feature types to vectismachining format:
+        - hole → hole
+        - pocket → pocket
+        - slot → slot
+        - turning_feature → boss/step/groove (based on subtype)
         """
         instances = []
 
@@ -79,14 +87,14 @@ class ProductionRecognizerIntegration:
         for hole in result.get('holes', []):
             instance = {
                 'type': 'hole',
-                'subtype': hole.get('subtype', 'unknown'),
+                'subtype': hole.get('subtype', 'through'),
                 'confidence': hole.get('confidence', 0.0),
-                'parameters': hole.get('dimensions', {}),
-                'location': hole.get('location', [0, 0, 0]),
-                'axis': hole.get('axis', [0, 0, 1]),
-                'is_through': hole.get('is_through', False),
-                'has_counterbore': hole.get('has_counterbore', False),
-                'has_countersink': hole.get('has_countersink', False),
+                'parameters': {
+                    'diameter': hole.get('diameter', 0.0),
+                    'depth': hole.get('depth', 0.0),
+                    'location': hole.get('location', [0, 0, 0]),
+                    'axis': hole.get('axis', [0, 0, 1])
+                },
                 'face_indices': hole.get('face_indices', []),
                 'detection_method': hole.get('detection_method', 'production')
             }
@@ -96,12 +104,10 @@ class ProductionRecognizerIntegration:
         for pocket in result.get('pockets', []):
             instance = {
                 'type': 'pocket',
-                'subtype': pocket.get('subtype', 'unknown'),
+                'subtype': pocket.get('subtype', 'rectangular'),
                 'confidence': pocket.get('confidence', 0.0),
                 'parameters': pocket.get('dimensions', {}),
                 'location': pocket.get('location', [0, 0, 0]),
-                'normal': pocket.get('normal', [0, 0, 1]),
-                'has_islands': pocket.get('has_islands', False),
                 'face_indices': pocket.get('face_indices', []),
                 'detection_method': pocket.get('detection_method', 'production')
             }
@@ -111,7 +117,7 @@ class ProductionRecognizerIntegration:
         for slot in result.get('slots', []):
             instance = {
                 'type': 'slot',
-                'subtype': slot.get('subtype', 'unknown'),
+                'subtype': slot.get('subtype', 'rectangular'),
                 'confidence': slot.get('confidence', 0.0),
                 'parameters': slot.get('dimensions', {}),
                 'location': slot.get('location', [0, 0, 0]),
@@ -133,6 +139,8 @@ class ProductionRecognizerIntegration:
                 feature_type = 'step'
             elif subtype == 'groove':
                 feature_type = 'groove'
+            elif subtype == 'taper':
+                feature_type = 'taper'
             else:
                 feature_type = 'turning_feature'
 
@@ -150,15 +158,41 @@ class ProductionRecognizerIntegration:
 
         return instances
 
+    def _generate_feature_summary(self, instances: List[Dict]) -> Dict[str, int]:
+        """
+        Generate feature summary for logging and debugging.
+        
+        Returns count of each feature type/subtype combination.
+        """
+        summary = {}
+        for instance in instances:
+            feature_type = instance.get('type', 'unknown')
+            subtype = instance.get('subtype')
+            
+            if subtype:
+                key = f"{feature_type}_{subtype}"
+            else:
+                key = feature_type
+                
+            summary[key] = summary.get(key, 0) + 1
+        
+        return summary
+
     def _empty_result(self) -> Dict:
         """Return empty result on failure"""
         return {
+            'status': 'failed',  # ✅ CRITICAL: app.py checks for this
             'instances': [],
             'num_features_detected': 0,
             'overall_confidence': 0.0,
+            'avg_confidence': 0.0,
             'part_family': 'unknown',
             'recognition_method': 'production_feature_recognizer',
-            'processing_time_seconds': 0.0
+            'processing_time_seconds': 0.0,
+            'inference_time_sec': 0.0,
+            'feature_summary': {},
+            'num_faces_analyzed': 0,
+            'error': 'Feature recognition failed'
         }
 
 
@@ -192,12 +226,12 @@ try:
     logger.info(f"   Confidence: {feature_result['overall_confidence']*100:.1f}%")
 
     # If production recognizer fails or low confidence, fallback
-    if feature_result['num_features_detected'] == 0 or feature_result['overall_confidence'] < 0.3:
+    if feature_result.get('status') != 'success' or feature_result['num_features_detected'] == 0 or feature_result['overall_confidence'] < 0.3:
         logger.warning("⚠️ Production recognizer low confidence, using fallback...")
 
         # Fallback to original recognizer
-        from crash_free_geometric_recognizer import ExtendedCrashFreeRecognizer
-        fallback_recognizer = ExtendedCrashFreeRecognizer()
+        from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
+        fallback_recognizer = FlaskCrashFreeRecognizer()
         feature_result = fallback_recognizer.recognize_features(step_file_path)
 
 except Exception as e:
@@ -205,8 +239,8 @@ except Exception as e:
 
     # Fallback to original recognizer
     logger.info("🔄 Falling back to original recognizer...")
-    from crash_free_geometric_recognizer import ExtendedCrashFreeRecognizer
-    fallback_recognizer = ExtendedCrashFreeRecognizer()
+    from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
+    fallback_recognizer = FlaskCrashFreeRecognizer()
     feature_result = fallback_recognizer.recognize_features(step_file_path)
 
 # Continue with existing code (machining translation, etc.)
