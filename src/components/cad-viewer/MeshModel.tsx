@@ -387,18 +387,25 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* Edge rendering: SilhouetteEdges for solid mode, conditional for wireframe */}
-        {displayStyle === "solid" && showEdges ? (
-          <SilhouetteEdges
-            geometry={geometry}
-            mesh={meshRef.current}
-            staticFeatureEdges={featureEdgesGeometry}
-            showHiddenEdges={showHiddenEdges}
-            controlsRef={controlsRef}
-            displayMode={displayStyle}
-          />
-        ) : displayStyle === "wireframe" && (
-          useSilhouetteEdges ? (
+        {/* Solid mode: ONLY backend feature edges (SilhouetteEdges never active in solid) */}
+        {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
+          <lineSegments geometry={featureEdgesGeometry} frustumCulled={true}>
+            <lineBasicMaterial
+              color="#000000"
+              toneMapped={false}
+              polygonOffset={true}
+              polygonOffsetFactor={-15}
+              polygonOffsetUnits={-10}
+              depthTest={true}
+              depthWrite={false}
+              depthFunc={THREE.LessEqualDepth}
+            />
+          </lineSegments>
+        )}
+
+        {/* Wireframe mode - use clean edges that show ALL mesh structure */}
+        {displayStyle === "wireframe" &&
+          (useSilhouetteEdges ? (
             <SilhouetteEdges
               geometry={geometry}
               mesh={meshRef.current}
@@ -411,8 +418,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             <lineSegments geometry={cleanEdgesGeometry} key={`wireframe-edges-${showHiddenEdges}`}>
               <lineBasicMaterial color="#000000" toneMapped={false} depthTest={!showHiddenEdges} depthWrite={false} />
             </lineSegments>
-          )
-        )}
+          ))}
       </group>
     );
   },
