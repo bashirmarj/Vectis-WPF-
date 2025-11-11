@@ -19,6 +19,9 @@ import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { useMeasurementStore } from "@/stores/measurementStore";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import FeatureTree from "./FeatureTree";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CADViewerProps {
   meshData?: MeshData; // ✅ Accept mesh data directly instead of meshId
@@ -26,6 +29,15 @@ interface CADViewerProps {
   fileName?: string;
   isSidebarCollapsed?: boolean;
   onMeshLoaded?: (data: MeshData) => void;
+  geometricFeatures?: {
+    instances: any[];
+    num_features_detected: number;
+    num_faces_analyzed: number;
+    confidence_score: number;
+    inference_time_sec: number;
+    recognition_method: string;
+    feature_summary?: Record<string, number>;
+  } | null;
 }
 
 interface MeshData {
@@ -78,7 +90,9 @@ export function CADViewer({
   fileName,
   isSidebarCollapsed = false,
   onMeshLoaded,
+  geometricFeatures,
 }: CADViewerProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [meshData, setMeshData] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -418,7 +432,7 @@ export function CADViewer({
 
   return (
     <div className="w-full h-full relative">
-      <CardContent className="p-0 h-full">
+      <CardContent className="p-0 h-full w-full">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -437,8 +451,35 @@ export function CADViewer({
             )}
           </div>
         ) : meshData && isRenderableFormat ? (
-          <div className="relative w-full h-full">
-            <UnifiedCADToolbar
+          <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+            {/* Feature Tree Sidebar */}
+            {geometricFeatures && sidebarOpen && (
+              <>
+                <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
+                  <div className="h-full overflow-hidden">
+                    <FeatureTree features={geometricFeatures} />
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+              </>
+            )}
+
+            {/* Main 3D Viewer Panel */}
+            <ResizablePanel defaultSize={geometricFeatures && sidebarOpen ? 80 : 100}>
+              <div className="relative w-full h-full">
+                {/* Sidebar Toggle Button */}
+                {geometricFeatures && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute top-16 left-2 z-10"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                  >
+                    {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                )}
+
+                <UnifiedCADToolbar
               onHomeView={() => handleSetView("isometric")}
               onFrontView={() => handleSetView("front")}
               onTopView={() => handleSetView("top")}
@@ -560,7 +601,9 @@ export function CADViewer({
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
-          </div>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Box className="h-16 w-16 text-muted-foreground" />

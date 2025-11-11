@@ -151,14 +151,10 @@ export function PartDetailCustomer({
           </div>
         ) : (
           <Tabs defaultValue="model" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="model">
                 <Package className="h-4 w-4 mr-2" />
-                3D Model
-              </TabsTrigger>
-              <TabsTrigger value="features">
-                <Layers className="h-4 w-4 mr-2" />
-                Features
+                3D Model & Features
                 {featureCount > 0 && (
                   <Badge variant="secondary" className="ml-2">
                     {featureCount}
@@ -174,63 +170,46 @@ export function PartDetailCustomer({
             <TabsContent value="model" className="mt-4">
               <div className="space-y-4">
                 <MaterialSelector value={file.material} materials={materials} onSelect={onUpdateMaterial} compact />
-                {/* ✅ FIXED: Removed invalid props (file and detectedFeatures) */}
-                <CADViewer fileName={file.file.name} meshData={file.meshData} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="features" className="mt-4">
-              {hasAnalysis ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <StatCard label="Volume" value={`${file.analysis.volume_cm3.toFixed(1)} cm³`} />
-                    <StatCard label="Surface Area" value={`${file.analysis.surface_area_cm2.toFixed(1)} cm²`} />
-                    <StatCard label="Complexity" value={file.analysis.complexity_score.toString()} />
-                  </div>
-
-                  {file.analysis.routing_reasoning && file.analysis.routing_reasoning.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-purple-600" />
-                          Industrial Routing Logic
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-2">
-                          {file.analysis.routing_reasoning.map((reason, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm">
-                              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                              <span>{reason}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {hasFeatures ? (
-                  <FeatureTree
-                    features={file.analysis?.geometric_features}
+                
+                <div className="h-[600px]">
+                  <CADViewer 
+                    fileName={file.file.name} 
+                    meshData={file.meshData}
+                    geometricFeatures={file.analysis?.geometric_features}
                   />
-                  ) : (
-                    <Card className="border-dashed">
-                      <CardContent className="pt-6 text-center">
-                        <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-3" />
-                        <p className="text-sm font-medium mb-1">Advanced feature detection unavailable</p>
-                        <p className="text-xs text-muted-foreground">
-                          Submit your file for detailed manual engineering review.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-sm text-muted-foreground">No analysis available yet</p>
-                </div>
-              )}
+
+                {hasAnalysis && (
+                  <>
+                    <div className="grid grid-cols-3 gap-3">
+                      <StatCard label="Volume" value={`${file.analysis.volume_cm3.toFixed(1)} cm³`} />
+                      <StatCard label="Surface Area" value={`${file.analysis.surface_area_cm2.toFixed(1)} cm²`} />
+                      <StatCard label="Complexity" value={file.analysis.complexity_score.toString()} />
+                    </div>
+
+                    {file.analysis.routing_reasoning && file.analysis.routing_reasoning.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-purple-600" />
+                            Industrial Routing Logic
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-2">
+                            {file.analysis.routing_reasoning.map((reason, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-sm">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <span>{reason}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="quote" className="mt-4">
