@@ -1662,18 +1662,11 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
                 logger.debug(f"Error processing ISO curve: {e}")
                 pass
         
-        # ===== POST-PROCESSING: Merge split circular arcs into complete circles =====
-        merged_result = merge_split_circles(feature_edges, edge_classifications, tagged_edges)
-        feature_edges = merged_result['feature_edges']
-        edge_classifications = merged_result['edge_classifications']
-        tagged_edges = merged_result['tagged_edges']
-        
-        logger.info(f"✅ Extracted {len(feature_edges)} significant edges (after circle merging):")
+        logger.info(f"✅ Extracted {len(feature_edges)} significant edges:")
         logger.info(f"   - Boundary edges: {stats['boundary_edges']}")
         logger.info(f"   - Sharp edges: {stats['sharp_edges']} (including {stats['geometric_features']} geometric features)")
         logger.info(f"   - ISO curves: {stats['iso_curves']}")
         logger.info(f"   - Tagged segments: {len(tagged_edges)}")
-        logger.info(f"   - Circles merged: {merged_result['circles_merged']}")
         logger.info(f"📊 Processing summary:")
         logger.info(f"   - Total edges in shape: {total_edge_count}")
         logger.info(f"   - Edges in edge_face_map: {edge_face_map.Size()}")
@@ -1694,168 +1687,6 @@ def extract_and_classify_feature_edges(shape, max_edges=500, angle_threshold_deg
 # ============================================================================
 # HELPER FUNCTIONS FOR UNIFIED EDGE EXTRACTION
 # ============================================================================
-
-def merge_split_circles(feature_edges, edge_classifications, tagged_edges):
-    """
-    Post-process extracted edges to merge ONLY seam-split circular arcs into complete circles.
-    Preserves ALL other edges including fillet arcs, corner arcs, etc.
-    
-    This function specifically targets cylindrical seam edges where a complete circle
-    is split into 2 halves (each ~180°). It does NOT merge fillet arcs or other
-    legitimate arc segments.
-    
-    Args:
-        feature_edges: List of polylines [[x,y,z], ...]
-        edge_classifications: List of classification dicts
-        tagged_edges: List of tagged segment dicts
-    
-    Returns:
-        Dict with merged arrays and merge statistics
-    """
-    logger.info("🔄 Merging seam-split circular arcs into complete circles...")
-    
-    # Find arcs that might be seam-split halves
-    arc_candidates = []
-    
-    for i, classification in enumerate(edge_classifications):
-        edge_type = classification.get('type')
-        
-        # Only consider arcs (not full circles, not lines)
-        if edge_type == 'arc' and classification.get('center') and classification.get('radius'):
-            start_angle = classification.get('start_angle', 0)
-            end_angle = classification.get('end_angle', 0)
-            angular_extent = abs(end_angle - start_angle)
-            
-            # Only consider arcs that are CLOSE to 180° (π radians)
-            # Seam splits create two ~180° halves
-            # Fillets are typically 90° or less
-            if abs(angular_extent - math.pi) < 0.5:  # Within ~28° of 180°
-                arc_candidates.append({
-                    'index': i,
-                    'center': tuple(classification['center']),
-                    'radius': classification['radius'],
-                    'normal': tuple(classification.get('normal', [0, 0, 1])),
-                    'angular_extent': angular_extent
-                })
-    
-    logger.info(f"   Found {len(arc_candidates)} arc candidates (near 180° arcs)")
-    
-    # Group arcs by center, radius, and normal (seam-split pairs)
-    position_tolerance = 0.001  # 1 micron
-    radius_tolerance = 0.001
-    normal_tolerance = 0.01
-    
-    merge_groups = []
-    used_indices = set()
-    
-    for i, arc1 in enumerate(arc_candidates):
-        if arc1['index'] in used_indices:
-            continue
-            
-        # Look for a matching arc (the other half)
-        for j, arc2 in enumerate(arc_candidates):
-            if j <= i or arc2['index'] in used_indices:
-                continue
-            
-            # Check if these arcs could be two halves of the same circle
-            center_match = np.linalg.norm(np.array(arc1['center']) - np.array(arc2['center'])) < position_tolerance
-            radius_match = abs(arc1['radius'] - arc2['radius']) < radius_tolerance
-            normal_match = abs(np.dot(np.array(arc1['normal']), np.array(arc2['normal']))) > (1.0 - normal_tolerance)
-            
-            if center_match and radius_match and normal_match:
-                # Check if combined angular extent is close to 360°
-                total_extent = arc1['angular_extent'] + arc2['angular_extent']
-                
-                if abs(total_extent - 2 * math.pi) < 0.2:  # Within ~11° of full circle
-                    merge_groups.append([arc1['index'], arc2['index']])
-                    used_indices.add(arc1['index'])
-                    used_indices.add(arc2['index'])
-                    logger.info(f"   ✅ Pairing arcs {arc1['index']} and {arc2['index']} "
-                               f"(radii: {arc1['radius']:.3f}, {arc2['radius']:.3f}mm)")
-                    break
-    
-    logger.info(f"   Found {len(merge_groups)} seam-split circle pairs to merge")
-    
-    # Build the merged result
-    merged_edges = []
-    merged_classifications = []
-    merged_tagged = []
-    indices_to_skip = set()
-    
-    # Process merge groups
-    for group in merge_groups:
-        # Combine the two arc halves into one circle
-        combined_points = []
-        for idx in group:
-            combined_points.extend(feature_edges[idx])
-            indices_to_skip.add(idx)
-        
-        # Remove duplicate points at connection
-        unique_points = []
-        for point in combined_points:
-            is_duplicate = False
-            for existing_point in unique_points:
-                if np.linalg.norm(np.array(point) - np.array(existing_point)) < position_tolerance:
-                    is_duplicate = True
-                    break
-            if not is_duplicate:
-                unique_points.append(point)
-        
-        # Get properties from first arc
-        first_classification = edge_classifications[group[0]]
-        radius = first_classification['radius']
-        
-        # Create merged circle classification
-        merged_classification = {
-            "id": len(merged_classifications),
-            "type": "circle",
-            "center": first_classification['center'],
-            "normal": first_classification['normal'],
-            "radius": radius,
-            "diameter": radius * 2,  # ✅ Provides diameter for measurement
-            "length": 2 * math.pi * radius,
-            "segment_count": len(unique_points),
-            "feature_id": first_classification['feature_id']
-        }
-        
-        merged_edges.append(unique_points)
-        merged_classifications.append(merged_classification)
-        
-        # Create tagged segments for the merged circle
-        for i in range(len(unique_points)):
-            next_i = (i + 1) % len(unique_points)  # Wrap around for last segment
-            merged_tagged.append({
-                'feature_id': merged_classification['feature_id'],
-                'start': unique_points[i],
-                'end': unique_points[next_i],
-                'type': 'circle',
-                'diameter': merged_classification['diameter'],
-                'radius': merged_classification['radius'],
-                'length': merged_classification['length']
-            })
-    
-    # Add all non-merged edges (including fillet arcs!)
-    for i, classification in enumerate(edge_classifications):
-        if i not in indices_to_skip:
-            merged_edges.append(feature_edges[i])
-            merged_classifications.append(classification)
-    
-    # Add all non-merged tagged segments
-    merged_feature_ids = {edge_classifications[i]['feature_id'] for i in indices_to_skip}
-    for segment in tagged_edges:
-        if segment.get('feature_id') not in merged_feature_ids:
-            merged_tagged.append(segment)
-    
-    logger.info(f"🔄 Circle merging complete:")
-    logger.info(f"   - {len(merge_groups)} circles created from seam-split arcs")
-    logger.info(f"   - {len(merged_edges)} total edges (including {len(merged_edges) - len(merge_groups)} preserved edges)")
-    
-    return {
-        'feature_edges': merged_edges,
-        'edge_classifications': merged_classifications,
-        'tagged_edges': merged_tagged,
-        'circles_merged': len(merge_groups)
-    }
 
 def is_cylinder_to_planar_edge(face1, face2):
     """
