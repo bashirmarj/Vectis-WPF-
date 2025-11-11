@@ -40,19 +40,14 @@ export function SilhouetteEdges({
   // Performance optimizations
   const frameCount = useRef(0);
   const isDragging = useRef(false);
-  const cameraCache = useRef<Array<{
-    pos: THREE.Vector3;
-    quat: THREE.Quaternion;
-    silhouettes: Float32Array;
-  }>>([]);
 
   // Mode-aware performance configuration
   const performanceConfig = useMemo(() => {
     if (displayMode === "wireframe") {
       return {
-        frameSkip: 1,           // Update every frame
-        positionThreshold: 0.2, // More sensitive
-        rotationThreshold: 0.03, // ~2 degrees
+        frameSkip: 2,           // Update every 2 frames - 50% reduction
+        positionThreshold: 0.3, // Slightly less sensitive
+        rotationThreshold: 0.05, // ~3 degrees
         pauseOnDrag: false      // Keep updating
       };
     }
@@ -90,36 +85,8 @@ export function SilhouetteEdges({
       }
     }
     
-    console.log("🔑 Static edge keys built:", keys.size, "edges");
     return keys;
   }, [staticFeatureEdges]);
-
-  // Helper: Check cache for similar camera position
-  const getCachedSilhouettes = (pos: THREE.Vector3, quat: THREE.Quaternion): Float32Array | null => {
-    const CACHE_THRESHOLD = 0.01;
-    
-    for (const cached of cameraCache.current) {
-      if (pos.distanceTo(cached.pos) < CACHE_THRESHOLD && 
-          quat.angleTo(cached.quat) < 0.01) {
-        console.log("💾 Using cached silhouettes");
-        return cached.silhouettes;
-      }
-    }
-    return null;
-  };
-
-  // Helper: Add to cache
-  const addToCache = (pos: THREE.Vector3, quat: THREE.Quaternion, silhouettes: Float32Array) => {
-    cameraCache.current.push({
-      pos: pos.clone(),
-      quat: quat.clone(),
-      silhouettes
-    });
-    
-    if (cameraCache.current.length > 5) {
-      cameraCache.current.shift();
-    }
-  };
 
   // Listen to controls drag events
   useEffect(() => {
@@ -128,12 +95,10 @@ export function SilhouetteEdges({
       
       const handleStart = () => {
         isDragging.current = true;
-        console.log("🖱️ Drag started - pausing silhouette updates");
       };
       
       const handleEnd = () => {
         isDragging.current = false;
-        console.log("🖱️ Drag ended - resuming silhouette updates");
         frameCount.current = 0; // Force immediate update
       };
       
@@ -168,27 +133,15 @@ export function SilhouetteEdges({
     const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > performanceConfig.rotationThreshold;
 
     if (posChanged || rotChanged) {
-      // Check cache first
-      const cached = getCachedSilhouettes(currentPos, currentQuat);
-      
-      if (cached) {
-        setSilhouettePositions(cached);
-      } else {
-        // Transform camera position to local space for accurate view direction
-        let localCameraPos = currentPos;
-        if (mesh) {
-          const worldToLocal = mesh.matrixWorld.clone().invert();
-          localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
-        }
-        
-        const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
-        console.log("🔄 Silhouette update:", silhouettes.length / 6, "segments");
-        
-        setSilhouettePositions(silhouettes);
-        
-        // Add to cache
-        addToCache(currentPos, currentQuat, silhouettes);
+      // Transform camera position to local space for accurate view direction
+      let localCameraPos = currentPos;
+      if (mesh) {
+        const worldToLocal = mesh.matrixWorld.clone().invert();
+        localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
       }
+      
+      const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
+      setSilhouettePositions(silhouettes);
       
       lastCameraPos.current.copy(currentPos);
       lastCameraQuat.current.copy(currentQuat);
@@ -206,13 +159,13 @@ export function SilhouetteEdges({
     return geo;
   }, [silhouettePositions]);
 
-  // Debug logging for dynamic silhouette geometry
+  // Cleanup effect for geometry disposal
   useEffect(() => {
-    if (dynamicSilhouetteGeometry) {
-      console.log("✅ Dynamic silhouette geometry created:");
-      console.log("  - Segments:", dynamicSilhouetteGeometry.attributes.position.count / 2);
-      console.log("  - Has bounding sphere:", !!dynamicSilhouetteGeometry.boundingSphere);
-    }
+    return () => {
+      if (dynamicSilhouetteGeometry) {
+        dynamicSilhouetteGeometry.dispose();
+      }
+    };
   }, [dynamicSilhouetteGeometry]);
 
   // Null safety check - don't render if no valid data
@@ -227,7 +180,7 @@ export function SilhouetteEdges({
       {staticFeatureEdges?.attributes?.position && (
         <lineSegments 
           geometry={staticFeatureEdges} 
-          frustumCulled={false}
+          frustumCulled={true}
           key={`static-edges-${showHiddenEdges}`}
         >
           <lineBasicMaterial 
@@ -246,6 +199,7 @@ export function SilhouetteEdges({
       {dynamicSilhouetteGeometry && (
         <lineSegments 
           geometry={dynamicSilhouetteGeometry}
+          frustumCulled={true}
           key={`dynamic-edges-${showHiddenEdges}`}
         >
           <lineBasicMaterial 
@@ -375,67 +329,64 @@ function computeSilhouetteEdges(
   cameraPos: THREE.Vector3,
   staticEdgeKeys: Set<string>
 ): Float32Array {
-  const silhouetteEdges: number[] = [];
+  // Pre-allocate array (30% of edges are typically silhouettes)
+  const estimatedSize = Math.floor(edgeMap.size * 0.3) * 6;
+  const positions = new Float32Array(estimatedSize);
+  let posIndex = 0;
+  
+  // Reusable vectors (avoid allocations)
+  const edgeMidpoint = new THREE.Vector3();
+  const viewDir = new THREE.Vector3();
 
-  edgeMap.forEach((edgeData) => {
+  edgeMap.forEach((edgeData, edgeKey) => {
     const { vertices, triangles } = edgeData;
 
-    // Skip if this edge is already rendered by static feature edges
-    const edgeKey = makeEdgeKey(vertices[0], vertices[1]);
+    // Skip if already in static edges (fast Set lookup)
     if (staticEdgeKeys.has(edgeKey)) {
-      console.log("⚡ Filtered duplicate edge:", edgeKey);
-      return; // Already rendered - avoid duplicate
-    }
-
-    // Boundary edges (only 1 triangle) - all boundaries in staticFeatureEdges
-    if (triangles.length === 1) {
-      // Skip all boundary edges - they're already rendered by staticFeatureEdges
-      // Note: We cannot distinguish sharp vs smooth boundaries without angle data
-      // (angle is only computed for edges with 2 adjacent triangles)
       return;
     }
 
-    // For interior edges (2 triangles), check silhouette only on SMOOTH surfaces
-    if (triangles.length === 2) {
-      // Skip feature edges (sharp angles >= 30°) - already in staticFeatureEdges
-      if (edgeData.angle !== undefined && edgeData.angle >= 30) {
-        return;
-      }
-      
-      const tri1 = triangles[0];
-      const tri2 = triangles[1];
-
-      // Use edge midpoint for accurate silhouette detection
-      const edgeMidpoint = new THREE.Vector3()
-        .addVectors(vertices[0], vertices[1])
-        .multiplyScalar(0.5);
-      
-      const viewDir = new THREE.Vector3()
-        .subVectors(cameraPos, edgeMidpoint)
-        .normalize();
-
-      // Check if faces are front or back facing with smooth threshold
-      const dot1 = tri1.normal.dot(viewDir);
-      const dot2 = tri2.normal.dot(viewDir);
-      
-      const threshold = 0.01; // Small threshold to avoid flickering
-      const isFrontFacing1 = dot1 > threshold;
-      const isFrontFacing2 = dot2 > threshold;
-
-      // Silhouette edge: one front, one back (view-dependent only)
-      const isSilhouetteEdge = isFrontFacing1 !== isFrontFacing2;
-
-      // ONLY show true silhouette edges (no feature edges)
-      if (isSilhouetteEdge) {
-        silhouetteEdges.push(
-          vertices[0].x, vertices[0].y, vertices[0].z,
-          vertices[1].x, vertices[1].y, vertices[1].z
-        );
-      }
+    // Skip boundary edges (in static features)
+    if (triangles.length !== 2) {
+      return;
     }
 
-    // Skip edges with more than 2 triangles (non-manifold geometry)
+    // Skip feature edges (already in static)
+    if (edgeData.angle !== undefined && edgeData.angle >= 30) {
+      return;
+    }
+    
+    const tri1 = triangles[0];
+    const tri2 = triangles[1];
+
+    // Inline midpoint calculation (reuse vector)
+    edgeMidpoint.addVectors(vertices[0], vertices[1]).multiplyScalar(0.5);
+    
+    // Inline view direction (reuse vector)
+    viewDir.subVectors(cameraPos, edgeMidpoint).normalize();
+
+    // Dot products
+    const dot1 = tri1.normal.dot(viewDir);
+    const dot2 = tri2.normal.dot(viewDir);
+    
+    const threshold = 0.01;
+    const isFrontFacing1 = dot1 > threshold;
+    const isFrontFacing2 = dot2 > threshold;
+
+    // Silhouette edge: one front, one back
+    if (isFrontFacing1 !== isFrontFacing2) {
+      // Direct array assignment (faster than push)
+      if (posIndex + 5 < positions.length) {
+        positions[posIndex++] = vertices[0].x;
+        positions[posIndex++] = vertices[0].y;
+        positions[posIndex++] = vertices[0].z;
+        positions[posIndex++] = vertices[1].x;
+        positions[posIndex++] = vertices[1].y;
+        positions[posIndex++] = vertices[1].z;
+      }
+    }
   });
 
-  return new Float32Array(silhouetteEdges);
+  // Trim to actual size
+  return positions.slice(0, posIndex);
 }
