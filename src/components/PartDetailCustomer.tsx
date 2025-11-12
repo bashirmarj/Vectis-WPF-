@@ -33,20 +33,6 @@ interface PartDetailCustomerProps {
       confidence?: number;
       method?: string;
       recommended_processes?: string[];
-      detected_features?: any;
-      manufacturing_features?: any;
-      feature_tree?: {
-        common_dimensions: Array<{
-          label: string;
-          value: number;
-          unit: string;
-        }>;
-        oriented_sections: Array<{
-          orientation: string;
-          features: any[];
-        }>;
-      };
-      feature_summary?: any;
       geometric_features?: any;
       recommended_routings?: string[];
       routing_reasoning?: string[];
@@ -86,7 +72,7 @@ export function PartDetailCustomer({
   const hasAnalysis = !!file.analysis;
   const hasFeatures =
     hasAnalysis &&
-    (file.analysis.manufacturing_features || file.analysis.feature_tree || file.analysis.detected_features);
+    file.analysis?.geometric_features?.feature_instances?.length > 0;
   const hasQuote = !!file.quote;
 
   // Debug logging
@@ -99,23 +85,15 @@ export function PartDetailCustomer({
     });
   }, [file.analysis?.geometric_features]);
 
-  console.log("🔍 Checking for features:", {
+  console.log("🔍 Feature data:", {
     hasAnalysis,
-    manufacturing_features: file.analysis?.manufacturing_features,
-    feature_summary: file.analysis?.feature_summary,
-    hasFeatures,
+    hasGeometricFeatures: !!file.analysis?.geometric_features,
+    featureCount: file.analysis?.geometric_features?.feature_instances?.length || 0,
   });
 
-  // Calculate feature count from either old or new structure
-  const featureCount = hasFeatures
-    ? file.analysis.feature_tree?.oriented_sections?.reduce((sum, s) => sum + s.features.length, 0) ||
-      (file.analysis.feature_summary
-        ? (file.analysis.feature_summary.through_holes || 0) +
-          (file.analysis.feature_summary.blind_holes || 0) +
-          (file.analysis.feature_summary.bores || 0) +
-          (file.analysis.feature_summary.bosses || 0)
-        : 0)
-    : 0;
+  // Calculate feature count from geometric_features
+  const featureCount = 
+    file.analysis?.geometric_features?.feature_instances?.length || 0;
 
   return (
     <Card className="w-full">

@@ -38,7 +38,6 @@ interface GeometricFeatures {
 
 interface FeatureTreeProps {
   features: GeometricFeatures | null | undefined;
-  featureSummary?: any;
   onFeatureSelect?: (featureInstance: FeatureInstance) => void;
 }
 
@@ -178,8 +177,7 @@ const getConfidenceBadge = (confidence: number): string => {
 };
 
 const FeatureTree: React.FC<FeatureTreeProps> = ({ 
-  features, 
-  featureSummary,
+  features,
   onFeatureSelect 
 }) => {
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);

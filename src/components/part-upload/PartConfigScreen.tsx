@@ -47,9 +47,6 @@ interface FileWithData {
     complexity_score?: number;
     confidence?: number;
     method?: string;
-    detected_features?: Record<string, boolean>;
-    manufacturing_features?: any;
-    feature_summary?: any;
     geometric_features?: any;
     recommended_processes?: string[];
     routing_reasoning?: string[];
@@ -176,7 +173,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                       <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2">
                           <Box className="w-5 h-5" />
-                          Detected Features ({selectedFile.analysis.geometric_features.instances?.length || 0})
+                          Detected Features ({selectedFile.analysis.geometric_features.feature_instances?.length || 0})
                         </CardTitle>
                         <ChevronDown className="w-5 h-5 transition-transform duration-200 data-[state=open]:rotate-180" />
                       </div>
@@ -186,7 +183,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     <CardContent className="pt-0">
                       <FeatureTree 
                         features={selectedFile.analysis.geometric_features}
-                        featureSummary={selectedFile.analysis.feature_summary}
                         onFeatureSelect={(feature) => {}}
                       />
                     </CardContent>
