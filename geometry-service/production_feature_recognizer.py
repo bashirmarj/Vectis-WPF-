@@ -4,7 +4,7 @@ production_feature_recognizer.py
 
 Main orchestrator for complete feature recognition system.
 
-Version: 2.1 - Deduplication Fix
+Version: 2.4 - Simplified for Pulley V-Groove Fix
 Target Accuracy: 70-80%
 
 Features:
@@ -13,7 +13,7 @@ Features:
 - Error handling
 - Confidence scoring
 - Manufacturing validation
-- ✅ FIXED: Disabled location dedup for turning features (semantic merger handles it)
+- ✅ Matches v2.4 turning recognizer
 """
 
 from production_hole_recognizer import ProductionHoleRecognizer
@@ -61,7 +61,7 @@ class ProductionFeatureRecognizer:
         self.turning_recognizer = ProductionTurningRecognizer()
         self.classifier = ProductionPartClassifier()
         
-        logger.info("✅ Production Feature Recognizer v2.1 initialized")
+        logger.info("✅ Production Feature Recognizer v2.4 initialized")
         logger.info(f"   Memory limit: {memory_limit_mb}MB")
         logger.info(f"   Time limit: {time_limit_sec}s")
 
@@ -127,11 +127,6 @@ class ProductionFeatureRecognizer:
                 holes = self.hole_recognizer.recognize_all_holes(shape)
                 all_features.extend(holes)
                 
-                feature_dict = {
-                    'holes': [self._to_dict(h) for h in holes],
-                    'turning_features': [self._to_dict(f) for f in turning_features],
-                    'rotation_axis': rotation_axis
-                }
             else:
                 # Prismatic: holes, pockets, slots
                 logger.info("\n🔧 Step 3: Recognizing prismatic features...")
@@ -147,26 +142,18 @@ class ProductionFeatureRecognizer:
                 logger.info("\n   ➖ Recognizing slots...")
                 slots = self.slot_recognizer.recognize_all_slots(shape)
                 all_features.extend(slots)
-                
-                feature_dict = {
-                    'holes': [self._to_dict(h) for h in holes],
-                    'pockets': [self._to_dict(p) for p in pockets],
-                    'slots': [self._to_dict(s) for s in slots]
-                }
             
             # Step 4: Post-processing
             logger.info("\n🔧 Step 4: Post-processing...")
             
-            # ✅ FIX: Only deduplicate non-turning features
-            # Turning features are already semantically merged in the turning recognizer
+            # For rotational: turning features already merged, just dedupe holes
+            # For prismatic: dedupe all
             if is_rotational:
-                # Deduplicate only holes (turning features already merged)
                 holes_dedup = self._remove_duplicates(holes)
                 all_features = turning_features + holes_dedup
                 logger.info(f"   Turning features: {len(turning_features)} (already merged)")
                 logger.info(f"   Holes: {len(holes)} → {len(holes_dedup)}")
             else:
-                # Prismatic: deduplicate all features
                 all_features = self._remove_duplicates(all_features)
             
             all_features = self._calculate_confidence(all_features)
@@ -181,6 +168,13 @@ class ProductionFeatureRecognizer:
             memory_used = self._get_memory_usage() - initial_memory
             
             # Determine part family
+            feature_dict = {
+                'turning_features': turning_features,
+                'holes': holes,
+                'pockets': pockets,
+                'slots': slots,
+                'rotation_axis': rotation_axis
+            }
             part_family = self.classifier.classify(shape, feature_dict)
             
             # Build result
@@ -192,7 +186,7 @@ class ProductionFeatureRecognizer:
                 'pockets': [self._to_dict(p) for p in pockets],
                 'slots': [self._to_dict(s) for s in slots],
                 'turning_features': [self._to_dict(f) for f in turning_features],
-                'rotation_axis': rotation_axis,
+                'rotation_axis': rotation_axis if isinstance(rotation_axis, list) else (rotation_axis.tolist() if rotation_axis is not None else None),
                 'num_features': len(all_features),
                 'confidence': overall_confidence,
                 'processing_time_seconds': processing_time,
@@ -279,9 +273,8 @@ class ProductionFeatureRecognizer:
         """
         Remove duplicate features based on location.
         
-        ✅ NOTE: This should NOT be called on turning features!
-           Turning features are already semantically merged in the
-           turning recognizer using manufacturing relationships.
+        NOTE: This should NOT be called on turning features!
+              Turning features are already semantically merged.
         """
         unique_features = []
         seen_locations = set()
