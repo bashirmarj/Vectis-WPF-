@@ -89,6 +89,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'tapped': 'Tapped Hole',
   'through': 'Through Hole',
   'blind': 'Blind Hole',
+  'tapered': 'Tapered Hole',
   // Production recognizer subtypes - POCKETS
   'rectangular': 'Rectangular Pocket',
   'circular': 'Circular Pocket',
@@ -109,7 +110,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
 
 // Feature category classification (works for both systems)
 const FEATURE_CATEGORIES = {
-  holes: ['through_hole', 'blind_hole', 'hole', 'partial_cylindrical', 'counterbore', 'countersink', 'tapped', 'through', 'blind'],
+  holes: ['through_hole', 'blind_hole', 'hole', 'partial_cylindrical', 'counterbore', 'countersink', 'tapped', 'through', 'blind', 'tapered'],
   pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket', 'pocket', 'general_pocket', 'rectangular', 'circular', 'complex_contour', 'with_islands'],
   slots: [
     'triangular_through_slot', 
