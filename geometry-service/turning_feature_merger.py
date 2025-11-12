@@ -4,8 +4,17 @@ turning_feature_merger.py
 
 Semantic merging for turning features to eliminate split circular edges.
 
-Version: 2.1 - V-Groove Fix
+Version: 2.2 - Relaxed Tolerances
 Author: Production Feature Recognition Team
+
+CHANGES IN v2.2:
+- ✅ RELAXED all tolerances 3-5x for real-world CAD files
+- ✅ axis_tolerance: 1.0mm → 5.0mm
+- ✅ position_tolerance: 10.0mm → 50.0mm  
+- ✅ diameter_tolerance: 3.0mm → 10.0mm
+- ✅ angle_tolerance: 5° → 15°
+- ✅ V-groove same-Z: 0.5mm → 2.0mm
+- ✅ Axis parallelism: 8° → 15°
 
 CHANGES IN v2.1:
 - ✅ V-groove merging: Detects 2 grooves at same Z but opposite radial sides
@@ -41,10 +50,10 @@ class TurningFeatureMerger:
     """
 
     def __init__(self,
-                 axis_tolerance: float = 1.0,      # Coaxial tolerance (mm)
-                 position_tolerance: float = 10.0,  # Adjacent tolerance (mm)
-                 diameter_tolerance: float = 3.0,   # Diameter match (mm)
-                 angle_tolerance: float = 5.0):     # Angle match (degrees)
+                 axis_tolerance: float = 5.0,      # Coaxial tolerance (mm) - RELAXED from 1.0
+                 position_tolerance: float = 50.0,  # Adjacent tolerance (mm) - RELAXED from 10.0
+                 diameter_tolerance: float = 10.0,  # Diameter match (mm) - RELAXED from 3.0
+                 angle_tolerance: float = 15.0):    # Angle match (degrees) - RELAXED from 5.0
         """
         Initialize merger with lenient tolerances.
         
@@ -73,6 +82,8 @@ class TurningFeatureMerger:
             return features
 
         logger.info(f"🔗 Semantic merging: {len(features)} turning features")
+        logger.info(f"   Tolerances: axis={self.axis_tolerance}mm, pos={self.position_tolerance}mm, "
+                   f"dia={self.diameter_tolerance}mm, angle={self.angle_tolerance}°")
 
         # Group by feature type
         by_type = {}
@@ -161,10 +172,10 @@ class TurningFeatureMerger:
                 # V-GROOVE FIX v2.1: Check for same axial position (circumferential groove)
                 z_distance = abs(z1 - z2)
                 
-                if z_distance < 0.5:  # Same Z-position (within 0.5mm)
+                if z_distance < 2.0:  # Same Z-position (within 2.0mm) - RELAXED from 0.5mm
                     # V-groove pattern: 2 grooves at same axial position
                     # They're on opposite sides of the rotation axis
-                    logger.info(f"      V-groove detected: groove {i} + groove {j} at same Z-position")
+                    logger.info(f"      V-groove detected: groove {i} + groove {j} at same Z-position (Δz={z_distance:.2f}mm)")
                     merge_group.append(g2)
                     used.add(j)
                 elif z_distance < self.position_tolerance:
@@ -349,7 +360,7 @@ class TurningFeatureMerger:
         axis1_norm = axis1 / np.linalg.norm(axis1)
         axis2_norm = axis2 / np.linalg.norm(axis2)
         dot = abs(np.dot(axis1_norm, axis2_norm))
-        return dot > 0.99  # ~8 degrees tolerance
+        return dot > 0.97  # ~15 degrees tolerance - RELAXED from 0.99 (~8 degrees)
 
     def _diameters_similar(self, d1: float, d2: float) -> bool:
         """Check if two diameters are similar"""
