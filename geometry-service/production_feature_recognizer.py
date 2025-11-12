@@ -4,23 +4,8 @@ production_feature_recognizer.py
 
 Main orchestrator for complete feature recognition system.
 
-Version: 2.4.1 - Rotation Axis Type Fix
+Version: 2.1 - Deduplication Fix
 Target Accuracy: 70-80%
-
-CHANGES IN v2.4.1:
-- ✅ Fixed rotation_axis type handling - already a list from turning recognizer
-
-CHANGES IN v2.4:
-- ✅ Fixed recognizer method names: recognize_all_holes/pockets/slots
-
-CHANGES IN v2.3:
-- ✅ Fixed classification logic - run recognizers first, then classify
-- ✅ Classifier now receives feature_dict as required
-
-CHANGES IN v2.2:
-- ✅ Disabled location-based deduplication for turning features
-- ✅ Turning features already semantically merged, don't need location dedup
-- ✅ Fixes step over-deduplication issue
 
 Features:
 - Integrates all recognizers
@@ -28,6 +13,7 @@ Features:
 - Error handling
 - Confidence scoring
 - Manufacturing validation
+- ✅ FIXED: Disabled location dedup for turning features (semantic merger handles it)
 """
 
 from production_hole_recognizer import ProductionHoleRecognizer
@@ -75,7 +61,7 @@ class ProductionFeatureRecognizer:
         self.turning_recognizer = ProductionTurningRecognizer()
         self.classifier = ProductionPartClassifier()
         
-        logger.info("✅ Production Feature Recognizer v2.4.1 initialized")
+        logger.info("✅ Production Feature Recognizer v2.1 initialized")
         logger.info(f"   Memory limit: {memory_limit_mb}MB")
         logger.info(f"   Time limit: {time_limit_sec}s")
 
@@ -84,242 +70,272 @@ class ProductionFeatureRecognizer:
         Main entry point: Recognize all features in STEP file.
         
         Args:
-            step_file_path: Path to STEP/IGES file
+            step_file_path: Path to STEP file
             
         Returns:
-            Dict with success, features, confidence, etc.
+            Complete recognition result
         """
         start_time = time.time()
+        initial_memory = self._get_memory_usage()
         
+        logger.info("="*80)
+        logger.info(f"🚀 Starting production feature recognition")
+        logger.info(f"📁 File: {step_file_path}")
+        logger.info("="*80)
+
         try:
             # Check file exists
             if not os.path.exists(step_file_path):
-                return self._error_result(f"File not found: {step_file_path}")
-
-            logger.info(f"🔍 Analyzing: {os.path.basename(step_file_path)}")
+                raise FileNotFoundError(f"STEP file not found: {step_file_path}")
             
-            # Load STEP file
+            # Step 1: Load STEP file
+            logger.info("\n📥 Step 1: Loading STEP file...")
             shape = read_step_file(step_file_path)
-            if shape is None:
-                return self._error_result("Failed to read STEP file")
-
-            # Run ALL recognizers first (needed for classification)
+            logger.info("   ✅ Loaded successfully")
+            
+            self._check_resources(start_time, "after file load")
+            
+            # Step 2: Pre-classification (rotational vs prismatic)
+            logger.info("\n🔄 Step 2: Pre-classification...")
+            turning_result = self.turning_recognizer.recognize_turning_features(shape)
+            
+            is_rotational = (turning_result['part_type'] == 'rotational')
+            rotation_axis = turning_result.get('axis')
+            turning_features = turning_result.get('features', [])
+            
+            if is_rotational:
+                logger.info("   ➜ Part has rotational characteristics")
+            else:
+                logger.info("   ➜ Part is prismatic")
+            
+            self._check_resources(start_time, "after turning recognition")
+            
+            # Step 3: Run appropriate recognizers
+            all_features = []
             holes = []
             pockets = []
             slots = []
-            turning_features = []
-            rotation_axis = None
-
-            # Try turning recognition first
-            logger.info("   🔄 Checking for turning features...")
-            result = self.turning_recognizer.recognize_turning_features(shape)
-            turning_features = result.get('features', [])
-            rotation_axis = result.get('axis')
             
-            # If not rotational, run milling recognizers
-            if result.get('part_type') == 'not_rotational':
-                logger.info("   ⬜ Prismatic part - running milling recognizers...")
+            if is_rotational:
+                # Rotational: turning features + holes
+                logger.info("\n🔄 Step 3: Recognizing rotational features...")
+                
+                all_features.extend(turning_features)
+                
+                # Holes (common on rotational parts)
+                logger.info("\n   🕳️  Recognizing holes...")
                 holes = self.hole_recognizer.recognize_all_holes(shape)
-                pockets = self.pocket_recognizer.recognize_all_pockets(shape)
-                slots = self.slot_recognizer.recognize_all_slots(shape)
-                logger.info(f"   Holes: {len(holes)}, Pockets: {len(pockets)}, Slots: {len(slots)}")
+                all_features.extend(holes)
+                
+                feature_dict = {
+                    'holes': [self._to_dict(h) for h in holes],
+                    'turning_features': [self._to_dict(f) for f in turning_features],
+                    'rotation_axis': rotation_axis
+                }
             else:
-                logger.info(f"   🔄 Rotational part - turning features: {len(turning_features)}")
-                # Also check for holes on rotational parts (drilled holes are common)
+                # Prismatic: holes, pockets, slots
+                logger.info("\n🔧 Step 3: Recognizing prismatic features...")
+                
+                logger.info("\n   🕳️  Recognizing holes...")
                 holes = self.hole_recognizer.recognize_all_holes(shape)
-                logger.info(f"   Holes: {len(holes)}")
-
-            # Build feature dict for classification
-            feature_dict = {
-                'turning_features': turning_features,
-                'holes': holes,
-                'pockets': pockets,
-                'slots': slots,
-                'rotation_axis': rotation_axis
-            }
+                all_features.extend(holes)
+                
+                logger.info("\n   📦 Recognizing pockets...")
+                pockets = self.pocket_recognizer.recognize_all_pockets(shape)
+                all_features.extend(pockets)
+                
+                logger.info("\n   ➖ Recognizing slots...")
+                slots = self.slot_recognizer.recognize_all_slots(shape)
+                all_features.extend(slots)
+                
+                feature_dict = {
+                    'holes': [self._to_dict(h) for h in holes],
+                    'pockets': [self._to_dict(p) for p in pockets],
+                    'slots': [self._to_dict(s) for s in slots]
+                }
             
-            # Classify part based on extracted features
-            part_family = self.classifier.classify(shape, feature_dict)
-            logger.info(f"   Part family: {part_family.value}")
-
-            # Post-process features
-            all_features = holes + pockets + slots + turning_features
+            # Step 4: Post-processing
+            logger.info("\n🔧 Step 4: Post-processing...")
             
-            # CRITICAL FIX v2.2: Split deduplication by feature type
-            # - Holes/pockets/slots: Apply location-based deduplication
-            # - Turning features: Skip deduplication (already semantically merged)
-            prismatic_features = holes + pockets + slots
-            deduplicated_prismatic = self._deduplicate_features(prismatic_features)
+            # ✅ FIX: Only deduplicate non-turning features
+            # Turning features are already semantically merged in the turning recognizer
+            if is_rotational:
+                # Deduplicate only holes (turning features already merged)
+                holes_dedup = self._remove_duplicates(holes)
+                all_features = turning_features + holes_dedup
+                logger.info(f"   Turning features: {len(turning_features)} (already merged)")
+                logger.info(f"   Holes: {len(holes)} → {len(holes_dedup)}")
+            else:
+                # Prismatic: deduplicate all features
+                all_features = self._remove_duplicates(all_features)
             
-            # Turning features don't need location dedup - already handled by semantic merger
-            deduplicated_turning = turning_features
+            all_features = self._calculate_confidence(all_features)
             
-            logger.info(f"🔧 Post-processing:")
-            logger.info(f"   Deduplicated features:")
-            logger.info(f"      Holes/pockets/slots: {len(prismatic_features)} → {len(deduplicated_prismatic)}")
-            logger.info(f"      Turning: {len(turning_features)} → {len(deduplicated_turning)} (semantic merge only)")
+            # Calculate overall confidence
+            if all_features:
+                overall_confidence = sum(self._get_confidence(f) for f in all_features) / len(all_features)
+            else:
+                overall_confidence = 0.0
             
-            final_features = deduplicated_prismatic + deduplicated_turning
-            
-            # Calculate confidence
-            confidence = self._calculate_confidence(final_features)
-
             processing_time = time.time() - start_time
+            memory_used = self._get_memory_usage() - initial_memory
             
-            logger.info(f"✅ RECOGNITION COMPLETE")
-            logger.info(f"   Total Features: {len(final_features)}")
-            logger.info(f"   Confidence: {confidence:.1%}")
-            logger.info(f"   Time: {processing_time:.2f}s")
-
-            # Generate feature summary
-            feature_summary = {}
-            for feat in final_features:
-                feat_dict = feat.to_dict() if hasattr(feat, 'to_dict') else feat
-                ftype = feat_dict.get('type', 'unknown')
-                subtype = feat_dict.get('subtype', '')
-                key = f"{ftype}_{subtype}" if subtype else ftype
-                feature_summary[key] = feature_summary.get(key, 0) + 1
-
-            logger.info(f"   Feature summary: {feature_summary}")
-
-            # Handle rotation_axis - it's already a list from turning recognizer
-            rotation_axis_list = None
-            if rotation_axis is not None:
-                if hasattr(rotation_axis, 'tolist'):
-                    # NumPy array - convert to list
-                    rotation_axis_list = rotation_axis.tolist()
-                elif isinstance(rotation_axis, list):
-                    # Already a list - use directly
-                    rotation_axis_list = rotation_axis
-                else:
-                    # Unknown type - try converting
-                    rotation_axis_list = list(rotation_axis)
-
-            return {
+            # Determine part family
+            part_family = self.classifier.classify(shape, feature_dict)
+            
+            # Build result
+            result = {
                 'success': True,
-                'features': [f.to_dict() if hasattr(f, 'to_dict') else f for f in final_features],
-                'holes': [f.to_dict() if hasattr(f, 'to_dict') else f for f in deduplicated_prismatic if self._is_hole(f)],
-                'pockets': [f.to_dict() if hasattr(f, 'to_dict') else f for f in deduplicated_prismatic if self._is_pocket(f)],
-                'slots': [f.to_dict() if hasattr(f, 'to_dict') else f for f in deduplicated_prismatic if self._is_slot(f)],
-                'turning_features': [f.to_dict() if hasattr(f, 'to_dict') else f for f in deduplicated_turning],
-                'num_features': len(final_features),
-                'confidence': confidence,
                 'part_family': part_family.value,
-                'rotation_axis': rotation_axis_list,
+                'features': [self._to_dict(f) for f in all_features],
+                'holes': [self._to_dict(h) for h in holes],
+                'pockets': [self._to_dict(p) for p in pockets],
+                'slots': [self._to_dict(s) for s in slots],
+                'turning_features': [self._to_dict(f) for f in turning_features],
+                'rotation_axis': rotation_axis,
+                'num_features': len(all_features),
+                'confidence': overall_confidence,
                 'processing_time_seconds': processing_time,
+                'memory_used_mb': memory_used,
                 'errors': []
             }
-
-        except Exception as e:
-            logger.error(f"❌ Recognition failed: {e}", exc_info=True)
-            return self._error_result(str(e))
-
-    def _is_hole(self, feature) -> bool:
-        """Check if feature is a hole"""
-        feat_dict = feature.to_dict() if hasattr(feature, 'to_dict') else feature
-        return feat_dict.get('type') == 'hole'
-
-    def _is_pocket(self, feature) -> bool:
-        """Check if feature is a pocket"""
-        feat_dict = feature.to_dict() if hasattr(feature, 'to_dict') else feature
-        return feat_dict.get('type') == 'pocket'
-
-    def _is_slot(self, feature) -> bool:
-        """Check if feature is a slot"""
-        feat_dict = feature.to_dict() if hasattr(feature, 'to_dict') else feature
-        return feat_dict.get('type') == 'slot'
-
-    def _deduplicate_features(self, features: List) -> List:
-        """
-        Deduplicate features based on location.
-        
-        NOTE: This is ONLY for prismatic features (holes, pockets, slots).
-        Turning features have their own semantic merging in turning_feature_merger.py
-        """
-        if not features:
-            return features
-
-        # Group by type first
-        by_type = {}
-        for feat in features:
-            feat_dict = feat.to_dict() if hasattr(feat, 'to_dict') else feat
-            ftype = feat_dict.get('type', 'unknown')
-            if ftype not in by_type:
-                by_type[ftype] = []
-            by_type[ftype].append(feat)
-
-        deduplicated = []
-
-        for ftype, flist in by_type.items():
-            # Location-based deduplication with 0.1mm tolerance
-            seen_locations = {}
             
-            for feat in flist:
-                feat_dict = feat.to_dict() if hasattr(feat, 'to_dict') else feat
-                loc = feat_dict.get('location', [0, 0, 0])
-                
-                # Round to 0.1mm precision
-                rounded = tuple(round(x, 1) for x in loc)
-                
-                if rounded not in seen_locations:
-                    seen_locations[rounded] = feat
-                    deduplicated.append(feat)
-                else:
-                    # Merge face indices if available
-                    existing = seen_locations[rounded]
-                    existing_dict = existing.to_dict() if hasattr(existing, 'to_dict') else existing
-                    if 'face_indices' in existing_dict and 'face_indices' in feat_dict:
-                        existing_dict['face_indices'].extend(feat_dict['face_indices'])
+            # Summary
+            logger.info("\n" + "="*80)
+            logger.info("✅ RECOGNITION COMPLETE")
+            logger.info("="*80)
+            logger.info(f"   Part Family: {part_family.value.upper()}")
+            logger.info(f"   Total Features: {len(all_features)}")
+            if is_rotational:
+                logger.info(f"      - Turning: {len(turning_features)}")
+                logger.info(f"      - Holes: {len(holes)}")
+            else:
+                logger.info(f"      - Holes: {len(holes)}")
+                logger.info(f"      - Pockets: {len(pockets)}")
+                logger.info(f"      - Slots: {len(slots)}")
+            logger.info(f"   Confidence: {overall_confidence*100:.1f}%")
+            logger.info(f"   Time: {processing_time:.2f}s")
+            logger.info(f"   Memory: {memory_used:.1f}MB")
+            logger.info("="*80)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Recognition failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            return {
+                'success': False,
+                'part_family': PartFamily.UNKNOWN.value,
+                'features': [],
+                'holes': [],
+                'pockets': [],
+                'slots': [],
+                'turning_features': [],
+                'rotation_axis': None,
+                'num_features': 0,
+                'confidence': 0.0,
+                'processing_time_seconds': time.time() - start_time,
+                'memory_used_mb': self._get_memory_usage() - initial_memory,
+                'errors': [str(e)]
+            }
 
-        return deduplicated
+    def _check_resources(self, start_time: float, stage: str):
+        """Check if within resource limits"""
+        elapsed = time.time() - start_time
+        memory_mb = self._get_memory_usage()
+        
+        if elapsed > self.time_limit_sec:
+            raise TimeoutError(f"Exceeded time limit at {stage}: {elapsed:.1f}s")
+        
+        if memory_mb > self.memory_limit_mb:
+            raise MemoryError(f"Exceeded memory limit at {stage}: {memory_mb:.1f}MB")
 
-    def _calculate_confidence(self, features: List) -> float:
-        """Calculate overall confidence score"""
-        if not features:
+    def _get_memory_usage(self) -> float:
+        """Get current memory usage in MB"""
+        process = psutil.Process(os.getpid())
+        return process.memory_info().rss / 1024 / 1024
+
+    def _to_dict(self, feature) -> Dict:
+        """Convert feature to dict"""
+        if hasattr(feature, 'to_dict'):
+            return feature.to_dict()
+        elif isinstance(feature, dict):
+            return feature
+        else:
+            return {}
+
+    def _get_confidence(self, feature) -> float:
+        """Extract confidence"""
+        if hasattr(feature, 'confidence'):
+            return feature.confidence
+        elif isinstance(feature, dict):
+            return feature.get('confidence', 0.0)
+        else:
             return 0.0
 
-        confidences = []
-        for feat in features:
-            feat_dict = feat.to_dict() if hasattr(feat, 'to_dict') else feat
-            confidences.append(feat_dict.get('confidence', 0.7))
+    def _remove_duplicates(self, features: List) -> List:
+        """
+        Remove duplicate features based on location.
+        
+        ✅ NOTE: This should NOT be called on turning features!
+           Turning features are already semantically merged in the
+           turning recognizer using manufacturing relationships.
+        """
+        unique_features = []
+        seen_locations = set()
+        
+        for feature in features:
+            loc = self._get_location(feature)
+            
+            if loc not in seen_locations:
+                unique_features.append(feature)
+                seen_locations.add(loc)
+        
+        if len(features) != len(unique_features):
+            logger.info(f"   Removed {len(features) - len(unique_features)} location duplicates")
+        
+        return unique_features
 
-        return sum(confidences) / len(confidences)
+    def _get_location(self, feature) -> tuple:
+        """Extract location rounded to 0.1mm"""
+        if hasattr(feature, 'location'):
+            loc = feature.location
+            return tuple(round(x, 1) for x in loc)
+        elif isinstance(feature, dict):
+            loc = feature.get('location', (0, 0, 0))
+            return tuple(round(x, 1) for x in loc)
+        else:
+            return (0, 0, 0)
 
-    def _error_result(self, error_msg: str) -> Dict:
-        """Return error result"""
-        return {
-            'success': False,
-            'features': [],
-            'holes': [],
-            'pockets': [],
-            'slots': [],
-            'turning_features': [],
-            'num_features': 0,
-            'confidence': 0.0,
-            'part_family': 'unknown',
-            'rotation_axis': None,
-            'processing_time_seconds': 0.0,
-            'errors': [error_msg]
-        }
+    def _calculate_confidence(self, features: List) -> List:
+        """Adjust confidence based on context"""
+        return features
+
+
+# Convenience function
+def recognize_step_file(step_file_path: str) -> Dict:
+    """Convenience function to recognize features"""
+    recognizer = ProductionFeatureRecognizer()
+    return recognizer.recognize(step_file_path)
 
 
 if __name__ == "__main__":
     import sys
     
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     
     if len(sys.argv) < 2:
         print("Usage: python production_feature_recognizer.py <step_file>")
         sys.exit(1)
-
-    recognizer = ProductionFeatureRecognizer()
-    result = recognizer.recognize(sys.argv[1])
     
-    print(f"\n{'='*60}")
-    print(f"RESULT: {'SUCCESS' if result['success'] else 'FAILED'}")
-    print(f"{'='*60}")
-    print(f"Features: {result['num_features']}")
-    print(f"Confidence: {result['confidence']:.1%}")
-    print(f"Part family: {result['part_family']}")
-    if result['errors']:
-        print(f"Errors: {result['errors']}")
+    result = recognize_step_file(sys.argv[1])
+    
+    if result['success']:
+        print(f"\n✅ Success!")
+        print(f"   Part type: {result['part_family']}")
+        print(f"   Features: {result['num_features']}")
+        print(f"   Confidence: {result['confidence']*100:.1f}%")
+    else:
+        print(f"\n❌ Failed: {result['errors']}")
