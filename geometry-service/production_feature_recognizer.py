@@ -4,8 +4,11 @@ production_feature_recognizer.py
 
 Main orchestrator for complete feature recognition system.
 
-Version: 2.4 - Method Name Fix
+Version: 2.4.1 - Rotation Axis Type Fix
 Target Accuracy: 70-80%
+
+CHANGES IN v2.4.1:
+- ✅ Fixed rotation_axis type handling - already a list from turning recognizer
 
 CHANGES IN v2.4:
 - ✅ Fixed recognizer method names: recognize_all_holes/pockets/slots
@@ -72,7 +75,7 @@ class ProductionFeatureRecognizer:
         self.turning_recognizer = ProductionTurningRecognizer()
         self.classifier = ProductionPartClassifier()
         
-        logger.info("✅ Production Feature Recognizer v2.4 initialized")
+        logger.info("✅ Production Feature Recognizer v2.4.1 initialized")
         logger.info(f"   Memory limit: {memory_limit_mb}MB")
         logger.info(f"   Time limit: {time_limit_sec}s")
 
@@ -179,6 +182,19 @@ class ProductionFeatureRecognizer:
 
             logger.info(f"   Feature summary: {feature_summary}")
 
+            # Handle rotation_axis - it's already a list from turning recognizer
+            rotation_axis_list = None
+            if rotation_axis is not None:
+                if hasattr(rotation_axis, 'tolist'):
+                    # NumPy array - convert to list
+                    rotation_axis_list = rotation_axis.tolist()
+                elif isinstance(rotation_axis, list):
+                    # Already a list - use directly
+                    rotation_axis_list = rotation_axis
+                else:
+                    # Unknown type - try converting
+                    rotation_axis_list = list(rotation_axis)
+
             return {
                 'success': True,
                 'features': [f.to_dict() if hasattr(f, 'to_dict') else f for f in final_features],
@@ -189,7 +205,7 @@ class ProductionFeatureRecognizer:
                 'num_features': len(final_features),
                 'confidence': confidence,
                 'part_family': part_family.value,
-                'rotation_axis': rotation_axis.tolist() if rotation_axis is not None else None,
+                'rotation_axis': rotation_axis_list,
                 'processing_time_seconds': processing_time,
                 'errors': []
             }
