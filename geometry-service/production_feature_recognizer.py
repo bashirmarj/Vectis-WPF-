@@ -4,8 +4,11 @@ production_feature_recognizer.py
 
 Main orchestrator for complete feature recognition system.
 
-Version: 2.3 - Classification Fix
+Version: 2.4 - Method Name Fix
 Target Accuracy: 70-80%
+
+CHANGES IN v2.4:
+- ✅ Fixed recognizer method names: recognize_all_holes/pockets/slots
 
 CHANGES IN v2.3:
 - ✅ Fixed classification logic - run recognizers first, then classify
@@ -69,7 +72,7 @@ class ProductionFeatureRecognizer:
         self.turning_recognizer = ProductionTurningRecognizer()
         self.classifier = ProductionPartClassifier()
         
-        logger.info("✅ Production Feature Recognizer v2.3 initialized")
+        logger.info("✅ Production Feature Recognizer v2.4 initialized")
         logger.info(f"   Memory limit: {memory_limit_mb}MB")
         logger.info(f"   Time limit: {time_limit_sec}s")
 
@@ -113,14 +116,14 @@ class ProductionFeatureRecognizer:
             # If not rotational, run milling recognizers
             if result.get('part_type') == 'not_rotational':
                 logger.info("   ⬜ Prismatic part - running milling recognizers...")
-                holes = self.hole_recognizer.recognize_holes(shape)
-                pockets = self.pocket_recognizer.recognize_pockets(shape)
-                slots = self.slot_recognizer.recognize_slots(shape)
+                holes = self.hole_recognizer.recognize_all_holes(shape)
+                pockets = self.pocket_recognizer.recognize_all_pockets(shape)
+                slots = self.slot_recognizer.recognize_all_slots(shape)
                 logger.info(f"   Holes: {len(holes)}, Pockets: {len(pockets)}, Slots: {len(slots)}")
             else:
                 logger.info(f"   🔄 Rotational part - turning features: {len(turning_features)}")
                 # Also check for holes on rotational parts (drilled holes are common)
-                holes = self.hole_recognizer.recognize_holes(shape)
+                holes = self.hole_recognizer.recognize_all_holes(shape)
                 logger.info(f"   Holes: {len(holes)}")
 
             # Build feature dict for classification
