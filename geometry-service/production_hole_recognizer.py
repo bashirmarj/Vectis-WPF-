@@ -4,20 +4,15 @@ production_hole_recognizer.py
 
 PRODUCTION-GRADE hole recognition system for CNC machining.
 
-Version: 2.1 (WITH TAPER HOLE FIX)
+Version: 2.1 - Tapered Hole Fix
 Target Accuracy: 75-85%
-
-NEW IN v2.1:
-- ✅ Proper tapered hole detection using CONICAL faces
-- ✅ Fixes tapered center holes being misclassified as counterbores
-- ✅ Distinguishes between counterbore (stepped cylindrical) and taper (conical)
 
 Handles:
 - Through holes (simple, complex exit)
 - Blind holes (flat bottom, conical, spherical)
 - Counterbored holes (single, multiple stages)
 - Countersunk holes (82°, 90°, 100°, 120°)
-- TAPERED HOLES (conical internal surfaces) - FIXED!
+- ✅ Tapered holes (conical geometry)
 - Tapped holes (metric, imperial, pipe threads)
 - Hole patterns (bolt circles, linear, rectangular)
 - Angled holes (off-axis drilling)
@@ -25,12 +20,10 @@ Handles:
 - Interrupted holes (through pocket walls)
 - Compound holes (CB + CS combinations)
 
-Features:
-- Memory-efficient processing
-- Robust error handling
-- Manufacturing validation
-- Confidence scoring
-- Pattern detection
+✅ NEW FIX:
+- Detects CONICAL faces adjacent to cylindrical holes
+- Classifies tapered holes correctly (not as counterbores)
+- Calculates taper angle from cone geometry
 """
 
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
@@ -65,7 +58,7 @@ class HoleType(Enum):
     COUNTERBORE = "counterbore"
     COUNTERSINK = "countersink"
     TAPPED = "tapped"
-    TAPERED = "tapered"  # NEW! - For conical holes
+    TAPERED = "tapered"  # ✅ NEW: For conical holes
     COMPOUND = "compound"  # CB + CS combination
     ANGLED = "angled"
     ON_CURVED = "on_curved_surface"
@@ -94,11 +87,11 @@ class Hole:
     countersink_diameter: Optional[float] = None
     countersink_angle: Optional[float] = None
 
-    # Taper attributes (NEW!)
-    has_taper: bool = False
-    taper_angle: Optional[float] = None
-    taper_start_diameter: Optional[float] = None
-    taper_end_diameter: Optional[float] = None
+    # ✅ NEW: Tapered hole attributes
+    is_tapered: bool = False
+    taper_angle: Optional[float] = None  # Degrees
+    start_diameter: Optional[float] = None  # Larger end
+    end_diameter: Optional[float] = None  # Smaller end
 
     # Thread attributes
     has_threads: bool = False
@@ -128,8 +121,8 @@ class Hole:
                 'countersink_diameter': self.countersink_diameter,
                 'countersink_angle': self.countersink_angle,
                 'taper_angle': self.taper_angle,
-                'taper_start_diameter': self.taper_start_diameter,
-                'taper_end_diameter': self.taper_end_diameter,
+                'start_diameter': self.start_diameter,
+                'end_diameter': self.end_diameter,
                 'thread_depth': self.thread_depth
             },
             'location': list(self.location),
@@ -138,7 +131,7 @@ class Hole:
             'bottom_type': self.bottom_type,
             'has_counterbore': self.has_counterbore,
             'has_countersink': self.has_countersink,
-            'has_taper': self.has_taper,
+            'is_tapered': self.is_tapered,
             'has_threads': self.has_threads,
             'thread_spec': self.thread_spec,
             'surface_normal': list(self.surface_normal) if self.surface_normal else None,
@@ -153,17 +146,14 @@ class ProductionHoleRecognizer:
     """
     Production-grade hole recognizer with 75-85% accuracy target.
     
-    Key improvements over v1:
+    Key improvements over v2.0:
+    - ✅ Tapered hole detection (conical geometry)
     - Complete counterbore/countersink detection
     - Thread recognition from geometry
     - Pattern detection
     - Manufacturing validation
     - Memory-efficient processing
     - Robust error handling
-    
-    NEW in v2.1:
-    - ✅ Proper tapered hole detection using conical faces
-    - ✅ Fixes misclassification of tapered holes as counterbores
     """
 
     def __init__(self, 
@@ -187,195 +177,185 @@ class ProductionHoleRecognizer:
     def recognize_all_holes(self, shape: TopoDS_Shape) -> List[Hole]:
         """
         Main entry point: Recognize all holes in a shape.
-
+        
         Args:
-            shape: TopoDS_Shape from pythonOCC
-
+            shape: TopoDS_Shape to analyze
+            
         Returns:
-            List of recognized Hole objects
+            List of detected Hole objects
         """
-        logger.info("🔍 Starting production hole recognition v2.1...")
+        logger.info("🕳️  Production Hole Recognizer v2.1")
         
         try:
-            # Step 1: Find all cylindrical AND conical faces (NEW!)
-            cylindrical_faces = self._find_all_cylinders(shape)
-            conical_faces = self._find_all_cones(shape)  # NEW!
+            # Step 1: Extract all cylindrical faces
+            cylinders = self._extract_cylindrical_faces(shape)
+            logger.info(f"   Found {len(cylinders)} cylindrical faces")
             
-            logger.info(f"   Found {len(cylindrical_faces)} cylindrical faces")
-            logger.info(f"   Found {len(conical_faces)} conical faces")  # NEW!
-
-            all_hole_faces = cylindrical_faces + conical_faces
-
-            if len(all_hole_faces) > self.max_holes * 2:
-                logger.warning(f"   ⚠️  Too many faces ({len(all_hole_faces)}), limiting to {self.max_holes * 2}")
-                all_hole_faces = all_hole_faces[:self.max_holes * 2]
-
-            # Step 2: Group coaxial faces (cylinders + cones with same axis)
-            hole_groups = self._group_coaxial_faces(all_hole_faces)
-            logger.info(f"   Grouped into {len(hole_groups)} potential holes")
-
-            # Step 3: Classify each hole
+            if not cylinders:
+                logger.info("   No cylindrical faces found")
+                return []
+            
+            # ✅ Step 1.5: Extract all conical faces (for tapered holes)
+            cones = self._extract_conical_faces(shape)
+            logger.info(f"   Found {len(cones)} conical faces")
+            
+            # Step 2: Group coaxial cylinders
+            cylinder_groups = self._group_coaxial_cylinders(cylinders)
+            logger.info(f"   Grouped into {len(cylinder_groups)} potential holes")
+            
+            # ✅ Step 2.5: Augment groups with coaxial cones (tapered holes)
+            cylinder_groups = self._augment_groups_with_cones(cylinder_groups, cones)
+            
+            # Step 3: Classify each group
             holes = []
-            for hole_group in hole_groups:
-                if len(holes) >= self.max_holes:
-                    logger.warning(f"   ⚠️  Reached max holes limit ({self.max_holes}), stopping")
-                    break
-
-                try:
-                    hole = self._classify_hole_group(hole_group, shape)
-                    if hole:
-                        # Manufacturing validation
-                        if self._validate_hole(hole):
-                            holes.append(hole)
-                except Exception as e:
-                    logger.debug(f"Error classifying hole group: {e}")
-                    self.processing_errors.append(str(e))
-
+            for group in cylinder_groups:
+                hole = self._classify_hole_group(group, shape)
+                if hole:
+                    # Validate
+                    if self._validate_hole(hole):
+                        holes.append(hole)
+                        
+                        if len(holes) >= self.max_holes:
+                            logger.warning(f"   ⚠️ Reached max holes limit ({self.max_holes})")
+                            break
+            
+            # Step 4: Pattern detection (bolt circles, etc.)
+            holes = self._detect_patterns(holes)
+            
             logger.info(f"✅ Recognized {len(holes)} holes")
-
+            
             self.recognized_holes = holes
             return holes
-
+            
         except Exception as e:
             logger.error(f"❌ Hole recognition failed: {e}")
             logger.error(traceback.format_exc())
             self.processing_errors.append(str(e))
             return []
 
-    def _find_all_cylinders(self, shape: TopoDS_Shape) -> List[Tuple[int, TopoDS_Face, Dict]]:
-        """Find all cylindrical faces (potential hole walls)"""
+    def _extract_cylindrical_faces(self, shape: TopoDS_Shape) -> List[Tuple[int, TopoDS_Face, Dict]]:
+        """Extract all cylindrical faces with parameters"""
         cylinders = []
-
-        try:
-            explorer = TopExp_Explorer(shape, TopAbs_FACE)
-            idx = 0
-
-            while explorer.More():
-                face = topods.Face(explorer.Current())
-
-                try:
-                    surf = BRepAdaptor_Surface(face)
-
-                    if surf.GetType() == GeomAbs_Cylinder:
-                        cylinder = surf.Cylinder()
-                        diameter = 2 * cylinder.Radius()
-
-                        # Filter by size
-                        if self.min_diameter <= diameter <= self.max_diameter:
-                            # Get axis
-                            axis_dir = cylinder.Axis().Direction()
-                            axis = np.array([axis_dir.X(), axis_dir.Y(), axis_dir.Z()])
-
-                            # Get location
-                            loc = cylinder.Location()
-                            location = np.array([loc.X(), loc.Y(), loc.Z()])
-
-                            # Get face orientation (inward/outward)
-                            props = GProp_GProps()
-                            brepgprop_SurfaceProperties(face, props)
-                            normal = props.CentreOfMass()
-
-                            params = {
-                                'type': 'cylinder',
-                                'diameter': diameter,
-                                'axis': axis,
-                                'location': location,
-                                'normal': np.array([normal.X(), normal.Y(), normal.Z()])
-                            }
-
-                            cylinders.append((idx, face, params))
-
-                except:
-                    pass
-
-                explorer.Next()
-                idx += 1
-
-        except Exception as e:
-            logger.debug(f"Error finding cylinders: {e}")
-
+        
+        explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        idx = 0
+        
+        while explorer.More():
+            face = topods.Face(explorer.Current())
+            
+            try:
+                surf = BRepAdaptor_Surface(face)
+                
+                if surf.GetType() == GeomAbs_Cylinder:
+                    cylinder = surf.Cylinder()
+                    
+                    diameter = cylinder.Radius() * 2
+                    
+                    # Filter by size
+                    if self.min_diameter <= diameter <= self.max_diameter:
+                        axis_dir = cylinder.Axis().Direction()
+                        axis = (axis_dir.X(), axis_dir.Y(), axis_dir.Z())
+                        
+                        location = cylinder.Location()
+                        loc = (location.X(), location.Y(), location.Z())
+                        
+                        v_range = surf.LastVParameter() - surf.FirstVParameter()
+                        height = abs(v_range)
+                        
+                        params = {
+                            'diameter': diameter,
+                            'axis': axis,
+                            'location': loc,
+                            'height': height,
+                            'geometry_type': 'cylinder'
+                        }
+                        
+                        cylinders.append((idx, face, params))
+            
+            except Exception as e:
+                logger.debug(f"Error processing face {idx}: {e}")
+            
+            explorer.Next()
+            idx += 1
+        
         return cylinders
 
-    def _find_all_cones(self, shape: TopoDS_Shape) -> List[Tuple[int, TopoDS_Face, Dict]]:
+    def _extract_conical_faces(self, shape: TopoDS_Shape) -> List[Tuple[int, TopoDS_Face, Dict]]:
         """
-        NEW v2.1: Find all conical faces (potential tapered holes).
-        
-        This fixes the issue where tapered holes were being misclassified
-        as counterbores because only cylindrical faces were being detected.
+        ✅ NEW: Extract all conical faces with parameters.
+        This is critical for detecting tapered holes!
         """
         cones = []
-
-        try:
-            explorer = TopExp_Explorer(shape, TopAbs_FACE)
-            idx = 0
-
-            while explorer.More():
-                face = topods.Face(explorer.Current())
-
-                try:
-                    surf = BRepAdaptor_Surface(face)
-
-                    if surf.GetType() == GeomAbs_Cone:
-                        cone = surf.Cone()
-                        
-                        # Get apex and axis
-                        apex = cone.Apex()
-                        axis_dir = cone.Axis().Direction()
-                        axis = np.array([axis_dir.X(), axis_dir.Y(), axis_dir.Z()])
-                        location = np.array([apex.X(), apex.Y(), apex.Z()])
-
-                        # Get semi-angle
-                        semi_angle = cone.SemiAngle() * 180 / np.pi  # Convert to degrees
-
-                        # Estimate diameter range from bounding box
-                        bbox = Bnd_Box()
-                        brepbndlib.Add(face, bbox)
-                        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-                        
-                        # Diameter at widest point
-                        max_extent = max(xmax - xmin, ymax - ymin)
-                        diameter = max_extent
-
-                        # Filter by size
-                        if self.min_diameter <= diameter <= self.max_diameter:
-                            params = {
-                                'type': 'cone',
-                                'diameter': diameter,  # At widest point
-                                'axis': axis,
-                                'location': location,
-                                'semi_angle': semi_angle,
-                                'apex': location
-                            }
-
-                            cones.append((idx, face, params))
-
-                except:
-                    pass
-
-                explorer.Next()
-                idx += 1
-
-        except Exception as e:
-            logger.debug(f"Error finding cones: {e}")
-
+        
+        explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        idx = 0
+        
+        while explorer.More():
+            face = topods.Face(explorer.Current())
+            
+            try:
+                surf = BRepAdaptor_Surface(face)
+                
+                if surf.GetType() == GeomAbs_Cone:
+                    cone = surf.Cone()
+                    
+                    # Get cone parameters
+                    apex = cone.Apex()
+                    axis_dir = cone.Axis().Direction()
+                    axis = (axis_dir.X(), axis_dir.Y(), axis_dir.Z())
+                    
+                    semi_angle = cone.SemiAngle()
+                    angle_deg = abs(semi_angle * 180 / np.pi)
+                    
+                    # Get reference radius at base
+                    ref_radius = cone.RefRadius()
+                    
+                    # Location
+                    loc = (apex.X(), apex.Y(), apex.Z())
+                    
+                    # Height of cone section
+                    v_range = surf.LastVParameter() - surf.FirstVParameter()
+                    height = abs(v_range)
+                    
+                    # Calculate diameter at midpoint
+                    # For a cone: radius = ref_radius + v * tan(semi_angle)
+                    v_mid = (surf.FirstVParameter() + surf.LastVParameter()) / 2
+                    radius_mid = ref_radius + abs(v_mid) * np.tan(semi_angle)
+                    diameter_mid = radius_mid * 2
+                    
+                    params = {
+                        'diameter': diameter_mid,  # Average diameter
+                        'axis': axis,
+                        'location': loc,
+                        'height': height,
+                        'angle': angle_deg,
+                        'ref_radius': ref_radius,
+                        'geometry_type': 'cone'
+                    }
+                    
+                    cones.append((idx, face, params))
+            
+            except Exception as e:
+                logger.debug(f"Error processing conical face {idx}: {e}")
+            
+            explorer.Next()
+            idx += 1
+        
         return cones
 
-    def _group_coaxial_faces(self, faces: List[Tuple[int, TopoDS_Face, Dict]]) -> List[List[Tuple[int, TopoDS_Face, Dict]]]:
+    def _group_coaxial_cylinders(self, 
+                                cylinders: List[Tuple[int, TopoDS_Face, Dict]]) -> List[List[Tuple[int, TopoDS_Face, Dict]]]:
         """
-        Group coaxial cylindrical AND conical faces (same axis).
-        
-        This is critical for detecting:
-        - Counterbore holes (multiple coaxial cylinders with different diameters)
-        - Tapered holes (conical faces)
-        - Compound holes (cylinders + cones)
+        Group cylinders that share the same axis (coaxial).
+        This is critical for detecting counterbores and countersinks.
         """
-        if not faces:
+        if not cylinders:
             return []
 
         groups = []
         used = set()
 
-        for i, (idx1, face1, params1) in enumerate(faces):
+        for i, (idx1, face1, params1) in enumerate(cylinders):
             if i in used:
                 continue
 
@@ -383,8 +363,8 @@ class ProductionHoleRecognizer:
             axis1 = np.array(params1['axis'])
             loc1 = np.array(params1['location'])
 
-            # Find coaxial faces
-            for j, (idx2, face2, params2) in enumerate(faces):
+            # Find coaxial cylinders
+            for j, (idx2, face2, params2) in enumerate(cylinders):
                 if i == j or j in used:
                     continue
 
@@ -397,6 +377,7 @@ class ProductionHoleRecognizer:
                     continue
 
                 # Check if axes are coaxial (within 0.1mm)
+                # Distance from point to line
                 loc_vec = loc2 - loc1
                 cross = np.cross(axis1, loc_vec)
                 distance = np.linalg.norm(cross)
@@ -410,309 +391,439 @@ class ProductionHoleRecognizer:
 
         return groups
 
+    def _augment_groups_with_cones(self,
+                                  cylinder_groups: List[List[Tuple[int, TopoDS_Face, Dict]]],
+                                  cones: List[Tuple[int, TopoDS_Face, Dict]]) -> List[List[Tuple[int, TopoDS_Face, Dict]]]:
+        """
+        ✅ NEW: Add coaxial conical faces to cylinder groups.
+        This enables detection of tapered holes.
+        """
+        augmented_groups = []
+        
+        for group in cylinder_groups:
+            # Get axis from first cylinder in group
+            if not group:
+                continue
+            
+            _, _, params = group[0]
+            group_axis = np.array(params['axis'])
+            group_loc = np.array(params['location'])
+            
+            # Find coaxial cones
+            coaxial_cones = []
+            for idx, face, cone_params in cones:
+                cone_axis = np.array(cone_params['axis'])
+                cone_loc = np.array(cone_params['location'])
+                
+                # Check if axes are parallel
+                axis_alignment = abs(np.dot(group_axis, cone_axis))
+                if axis_alignment < 0.9998:  # cos(1°)
+                    continue
+                
+                # Check if axes are coaxial (within 0.1mm)
+                loc_vec = cone_loc - group_loc
+                cross = np.cross(group_axis, loc_vec)
+                distance = np.linalg.norm(cross)
+                
+                if distance < 0.1:
+                    coaxial_cones.append((idx, face, cone_params))
+            
+            # Add cones to group
+            augmented_group = group + coaxial_cones
+            augmented_groups.append(augmented_group)
+        
+        return augmented_groups
+
     def _classify_hole_group(self, 
                             group: List[Tuple[int, TopoDS_Face, Dict]],
                             shape: TopoDS_Shape) -> Optional[Hole]:
         """
-        Classify a group of coaxial faces as a specific hole type.
+        Classify a group of coaxial cylinders/cones as a specific hole type.
         
-        NEW v2.1 Logic:
-        1. Check for CONICAL faces → TAPERED HOLE (prioritize this!)
-        2. Sort cylinders by diameter (largest to smallest)
-        3. Check for counterbore (larger diameter cylinders at top)
-        4. Check for countersink (small conical face at entry)
+        Logic:
+        1. Separate cylinders and cones
+        2. Check for tapered holes (conical geometry)
+        3. Check for counterbore (larger diameter cylinder at top)
+        4. Check for countersink (conical face)
         5. Check for through vs blind
         6. Check for threads (helical patterns)
-        
-        This fixes the bug where tapered holes were being detected as counterbores
-        because the conical geometry wasn't being recognized.
         """
         if not group:
             return None
 
         try:
-            # NEW v2.1: Check for TAPERED HOLES first!
-            conical_faces = [item for item in group if item[2]['type'] == 'cone']
-            cylindrical_faces = [item for item in group if item[2]['type'] == 'cylinder']
+            # ✅ NEW: Separate cylinders and cones
+            cylinders = [(idx, face, params) for idx, face, params in group 
+                        if params.get('geometry_type') == 'cylinder']
+            cones = [(idx, face, params) for idx, face, params in group 
+                    if params.get('geometry_type') == 'cone']
+            
+            # If we have cones, this might be a tapered hole
+            is_tapered_hole = len(cones) > 0
+            
+            # Base cylinder (smallest diameter = actual hole)
+            if cylinders:
+                sorted_cylinders = sorted(cylinders, key=lambda x: x[2]['diameter'], reverse=True)
+                base_idx, base_face, base_params = sorted_cylinders[-1]
+            elif cones:
+                # Pure tapered hole (no cylindrical section)
+                sorted_cones = sorted(cones, key=lambda x: x[2]['diameter'], reverse=True)
+                base_idx, base_face, base_params = sorted_cones[-1]
+            else:
+                return None
+            
+            diameter = base_params['diameter']
+            axis = base_params['axis']
+            location = base_params['location']
 
-            # CASE 1: Tapered hole (has conical faces)
-            if conical_faces:
-                return self._classify_tapered_hole(conical_faces, cylindrical_faces, group, shape)
+            # Check if through hole
+            is_through = self._is_through_hole(group, shape)
 
-            # CASE 2: Cylindrical hole (counterbore, countersink, simple)
-            if cylindrical_faces:
-                return self._classify_cylindrical_hole(cylindrical_faces, group, shape)
+            # Calculate depth
+            if is_through:
+                depth = self._calculate_through_depth(group, shape)
+                hole_type = HoleType.THROUGH
+                bottom_type = None
+            else:
+                depth, bottom_type = self._calculate_blind_depth_and_bottom(base_face, axis, shape)
+                hole_type = HoleType.BLIND
 
-            return None
+            # ✅ NEW: Check for tapered hole
+            taper_angle = None
+            start_diameter = None
+            end_diameter = None
+            
+            if is_tapered_hole and cones:
+                # Get taper parameters from cone
+                cone_params = cones[0][2]
+                taper_angle = cone_params.get('angle', 0)
+                
+                # Calculate start and end diameters
+                ref_radius = cone_params.get('ref_radius', 0)
+                height = cone_params.get('height', 0)
+                semi_angle_rad = taper_angle * np.pi / 180
+                
+                start_diameter = ref_radius * 2
+                end_diameter = (ref_radius + height * np.tan(semi_angle_rad)) * 2
+                
+                # Ensure start > end (larger end first)
+                if start_diameter < end_diameter:
+                    start_diameter, end_diameter = end_diameter, start_diameter
+                
+                # Use average as reported diameter
+                diameter = (start_diameter + end_diameter) / 2
+                
+                hole_type = HoleType.TAPERED
+                logger.info(f"      ✓ Tapered hole detected: Ø{start_diameter:.1f}→Ø{end_diameter:.1f}mm, angle={taper_angle:.1f}°")
+
+            # Check for counterbore (only if not tapered)
+            has_cb = False
+            cb_diameter = None
+            cb_depth = None
+            if not is_tapered_hole and len(cylinders) > 1:
+                has_cb, cb_diameter, cb_depth = self._detect_counterbore(sorted_cylinders)
+
+            # Check for countersink
+            has_cs, cs_diameter, cs_angle = self._detect_countersink(group, shape)
+
+            # Check for threads
+            has_threads, thread_spec, thread_depth = self._detect_threads(base_face, diameter, depth)
+
+            # Determine final hole type
+            if has_cb and has_cs:
+                hole_type = HoleType.COMPOUND
+            elif has_cb:
+                hole_type = HoleType.COUNTERBORE
+            elif has_cs and not is_tapered_hole:  # Countersink different from taper
+                hole_type = HoleType.COUNTERSINK
+            elif has_threads:
+                hole_type = HoleType.TAPPED
+
+            # Get entry/exit faces
+            entry_face_idx, exit_face_idx, surface_normal = self._get_entry_exit_faces(
+                group, shape, axis
+            )
+
+            # Calculate confidence
+            confidence = self._calculate_confidence(
+                hole_type, diameter, depth, has_cb, has_cs, has_threads
+            )
+
+            # Collect all face indices
+            face_indices = [idx for idx, _, _ in group]
+
+            hole = Hole(
+                hole_type=hole_type,
+                diameter=diameter,
+                depth=depth,
+                location=location,
+                axis=axis,
+                is_through=is_through,
+                bottom_type=bottom_type,
+                has_counterbore=has_cb,
+                counterbore_diameter=cb_diameter,
+                counterbore_depth=cb_depth,
+                has_countersink=has_cs,
+                countersink_diameter=cs_diameter,
+                countersink_angle=cs_angle,
+                is_tapered=is_tapered_hole,
+                taper_angle=taper_angle,
+                start_diameter=start_diameter,
+                end_diameter=end_diameter,
+                has_threads=has_threads,
+                thread_spec=thread_spec,
+                thread_depth=thread_depth,
+                entry_face_idx=entry_face_idx,
+                exit_face_idx=exit_face_idx,
+                surface_normal=surface_normal,
+                confidence=confidence,
+                face_indices=face_indices
+            )
+
+            return hole
 
         except Exception as e:
             logger.debug(f"Error classifying hole group: {e}")
+            logger.debug(traceback.format_exc())
             return None
-
-    def _classify_tapered_hole(self, 
-                              conical_faces: List[Tuple[int, TopoDS_Face, Dict]],
-                              cylindrical_faces: List[Tuple[int, TopoDS_Face, Dict]],
-                              full_group: List[Tuple[int, TopoDS_Face, Dict]],
-                              shape: TopoDS_Shape) -> Optional[Hole]:
-        """
-        NEW v2.1: Properly classify tapered holes using conical geometry.
-        
-        A tapered hole has:
-        - One or more conical faces forming the tapered section
-        - Possibly cylindrical faces at entry/exit
-        - Variable diameter along axis
-        """
-        # Get primary conical face
-        cone_idx, cone_face, cone_params = conical_faces[0]
-        
-        # Hole parameters
-        axis = cone_params['axis']
-        location = cone_params['location']
-        semi_angle = cone_params['semi_angle']
-        
-        # Diameter at widest point
-        diameter = cone_params['diameter']
-        
-        # Estimate start/end diameters
-        # If there are cylindrical faces, use their diameters
-        if cylindrical_faces:
-            cyl_diameters = [item[2]['diameter'] for item in cylindrical_faces]
-            start_diameter = max(cyl_diameters)
-            end_diameter = min(cyl_diameters)
-        else:
-            # Estimate from cone geometry
-            # For a tapered hole, the widest part is typically at entry
-            start_diameter = diameter
-            end_diameter = diameter * 0.5  # Rough estimate
-        
-        # Check if through hole
-        is_through = self._is_through_hole(full_group, shape)
-        
-        # Calculate depth
-        if is_through:
-            depth = self._calculate_through_depth(full_group, shape)
-            hole_type = HoleType.TAPERED
-            bottom_type = None
-        else:
-            depth, bottom_type = self._calculate_blind_depth_and_bottom(cone_face, tuple(axis), shape)
-            hole_type = HoleType.TAPERED
-        
-        # Calculate confidence
-        confidence = 0.75  # Base confidence for tapered holes
-        
-        # Collect all face indices
-        face_indices = [idx for idx, _, _ in full_group]
-        
-        # Create hole object
-        hole = Hole(
-            hole_type=hole_type,
-            diameter=(start_diameter + end_diameter) / 2,  # Average diameter
-            depth=depth,
-            location=tuple(location),
-            axis=tuple(axis),
-            is_through=is_through,
-            bottom_type=bottom_type,
-            has_taper=True,
-            taper_angle=semi_angle * 2,  # Full cone angle (not semi-angle)
-            taper_start_diameter=start_diameter,
-            taper_end_diameter=end_diameter,
-            confidence=confidence,
-            face_indices=face_indices
-        )
-        
-        logger.info(f"   ✅ Detected TAPERED hole: Ø{start_diameter:.1f}mm → Ø{end_diameter:.1f}mm, angle={semi_angle*2:.1f}°")
-        
-        return hole
-
-    def _classify_cylindrical_hole(self,
-                                   cylindrical_faces: List[Tuple[int, TopoDS_Face, Dict]],
-                                   full_group: List[Tuple[int, TopoDS_Face, Dict]],
-                                   shape: TopoDS_Shape) -> Optional[Hole]:
-        """
-        Classify purely cylindrical holes (counterbore, simple, etc).
-        
-        This is the original logic but now separated from tapered hole detection.
-        """
-        # Sort by diameter (largest first)
-        sorted_group = sorted(cylindrical_faces, key=lambda x: x[2]['diameter'], reverse=True)
-
-        # Base cylinder (smallest diameter = actual hole)
-        base_idx, base_face, base_params = sorted_group[-1]
-        diameter = base_params['diameter']
-        axis = base_params['axis']
-        location = base_params['location']
-
-        # Check if through hole
-        is_through = self._is_through_hole(full_group, shape)
-
-        # Calculate depth
-        if is_through:
-            depth = self._calculate_through_depth(full_group, shape)
-            hole_type = HoleType.THROUGH
-            bottom_type = None
-        else:
-            depth, bottom_type = self._calculate_blind_depth_and_bottom(base_face, tuple(axis), shape)
-            hole_type = HoleType.BLIND
-
-        # Check for counterbore
-        has_cb, cb_diameter, cb_depth = self._detect_counterbore(sorted_group)
-
-        # Check for countersink (would need conical faces, so skip here)
-        has_cs = False
-        cs_diameter = None
-        cs_angle = None
-
-        # Check for threads
-        has_threads, thread_spec, thread_depth = self._detect_threads(base_face, diameter, depth)
-
-        # Determine final hole type
-        if has_cb:
-            hole_type = HoleType.COUNTERBORE
-        elif has_threads:
-            hole_type = HoleType.TAPPED
-
-        # Calculate confidence
-        confidence = self._calculate_confidence(
-            hole_type, diameter, depth, has_cb, has_cs, has_threads
-        )
-
-        # Collect all face indices
-        face_indices = [idx for idx, _, _ in full_group]
-
-        hole = Hole(
-            hole_type=hole_type,
-            diameter=diameter,
-            depth=depth,
-            location=tuple(location),
-            axis=tuple(axis),
-            is_through=is_through,
-            bottom_type=bottom_type,
-            has_counterbore=has_cb,
-            counterbore_diameter=cb_diameter,
-            counterbore_depth=cb_depth,
-            has_countersink=has_cs,
-            countersink_diameter=cs_diameter,
-            countersink_angle=cs_angle,
-            has_threads=has_threads,
-            thread_spec=thread_spec,
-            thread_depth=thread_depth,
-            confidence=confidence,
-            face_indices=face_indices
-        )
-
-        return hole
 
     def _is_through_hole(self, group: List[Tuple[int, TopoDS_Face, Dict]], 
                         shape: TopoDS_Shape) -> bool:
         """Determine if hole goes completely through the part"""
-        # Simplified: Check if hole has entry and exit faces
-        # This would require more sophisticated topology analysis
-        return False  # Conservative default
+        # Simplified check: if cylinder height is > 80% of part height, assume through
+        try:
+            bbox = Bnd_Box()
+            brepbndlib.Add(shape, bbox)
+            xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+            part_height = max(xmax - xmin, ymax - ymin, zmax - zmin)
+            
+            # Get max cylinder height
+            max_height = max(params['height'] for _, _, params in group if 'height' in params)
+            
+            if max_height > part_height * 0.8:
+                return True
+            
+            return False
+        except:
+            return False
 
     def _calculate_through_depth(self, group: List[Tuple[int, TopoDS_Face, Dict]], 
-                                 shape: TopoDS_Shape) -> float:
+                                shape: TopoDS_Shape) -> float:
         """Calculate depth of through hole"""
-        # Get bounding box of all faces
-        bbox = Bnd_Box()
-        for _, face, _ in group:
-            brepbndlib.Add(face, bbox)
-        
-        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-        return max(xmax - xmin, ymax - ymin, zmax - zmin)
+        try:
+            return sum(params['height'] for _, _, params in group if 'height' in params)
+        except:
+            return 0.0
 
-    def _calculate_blind_depth_and_bottom(self, face: TopoDS_Face, 
+    def _calculate_blind_depth_and_bottom(self, 
+                                         face: TopoDS_Face, 
                                          axis: Tuple[float, float, float],
                                          shape: TopoDS_Shape) -> Tuple[float, str]:
-        """Calculate depth of blind hole and bottom type"""
-        # Get face bounding box
-        bbox = Bnd_Box()
-        brepbndlib.Add(face, bbox)
-        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+        """
+        Calculate depth and bottom type for blind holes.
         
-        # Depth is maximum extent along axis
-        axis_vec = np.array(axis)
-        extent = np.array([xmax - xmin, ymax - ymin, zmax - zmin])
-        depth = abs(np.dot(extent, axis_vec))
-        
-        # Bottom type (simplified)
-        bottom_type = 'flat'  # Default assumption
-        
-        return depth, bottom_type
+        Returns:
+            (depth, bottom_type) where bottom_type is 'flat', 'conical', or 'spherical'
+        """
+        try:
+            surf = BRepAdaptor_Surface(face)
+            
+            # Get height from surface parameters
+            if surf.GetType() == GeomAbs_Cylinder:
+                v_range = surf.LastVParameter() - surf.FirstVParameter()
+                depth = abs(v_range)
+            elif surf.GetType() == GeomAbs_Cone:
+                v_range = surf.LastVParameter() - surf.FirstVParameter()
+                depth = abs(v_range)
+            else:
+                depth = 10.0  # Default
 
-    def _detect_counterbore(self, sorted_group: List[Tuple[int, TopoDS_Face, Dict]]) -> Tuple[bool, Optional[float], Optional[float]]:
-        """Detect counterbore from multiple coaxial cylinders"""
+            # Check adjacent faces for bottom geometry
+            bottom_type = 'flat'  # Default
+
+            edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
+            while edge_exp.More():
+                edge = topods.Edge(edge_exp.Current())
+
+                # Find bottom face
+                face_exp = TopExp_Explorer(shape, TopAbs_FACE)
+                while face_exp.More():
+                    adj_face = topods.Face(face_exp.Current())
+
+                    if not adj_face.IsSame(face):
+                        try:
+                            adj_surf = BRepAdaptor_Surface(adj_face)
+                            face_type = adj_surf.GetType()
+
+                            if face_type == GeomAbs_Cone:
+                                bottom_type = 'conical'
+                                # Add cone depth to total
+                                cone_height = adj_surf.LastVParameter() - adj_surf.FirstVParameter()
+                                depth += abs(cone_height)
+                                break
+                            elif face_type == GeomAbs_Sphere:
+                                bottom_type = 'spherical'
+                                break
+                            elif face_type == GeomAbs_Plane:
+                                # Check if perpendicular to axis
+                                plane_norm = adj_surf.Plane().Axis().Direction()
+                                plane_norm_vec = np.array([plane_norm.X(), plane_norm.Y(), plane_norm.Z()])
+                                axis_vec = np.array(axis)
+                                
+                                if abs(np.dot(axis_vec, plane_norm_vec)) > 0.95:
+                                    bottom_type = 'flat'
+                                    break
+                        except:
+                            pass
+
+                    face_exp.Next()
+
+                edge_exp.Next()
+
+            return depth, bottom_type
+
+        except Exception as e:
+            logger.debug(f"Error calculating blind depth: {e}")
+            return 10.0, 'flat'
+
+    def _detect_counterbore(self, 
+                           sorted_group: List[Tuple[int, TopoDS_Face, Dict]]
+                           ) -> Tuple[bool, Optional[float], Optional[float]]:
+        """
+        Detect counterbore from multiple coaxial cylinders.
+        
+        Counterbore: Larger diameter cylinder above smaller diameter.
+        
+        Returns:
+            (has_counterbore, cb_diameter, cb_depth)
+        """
         if len(sorted_group) < 2:
             return False, None, None
+
+        try:
+            # sorted_group is sorted largest to smallest diameter
+            largest_idx, largest_face, largest_params = sorted_group[0]
+            smallest_idx, smallest_face, smallest_params = sorted_group[-1]
+
+            diameter_ratio = largest_params['diameter'] / smallest_params['diameter']
+
+            # Counterbore typically 1.5x to 3x hole diameter
+            if 1.3 < diameter_ratio < 4.0:
+                cb_diameter = largest_params['diameter']
+                cb_depth = largest_params['height']
+
+                return True, cb_diameter, cb_depth
+
+            return False, None, None
+
+        except Exception as e:
+            logger.debug(f"Error detecting counterbore: {e}")
+            return False, None, None
+
+    def _detect_countersink(self, 
+                           group: List[Tuple[int, TopoDS_Face, Dict]],
+                           shape: TopoDS_Shape) -> Tuple[bool, Optional[float], Optional[float]]:
+        """
+        Detect countersink by finding conical faces adjacent to cylinder.
         
-        # Largest diameter cylinder
-        cb_diameter = sorted_group[0][2]['diameter']
-        base_diameter = sorted_group[-1][2]['diameter']
+        NOTE: Countersinks are different from tapered holes:
+        - Countersink: Small cone at entrance for flathead screws (usually 82°, 90°)
+        - Tapered hole: Entire hole is conical
         
-        # Counterbore if first cylinder is significantly larger
-        if cb_diameter > base_diameter + 2.0:  # At least 2mm larger
-            # Estimate CB depth (would need better geometry analysis)
-            cb_depth = 10.0  # Placeholder
-            return True, cb_diameter, cb_depth
+        Returns:
+            (has_countersink, cs_diameter, cs_angle)
+        """
+        # Check for small conical faces with standard countersink angles
+        for idx, face, params in group:
+            if params.get('geometry_type') == 'cone':
+                angle = params.get('angle', 0)
+                height = params.get('height', 0)
+                
+                # Standard countersink angles: 82°, 90°, 100°, 120°
+                # And countersink is typically shallow (< 5mm deep)
+                is_countersink_angle = any(abs(angle - std_angle) < 5 
+                                          for std_angle in [41, 45, 50, 60])  # Half angles
+                is_shallow = height < 5.0
+                
+                if is_countersink_angle and is_shallow:
+                    cs_diameter = params['diameter']
+                    cs_angle = angle * 2  # Full included angle
+                    return True, cs_diameter, cs_angle
         
         return False, None, None
 
-    def _detect_threads(self, face: TopoDS_Face, diameter: float, depth: float) -> Tuple[bool, Optional[str], Optional[float]]:
-        """Detect threads (simplified - helical detection is complex)"""
-        # Thread detection requires helical edge analysis
-        # Placeholder implementation
+    def _detect_threads(self, face: TopoDS_Face, diameter: float, depth: float
+                       ) -> Tuple[bool, Optional[str], Optional[float]]:
+        """
+        Detect threads from geometry (simplified).
+        
+        Returns:
+            (has_threads, thread_spec, thread_depth)
+        """
+        # TODO: Implement helical edge detection
         return False, None, None
 
-    def _calculate_confidence(self, hole_type: HoleType, diameter: float, depth: float,
-                             has_cb: bool, has_cs: bool, has_threads: bool) -> float:
-        """Calculate confidence score"""
-        confidence = 0.5  # Base confidence
+    def _get_entry_exit_faces(self, 
+                             group: List[Tuple[int, TopoDS_Face, Dict]],
+                             shape: TopoDS_Shape,
+                             axis: Tuple[float, float, float]
+                             ) -> Tuple[Optional[int], Optional[int], Optional[Tuple[float, float, float]]]:
+        """Get entry and exit face indices and surface normal"""
+        # Simplified implementation
+        return None, None, None
 
-        # Boost for clear features
-        if has_cb or has_cs:
-            confidence += 0.2
-
+    def _calculate_confidence(self, 
+                             hole_type: HoleType,
+                             diameter: float,
+                             depth: float,
+                             has_cb: bool,
+                             has_cs: bool,
+                             has_threads: bool) -> float:
+        """Calculate confidence score for detected hole"""
+        confidence = 0.7  # Base confidence
+        
+        # Bonus for standard features
+        if has_cb:
+            confidence += 0.1
+        if has_cs:
+            confidence += 0.1
         if has_threads:
             confidence += 0.1
-
-        # Boost for standard sizes
-        standard_diameters = [3, 4, 5, 6, 8, 10, 12, 16, 20, 25]
-        if any(abs(diameter - std) < 0.5 for std in standard_diameters):
-            confidence += 0.15
-
-        # Boost for reasonable depth/diameter ratio
-        if depth > 0 and 0.5 < depth/diameter < 10:
-            confidence += 0.1
-
-        return min(confidence, 1.0)
+        
+        # Validate geometry
+        if diameter < self.min_diameter or diameter > self.max_diameter:
+            confidence -= 0.2
+        
+        if depth < diameter * 0.5:  # Holes should be at least half diameter deep
+            confidence -= 0.1
+        
+        return max(0.0, min(1.0, confidence))
 
     def _validate_hole(self, hole: Hole) -> bool:
-        """Manufacturing validation checks"""
-        warnings = []
-
-        # Check minimum diameter
-        if hole.diameter < self.min_diameter:
-            warnings.append(f"Diameter {hole.diameter:.2f}mm below minimum")
+        """Validate hole parameters"""
+        # Check diameter
+        if hole.diameter < self.min_diameter or hole.diameter > self.max_diameter:
             return False
-
-        # Check maximum diameter
-        if hole.diameter > self.max_diameter:
-            warnings.append(f"Diameter {hole.diameter:.2f}mm above maximum")
+        
+        # Check depth
+        if hole.depth <= 0:
             return False
-
+        
         # Check depth/diameter ratio
-        if hole.depth > 0:
-            depth_ratio = hole.depth / hole.diameter
-            if depth_ratio > 20:
-                warnings.append(f"Depth/diameter ratio {depth_ratio:.1f} too high (max 20)")
-                hole.confidence *= 0.7
-
-        hole.validation_warnings = warnings
+        if hole.depth < hole.diameter * 0.1:  # Too shallow
+            return False
+        
         return True
+
+    def _detect_patterns(self, holes: List[Hole]) -> List[Hole]:
+        """Detect hole patterns (bolt circles, linear, rectangular)"""
+        # TODO: Implement pattern detection
+        return holes
 
 
 # Convenience function
 def recognize_holes(step_file_or_shape) -> List[Hole]:
-    """Convenience function"""
+    """Convenience function to recognize holes"""
     from OCC.Extend.DataExchange import read_step_file
     
     if isinstance(step_file_or_shape, str):
@@ -735,15 +846,19 @@ if __name__ == "__main__":
     
     holes = recognize_holes(sys.argv[1])
     
-    print(f"\n✅ Found {len(holes)} holes")
+    print(f"\n✅ Total holes: {len(holes)}")
     
     for i, hole in enumerate(holes, 1):
         print(f"\n{i}. {hole.hole_type.value.upper()}")
         print(f"   Diameter: Ø{hole.diameter:.2f}mm")
         print(f"   Depth: {hole.depth:.2f}mm")
         print(f"   Location: ({hole.location[0]:.1f}, {hole.location[1]:.1f}, {hole.location[2]:.1f})")
+        if hole.is_tapered:
+            print(f"   Taper: Ø{hole.start_diameter:.1f}→Ø{hole.end_diameter:.1f}mm @ {hole.taper_angle:.1f}°")
         if hole.has_counterbore:
             print(f"   Counterbore: Ø{hole.counterbore_diameter:.2f}mm × {hole.counterbore_depth:.2f}mm")
-        if hole.has_taper:
-            print(f"   Taper: Ø{hole.taper_start_diameter:.2f}mm → Ø{hole.taper_end_diameter:.2f}mm, angle={hole.taper_angle:.1f}°")
+        if hole.has_countersink:
+            print(f"   Countersink: {hole.countersink_angle:.0f}° × Ø{hole.countersink_diameter:.2f}mm")
+        if hole.has_threads:
+            print(f"   Threads: {hole.thread_spec}")
         print(f"   Confidence: {hole.confidence*100:.1f}%")
