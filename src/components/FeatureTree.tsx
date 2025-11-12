@@ -315,7 +315,11 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
     Object.entries(categorizedFeatures).forEach(([category, instances]) => {
       instances.forEach(instance => {
-        const baseType = FEATURE_DISPLAY_NAMES[instance.type] || instance.type;
+        // Prioritize subtype for more detailed naming (e.g., "counterbore" over "hole")
+        const baseType = (instance.subtype && FEATURE_DISPLAY_NAMES[instance.subtype]) 
+          || FEATURE_DISPLAY_NAMES[instance.type] 
+          || instance.subtype 
+          || instance.type;
         
         if (!counters[baseType]) {
           counters[baseType] = 0;
