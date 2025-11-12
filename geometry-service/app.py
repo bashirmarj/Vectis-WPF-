@@ -1,5 +1,5 @@
 # app.py - Production-Grade CAD Geometry Analysis Service
-# Version 11.0.0 - Industry Standards & Best Practices Implementation
+# Version 12.0.0 - Simplified Production Feature Recognition
 # Based on: "Automated CAD Feature Recognition: Industry Standards and Best Practices"
 #
 # Key Upgrades:
@@ -12,6 +12,7 @@
 # - Comprehensive error classification (transient/permanent/systemic)
 # - Production metrics (IoU, precision, recall, confidence)
 # - ISO 9001/25010 compliance logging
+# - Production Feature Recognizer v2.0 (Holes, Pockets, Slots, Turning)
 
 import os
 import io
@@ -136,24 +137,17 @@ logging.getLogger('occwl').propagate = False
 logging.getLogger('occwl').setLevel(logging.ERROR)
 
 # === Feature Recognition Integration ===
-# Production Feature Recognizer v2.0 with fallback to crash-free recognizer
+# Production Feature Recognizer v2.0 - Holes, Pockets, Slots, Turning
 try:
     from production_recognizer_integration import ProductionRecognizerIntegration
     feature_recognizer = ProductionRecognizerIntegration()
     FEATURE_RECOGNITION_AVAILABLE = True
     logger.info("✅ Production Feature Recognizer v2.0 initialized (Holes, Pockets, Slots, Turning)")
 except Exception as e:
-    # Fallback to crash-free recognizer if production recognizer fails to load
-    logger.warning(f"⚠️ Production recognizer unavailable, falling back: {e}")
-    try:
-        from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
-        feature_recognizer = FlaskCrashFreeRecognizer(time_limit=30.0, memory_limit_mb=2000)
-        FEATURE_RECOGNITION_AVAILABLE = True
-        logger.info("✅ Crash-free geometric recognizer initialized (fallback mode)")
-    except Exception as fallback_error:
-        feature_recognizer = None
-        FEATURE_RECOGNITION_AVAILABLE = False
-        logger.warning(f"⚠️ All feature recognition unavailable: {fallback_error}")
+    feature_recognizer = None
+    FEATURE_RECOGNITION_AVAILABLE = False
+    logger.error(f"❌ Production Feature Recognizer initialization failed: {e}")
+    logger.error("Feature recognition will be unavailable for this deployment")
 
 # ============================================================================
 # ERROR CLASSIFICATION & HANDLING
@@ -2152,13 +2146,6 @@ def recognize_features_geometric(shape, correlation_id: str):
                 logger.info(f"[{correlation_id}] 🚀 Production recognizer completed:")
                 logger.info(f"[{correlation_id}]    Features: {num_features}, Family: {part_family}")
                 logger.info(f"[{correlation_id}]    Confidence: {confidence*100:.1f}%, Time: {proc_time:.2f}s")
-                
-                # Fallback if confidence is too low
-                if num_features == 0 or confidence < 0.2:
-                    logger.warning(f"[{correlation_id}] ⚠️ Low confidence result, using fallback recognizer")
-                    from crash_free_geometric_recognizer import FlaskCrashFreeRecognizer
-                    fallback = FlaskCrashFreeRecognizer(time_limit=30.0, memory_limit_mb=2000)
-                    result = geometric_circuit_breaker.call(fallback.recognize_features, tmp_path)
             
         except (RuntimeError, MemoryError, OSError) as graph_error:
             # Handle critical failures (memory corruption, OCC crashes)
@@ -2183,7 +2170,7 @@ def recognize_features_geometric(shape, correlation_id: str):
             'num_faces_analyzed': result.get('num_faces_analyzed', 0),
             'confidence_score': avg_confidence,
             'inference_time_sec': result.get('inference_time_sec', 0.0),
-            'recognition_method': 'rule_based',
+            'recognition_method': result.get('recognition_method', 'production_feature_recognizer'),
             'feature_summary': feature_summary  # ✅ NEW: Include feature breakdown
         }
         
@@ -2561,10 +2548,10 @@ def root():
             "circuit_breaker": "Cascade failure prevention (auto success tracking)",
             "dead_letter_queue": "Failed request tracking",
             "classification": "Mesh-based with neighbor propagation",
-            "feature_detection": "Rule-based with topology analysis" if FEATURE_RECOGNITION_AVAILABLE else "unavailable",
+            "feature_detection": "Production Feature Recognizer v2.0 (Holes, Pockets, Slots, Turning)" if FEATURE_RECOGNITION_AVAILABLE else "unavailable",
             "edge_extraction": "Professional smart filtering (20° dihedral angle)",
             "feature_recognition_available": FEATURE_RECOGNITION_AVAILABLE,
-            "recognition_method": "rule_based",
+            "recognition_method": "production_feature_recognizer" if FEATURE_RECOGNITION_AVAILABLE else "none",
             "iso_compliance": "ISO 9001 audit logging"
         },
         "performance_targets": {
@@ -2583,7 +2570,7 @@ def health():
         "status": "healthy" if circuit_state["state"] == "CLOSED" else "degraded",
         "circuit_breaker": circuit_state["state"],
         "feature_recognition_status": "available" if FEATURE_RECOGNITION_AVAILABLE else "unavailable",
-        "recognition_method": "rule_based",
+        "recognition_method": "production_feature_recognizer" if FEATURE_RECOGNITION_AVAILABLE else "none",
         "timestamp": datetime.utcnow().isoformat()
     }
     
