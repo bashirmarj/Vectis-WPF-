@@ -560,6 +560,8 @@ class ProductionTurningRecognizer:
         - V-groove split into 2 conical faces → 2 grooves → 1 groove
         - Tapered hole detected multiple times → 3 tapers → 1 taper
         - Circular edges split → duplicate steps → 1 step
+        
+        Version 2.0: LENIENT TOLERANCES for real-world circular edge splits
         """
         if not features:
             return features
@@ -567,11 +569,13 @@ class ProductionTurningRecognizer:
         # Import the merger (inline to avoid circular import)
         from turning_feature_merger import TurningFeatureMerger
         
+        # LENIENT TOLERANCES for circular edge splits (v2.0)
+        # Circular edges can split with significant positional variations
         merger = TurningFeatureMerger(
-            axis_tolerance=0.5,        # mm
-            position_tolerance=2.0,    # mm
-            diameter_tolerance=1.0,    # mm
-            angle_tolerance=5.0        # degrees
+            axis_tolerance=5.0,        # mm (was 0.5mm - INCREASED 10x)
+            position_tolerance=10.0,   # mm (was 2.0mm - INCREASED 5x)
+            diameter_tolerance=3.0,    # mm (was 1.0mm - INCREASED 3x)
+            angle_tolerance=10.0       # degrees (was 5.0° - INCREASED 2x)
         )
         
         merged_features = merger.merge_turning_features(features)

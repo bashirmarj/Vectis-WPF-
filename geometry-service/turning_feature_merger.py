@@ -4,17 +4,25 @@ turning_feature_merger.py
 
 SEMANTIC MERGING for turning features to eliminate duplicates.
 
+Version: 2.0 (FIXED - More lenient tolerances for circular edge splits)
+
 Solves:
 - V-groove split into 2 conical faces → 2 grooves (FIXED: merge into 1)
 - Tapered hole detected multiple times → 3 tapers (FIXED: merge into 1)
 - Circular edges split → duplicate steps (FIXED: merge into 1)
 
+Key fixes in v2.0:
+- Increased tolerances for circular edge splits (5mm axis, 10mm position, 3mm diameter)
+- Better logging to show actual merges
+- Added detailed debug output when features don't match
+- Special handling for rotational features with loose radial tolerance
+
 Strategy:
 1. Group features by type (groove, taper, step)
 2. Merge features with:
-   - Same axis (coaxial within tolerance)
-   - Adjacent axial positions (touching or overlapping)
-   - Similar geometric properties (diameter, width, angle)
+   - Same axis (coaxial within 5mm - lenient for edge splits)
+   - Adjacent axial positions (touching or overlapping within 10mm)
+   - Similar geometric properties (diameter within 3mm, angle within 10°)
 3. Combine face_indices from merged features
 4. Update dimensions based on merged geometry
 """
@@ -30,15 +38,20 @@ logger = logging.getLogger(__name__)
 class TurningFeatureMerger:
     """
     Semantic merging for turning features to eliminate splits from circular edges.
+    
+    Version 2.0: More lenient tolerances for real-world circular edge splits.
     """
     
     def __init__(self, 
-                 axis_tolerance: float = 0.5,      # mm - coaxial tolerance
-                 position_tolerance: float = 2.0,   # mm - adjacent position tolerance
-                 diameter_tolerance: float = 1.0,   # mm - similar diameter tolerance
-                 angle_tolerance: float = 5.0):     # degrees - similar angle tolerance
+                 axis_tolerance: float = 5.0,       # mm - INCREASED from 0.5mm
+                 position_tolerance: float = 10.0,   # mm - INCREASED from 2.0mm
+                 diameter_tolerance: float = 3.0,    # mm - INCREASED from 1.0mm
+                 angle_tolerance: float = 10.0):     # degrees - INCREASED from 5.0°
         """
         Initialize merger with geometric tolerances.
+        
+        LENIENT TOLERANCES for circular edge splits that can have significant
+        positional variations while still being part of the same feature.
         
         Args:
             axis_tolerance: Maximum distance between axes to consider coaxial (mm)
@@ -50,6 +63,8 @@ class TurningFeatureMerger:
         self.position_tolerance = position_tolerance
         self.diameter_tolerance = diameter_tolerance
         self.angle_tolerance = angle_tolerance
+        
+        logger.info(f"   📏 Merger tolerances: axis={axis_tolerance}mm, pos={position_tolerance}mm, dia={diameter_tolerance}mm, angle={angle_tolerance}°")
     
     def merge_turning_features(self, features: List) -> List:
         """
@@ -64,7 +79,8 @@ class TurningFeatureMerger:
         if not features:
             return features
         
-        logger.info(f"\n🔗 Semantic merging: {len(features)} raw features")
+        initial_count = len(features)
+        logger.info(f"\n🔗 Semantic merging: {initial_count} raw features")
         
         # Separate by feature type
         grooves = [f for f in features if f.feature_type.value == 'groove']
@@ -81,9 +97,11 @@ class TurningFeatureMerger:
         # Combine all
         merged_features = merged_grooves + merged_tapers + merged_steps + bases + others
         
-        removed = len(features) - len(merged_features)
+        removed = initial_count - len(merged_features)
         if removed > 0:
-            logger.info(f"   → {len(merged_features)} unique features (-{removed} duplicates)")
+            logger.info(f"   ✅ Merged {removed} duplicate features → {len(merged_features)} unique features")
+        else:
+            logger.info(f"   ℹ️  No duplicates found (all {len(merged_features)} features are unique)")
         
         return merged_features
     
@@ -98,12 +116,15 @@ class TurningFeatureMerger:
         - Similar diameter range
         """
         if len(grooves) <= 1:
+            if grooves:
+                logger.info(f"   🔧 Grooves: {len(grooves)} (no duplicates to merge)")
             return grooves
         
-        logger.info(f"   🔗 Merging {len(grooves)} grooves...")
+        logger.info(f"   🔧 Processing {len(grooves)} grooves for merging...")
         
         merged = []
         used = set()
+        merge_count = 0
         
         for i, g1 in enumerate(grooves):
             if i in used:
@@ -125,32 +146,44 @@ class TurningFeatureMerger:
                 loc2 = np.array(g2.location)
                 dia2 = g2.diameter
                 
-                # Check if coaxial
-                if not self._are_coaxial(axis1, axis2, loc1, loc2):
+                # Debug: Check each criterion
+                is_coaxial = self._are_coaxial(axis1, axis2, loc1, loc2)
+                axial_distance = abs(np.dot(loc2 - loc1, axis1 / (np.linalg.norm(axis1) + 1e-10)))
+                is_adjacent = axial_distance < self.position_tolerance
+                is_similar_dia = abs(dia1 - dia2) < self.diameter_tolerance
+                
+                if not is_coaxial:
+                    logger.debug(f"      Groove {i} vs {j}: NOT coaxial (dist={self._axis_distance(axis1, axis2, loc1, loc2):.2f}mm > {self.axis_tolerance}mm)")
                     continue
                 
-                # Check if adjacent axially (along rotation axis)
-                axial_distance = abs(np.dot(loc2 - loc1, axis1))
-                if axial_distance > self.position_tolerance:
+                if not is_adjacent:
+                    logger.debug(f"      Groove {i} vs {j}: NOT adjacent (axial_dist={axial_distance:.2f}mm > {self.position_tolerance}mm)")
                     continue
                 
-                # Check if similar diameter (grooves in same feature have similar dia)
-                if abs(dia1 - dia2) > self.diameter_tolerance:
+                if not is_similar_dia:
+                    logger.debug(f"      Groove {i} vs {j}: NOT similar diameter (Δdia={abs(dia1-dia2):.2f}mm > {self.diameter_tolerance}mm)")
                     continue
                 
                 # This is part of the same groove!
+                logger.info(f"      ✓ Merging groove {i} (Ø{dia1:.1f}mm) + groove {j} (Ø{dia2:.1f}mm)")
                 group.append(g2)
                 used.add(j)
             
             # Merge the group into one feature
             if len(group) > 1:
-                logger.info(f"      Merging {len(group)} groove sections → 1 groove")
+                merge_count += len(group) - 1
                 merged_feature = self._merge_feature_group(group)
                 merged.append(merged_feature)
+                logger.info(f"      → Merged {len(group)} groove sections → 1 groove (Ø{merged_feature.diameter:.1f}mm)")
             else:
                 merged.append(g1)
             
             used.add(i)
+        
+        if merge_count > 0:
+            logger.info(f"   ✅ Grooves: {len(grooves)} → {len(merged)} (removed {merge_count} duplicates)")
+        else:
+            logger.info(f"   ℹ️  Grooves: {len(grooves)} (no matches found - check tolerances if unexpected)")
         
         return merged
     
@@ -165,12 +198,15 @@ class TurningFeatureMerger:
         - Similar taper angle
         """
         if len(tapers) <= 1:
+            if tapers:
+                logger.info(f"   🔧 Tapers: {len(tapers)} (no duplicates to merge)")
             return tapers
         
-        logger.info(f"   🔗 Merging {len(tapers)} tapers...")
+        logger.info(f"   🔧 Processing {len(tapers)} tapers for merging...")
         
         merged = []
         used = set()
+        merge_count = 0
         
         for i, t1 in enumerate(tapers):
             if i in used:
@@ -190,31 +226,43 @@ class TurningFeatureMerger:
                 loc2 = np.array(t2.location)
                 angle2 = t2.taper_angle or 0.0
                 
-                # Check if coaxial
-                if not self._are_coaxial(axis1, axis2, loc1, loc2):
+                # Debug: Check each criterion
+                is_coaxial = self._are_coaxial(axis1, axis2, loc1, loc2)
+                axial_distance = abs(np.dot(loc2 - loc1, axis1 / (np.linalg.norm(axis1) + 1e-10)))
+                is_adjacent = axial_distance < self.position_tolerance
+                is_similar_angle = abs(angle1 - angle2) < self.angle_tolerance
+                
+                if not is_coaxial:
+                    logger.debug(f"      Taper {i} vs {j}: NOT coaxial (dist={self._axis_distance(axis1, axis2, loc1, loc2):.2f}mm > {self.axis_tolerance}mm)")
                     continue
                 
-                # Check if adjacent
-                axial_distance = abs(np.dot(loc2 - loc1, axis1))
-                if axial_distance > self.position_tolerance:
+                if not is_adjacent:
+                    logger.debug(f"      Taper {i} vs {j}: NOT adjacent (axial_dist={axial_distance:.2f}mm > {self.position_tolerance}mm)")
                     continue
                 
-                # Check if similar angle
-                if abs(angle1 - angle2) > self.angle_tolerance:
+                if not is_similar_angle:
+                    logger.debug(f"      Taper {i} vs {j}: NOT similar angle (Δangle={abs(angle1-angle2):.2f}° > {self.angle_tolerance}°)")
                     continue
                 
                 # Same taper!
+                logger.info(f"      ✓ Merging taper {i} (angle={angle1:.1f}°) + taper {j} (angle={angle2:.1f}°)")
                 group.append(t2)
                 used.add(j)
             
             if len(group) > 1:
-                logger.info(f"      Merging {len(group)} taper sections → 1 taper")
+                merge_count += len(group) - 1
                 merged_feature = self._merge_feature_group(group)
                 merged.append(merged_feature)
+                logger.info(f"      → Merged {len(group)} taper sections → 1 taper (angle={merged_feature.taper_angle:.1f}°)")
             else:
                 merged.append(t1)
             
             used.add(i)
+        
+        if merge_count > 0:
+            logger.info(f"   ✅ Tapers: {len(tapers)} → {len(merged)} (removed {merge_count} duplicates)")
+        else:
+            logger.info(f"   ℹ️  Tapers: {len(tapers)} (no matches found - check tolerances if unexpected)")
         
         return merged
     
@@ -229,12 +277,15 @@ class TurningFeatureMerger:
         - Adjacent or same axial position
         """
         if len(steps) <= 1:
+            if steps:
+                logger.info(f"   🔧 Steps: {len(steps)} (no duplicates to merge)")
             return steps
         
-        logger.info(f"   🔗 Merging {len(steps)} steps...")
+        logger.info(f"   🔧 Processing {len(steps)} steps for merging...")
         
         merged = []
         used = set()
+        merge_count = 0
         
         for i, s1 in enumerate(steps):
             if i in used:
@@ -254,31 +305,43 @@ class TurningFeatureMerger:
                 loc2 = np.array(s2.location)
                 dia2 = s2.diameter
                 
-                # Check if coaxial
-                if not self._are_coaxial(axis1, axis2, loc1, loc2):
+                # Debug: Check each criterion
+                is_coaxial = self._are_coaxial(axis1, axis2, loc1, loc2)
+                is_same_dia = abs(dia1 - dia2) < self.diameter_tolerance
+                axial_distance = abs(np.dot(loc2 - loc1, axis1 / (np.linalg.norm(axis1) + 1e-10)))
+                is_adjacent = axial_distance < self.position_tolerance + 5.0  # Extra lenient for steps
+                
+                if not is_coaxial:
+                    logger.debug(f"      Step {i} vs {j}: NOT coaxial (dist={self._axis_distance(axis1, axis2, loc1, loc2):.2f}mm > {self.axis_tolerance}mm)")
                     continue
                 
-                # Check if same diameter (same radial position)
-                if abs(dia1 - dia2) > self.diameter_tolerance:
+                if not is_same_dia:
+                    logger.debug(f"      Step {i} vs {j}: NOT same diameter (Δdia={abs(dia1-dia2):.2f}mm > {self.diameter_tolerance}mm)")
                     continue
                 
-                # Check if adjacent or overlapping axially
-                axial_distance = abs(np.dot(loc2 - loc1, axis1))
-                if axial_distance > self.position_tolerance + 5.0:  # More lenient for steps
+                if not is_adjacent:
+                    logger.debug(f"      Step {i} vs {j}: NOT adjacent (axial_dist={axial_distance:.2f}mm > {self.position_tolerance + 5.0}mm)")
                     continue
                 
                 # Same step!
+                logger.info(f"      ✓ Merging step {i} (Ø{dia1:.1f}mm) + step {j} (Ø{dia2:.1f}mm)")
                 group.append(s2)
                 used.add(j)
             
             if len(group) > 1:
-                logger.info(f"      Merging {len(group)} step sections → 1 step")
+                merge_count += len(group) - 1
                 merged_feature = self._merge_feature_group(group)
                 merged.append(merged_feature)
+                logger.info(f"      → Merged {len(group)} step sections → 1 step (Ø{merged_feature.diameter:.1f}mm)")
             else:
                 merged.append(s1)
             
             used.add(i)
+        
+        if merge_count > 0:
+            logger.info(f"   ✅ Steps: {len(steps)} → {len(merged)} (removed {merge_count} duplicates)")
+        else:
+            logger.info(f"   ℹ️  Steps: {len(steps)} (no matches found - check tolerances if unexpected)")
         
         return merged
     
@@ -297,20 +360,28 @@ class TurningFeatureMerger:
             True if axes are parallel and close enough to be considered same axis
         """
         # Normalize axes
-        axis1 = axis1 / (np.linalg.norm(axis1) + 1e-10)
-        axis2 = axis2 / (np.linalg.norm(axis2) + 1e-10)
+        axis1_norm = axis1 / (np.linalg.norm(axis1) + 1e-10)
+        axis2_norm = axis2 / (np.linalg.norm(axis2) + 1e-10)
         
-        # Check if parallel (within 1 degree)
-        axis_alignment = abs(np.dot(axis1, axis2))
-        if axis_alignment < 0.9998:  # cos(1°) ≈ 0.9998
+        # Check if parallel (within 5 degrees - very lenient)
+        axis_alignment = abs(np.dot(axis1_norm, axis2_norm))
+        if axis_alignment < 0.996:  # cos(5°) ≈ 0.996
             return False
         
         # Check if axes are close (perpendicular distance)
         loc_vec = loc2 - loc1
-        cross = np.cross(axis1, loc_vec)
+        cross = np.cross(axis1_norm, loc_vec)
         distance = np.linalg.norm(cross)
         
         return distance < self.axis_tolerance
+    
+    def _axis_distance(self, axis1: np.ndarray, axis2: np.ndarray,
+                      loc1: np.ndarray, loc2: np.ndarray) -> float:
+        """Calculate perpendicular distance between two axes"""
+        axis1_norm = axis1 / (np.linalg.norm(axis1) + 1e-10)
+        loc_vec = loc2 - loc1
+        cross = np.cross(axis1_norm, loc_vec)
+        return np.linalg.norm(cross)
     
     def _merge_feature_group(self, group: List):
         """
@@ -407,21 +478,24 @@ class TurningFeatureMerger:
 
 # Integration helper
 def apply_semantic_merging(features: List, 
-                          axis_tol: float = 0.5,
-                          position_tol: float = 2.0) -> List:
+                          axis_tol: float = 5.0,
+                          position_tol: float = 10.0,
+                          diameter_tol: float = 3.0) -> List:
     """
     Convenience function to apply semantic merging to turning features.
     
     Args:
         features: List of TurningFeature objects
-        axis_tol: Coaxial tolerance (mm)
-        position_tol: Adjacent position tolerance (mm)
+        axis_tol: Coaxial tolerance (mm) - default 5.0mm (lenient for edge splits)
+        position_tol: Adjacent position tolerance (mm) - default 10.0mm (lenient)
+        diameter_tol: Diameter similarity tolerance (mm) - default 3.0mm (lenient)
         
     Returns:
         List of merged features with duplicates removed
     """
     merger = TurningFeatureMerger(
         axis_tolerance=axis_tol,
-        position_tolerance=position_tol
+        position_tolerance=position_tol,
+        diameter_tolerance=diameter_tol
     )
     return merger.merge_turning_features(features)
