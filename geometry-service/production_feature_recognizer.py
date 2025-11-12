@@ -4,8 +4,12 @@ production_feature_recognizer.py
 
 Main orchestrator for complete feature recognition system.
 
-Version: 2.2 - Location Dedup Fix
+Version: 2.3 - Classification Fix
 Target Accuracy: 70-80%
+
+CHANGES IN v2.3:
+- ✅ Fixed classification logic - run recognizers first, then classify
+- ✅ Classifier now receives feature_dict as required
 
 CHANGES IN v2.2:
 - ✅ Disabled location-based deduplication for turning features
@@ -65,7 +69,7 @@ class ProductionFeatureRecognizer:
         self.turning_recognizer = ProductionTurningRecognizer()
         self.classifier = ProductionPartClassifier()
         
-        logger.info("✅ Production Feature Recognizer v2.2 initialized")
+        logger.info("✅ Production Feature Recognizer v2.3 initialized")
         logger.info(f"   Memory limit: {memory_limit_mb}MB")
         logger.info(f"   Time limit: {time_limit_sec}s")
 
@@ -93,29 +97,44 @@ class ProductionFeatureRecognizer:
             if shape is None:
                 return self._error_result("Failed to read STEP file")
 
-            # Classify part
-            part_family = self.classifier.classify(shape)
-            logger.info(f"   Part family: {part_family.value}")
-
-            # Run recognizers based on part type
+            # Run ALL recognizers first (needed for classification)
             holes = []
             pockets = []
             slots = []
             turning_features = []
             rotation_axis = None
 
-            if part_family == PartFamily.TURNED:
-                # Rotational part - only turning features
-                result = self.turning_recognizer.recognize_turning_features(shape)
-                turning_features = result.get('features', [])
-                rotation_axis = result.get('axis')
-                logger.info(f"   Turning features: {len(turning_features)}")
-            else:
-                # Prismatic part - holes, pockets, slots
+            # Try turning recognition first
+            logger.info("   🔄 Checking for turning features...")
+            result = self.turning_recognizer.recognize_turning_features(shape)
+            turning_features = result.get('features', [])
+            rotation_axis = result.get('axis')
+            
+            # If not rotational, run milling recognizers
+            if result.get('part_type') == 'not_rotational':
+                logger.info("   ⬜ Prismatic part - running milling recognizers...")
                 holes = self.hole_recognizer.recognize_holes(shape)
                 pockets = self.pocket_recognizer.recognize_pockets(shape)
                 slots = self.slot_recognizer.recognize_slots(shape)
                 logger.info(f"   Holes: {len(holes)}, Pockets: {len(pockets)}, Slots: {len(slots)}")
+            else:
+                logger.info(f"   🔄 Rotational part - turning features: {len(turning_features)}")
+                # Also check for holes on rotational parts (drilled holes are common)
+                holes = self.hole_recognizer.recognize_holes(shape)
+                logger.info(f"   Holes: {len(holes)}")
+
+            # Build feature dict for classification
+            feature_dict = {
+                'turning_features': turning_features,
+                'holes': holes,
+                'pockets': pockets,
+                'slots': slots,
+                'rotation_axis': rotation_axis
+            }
+            
+            # Classify part based on extracted features
+            part_family = self.classifier.classify(shape, feature_dict)
+            logger.info(f"   Part family: {part_family.value}")
 
             # Post-process features
             all_features = holes + pockets + slots + turning_features
