@@ -93,24 +93,47 @@ class ProductionFeatureRecognizer:
                 logger.error("❌ Failed to load STEP file")
                 return self._error_result("Failed to load STEP file")
             
-            # Step 1: Classify part family
-            logger.info("\n🏷️  Step 1: Classifying part...")
-            part_family = self.classifier.classify(shape)
-            logger.info(f"   → {part_family.value.upper()}")
+            # Step 1: Initial feature recognition (turning + holes)
+            logger.info("\n🔍 Step 1: Initial feature detection...")
             
-            # Step 2: Recognize holes (all parts)
-            logger.info("\n🕳️  Step 2: Recognizing holes...")
+            # Try turning recognition first
+            logger.info("\n   🔄 Checking for rotational features...")
+            turning_result = self.turning_recognizer.recognize_turning_features(shape)
+            
+            if turning_result['part_type'] == 'rotational':
+                turning_features = turning_result['features']
+                rotation_axis = turning_result['axis']
+                logger.info(f"   Found {len(turning_features)} turning features")
+            else:
+                turning_features = []
+                rotation_axis = None
+                logger.info("   No rotational features detected")
+            
+            # Recognize holes (all parts have holes)
+            logger.info("\n   🕳️  Recognizing holes...")
             holes = self.hole_recognizer.recognize_all_holes(shape)
             logger.info(f"   Found {len(holes)} holes")
+            
+            # Step 2: Classify based on initial features
+            logger.info("\n🏷️  Step 2: Classifying part family...")
+            
+            feature_dict = {
+                'turning_features': [self._to_dict(f) for f in turning_features],
+                'holes': [self._to_dict(h) for h in holes],
+                'pockets': [],
+                'slots': [],
+                'rotation_axis': rotation_axis
+            }
+            
+            part_family = self.classifier.classify(shape, feature_dict)
+            logger.info(f"   → {part_family.value.upper()}")
             
             # Initialize feature lists
             pockets = []
             slots = []
-            turning_features = []
-            rotation_axis = None
-            all_features = holes.copy()
+            all_features = holes.copy() + turning_features.copy()
             
-            # Step 3: Part-specific recognition
+            # Step 3: Part-specific recognition (prismatic features if needed)
             if part_family == PartFamily.PRISMATIC:
                 logger.info("\n🔲 Step 3: Recognizing prismatic features...")
                 
@@ -125,31 +148,13 @@ class ProductionFeatureRecognizer:
                 logger.info(f"   Pockets: {len(pockets)}, Slots: {len(slots)}")
             
             elif part_family == PartFamily.ROTATIONAL:
-                logger.info("\n🔄 Step 3: Recognizing rotational features...")
-                
-                turning_result = self.turning_recognizer.recognize_turning_features(shape)
-                
-                if turning_result['part_type'] == 'rotational':
-                    turning_features = turning_result['features']
-                    rotation_axis = turning_result['axis']
-                    all_features.extend(turning_features)
-                    logger.info(f"   Turning features: {len(turning_features)}")
-                else:
-                    logger.warning("   ⚠️  Classified as rotational but no turning features found")
+                logger.info("\n🔄 Step 3: Rotational part confirmed")
+                logger.info(f"   Turning features: {len(turning_features)}")
             
-            else:  # MIXED or UNKNOWN
-                logger.info("\n🔀 Step 3: Recognizing mixed features...")
+            else:  # HYBRID or UNKNOWN
+                logger.info("\n🔀 Step 3: Recognizing mixed/hybrid features...")
                 
-                # Check for rotational characteristics
-                turning_result = self.turning_recognizer.recognize_turning_features(shape)
-                
-                if turning_result['part_type'] == 'rotational':
-                    logger.info("   ➜ Part has rotational characteristics")
-                    turning_features = turning_result['features']
-                    rotation_axis = turning_result['axis']
-                    all_features.extend(turning_features)
-                
-                # Also check for prismatic features
+                # Add prismatic features
                 logger.info("\n   📦 Recognizing pockets...")
                 pockets = self.pocket_recognizer.recognize_all_pockets(shape)
                 all_features.extend(pockets)
