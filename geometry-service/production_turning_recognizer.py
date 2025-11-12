@@ -4,23 +4,21 @@ production_turning_recognizer.py
 
 PRODUCTION-GRADE turning feature recognition for CNC lathe operations.
 
-Version: 2.2 - V-Groove Pattern Detection Fix
+Version: 2.3 - Complete V-Groove Pulley Fix
 Target Accuracy: 75-85%
 
-✅ CRITICAL FIXES:
-- V-groove pattern detection (cylindrical + adjacent conical faces)
-- Filters conical faces from taper extraction if part of grooves
-- Improved semantic merging with relaxed tolerances
-- Detects V-groove type based on adjacent geometry
+✅ ALL FIXES:
+- Rotation axis-based axial position calculation (not hardcoded Z)
+- Aggressive groove merging (20x tolerance for split edges)
+- V-groove cone tracking and filtering from tapers
+- Proper step consolidation (merge duplicate steps at same position)
 """
 
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane, GeomAbs_Cone
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
-from OCC.Core.TopoDS import topods, TopoDS_Face, TopoDS_Shape, TopoDS_Edge
-from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
+from OCC.Core.TopoDS import topods, TopoDS_Face, TopoDS_Shape
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
@@ -53,20 +51,18 @@ class TurningFeature:
     """Complete turning feature definition"""
     feature_type: TurningFeatureType
     diameter: float
-    length: float  # Axial length
+    length: float
     location: Tuple[float, float, float]
     axis: Tuple[float, float, float]
 
-    # Optional attributes
     step_depth: Optional[float] = None
     groove_width: Optional[float] = None
-    groove_type: Optional[str] = None  # 'rectangular', 'v', 'radius'
+    groove_type: Optional[str] = None
     taper_angle: Optional[float] = None
-    start_diameter: Optional[float] = None  # For tapers
+    start_diameter: Optional[float] = None
     end_diameter: Optional[float] = None
     thread_spec: Optional[str] = None
 
-    # Quality attributes
     confidence: float = 0.0
     face_indices: List[int] = field(default_factory=list)
     validation_warnings: List[str] = field(default_factory=list)
@@ -92,20 +88,12 @@ class TurningFeature:
             'confidence': self.confidence,
             'face_indices': self.face_indices,
             'validation_warnings': self.validation_warnings,
-            'detection_method': 'production_turning_recognizer_v2.2'
+            'detection_method': 'production_turning_recognizer_v2.3'
         }
 
 
 class ProductionTurningRecognizer:
-    """
-    Production-grade turning recognizer with 75-85% accuracy.
-    
-    Key improvements v2.2:
-    - ✅ V-groove PATTERN detection (cylindrical + adjacent cones)
-    - ✅ Filters conical faces from taper extraction
-    - ✅ Improved semantic merging
-    - ✅ Adaptive tolerances
-    """
+    """Production-grade turning recognizer with 75-85% accuracy"""
 
     def __init__(self, max_features: int = 500):
         self.max_features = max_features
@@ -113,16 +101,14 @@ class ProductionTurningRecognizer:
         self.recognized_features: List[TurningFeature] = []
         self.processing_errors: List[str] = []
         
-        # Adaptive tolerances
         self.axial_tolerance = 5.0
         self.diameter_tolerance = 1.0
         self.angle_tolerance = 2.0
         
-        # ✅ NEW: Track which conical faces are part of grooves
         self.groove_cone_indices: Set[int] = set()
 
     def _calculate_adaptive_tolerances(self, shape: TopoDS_Shape):
-        """Calculate adaptive tolerances based on part size (ISO 2768 inspired)"""
+        """Calculate adaptive tolerances based on part size"""
         try:
             bbox = Bnd_Box()
             brepbndlib.Add(shape, bbox)
@@ -134,7 +120,6 @@ class ProductionTurningRecognizer:
             
             diagonal = math.sqrt(length**2 + width**2 + height**2)
             
-            # Categorical scaling
             if diagonal < 10:
                 scale_factor = 0.001
             elif diagonal < 100:
@@ -157,15 +142,26 @@ class ProductionTurningRecognizer:
             self.axial_tolerance = 5.0
             self.diameter_tolerance = 1.0
 
+    def _get_axial_position(self, location: Tuple[float, float, float]) -> float:
+        """
+        ✅ CRITICAL: Get axial position along rotation axis.
+        For X-axis rotation [1,0,0]: returns X coordinate
+        For Z-axis rotation [0,0,1]: returns Z coordinate
+        """
+        if self.rotation_axis is None:
+            return location[2]
+        
+        loc_vec = np.array(location)
+        axial_pos = np.dot(loc_vec, self.rotation_axis)
+        return axial_pos
+
     def recognize_turning_features(self, shape: TopoDS_Shape) -> Dict:
-        """Main entry point: Recognize all turning features"""
-        logger.info("🔍 Starting production turning recognition v2.2...")
+        """Main entry point"""
+        logger.info("🔍 Starting production turning recognition v2.3...")
 
         try:
-            # Step 1: Calculate adaptive tolerances
             self._calculate_adaptive_tolerances(shape)
             
-            # Step 2: Detect rotation axis
             self.rotation_axis = self._find_rotation_axis(shape)
 
             if self.rotation_axis is None:
@@ -178,31 +174,35 @@ class ProductionTurningRecognizer:
 
             logger.info(f"   ✅ Rotation axis: {self.rotation_axis}")
 
-            # Step 3: Extract cylindrical features
             cylindrical_features = self._extract_cylindrical_features(shape)
             logger.info(f"   Found {len(cylindrical_features)} cylinders")
 
-            # Step 4: Merge coaxial bases
             merged_features = self._merge_coaxial_bases(cylindrical_features)
-            logger.info(f"   After merging: {len(merged_features)} features")
+            logger.info(f"   After base merging: {len(merged_features)} features")
 
-            # ✅ Step 5: Extract grooves WITH adjacent cone detection
             grooves = self._extract_grooves_with_pattern_detection(shape)
-            logger.info(f"   Found {len(grooves)} grooves (with pattern detection)")
+            logger.info(f"   Found {len(grooves)} raw grooves")
             
-            # ✅ Step 6: Semantic groove merging with relaxed tolerances
             grooves = self._semantic_merge_grooves(grooves)
-            logger.info(f"   After semantic merge: {len(grooves)} grooves")
+            logger.info(f"   After groove merging: {len(grooves)} grooves")
 
-            # ✅ Step 7: Extract tapers (EXCLUDING groove cones)
             tapers = self._extract_tapers_filtered(shape)
             logger.info(f"   Found {len(tapers)} tapers (filtered)")
 
-            # Step 8: Extract threads
             threads = self._extract_threads(shape)
             logger.info(f"   Found {len(threads)} threads")
 
-            # Combine all
+            # ✅ Merge duplicate steps
+            steps = [f for f in merged_features if f.feature_type == TurningFeatureType.STEP]
+            non_steps = [f for f in merged_features if f.feature_type != TurningFeatureType.STEP]
+            
+            if len(steps) > 1:
+                logger.info(f"   🔗 Merging {len(steps)} steps...")
+                steps = self._merge_duplicate_steps(steps)
+                logger.info(f"   After step merging: {len(steps)} steps")
+            
+            merged_features = non_steps + steps
+
             all_features = merged_features + grooves + tapers + threads
 
             logger.info(f"✅ Total turning features: {len(all_features)}")
@@ -224,24 +224,84 @@ class ProductionTurningRecognizer:
                 'features': []
             }
 
+    def _merge_duplicate_steps(self, steps: List[TurningFeature]) -> List[TurningFeature]:
+        """
+        ✅ NEW: Merge duplicate steps at same axial position.
+        Pulley can have symmetric steps detected on both sides.
+        """
+        if len(steps) <= 1:
+            return steps
+        
+        merged = []
+        used = set()
+        
+        for i, s1 in enumerate(steps):
+            if i in used:
+                continue
+            
+            group = [s1]
+            axial_pos1 = self._get_axial_position(s1.location)
+            
+            for j in range(i + 1, len(steps)):
+                if j in used:
+                    continue
+                
+                s2 = steps[j]
+                axial_pos2 = self._get_axial_position(s2.location)
+                
+                axial_dist = abs(axial_pos1 - axial_pos2)
+                dia_diff = abs(s1.diameter - s2.diameter)
+                
+                # Merge if at same axial position with same diameter
+                if axial_dist < self.axial_tolerance and dia_diff < self.diameter_tolerance:
+                    logger.info(f"      ✓ Merging step {i} + step {j} (axial dist: {axial_dist:.3f}mm)")
+                    group.append(s2)
+                    used.add(j)
+            
+            if len(group) > 1:
+                merged_step = self._merge_step_group(group)
+                merged.append(merged_step)
+            else:
+                merged.append(s1)
+            
+            used.add(i)
+        
+        return merged
+
+    def _merge_step_group(self, group: List[TurningFeature]) -> TurningFeature:
+        """Merge multiple steps into one"""
+        avg_diameter = np.mean([s.diameter for s in group])
+        total_length = sum(s.length for s in group)
+        avg_step_depth = np.mean([s.step_depth for s in group if s.step_depth])
+        
+        locations = np.array([s.location for s in group])
+        center = np.mean(locations, axis=0)
+        
+        all_faces = []
+        for s in group:
+            all_faces.extend(s.face_indices)
+        
+        return TurningFeature(
+            feature_type=TurningFeatureType.STEP,
+            diameter=avg_diameter,
+            length=total_length,
+            location=tuple(center),
+            axis=group[0].axis,
+            step_depth=avg_step_depth,
+            confidence=max(s.confidence for s in group),
+            face_indices=sorted(set(all_faces))
+        )
+
     def _extract_grooves_with_pattern_detection(self, shape: TopoDS_Shape) -> List[TurningFeature]:
         """
-        ✅ NEW: Extract grooves with V-groove pattern detection.
-        
-        V-groove pattern:
-        - Cylindrical bottom (narrow, recessed)
-        - Adjacent conical faces (forming V shape)
-        
-        This method detects the COMPLETE groove including cone geometry.
+        ✅ Extract grooves with V-groove pattern detection
         """
         grooves = []
         
         try:
-            # Build face adjacency map
             face_map = TopTools_IndexedDataMapOfShapeListOfShape()
             topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, face_map)
             
-            # Extract all faces with metadata
             all_cylinders = []
             all_cones = []
             
@@ -315,13 +375,12 @@ class ProductionTurningRecognizer:
                 explorer.Next()
                 idx += 1
 
-            # Sort cylinders by axial position
-            all_cylinders.sort(key=lambda c: c['location'][2])
+            # Sort by axial position
+            all_cylinders.sort(key=lambda c: self._get_axial_position(c['location']))
 
-            # Detect grooves: narrow cylinders with adjacent cones
+            # Detect grooves
             for i, cyl in enumerate(all_cylinders):
                 if cyl['width'] < 10.0:  # Narrow feature
-                    # Check neighbors for diameter context
                     neighbor_diameters = []
 
                     if i > 0:
@@ -332,25 +391,19 @@ class ProductionTurningRecognizer:
                     if neighbor_diameters:
                         avg_neighbor_dia = np.mean(neighbor_diameters)
 
-                        # Groove if significantly smaller than neighbors
                         if cyl['diameter'] < avg_neighbor_dia - self.diameter_tolerance:
                             
-                            # ✅ Check for adjacent conical faces (V-groove detection)
+                            # Check for adjacent cones
                             adjacent_cones = self._find_adjacent_cones(
                                 cyl['face'], all_cones, face_map, cyl['location']
                             )
                             
-                            # Determine groove type
-                            if len(adjacent_cones) >= 2:
+                            if len(adjacent_cones) >= 1:
                                 groove_type = 'v'
-                                logger.info(f"      ✓ V-groove detected at face {cyl['idx']} with {len(adjacent_cones)} adjacent cones")
+                                logger.info(f"      ✓ V-groove detected (face {cyl['idx']}, {len(adjacent_cones)} cones)")
                                 
-                                # Mark cone indices as part of groove
                                 for cone in adjacent_cones:
                                     self.groove_cone_indices.add(cone['idx'])
-                            elif len(adjacent_cones) == 1:
-                                groove_type = 'v'  # Partial V-groove
-                                self.groove_cone_indices.add(adjacent_cones[0]['idx'])
                             else:
                                 groove_type = 'rectangular'
 
@@ -379,37 +432,30 @@ class ProductionTurningRecognizer:
                             all_cones: List[Dict],
                             face_map: TopTools_IndexedDataMapOfShapeListOfShape,
                             cyl_location: Tuple[float, float, float]) -> List[Dict]:
-        """
-        ✅ NEW: Find conical faces adjacent to a cylindrical groove bottom.
-        This is the key to V-groove detection!
-        """
+        """Find conical faces adjacent to cylindrical groove"""
         adjacent_cones = []
         
         try:
-            # Get edges of cylinder face
             edge_exp = TopExp_Explorer(cyl_face, TopAbs_EDGE)
             
             while edge_exp.More():
                 edge = topods.Edge(edge_exp.Current())
                 
-                # Find faces sharing this edge
                 if face_map.Contains(edge):
                     face_list = face_map.FindFromKey(edge)
                     
                     for j in range(face_list.Length()):
                         adj_face = topods.Face(face_list.Value(j + 1))
                         
-                        # Check if this adjacent face is a cone
                         for cone in all_cones:
                             if cone['face'].IsSame(adj_face):
-                                # Check if cone is at similar axial position
-                                cone_loc = np.array(cone['location'])
-                                cyl_loc = np.array(cyl_location)
+                                # ✅ Use axial distance along rotation axis
+                                cyl_axial = self._get_axial_position(cyl_location)
+                                cone_axial = self._get_axial_position(cone['location'])
                                 
-                                # Relaxed tolerance for axial distance
-                                axial_dist = abs(cone_loc[2] - cyl_loc[2])
+                                axial_dist = abs(cyl_axial - cone_axial)
                                 
-                                if axial_dist < self.axial_tolerance * 5:  # 5x tolerance
+                                if axial_dist < self.axial_tolerance * 10:  # Relaxed
                                     adjacent_cones.append(cone)
                                     break
                 
@@ -422,28 +468,20 @@ class ProductionTurningRecognizer:
 
     def _semantic_merge_grooves(self, grooves: List[TurningFeature]) -> List[TurningFeature]:
         """
-        ✅ IMPROVED: Semantic groove merging with RELAXED tolerances.
-        
-        V-grooves can have segments that are slightly offset due to:
-        - Circular edge splitting
-        - CAD representation differences
-        - Floating point precision
-        
-        Use 10x tolerance for groove merging!
+        ✅ AGGRESSIVE merging with 20x tolerance for split circular edges
         """
         if len(grooves) <= 1:
             return grooves
         
-        logger.info(f"\n   🔗 Semantic groove merging (relaxed tolerances)...")
+        logger.info(f"\n   🔗 Semantic groove merging...")
         logger.info(f"      Processing {len(grooves)} grooves...")
         
         merged = []
         used = set()
-        merge_count = 0
         
-        # ✅ Use MUCH more relaxed tolerances for grooves
-        merge_axial_tol = self.axial_tolerance * 10  # 10x tolerance
-        merge_dia_tol = self.diameter_tolerance * 10  # 10x tolerance
+        # ✅ VERY AGGRESSIVE tolerance for split edges
+        merge_axial_tol = self.axial_tolerance * 20  # 20x tolerance!
+        merge_dia_tol = self.diameter_tolerance * 20
         
         logger.info(f"      Merge tolerances: axial={merge_axial_tol:.2f}mm, diameter={merge_dia_tol:.2f}mm")
         
@@ -452,35 +490,31 @@ class ProductionTurningRecognizer:
                 continue
             
             group = [g1]
-            loc1 = np.array(g1.location)
+            axial_pos1 = self._get_axial_position(g1.location)
             dia1 = g1.diameter
             
-            # Look for grooves at same axial position
             for j in range(i + 1, len(grooves)):
                 if j in used:
                     continue
                 
                 g2 = grooves[j]
-                loc2 = np.array(g2.location)
+                axial_pos2 = self._get_axial_position(g2.location)
                 dia2 = g2.diameter
                 
-                # Calculate distances
-                axial_dist = abs(loc1[2] - loc2[2])
+                # ✅ Use axial position along rotation axis
+                axial_dist = abs(axial_pos1 - axial_pos2)
                 dia_diff = abs(dia1 - dia2)
                 
-                # ✅ Relaxed merge criteria
-                same_z_position = axial_dist < merge_axial_tol
+                same_position = axial_dist < merge_axial_tol
                 similar_diameter = dia_diff < merge_dia_tol
                 
-                if same_z_position and similar_diameter:
-                    logger.info(f"      ✓ Merging groove {i} (Ø{dia1:.1f}mm @ Z={loc1[2]:.1f}) + groove {j} (Ø{dia2:.1f}mm @ Z={loc2[2]:.1f})")
+                if same_position and similar_diameter:
+                    logger.info(f"      ✓ Merging groove {i} + groove {j}")
                     logger.info(f"        Axial dist: {axial_dist:.3f}mm, Dia diff: {dia_diff:.3f}mm")
                     group.append(g2)
                     used.add(j)
             
-            # Merge the group
             if len(group) > 1:
-                merge_count += len(group) - 1
                 merged_feature = self._merge_groove_group(group)
                 merged.append(merged_feature)
                 logger.info(f"      → Merged {len(group)} grooves → 1 {merged_feature.groove_type}-groove")
@@ -489,28 +523,22 @@ class ProductionTurningRecognizer:
             
             used.add(i)
         
-        if merge_count > 0:
-            logger.info(f"   ✅ Grooves: {len(grooves)} → {len(merged)} (merged {merge_count} duplicates)")
-        else:
-            logger.info(f"   ℹ️  Grooves: {len(grooves)} (no merges needed)")
+        logger.info(f"   ✅ Grooves: {len(grooves)} → {len(merged)}")
         
         return merged
 
     def _merge_groove_group(self, group: List[TurningFeature]) -> TurningFeature:
-        """Merge a group of grooves into one"""
+        """Merge groove group"""
         avg_diameter = np.mean([g.diameter for g in group])
         max_width = max(g.groove_width or 0 for g in group)
         
-        # Average location
         locations = np.array([g.location for g in group])
         center = np.mean(locations, axis=0)
         
-        # Collect all face indices
         all_faces = []
         for g in group:
             all_faces.extend(g.face_indices)
         
-        # Determine groove type - prefer 'v' if any groove is V-type
         groove_type = 'v' if any(g.groove_type == 'v' for g in group) else (group[0].groove_type or 'rectangular')
         
         return TurningFeature(
@@ -527,8 +555,7 @@ class ProductionTurningRecognizer:
 
     def _extract_tapers_filtered(self, shape: TopoDS_Shape) -> List[TurningFeature]:
         """
-        ✅ IMPROVED: Extract tapered sections EXCLUDING conical faces that are part of grooves.
-        This prevents V-groove cones from appearing as separate taper features!
+        ✅ Extract tapers EXCLUDING V-groove cones
         """
         tapers = []
 
@@ -540,7 +567,7 @@ class ProductionTurningRecognizer:
                 face = topods.Face(explorer.Current())
 
                 try:
-                    # ✅ Skip if this cone is part of a groove
+                    # ✅ Skip groove cones
                     if idx in self.groove_cone_indices:
                         logger.debug(f"   Skipping cone face {idx} (part of groove)")
                         explorer.Next()
@@ -555,7 +582,6 @@ class ProductionTurningRecognizer:
                         axis_dir = cone.Axis().Direction()
                         axis = np.array([axis_dir.X(), axis_dir.Y(), axis_dir.Z()])
 
-                        # Check alignment
                         if self.rotation_axis is not None:
                             alignment = abs(np.dot(self.rotation_axis, axis))
 
@@ -563,11 +589,9 @@ class ProductionTurningRecognizer:
                                 semi_angle = cone.SemiAngle()
                                 angle_deg = abs(semi_angle * 180 / np.pi)
 
-                                # Get surface parameters
                                 v_min = surf.FirstVParameter()
                                 v_max = surf.LastVParameter()
 
-                                # Calculate average diameter
                                 try:
                                     v_mid = (v_min + v_max) / 2
                                     u_mid = (surf.FirstUParameter() + surf.LastUParameter()) / 2
@@ -599,7 +623,7 @@ class ProductionTurningRecognizer:
                                     tapers.append(taper)
 
                                 except Exception as e:
-                                    logger.debug(f"Error calculating taper dimensions: {e}")
+                                    logger.debug(f"Error calculating taper: {e}")
 
                 except Exception as e:
                     logger.debug(f"Error extracting taper {idx}: {e}")
@@ -613,7 +637,7 @@ class ProductionTurningRecognizer:
         return tapers
 
     def _find_rotation_axis(self, shape: TopoDS_Shape) -> Optional[np.ndarray]:
-        """Detect rotation axis from cylindrical features"""
+        """Detect rotation axis"""
         try:
             cylinders = []
 
@@ -627,9 +651,7 @@ class ProductionTurningRecognizer:
 
                     if surf.GetType() == GeomAbs_Cylinder:
                         cylinder = surf.Cylinder()
-
                         axis_dir = cylinder.Axis().Direction()
-
                         cylinders.append(np.array([axis_dir.X(), axis_dir.Y(), axis_dir.Z()]))
 
                 except:
@@ -640,12 +662,10 @@ class ProductionTurningRecognizer:
             if len(cylinders) == 0:
                 return None
 
-            # Average all axes
             cylinders_np = np.array(cylinders)
             avg_axis = np.mean(cylinders_np, axis=0)
             avg_axis = avg_axis / np.linalg.norm(avg_axis)
 
-            # Check consistency
             alignments = [abs(np.dot(avg_axis, cyl)) for cyl in cylinders_np]
             avg_alignment = np.mean(alignments)
 
@@ -659,7 +679,7 @@ class ProductionTurningRecognizer:
             return None
 
     def _extract_cylindrical_features(self, shape: TopoDS_Shape) -> List[TurningFeature]:
-        """Extract all cylindrical features"""
+        """Extract cylindrical features"""
         features = []
 
         explorer = TopExp_Explorer(shape, TopAbs_FACE)
@@ -673,17 +693,15 @@ class ProductionTurningRecognizer:
 
                 if surf.GetType() == GeomAbs_Cylinder:
                     cylinder = surf.Cylinder()
-
                     diameter = cylinder.Radius() * 2
 
                     axis_dir = cylinder.Axis().Direction()
                     axis = np.array([axis_dir.X(), axis_dir.Y(), axis_dir.Z()])
 
-                    # Check alignment
                     if self.rotation_axis is not None:
                         alignment = abs(np.dot(self.rotation_axis, axis))
 
-                        if alignment > 0.99:  # Coaxial
+                        if alignment > 0.99:
                             location = cylinder.Location()
                             loc = (location.X(), location.Y(), location.Z())
 
@@ -717,7 +735,6 @@ class ProductionTurningRecognizer:
 
         logger.info("   🔗 Merging coaxial bases...")
 
-        # Group by diameter
         diameter_groups = {}
 
         for feature in features:
@@ -728,24 +745,20 @@ class ProductionTurningRecognizer:
 
             diameter_groups[diameter_key].append(feature)
 
-        # Find maximum diameter (base)
         max_diameter = max(diameter_groups.keys())
 
         merged_features = []
 
-        # Merge base sections
         if max_diameter in diameter_groups:
             base_sections = diameter_groups[max_diameter]
 
             if len(base_sections) > 1:
                 logger.info(f"      Merging {len(base_sections)} sections → 1 BASE")
-
                 merged_base = self._merge_sections(base_sections, TurningFeatureType.BASE_CYLINDER)
                 merged_features.append(merged_base)
             else:
                 merged_features.append(base_sections[0])
 
-        # Add smaller diameters as STEPS
         for diameter in sorted(diameter_groups.keys()):
             if diameter < max_diameter - self.diameter_tolerance:
                 step_sections = diameter_groups[diameter]
@@ -763,15 +776,13 @@ class ProductionTurningRecognizer:
                     )
 
                     merged_features.append(step)
-
                     logger.info(f"      Step: Ø{section.diameter:.1f}mm (depth: {step.step_depth:.1f}mm)")
 
         return merged_features
 
-    def _merge_sections(self, 
-                       sections: List[TurningFeature], 
+    def _merge_sections(self, sections: List[TurningFeature], 
                        feature_type: TurningFeatureType) -> TurningFeature:
-        """Merge discontinuous sections"""
+        """Merge sections"""
         total_length = sum(s.length for s in sections)
         avg_diameter = np.mean([s.diameter for s in sections])
 
@@ -795,11 +806,10 @@ class ProductionTurningRecognizer:
         )
 
     def _extract_threads(self, shape: TopoDS_Shape) -> List[TurningFeature]:
-        """Extract threaded sections (simplified)"""
+        """Extract threads"""
         return []
 
 
-# Convenience function
 def recognize_turning_features(step_file_or_shape) -> Dict:
     """Convenience function"""
     from OCC.Extend.DataExchange import read_step_file
