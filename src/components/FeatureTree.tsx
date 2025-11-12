@@ -27,7 +27,7 @@ interface FeatureInstance {
 
 // Backend geometric_features structure
 interface GeometricFeatures {
-  feature_instances: FeatureInstance[];
+  instances: FeatureInstance[];
   num_features_detected: number;
   num_faces_analyzed: number;
   confidence_score: number;
@@ -185,7 +185,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   // Fetch AI explanation when features load
   useEffect(() => {
-    if (features && features.feature_instances && features.feature_instances.length > 0 && !aiExplanation && !loadingExplanation) {
+    if (features && features.instances && features.instances.length > 0 && !aiExplanation && !loadingExplanation) {
       fetchAIExplanation();
     }
   }, [features]);
@@ -195,7 +195,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     try {
       const { data, error } = await supabase.functions.invoke('explain-features', {
         body: {
-          features: features.feature_instances.map(f => ({
+          features: features.instances.map(f => ({
             type: f.type,
             subtype: f.subtype,
             dimensions: f.parameters
@@ -221,7 +221,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   
   // ✅ Add null check
-  if (!features || !features.feature_instances || features.feature_instances.length === 0) {
+  if (!features || !features.instances || features.instances.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -256,7 +256,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       other: []
     };
 
-    features.feature_instances.forEach(instance => {
+    features.instances.forEach(instance => {
       let categorized = false;
       
       for (const [category, types] of Object.entries(FEATURE_CATEGORIES)) {
@@ -273,7 +273,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     });
 
     return grouped;
-  }, [features.feature_instances]);
+  }, [features.instances]);
 
   // Calculate summary statistics
   const stats = useMemo(() => {
@@ -285,9 +285,9 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       totalFeatures,
       totalFaces,
       avgConfidence,
-      highConfidence: features.feature_instances.filter(f => f.confidence >= 0.9).length,
-      mediumConfidence: features.feature_instances.filter(f => f.confidence >= 0.7 && f.confidence < 0.9).length,
-      lowConfidence: features.feature_instances.filter(f => f.confidence < 0.7).length
+      highConfidence: features.instances.filter(f => f.confidence >= 0.9).length,
+      mediumConfidence: features.instances.filter(f => f.confidence >= 0.7 && f.confidence < 0.9).length,
+      lowConfidence: features.instances.filter(f => f.confidence < 0.7).length
     };
   }, [features]);
 

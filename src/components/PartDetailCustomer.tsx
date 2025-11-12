@@ -72,7 +72,7 @@ export function PartDetailCustomer({
   const hasAnalysis = !!file.analysis;
   const hasFeatures =
     hasAnalysis &&
-    file.analysis?.geometric_features?.feature_instances?.length > 0;
+    file.analysis?.geometric_features?.instances?.length > 0;
   const hasQuote = !!file.quote;
 
   // Debug logging
@@ -88,12 +88,12 @@ export function PartDetailCustomer({
   console.log("🔍 Feature data:", {
     hasAnalysis,
     hasGeometricFeatures: !!file.analysis?.geometric_features,
-    featureCount: file.analysis?.geometric_features?.feature_instances?.length || 0,
+    featureCount: file.analysis?.geometric_features?.instances?.length || 0,
   });
 
   // Calculate feature count from geometric_features
   const featureCount = 
-    file.analysis?.geometric_features?.feature_instances?.length || 0;
+    file.analysis?.geometric_features?.instances?.length || 0;
 
   return (
     <Card className="w-full">

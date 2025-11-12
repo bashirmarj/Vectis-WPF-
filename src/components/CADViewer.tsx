@@ -30,7 +30,7 @@ interface CADViewerProps {
   isSidebarCollapsed?: boolean;
   onMeshLoaded?: (data: MeshData) => void;
   geometricFeatures?: {
-    feature_instances: any[];
+    instances: any[];
     num_features_detected: number;
     num_faces_analyzed: number;
     confidence_score: number;
@@ -115,8 +115,8 @@ export function CADViewer({
   useEffect(() => {
     console.log('🔍 CADViewer received geometricFeatures:', {
       exists: !!geometricFeatures,
-      hasFeatureInstances: !!geometricFeatures?.feature_instances,
-      instanceCount: geometricFeatures?.feature_instances?.length || 0,
+      hasInstances: !!geometricFeatures?.instances,
+      instanceCount: geometricFeatures?.instances?.length || 0,
       data: geometricFeatures
     });
   }, [geometricFeatures]);
@@ -463,7 +463,7 @@ export function CADViewer({
         ) : meshData && isRenderableFormat ? (
           <ResizablePanelGroup direction="horizontal" className="w-full h-full">
             {/* Feature Tree Sidebar */}
-            {geometricFeatures?.feature_instances?.length > 0 && sidebarOpen && (
+            {geometricFeatures?.instances?.length > 0 && sidebarOpen && (
               <>
                 <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
                   <div className="h-full overflow-hidden">
@@ -475,10 +475,10 @@ export function CADViewer({
             )}
 
             {/* Main 3D Viewer Panel */}
-            <ResizablePanel defaultSize={geometricFeatures?.feature_instances?.length > 0 && sidebarOpen ? 80 : 100}>
+            <ResizablePanel defaultSize={geometricFeatures?.instances?.length > 0 && sidebarOpen ? 80 : 100}>
               <div className="relative w-full h-full">
                 {/* Sidebar Toggle Button */}
-                {geometricFeatures?.feature_instances?.length > 0 && (
+                {geometricFeatures?.instances?.length > 0 && (
                   <Button
                     variant="outline"
                     size="icon"

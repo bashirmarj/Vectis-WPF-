@@ -173,7 +173,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                       <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2">
                           <Box className="w-5 h-5" />
-                          Detected Features ({selectedFile.analysis.geometric_features.feature_instances?.length || 0})
+                          Detected Features ({selectedFile.analysis.geometric_features.instances?.length || 0})
                         </CardTitle>
                         <ChevronDown className="w-5 h-5 transition-transform duration-200 data-[state=open]:rotate-180" />
                       </div>
