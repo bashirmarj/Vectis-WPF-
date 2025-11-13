@@ -403,13 +403,16 @@ class EdgeFeatureDetector:
             fallback_type = 'blind_hole' if is_blind else 'through_hole'
             taxonomy_def = get_feature_definition(fallback_type)
         
-        # SAFETY NET: If taxonomy lookup completely fails, use inline defaults
-        if not taxonomy_def:
-            boundary_value = 'blind' if is_blind else 'through'
-            profile_value = 'circular'
-        else:
+        # SAFETY NET: Check taxonomy definition and its attributes exist
+        if taxonomy_def and hasattr(taxonomy_def, 'boundary') and taxonomy_def.boundary:
             boundary_value = taxonomy_def.boundary.value
+        else:
+            boundary_value = 'blind' if is_blind else 'through'
+        
+        if taxonomy_def and hasattr(taxonomy_def, 'profile') and taxonomy_def.profile:
             profile_value = taxonomy_def.profile.value
+        else:
+            profile_value = 'circular'
         
         # Build dimensions based on geometry
         if has_counterbore:
