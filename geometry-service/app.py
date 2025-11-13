@@ -1,8 +1,10 @@
 # app.py - Production-Grade CAD Geometry Analysis Service
-# Version 12.0.0 - Simplified Production Feature Recognition
+# Version 12.1.0 - Hybrid Taxonomy-Based Feature Recognition
+# Updated: 2025-11-13 - Added taxonomy integration to edge-based detection
 # Based on: "Automated CAD Feature Recognition: Industry Standards and Best Practices"
 #
 # Key Upgrades:
+# - HYBRID taxonomy-based hole classification (boundary detection + geometry + taxonomy)
 # - 5-stage validation pipeline (file system → format → parsing → geometry → quality)
 # - Automatic healing algorithms for malformed CAD
 # - Fallback processing tiers (B-Rep → Mesh → Point cloud)
