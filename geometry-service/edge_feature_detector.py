@@ -403,6 +403,14 @@ class EdgeFeatureDetector:
             fallback_type = 'blind_hole' if is_blind else 'through_hole'
             taxonomy_def = get_feature_definition(fallback_type)
         
+        # SAFETY NET: If taxonomy lookup completely fails, use inline defaults
+        if not taxonomy_def:
+            boundary_value = 'blind' if is_blind else 'through'
+            profile_value = 'circular'
+        else:
+            boundary_value = taxonomy_def.boundary.value
+            profile_value = taxonomy_def.profile.value
+        
         # Build dimensions based on geometry
         if has_counterbore:
             dimensions = {
@@ -433,7 +441,7 @@ class EdgeFeatureDetector:
         else:
             confidence = 0.80
         
-        # Create feature with taxonomy metadata (now guaranteed to have taxonomy_def)
+        # Create feature with taxonomy metadata (with safety fallback)
         return DetectedFeature(
             feature_type=taxonomy_type,
             subtype='hole',
@@ -443,8 +451,8 @@ class EdgeFeatureDetector:
             orientation=entry_plane['normal'],
             edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
             detection_method='hybrid_taxonomy_based',
-            boundary_condition=taxonomy_def.boundary.value,
-            profile_type=taxonomy_def.profile.value
+            boundary_condition=boundary_value,
+            profile_type=profile_value
         )
     
     def _detect_secondary_features(self, middle_planes: List[Dict], base_diameter: float, primary_hole: DetectedFeature):
