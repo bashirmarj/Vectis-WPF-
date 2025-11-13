@@ -370,8 +370,11 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       pockets: [],
       slots: [],
       steps: [],
-      passages: [],
+      bosses: [],
+      fillets: [],
       chamfers: [],
+      grooves: [],
+      passages: [],
       turning: [],
       other: []
     };
