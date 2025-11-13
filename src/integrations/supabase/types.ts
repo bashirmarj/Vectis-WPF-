@@ -18,7 +18,6 @@ export type Database = {
         Row: {
           created_at: string | null
           edge_classifications: Json | null
-          extended_attributes: Json | null
           face_classifications: Json | null
           face_types: string[] | null
           feature_edges: Json | null
@@ -26,13 +25,10 @@ export type Database = {
           file_name: string
           id: string
           indices: number[]
-          instance_features: Json | null
           line_item_id: string | null
           normals: number[]
-          processing_time_ms: number | null
           quotation_id: string | null
           recognition_method: string | null
-          semantic_labels: number[] | null
           tagged_feature_edges: Json | null
           triangle_count: number
           vertex_colors: string[] | null
@@ -42,7 +38,6 @@ export type Database = {
         Insert: {
           created_at?: string | null
           edge_classifications?: Json | null
-          extended_attributes?: Json | null
           face_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
@@ -50,13 +45,10 @@ export type Database = {
           file_name: string
           id?: string
           indices: number[]
-          instance_features?: Json | null
           line_item_id?: string | null
           normals: number[]
-          processing_time_ms?: number | null
           quotation_id?: string | null
           recognition_method?: string | null
-          semantic_labels?: number[] | null
           tagged_feature_edges?: Json | null
           triangle_count: number
           vertex_colors?: string[] | null
@@ -66,7 +58,6 @@ export type Database = {
         Update: {
           created_at?: string | null
           edge_classifications?: Json | null
-          extended_attributes?: Json | null
           face_classifications?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
@@ -74,13 +65,10 @@ export type Database = {
           file_name?: string
           id?: string
           indices?: number[]
-          instance_features?: Json | null
           line_item_id?: string | null
           normals?: number[]
-          processing_time_ms?: number | null
           quotation_id?: string | null
           recognition_method?: string | null
-          semantic_labels?: number[] | null
           tagged_feature_edges?: Json | null
           triangle_count?: number
           vertex_colors?: string[] | null
@@ -389,47 +377,6 @@ export type Database = {
           },
         ]
       }
-      manufacturing_feature_instances: {
-        Row: {
-          bottom_face_indices: number[] | null
-          confidence: number
-          created_at: string | null
-          face_indices: number[]
-          feature_type: string
-          id: string
-          mesh_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          bottom_face_indices?: number[] | null
-          confidence: number
-          created_at?: string | null
-          face_indices: number[]
-          feature_type: string
-          id?: string
-          mesh_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          bottom_face_indices?: number[] | null
-          confidence?: number
-          created_at?: string | null
-          face_indices?: number[]
-          feature_type?: string
-          id?: string
-          mesh_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "manufacturing_feature_instances_mesh_id_fkey"
-            columns: ["mesh_id"]
-            isOneToOne: false
-            referencedRelation: "cad_meshes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       manufacturing_processes: {
         Row: {
           base_rate_per_hour: number
@@ -716,34 +663,52 @@ export type Database = {
       }
       part_features: {
         Row: {
+          boundary_condition: string | null
           created_at: string | null
+          feature_hierarchy: string | null
           feature_type: string
           file_name: string
           id: string
           line_item_id: string | null
           orientation: string | null
           parameters: Json
+          parent_feature_id: string | null
+          profile_type: string | null
           quotation_id: string | null
+          surface_finish: string | null
+          tolerance_class: string | null
         }
         Insert: {
+          boundary_condition?: string | null
           created_at?: string | null
+          feature_hierarchy?: string | null
           feature_type: string
           file_name: string
           id?: string
           line_item_id?: string | null
           orientation?: string | null
           parameters: Json
+          parent_feature_id?: string | null
+          profile_type?: string | null
           quotation_id?: string | null
+          surface_finish?: string | null
+          tolerance_class?: string | null
         }
         Update: {
+          boundary_condition?: string | null
           created_at?: string | null
+          feature_hierarchy?: string | null
           feature_type?: string
           file_name?: string
           id?: string
           line_item_id?: string | null
           orientation?: string | null
           parameters?: Json
+          parent_feature_id?: string | null
+          profile_type?: string | null
           quotation_id?: string | null
+          surface_finish?: string | null
+          tolerance_class?: string | null
         }
         Relationships: [
           {
@@ -751,6 +716,13 @@ export type Database = {
             columns: ["line_item_id"]
             isOneToOne: false
             referencedRelation: "quote_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "part_features_parent_feature_id_fkey"
+            columns: ["parent_feature_id"]
+            isOneToOne: false
+            referencedRelation: "part_features"
             referencedColumns: ["id"]
           },
           {

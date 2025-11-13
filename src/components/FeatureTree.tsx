@@ -41,11 +41,117 @@ interface FeatureTreeProps {
   onFeatureSelect?: (featureInstance: FeatureInstance) => void;
 }
 
-// Feature type to display name mapping (supports both AAGNet and rule-based)
+// Feature type to display name mapping (supports 60+ taxonomy + legacy)
 const FEATURE_DISPLAY_NAMES: Record<string, string> = {
-  // AAGNet feature types
-  'chamfer': 'Chamfer',
+  // ============================================================================
+  // HOLE FEATURES (14 types) - New Taxonomy
+  // ============================================================================
   'through_hole': 'Through Hole',
+  'blind_hole': 'Blind Hole',
+  'counterbore': 'Counterbored Hole (⌴)',
+  'countersink': 'Countersunk Hole (⌵)',
+  'spotface': 'Spotface',
+  'back_counterbore': 'Back Counterbore',
+  'back_spotface': 'Back Spotface',
+  'tapped_hole': 'Tapped Hole',
+  'reamed_hole': 'Reamed Hole',
+  'bored_hole': 'Bored Hole',
+  'tapered_hole': 'Tapered Hole',
+  'stepped_hole': 'Stepped Hole',
+  'elliptical_hole': 'Elliptical Hole',
+  'polygonal_hole': 'Polygonal Hole',
+  
+  // ============================================================================
+  // POCKET FEATURES (8 types) - New Taxonomy
+  // ============================================================================
+  'closed_rectangular_pocket': 'Closed Rectangular Pocket',
+  'open_rectangular_pocket': 'Open Rectangular Pocket',
+  'circular_pocket': 'Circular Pocket',
+  'irregular_pocket': 'Irregular Pocket',
+  'obround_pocket': 'Obround Pocket',
+  'island_pocket': 'Island Pocket',
+  'triangular_pocket': 'Triangular Pocket',
+  'hexagonal_pocket': 'Hexagonal Pocket (6-Sides)',
+  
+  // ============================================================================
+  // SLOT FEATURES (9 types) - New Taxonomy
+  // ============================================================================
+  'through_slot_rectangular': 'Rectangular Through Slot',
+  'blind_slot_rectangular': 'Rectangular Blind Slot',
+  'open_u_slot': 'Open U-Slot',
+  'corner_slot': 'Corner L-Slot',
+  't_slot': 'T-Slot',
+  'dovetail_slot': 'Dovetail Slot',
+  'keyway_slot': 'Keyway Slot',
+  'woodruff_keyway': 'Woodruff Keyway',
+  'v_slot': 'V-Slot',
+  
+  // ============================================================================
+  // STEP FEATURES (8 types) - New Taxonomy
+  // ============================================================================
+  'simple_step': 'Simple Step',
+  'compound_step': 'Compound Step',
+  'through_step': 'Through Step',
+  'blind_step': 'Blind Step',
+  'slanted_step': 'Slanted Step',
+  'circular_step': 'Circular Step',
+  'two_sides_step': 'Two-Sides Step',
+  'triangular_step': 'Triangular Step',
+  
+  // ============================================================================
+  // BOSS FEATURES (5 types) - New Taxonomy
+  // ============================================================================
+  'cylindrical_boss': 'Cylindrical Boss',
+  'rectangular_boss': 'Rectangular Boss',
+  'irregular_boss': 'Irregular Boss',
+  'rib': 'Rib',
+  'lug': 'Lug',
+  
+  // ============================================================================
+  // FILLET FEATURES (4 types) - New Taxonomy
+  // ============================================================================
+  'constant_radius_fillet': 'Constant Radius Fillet',
+  'variable_radius_fillet': 'Variable Radius Fillet',
+  'corner_fillet': 'Corner Fillet',
+  'face_blend': 'Face Blend',
+  
+  // ============================================================================
+  // CHAMFER FEATURES (4 types) - New Taxonomy
+  // ============================================================================
+  'equal_distance_chamfer': 'Equal Distance Chamfer (C)',
+  'distance_angle_chamfer': 'Distance-Angle Chamfer',
+  'two_distance_chamfer': 'Two-Distance Chamfer',
+  'corner_chamfer': 'Corner Chamfer',
+  
+  // ============================================================================
+  // GROOVE FEATURES (5 types) - New Taxonomy
+  // ============================================================================
+  'external_groove': 'External Groove',
+  'internal_groove': 'Internal Groove',
+  'face_groove': 'Face Groove',
+  'o_ring_groove': 'O-Ring Groove',
+  'thread_relief_groove': 'Thread Relief Groove',
+  
+  // ============================================================================
+  // OTHER FEATURES (3 types) - New Taxonomy
+  // ============================================================================
+  'protrusion': 'Protrusion',
+  'depression': 'Depression',
+  'transition': 'Transition',
+  
+  // ============================================================================
+  // BACKWARD COMPATIBILITY - Legacy types
+  // ============================================================================
+  'hole': 'Hole',
+  'pocket': 'Pocket',
+  'slot': 'Slot',
+  'fillet': 'Fillet',
+  'chamfer': 'Chamfer',
+  'boss': 'Boss',
+  'step': 'Step',
+  'groove': 'Groove',
+  
+  // Old AAGNet types
   'triangular_passage': 'Triangular Passage',
   'rectangular_passage': 'Rectangular Passage',
   '6sides_passage': '6-Sides Passage',
@@ -56,9 +162,6 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   '2sides_through_step': '2-Sides Through Step',
   'slanted_through_step': 'Slanted Through Step',
   'Oring': 'O-Ring',
-  'blind_hole': 'Blind Hole',
-  'triangular_pocket': 'Triangular Pocket',
-  'rectangular_pocket': 'Rectangular Pocket',
   '6sides_pocket': '6-Sides Pocket',
   'circular_end_pocket': 'Circular End Pocket',
   'rectangular_blind_slot': 'Rectangular Blind Slot',
@@ -69,75 +172,85 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'rectangular_blind_step': 'Rectangular Blind Step',
   'round': 'Round',
   'stock': 'Stock',
-  // Rule-based feature types
-  'hole': 'Hole',
-  'pocket': 'Pocket',
-  'slot': 'Slot',
-  'fillet': 'Fillet',
-  'boss': 'Boss',
+  
+  // Production recognizer subtypes (legacy)
+  'tapped': 'Tapped Hole',
+  'through': 'Through Hole',
+  'blind': 'Blind Hole',
+  'tapered': 'Tapered Hole',
+  'rectangular': 'Rectangular Pocket',
+  'circular': 'Circular Pocket',
+  'complex_contour': 'Complex Pocket',
+  'with_islands': 'Pocket with Islands',
+  'through_slot': 'Through Slot',
+  'blind_slot': 'Blind Slot',
+  'keyway': 'Keyway',
+  'base_cylinder': 'Base Cylinder',
+  'taper': 'Taper',
+  'turning_feature': 'Turning Feature',
+  'partial_cylindrical': 'Partial Cylindrical',
   'general_pocket': 'General Pocket',
   'rectangular_slot': 'Rectangular Slot',
   'constant_radius': 'Constant Radius',
   'variable_radius': 'Variable Radius',
   '45_degree': '45° Chamfer',
   'angled': 'Angled Chamfer',
-  'partial_cylindrical': 'Partial Cylindrical',
-  'cylindrical_shaft': 'Cylindrical Shaft',
-  // Production recognizer subtypes - HOLES
-  'counterbore': 'Counterbored Hole',
-  'countersink': 'Countersunk Hole',
-  'tapped': 'Tapped Hole',
-  'through': 'Through Hole',
-  'blind': 'Blind Hole',
-  'tapered': 'Tapered Hole',
-  // Production recognizer subtypes - POCKETS
-  'rectangular': 'Rectangular Pocket',
-  'circular': 'Circular Pocket',
-  'complex_contour': 'Complex Pocket',
-  'with_islands': 'Pocket with Islands',
-  // Production recognizer subtypes - SLOTS
-  'through_slot': 'Through Slot',
-  'blind_slot': 'Blind Slot',
-  't_slot': 'T-Slot',
-  'keyway': 'Keyway',
-  // Production recognizer subtypes - TURNING
-  'base_cylinder': 'Base Cylinder',
-  'step': 'Step',
-  'groove': 'Groove',
-  'taper': 'Taper',
-  'turning_feature': 'Turning Feature'
+  'cylindrical_shaft': 'Cylindrical Shaft'
 };
 
-// Feature category classification (works for both systems)
+// Feature category classification (supports 60+ taxonomy + legacy)
 const FEATURE_CATEGORIES = {
-  holes: ['through_hole', 'blind_hole', 'hole', 'partial_cylindrical', 'counterbore', 'countersink', 'tapped', 'through', 'blind', 'tapered'],
-  pockets: ['triangular_pocket', 'rectangular_pocket', '6sides_pocket', 'circular_end_pocket', 'pocket', 'general_pocket', 'rectangular', 'circular', 'complex_contour', 'with_islands'],
+  holes: [
+    // New taxonomy
+    'through_hole', 'blind_hole', 'counterbore', 'countersink', 'spotface',
+    'back_counterbore', 'back_spotface', 'tapped_hole', 'reamed_hole',
+    'bored_hole', 'tapered_hole', 'stepped_hole', 'elliptical_hole', 'polygonal_hole',
+    // Legacy
+    'hole', 'partial_cylindrical', 'tapped', 'through', 'blind', 'tapered'
+  ],
+  pockets: [
+    // New taxonomy
+    'closed_rectangular_pocket', 'open_rectangular_pocket', 'circular_pocket',
+    'irregular_pocket', 'obround_pocket', 'island_pocket', 'triangular_pocket', 'hexagonal_pocket',
+    // Legacy
+    'pocket', 'general_pocket', 'rectangular', 'circular', 'complex_contour', 'with_islands',
+    '6sides_pocket', 'circular_end_pocket'
+  ],
   slots: [
-    'triangular_through_slot', 
-    'rectangular_through_slot', 
-    'circular_through_slot',
-    'rectangular_blind_slot',
-    'v_circular_end_blind_slot',
-    'h_circular_end_blind_slot',
-    'slot',
-    'rectangular_slot',
-    'through_slot',
-    'blind_slot',
-    't_slot',
-    'keyway'
+    // New taxonomy
+    'through_slot_rectangular', 'blind_slot_rectangular', 'open_u_slot',
+    'corner_slot', 't_slot', 'dovetail_slot', 'keyway_slot', 'woodruff_keyway', 'v_slot',
+    // Legacy
+    'slot', 'rectangular_slot', 'through_slot', 'blind_slot', 'keyway',
+    'triangular_through_slot', 'rectangular_through_slot', 'circular_through_slot',
+    'rectangular_blind_slot', 'v_circular_end_blind_slot', 'h_circular_end_blind_slot'
   ],
   steps: [
-    'rectangular_through_step',
-    '2sides_through_step',
-    'slanted_through_step',
-    'triangular_blind_step',
-    'circular_blind_step',
-    'rectangular_blind_step'
+    // New taxonomy
+    'simple_step', 'compound_step', 'through_step', 'blind_step',
+    'slanted_step', 'circular_step', 'two_sides_step', 'triangular_step',
+    // Legacy
+    'rectangular_through_step', '2sides_through_step', 'slanted_through_step',
+    'triangular_blind_step', 'circular_blind_step', 'rectangular_blind_step', 'step'
+  ],
+  bosses: [
+    'cylindrical_boss', 'rectangular_boss', 'irregular_boss', 'rib', 'lug', 'boss'
+  ],
+  fillets: [
+    'constant_radius_fillet', 'variable_radius_fillet', 'corner_fillet', 'face_blend',
+    'fillet', 'constant_radius', 'variable_radius', 'round'
+  ],
+  chamfers: [
+    'equal_distance_chamfer', 'distance_angle_chamfer', 'two_distance_chamfer', 'corner_chamfer',
+    'chamfer', '45_degree', 'angled'
+  ],
+  grooves: [
+    'external_groove', 'internal_groove', 'face_groove', 'o_ring_groove', 'thread_relief_groove',
+    'groove', 'Oring'
   ],
   passages: ['triangular_passage', 'rectangular_passage', '6sides_passage'],
-  chamfers: ['chamfer', 'round', 'fillet', 'constant_radius', 'variable_radius', '45_degree', 'angled'],
-  turning: ['base_cylinder', 'step', 'groove', 'taper', 'turning_feature'],
-  other: ['Oring', 'boss']
+  turning: ['base_cylinder', 'groove', 'taper', 'turning_feature', 'cylindrical_shaft'],
+  other: ['protrusion', 'depression', 'transition', 'stock']
 };
 
 // Feature category display names
@@ -146,8 +259,11 @@ const CATEGORY_NAMES = {
   pockets: 'Pockets',
   slots: 'Slots',
   steps: 'Steps',
+  bosses: 'Bosses & Protrusions',
+  fillets: 'Fillets & Rounds',
+  chamfers: 'Chamfers',
+  grooves: 'Grooves',
   passages: 'Passages',
-  chamfers: 'Chamfers & Rounds',
   turning: 'Turning Features',
   other: 'Other Features'
 };
@@ -158,8 +274,11 @@ const CategoryIcon: Record<string, React.ComponentType<any>> = {
   pockets: Box,
   slots: Square,
   steps: Layers,
+  bosses: Sparkles,
+  fillets: Zap,
+  chamfers: Triangle,
+  grooves: Circle,
   passages: Triangle,
-  chamfers: Zap,
   turning: Circle,
   other: Box
 };
