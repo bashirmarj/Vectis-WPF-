@@ -101,6 +101,14 @@ class EdgeFeatureDetector:
         # Priority 6: Grooves (for turning features)
         self._detect_all_grooves()
         
+        # CRITICAL: Deduplicate and merge overlapping features
+        initial_count = len(self.detected_features)
+        self._semantic_merge_features()
+        final_count = len(self.detected_features)
+        
+        if initial_count != final_count:
+            logger.info(f"\n🔧 Semantic merging: {initial_count} → {final_count} features ({initial_count - final_count} duplicates removed)")
+        
         logger.info("\n" + "="*70)
         logger.info(f"✅ DETECTION COMPLETE: {len(self.detected_features)} features")
         logger.info("="*70)
@@ -144,6 +152,15 @@ class EdgeFeatureDetector:
         groups = []
         used = set()
         
+        # Calculate adaptive tolerance based on part size
+        if self.circular_edges:
+            all_radii = [e.get('radius', 1) for e in self.circular_edges if e.get('radius')]
+            max_radius = max(all_radii) if all_radii else 50
+            # Adaptive: 2% of max radius, minimum 0.5mm, maximum 10mm
+            axis_tolerance = max(0.5, min(10.0, max_radius * 0.02))
+        else:
+            axis_tolerance = 1.0
+        
         for i, circle1 in enumerate(self.circular_edges):
             if i in used:
                 continue
@@ -163,13 +180,13 @@ class EdgeFeatureDetector:
                 
                 # Check if axes are parallel
                 dot_product = abs(np.dot(normal1, normal2))
-                if dot_product > 0.98:  # Nearly parallel
+                if dot_product > 0.98:  # Nearly parallel (11.5° tolerance)
                     # Check if axes are collinear
                     center_diff = center2 - center1
                     cross = np.cross(normal1, center_diff)
                     distance = np.linalg.norm(cross)
                     
-                    if distance < 1.0:  # Coaxial
+                    if distance < axis_tolerance:  # Adaptive coaxial tolerance
                         group.append(circle2)
                         used.add(j)
             
@@ -553,17 +570,40 @@ class EdgeFeatureDetector:
         
         concave_lines = [e for e in self.line_edges if e.get('convexity') == 'concave']
         
+        # Limit combinatorial explosion for large edge counts
+        if len(concave_lines) > 100:
+            logger.info(f"      ⚠️  Too many concave edges ({len(concave_lines)}), limiting slot detection")
+            concave_lines = concave_lines[:100]
+        
         for i, edge1 in enumerate(concave_lines):
             for edge2 in concave_lines[i+1:]:
                 # Check if parallel
                 vec1 = np.array(edge1['end_point']) - np.array(edge1['start_point'])
                 vec2 = np.array(edge2['end_point']) - np.array(edge2['start_point'])
                 
-                vec1 = vec1 / np.linalg.norm(vec1)
-                vec2 = vec2 / np.linalg.norm(vec2)
+                len1 = np.linalg.norm(vec1)
+                len2 = np.linalg.norm(vec2)
+                
+                if len1 < 0.01 or len2 < 0.01:
+                    continue
+                
+                vec1 = vec1 / len1
+                vec2 = vec2 / len2
                 
                 dot = abs(np.dot(vec1, vec2))
                 if dot > 0.95:  # Nearly parallel
+                    # Additional criteria: edges must be similar length (within 50%)
+                    length_ratio = max(len1, len2) / min(len1, len2)
+                    if length_ratio > 2.0:
+                        continue
+                    
+                    # And must be reasonably close (within 100mm)
+                    distance = np.linalg.norm(
+                        np.array(edge1['midpoint']) - np.array(edge2['midpoint'])
+                    )
+                    if distance > 100:
+                        continue
+                    
                     pairs.append((edge1, edge2))
         
         return pairs
@@ -613,10 +653,19 @@ class EdgeFeatureDetector:
         logger.info("\n〰️  GROOVES (5 types)")
         
         # Find parallel circular edges (groove signature)
+        # Grooves are rare on prismatic parts, common on turned parts
         count = 0
+        used = set()
         
         for i, circle1 in enumerate(self.circular_edges):
+            if i in used:
+                continue
+                
             for circle2 in self.circular_edges[i+1:]:
+                j = self.circular_edges.index(circle2)
+                if j in used:
+                    continue
+                
                 # Check if parallel (same normal)
                 normal1 = np.array(circle1['normal'])
                 normal2 = np.array(circle2['normal'])
@@ -627,25 +676,39 @@ class EdgeFeatureDetector:
                     z2 = circle2['center'][2]
                     width = abs(z1 - z2)
                     
-                    if 0.5 < width < 20:  # Typical groove width
-                        feature = DetectedFeature(
-                            feature_type='external_groove',
-                            subtype='groove',
-                            confidence=0.70,
-                            dimensions={
-                                'width': width,
-                                'diameter': circle1['diameter']
-                            },
-                            location=circle1['center'],
-                            orientation=circle1['normal'],
-                            edge_indices=[circle1['edge_id'], circle2['edge_id']],
-                            detection_method='edge_parallel_circles',
-                            boundary_condition=None,
-                            profile_type='rectangular'
+                    # Grooves must be:
+                    # 1. Similar diameter (within 10%)
+                    # 2. Small width (0.5-20mm)
+                    # 3. Same radial position
+                    diameter_ratio = max(circle1['diameter'], circle2['diameter']) / min(circle1['diameter'], circle2['diameter'])
+                    
+                    if diameter_ratio < 1.1 and 0.5 < width < 20:
+                        # Check radial alignment (centers should be vertically aligned for grooves)
+                        radial_offset = np.linalg.norm(
+                            np.array(circle1['center'][:2]) - np.array(circle2['center'][:2])
                         )
-                        self.detected_features.append(feature)
-                        count += 1
-                        break
+                        
+                        if radial_offset < 1.0:  # Vertically aligned
+                            feature = DetectedFeature(
+                                feature_type='external_groove',
+                                subtype='groove',
+                                confidence=0.70,
+                                dimensions={
+                                    'width': width,
+                                    'diameter': circle1['diameter']
+                                },
+                                location=circle1['center'],
+                                orientation=circle1['normal'],
+                                edge_indices=[circle1['edge_id'], circle2['edge_id']],
+                                detection_method='edge_parallel_circles',
+                                boundary_condition=None,
+                                profile_type='rectangular'
+                            )
+                            self.detected_features.append(feature)
+                            count += 1
+                            used.add(i)
+                            used.add(j)
+                            break
         
         if count > 0:
             logger.info(f"   ✅ Detected {count} grooves")
@@ -653,6 +716,112 @@ class EdgeFeatureDetector:
     # ========================================================================
     # UTILITY METHODS
     # ========================================================================
+    
+    def _semantic_merge_features(self):
+        """
+        Post-processing: Merge duplicate and overlapping features
+        
+        Handles:
+        - Multiple detections of same hole (stepped + tapped + basic)
+        - Overlapping slots from parallel edge pairs
+        - Duplicate grooves from circular edge combinations
+        """
+        if not self.detected_features:
+            return
+        
+        merged = []
+        used = set()
+        
+        for i, feature1 in enumerate(self.detected_features):
+            if i in used:
+                continue
+            
+            # Find all features that share edges with this one
+            overlapping = [i]
+            for j, feature2 in enumerate(self.detected_features[i+1:], start=i+1):
+                if j in used:
+                    continue
+                
+                # Check if features share edges (likely same feature detected multiple ways)
+                shared_edges = set(feature1.edge_indices) & set(feature2.edge_indices)
+                if shared_edges:
+                    # Merge criteria: same category AND share edges
+                    cat1 = self._get_feature_category(feature1.feature_type)
+                    cat2 = self._get_feature_category(feature2.feature_type)
+                    
+                    if cat1 == cat2:
+                        overlapping.append(j)
+                        used.add(j)
+            
+            # Keep the highest confidence detection
+            if len(overlapping) > 1:
+                best_idx = max(overlapping, key=lambda idx: self.detected_features[idx].confidence)
+                merged.append(self.detected_features[best_idx])
+                for idx in overlapping:
+                    used.add(idx)
+            else:
+                merged.append(feature1)
+                used.add(i)
+        
+        # Additional pass: remove features with very similar locations (likely duplicates)
+        final = []
+        used_final = set()
+        
+        for i, feature1 in enumerate(merged):
+            if i in used_final:
+                continue
+            
+            duplicates = [i]
+            loc1 = np.array(feature1.location)
+            
+            for j, feature2 in enumerate(merged[i+1:], start=i+1):
+                if j in used_final:
+                    continue
+                
+                loc2 = np.array(feature2.location)
+                distance = np.linalg.norm(loc1 - loc2)
+                
+                # Same location (within 0.1mm) AND same category = duplicate
+                if distance < 0.1:
+                    cat1 = self._get_feature_category(feature1.feature_type)
+                    cat2 = self._get_feature_category(feature2.feature_type)
+                    
+                    if cat1 == cat2:
+                        duplicates.append(j)
+                        used_final.add(j)
+            
+            # Keep highest confidence
+            if len(duplicates) > 1:
+                best_idx = max(duplicates, key=lambda idx: merged[idx].confidence)
+                final.append(merged[best_idx])
+                for idx in duplicates:
+                    used_final.add(idx)
+            else:
+                final.append(feature1)
+                used_final.add(i)
+        
+        self.detected_features = final
+    
+    def _get_feature_category(self, feature_type: str) -> str:
+        """Get feature category for grouping"""
+        if 'hole' in feature_type:
+            return 'hole'
+        elif 'fillet' in feature_type:
+            return 'fillet'
+        elif 'chamfer' in feature_type:
+            return 'chamfer'
+        elif 'slot' in feature_type:
+            return 'slot'
+        elif 'pocket' in feature_type:
+            return 'pocket'
+        elif 'groove' in feature_type:
+            return 'groove'
+        elif 'step' in feature_type:
+            return 'step'
+        elif 'boss' in feature_type:
+            return 'boss'
+        else:
+            return 'other'
     
     def _feature_to_dict(self, feature: DetectedFeature) -> Dict:
         """Convert DetectedFeature to dict"""
