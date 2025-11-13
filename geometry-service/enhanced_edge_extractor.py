@@ -30,7 +30,7 @@ from OCC.Core.GeomAbs import (
 )
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Dir
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 
 logger = logging.getLogger(__name__)
 
@@ -255,14 +255,15 @@ class EnhancedEdgeExtractor:
             # Get adjacent faces
             if self.edge_face_map.Contains(edge):
                 face_list = self.edge_face_map.FindFromKey(edge)
-                num_faces = face_list.Size()
                 
                 face_indices = []
                 face_normals = []
                 face_types = []
                 
-                for i in range(1, num_faces + 1):
-                    face = topods.Face(face_list.Value(i))
+                # Iterate through face list using OpenCascade iterator
+                face_iterator = TopTools_ListIteratorOfListOfShape(face_list)
+                while face_iterator.More():
+                    face = topods.Face(face_iterator.Value())
                     
                     # Find face index
                     face_idx = None
@@ -281,6 +282,8 @@ class EnhancedEdgeExtractor:
                         # Get face type
                         face_type = self._get_face_type(face)
                         face_types.append(face_type)
+                    
+                    face_iterator.Next()
                 
                 edge_data.adjacent_faces = face_indices
                 edge_data.face_normals = face_normals
