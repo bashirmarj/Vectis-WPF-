@@ -131,18 +131,9 @@ class EdgeFeatureDetector:
         # Group coaxial circles
         coaxial_groups = self._find_coaxial_circles()
         
-        # Detect compound holes first (contain simpler holes)
-        self._detect_counterbores(coaxial_groups)
-        self._detect_countersinks(coaxial_groups)
-        self._detect_spotfaces(coaxial_groups)
-        self._detect_stepped_holes(coaxial_groups)
-        
-        # Detect basic holes
-        self._detect_basic_holes(coaxial_groups)
-        
-        # Detect specialized holes
-        self._detect_tapped_holes()
-        self._detect_tapered_holes()
+        # Two-stage detection: primary hole + secondary features
+        for group in coaxial_groups:
+            self._detect_hole_feature_two_stage(group)
         
         hole_count = sum(1 for f in self.detected_features if 'hole' in f.feature_type)
         logger.info(f"   ✅ Detected {hole_count} holes")
@@ -195,217 +186,228 @@ class EdgeFeatureDetector:
         
         return groups
     
-    def _detect_counterbores(self, coaxial_groups: List[List[Dict]]):
-        """Detect counterbored holes (large cylinder above small cylinder)"""
-        logger.info("      🔧 Counterbores...")
-        count = 0
+    def _detect_hole_feature_two_stage(self, coaxial_group: List[Dict]):
+        """
+        Two-stage hole detection:
+        1. Primary: Entry-exit relationship defines hole type
+        2. Secondary: Middle planes define grooves/steps
+        """
+        if not coaxial_group:
+            return
         
-        for group in coaxial_groups:
-            if len(group) < 2:
-                continue
-            
-            # Sort by diameter (largest first)
-            sorted_group = sorted(group, key=lambda x: x.get('diameter', 0), reverse=True)
-            
-            larger = sorted_group[0]
-            smaller = sorted_group[1]
-            
-            # Counterbore signature: diameter ratio > 1.3
-            if larger['diameter'] > smaller['diameter'] * 1.3:
-                feature = DetectedFeature(
-                    feature_type='counterbore',
-                    subtype='hole',
-                    confidence=0.88,
-                    dimensions={
-                        'cb_diameter': larger['diameter'],
-                        'cb_radius': larger['radius'],
-                        'pilot_diameter': smaller['diameter'],
-                        'pilot_radius': smaller['radius']
-                    },
-                    location=larger['center'],
-                    orientation=larger['normal'],
-                    edge_indices=[larger['edge_id'], smaller['edge_id']],
-                    detection_method='edge_coaxial_analysis',
-                    boundary_condition='blind',
-                    profile_type='circular'
-                )
-                self.detected_features.append(feature)
-                count += 1
+        # Phase 1: Group circles by axial plane (Z-position)
+        plane_groups = self._group_by_axial_plane(coaxial_group)
         
-        if count > 0:
-            logger.info(f"         Found {count} counterbores")
+        if not plane_groups:
+            return
+        
+        # Phase 2: Order planes from entry (top) to exit (bottom)
+        ordered_planes = sorted(plane_groups, key=lambda p: p['center'][2], reverse=True)
+        
+        # Phase 3: Analyze entry-exit relationship (PRIMARY HOLE)
+        entry_plane = ordered_planes[0]
+        exit_plane = ordered_planes[-1]
+        middle_planes = ordered_planes[1:-1] if len(ordered_planes) > 2 else []
+        
+        # Determine primary hole type
+        primary_hole = self._classify_primary_hole(entry_plane, exit_plane, len(ordered_planes))
+        
+        if primary_hole:
+            self.detected_features.append(primary_hole)
+        
+        # Phase 4: Detect secondary features (grooves, steps)
+        if middle_planes and primary_hole:
+            base_diameter = (entry_plane['diameter'] + exit_plane['diameter']) / 2
+            self._detect_secondary_features(middle_planes, base_diameter, primary_hole)
     
-    def _detect_countersinks(self, coaxial_groups: List[List[Dict]]):
-        """Detect countersunk holes (conical recess above cylinder)"""
-        logger.info("      🔧 Countersinks...")
-        # Simplified: Would need conical edge detection
-        # For now, detect by diameter ratio and face type hints
-        pass
-    
-    def _detect_spotfaces(self, coaxial_groups: List[List[Dict]]):
-        """Detect spotfaces (very shallow counterbores)"""
-        logger.info("      🔧 Spotfaces...")
-        count = 0
+    def _group_by_axial_plane(self, circles: List[Dict]) -> List[Dict]:
+        """
+        Group circular edges by axial position (same Z-height = same plane)
+        Returns list of plane groups with merged properties
+        """
+        if not circles:
+            return []
         
-        for group in coaxial_groups:
-            if len(group) < 2:
-                continue
+        # Sort by Z-position
+        sorted_circles = sorted(circles, key=lambda c: c['center'][2], reverse=True)
+        
+        planes = []
+        current_plane = [sorted_circles[0]]
+        
+        for circle in sorted_circles[1:]:
+            # Check axial distance
+            prev_z = current_plane[0]['center'][2]
+            curr_z = circle['center'][2]
+            axial_distance = abs(prev_z - curr_z)
             
-            sorted_group = sorted(group, key=lambda x: x.get('diameter', 0), reverse=True)
-            larger = sorted_group[0]
-            smaller = sorted_group[1]
+            if axial_distance < 1.0:  # Same plane (within 1mm)
+                current_plane.append(circle)
+            else:
+                # Finalize current plane and start new one
+                planes.append(self._merge_plane_circles(current_plane))
+                current_plane = [circle]
+        
+        # Add last plane
+        planes.append(self._merge_plane_circles(current_plane))
+        
+        return planes
+    
+    def _merge_plane_circles(self, circles: List[Dict]) -> Dict:
+        """Merge multiple circles on same plane into single plane descriptor"""
+        if not circles:
+            return None
+        
+        # Average properties
+        avg_diameter = np.mean([c.get('diameter', 0) for c in circles])
+        avg_center = np.mean([c['center'] for c in circles], axis=0)
+        avg_normal = np.mean([c['normal'] for c in circles], axis=0)
+        
+        # Collect all edge IDs
+        edge_ids = [c['edge_id'] for c in circles]
+        
+        return {
+            'diameter': avg_diameter,
+            'radius': avg_diameter / 2,
+            'center': tuple(avg_center),
+            'normal': tuple(avg_normal),
+            'edge_ids': edge_ids,
+            'num_circles': len(circles)
+        }
+    
+    def _classify_primary_hole(self, entry_plane: Dict, exit_plane: Dict, num_planes: int) -> DetectedFeature:
+        """
+        Classify primary hole based on entry-exit relationship only
+        Ignores middle planes (those are secondary features)
+        """
+        entry_diameter = entry_plane['diameter']
+        exit_diameter = exit_plane['diameter']
+        
+        # Check if diameters are similar (within 1mm tolerance)
+        diameter_similar = abs(entry_diameter - exit_diameter) < 1.0
+        
+        if num_planes == 1:
+            # Single plane = blind hole
+            return DetectedFeature(
+                feature_type='blind_hole',
+                subtype='hole',
+                confidence=0.82,
+                dimensions={'diameter': entry_diameter, 'radius': entry_plane['radius']},
+                location=entry_plane['center'],
+                orientation=entry_plane['normal'],
+                edge_indices=entry_plane['edge_ids'],
+                detection_method='edge_single_plane',
+                boundary_condition='blind',
+                profile_type='circular'
+            )
+        
+        elif diameter_similar:
+            # Entry and exit same diameter = through hole
+            return DetectedFeature(
+                feature_type='through_hole',
+                subtype='hole',
+                confidence=0.85,
+                dimensions={
+                    'diameter': (entry_diameter + exit_diameter) / 2,
+                    'radius': (entry_plane['radius'] + exit_plane['radius']) / 2
+                },
+                location=entry_plane['center'],
+                orientation=entry_plane['normal'],
+                edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
+                detection_method='edge_entry_exit_same',
+                boundary_condition='through',
+                profile_type='circular'
+            )
+        
+        elif entry_diameter > exit_diameter * 1.2:
+            # Entry larger than exit = counterbore
+            return DetectedFeature(
+                feature_type='counterbore',
+                subtype='hole',
+                confidence=0.88,
+                dimensions={
+                    'cb_diameter': entry_diameter,
+                    'cb_radius': entry_plane['radius'],
+                    'pilot_diameter': exit_diameter,
+                    'pilot_radius': exit_plane['radius']
+                },
+                location=entry_plane['center'],
+                orientation=entry_plane['normal'],
+                edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
+                detection_method='edge_entry_larger',
+                boundary_condition='through',
+                profile_type='circular'
+            )
+        
+        else:
+            # Complex diameter relationship = stepped hole
+            return DetectedFeature(
+                feature_type='stepped_hole',
+                subtype='hole',
+                confidence=0.80,
+                dimensions={
+                    'num_steps': num_planes,
+                    'entry_diameter': entry_diameter,
+                    'exit_diameter': exit_diameter
+                },
+                location=entry_plane['center'],
+                orientation=entry_plane['normal'],
+                edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
+                detection_method='edge_complex_diameters',
+                boundary_condition='through',
+                profile_type='circular'
+            )
+    
+    def _detect_secondary_features(self, middle_planes: List[Dict], base_diameter: float, primary_hole: DetectedFeature):
+        """
+        Detect secondary features in middle planes (grooves, intermediate steps)
+        These are separate features that occur within the primary hole
+        """
+        for i, plane in enumerate(middle_planes):
+            plane_diameter = plane['diameter']
             
-            # Spotface signature: diameter ratio > 1.2 and shallow
-            # (depth detection would require face analysis - simplified here)
-            if 1.2 < larger['diameter'] / smaller['diameter'] < 1.5:
-                feature = DetectedFeature(
-                    feature_type='spotface',
-                    subtype='hole',
+            # Groove signature: diameter larger than base
+            if plane_diameter > base_diameter * 1.05:
+                # This is an O-ring groove or relief groove
+                groove_width = 2.0  # Approximate, would need axial extent calculation
+                
+                groove = DetectedFeature(
+                    feature_type='o_ring_groove',
+                    subtype='groove',
                     confidence=0.75,
                     dimensions={
-                        'sf_diameter': larger['diameter'],
-                        'pilot_diameter': smaller['diameter']
+                        'diameter': plane_diameter,
+                        'width': groove_width,
+                        'base_hole_diameter': base_diameter
                     },
-                    location=larger['center'],
-                    orientation=larger['normal'],
-                    edge_indices=[larger['edge_id'], smaller['edge_id']],
-                    detection_method='edge_shallow_counterbore',
-                    boundary_condition='blind',
-                    profile_type='circular'
+                    location=plane['center'],
+                    orientation=plane['normal'],
+                    edge_indices=plane['edge_ids'],
+                    detection_method='edge_middle_plane_expanded',
+                    boundary_condition=None,
+                    profile_type='rectangular'
                 )
-                self.detected_features.append(feature)
-                count += 1
-        
-        if count > 0:
-            logger.info(f"         Found {count} spotfaces")
-    
-    def _detect_stepped_holes(self, coaxial_groups: List[List[Dict]]):
-        """Detect stepped holes (3+ diameter changes)"""
-        logger.info("      🔧 Stepped holes...")
-        count = 0
-        
-        for group in coaxial_groups:
-            if len(group) >= 3:
-                # Multiple diameters = stepped hole
-                sorted_group = sorted(group, key=lambda x: x.get('diameter', 0))
-                
-                steps = []
-                for circle in sorted_group:
-                    steps.append({
-                        'diameter': circle['diameter'],
-                        'edge_id': circle['edge_id']
-                    })
-                
-                mid_circle = sorted_group[len(sorted_group) // 2]
-                
-                feature = DetectedFeature(
-                    feature_type='stepped_hole',
-                    subtype='hole',
-                    confidence=0.82,
-                    dimensions={
-                        'steps': steps,
-                        'num_steps': len(steps)
-                    },
-                    location=mid_circle['center'],
-                    orientation=mid_circle['normal'],
-                    edge_indices=[c['edge_id'] for c in sorted_group],
-                    detection_method='edge_multiple_diameters',
-                    boundary_condition='blind',
-                    profile_type='circular'
-                )
-                self.detected_features.append(feature)
-                count += 1
-        
-        if count > 0:
-            logger.info(f"         Found {count} stepped holes")
-    
-    def _detect_basic_holes(self, coaxial_groups: List[List[Dict]]):
-        """Detect simple through/blind holes"""
-        logger.info("      🔧 Through/blind holes...")
-        count = 0
-        
-        # Track circles already used in compound features
-        used_edges = set()
-        for feature in self.detected_features:
-            if 'hole' in feature.feature_type:
-                used_edges.update(feature.edge_indices)
-        
-        # Detect remaining circles
-        for group in coaxial_groups:
-            if len(group) == 1:
-                circle = group[0]
-                if circle['edge_id'] in used_edges:
-                    continue
-                
-                # Determine through vs blind by face adjacency
-                num_adjacent_faces = len(circle.get('adjacent_faces', []))
-                is_through = num_adjacent_faces == 2  # Simplified heuristic
-                
-                feature = DetectedFeature(
-                    feature_type='through_hole' if is_through else 'blind_hole',
-                    subtype='hole',
-                    confidence=0.85,
-                    dimensions={
-                        'diameter': circle['diameter'],
-                        'radius': circle['radius']
-                    },
-                    location=circle['center'],
-                    orientation=circle['normal'],
-                    edge_indices=[circle['edge_id']],
-                    detection_method='edge_single_circle',
-                    boundary_condition='through' if is_through else 'blind',
-                    profile_type='circular'
-                )
-                self.detected_features.append(feature)
-                count += 1
-        
-        if count > 0:
-            logger.info(f"         Found {count} basic holes")
-    
-    def _detect_tapped_holes(self):
-        """Detect tapped holes by diameter matching common tap sizes"""
-        logger.info("      🔧 Tapped holes...")
-        
-        # Common tap drill sizes (metric)
-        tap_sizes = {
-            2.5: 3.0, 3.3: 4.0, 4.2: 5.0, 5.0: 6.0, 
-            6.8: 8.0, 8.5: 10.0, 10.5: 12.0
-        }
-        
-        count = 0
-        for circle in self.circular_edges:
-            diameter = circle.get('diameter', 0)
+                self.detected_features.append(groove)
             
-            # Check if matches tap drill size
-            for tap_drill, major_diameter in tap_sizes.items():
-                if abs(diameter - tap_drill) < 0.5:
-                    feature = DetectedFeature(
-                        feature_type='tapped_hole',
-                        subtype='hole',
-                        confidence=0.65,  # Lower without thread detection
-                        dimensions={
-                            'major_diameter': major_diameter,
-                            'tap_drill_diameter': diameter,
-                            'thread_designation': f'M{int(major_diameter)}'
-                        },
-                        location=circle['center'],
-                        orientation=circle['normal'],
-                        edge_indices=[circle['edge_id']],
-                        detection_method='edge_tap_size_match',
-                        boundary_condition='blind',
-                        profile_type='circular'
-                    )
-                    self.detected_features.append(feature)
-                    count += 1
-                    break
-        
-        if count > 0:
-            logger.info(f"         Found {count} tapped holes")
-    
-    def _detect_tapered_holes(self):
-        """Detect tapered holes (would need conical edge detection)"""
-        # Simplified: requires cone surface detection
-        pass
+            # Step signature: diameter significantly different from base
+            elif abs(plane_diameter - base_diameter) > 1.0:
+                # This is an intermediate step
+                step = DetectedFeature(
+                    feature_type='intermediate_step',
+                    subtype='step',
+                    confidence=0.70,
+                    dimensions={
+                        'diameter': plane_diameter,
+                        'base_diameter': base_diameter,
+                        'position': i + 1  # Position in sequence
+                    },
+                    location=plane['center'],
+                    orientation=plane['normal'],
+                    edge_indices=plane['edge_ids'],
+                    detection_method='edge_middle_plane_step',
+                    boundary_condition=None,
+                    profile_type='circular'
+                )
+                self.detected_features.append(step)
     
     # ========================================================================
     # FILLET DETECTION (4 types)
