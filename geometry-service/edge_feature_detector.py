@@ -19,6 +19,8 @@ from typing import List, Dict, Tuple, Optional
 from collections import defaultdict
 from dataclasses import dataclass
 
+from feature_taxonomy import get_feature_definition, BoundaryCondition, FeatureCategory
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -48,6 +50,9 @@ class EdgeFeatureDetector:
         
         # Build lookup indices
         self._build_indices()
+        
+        # Calculate part bounding box for boundary detection
+        self._calculate_part_bounds()
     
     def _build_indices(self):
         """Build fast lookup structures"""
@@ -71,6 +76,64 @@ class EdgeFeatureDetector:
                 self.arc_edges.append(edge)
             elif edge_type == 'line':
                 self.line_edges.append(edge)
+    
+    def _calculate_part_bounds(self):
+        """Calculate part bounding box from edge geometry"""
+        all_points = []
+        
+        for edge in self.edges:
+            if edge.get('start_point'):
+                all_points.append(edge['start_point'])
+            if edge.get('end_point'):
+                all_points.append(edge['end_point'])
+            if edge.get('center'):
+                all_points.append(edge['center'])
+        
+        if all_points:
+            points_array = np.array(all_points)
+            self.part_min = points_array.min(axis=0)
+            self.part_max = points_array.max(axis=0)
+            self.part_size = self.part_max - self.part_min
+        else:
+            self.part_min = np.array([0, 0, 0])
+            self.part_max = np.array([100, 100, 100])
+            self.part_size = np.array([100, 100, 100])
+    
+    def _is_hole_blind(self, entry_plane: Dict, exit_plane: Dict) -> bool:
+        """
+        Determine if hole is blind (terminates inside part) or through (exits part)
+        
+        HYBRID METHOD: Uses topology + part bounds
+        - BLIND: Exit plane is significantly above part bottom
+        - THROUGH: Exit plane is at/near part bottom or top face
+        
+        Args:
+            entry_plane: Entry plane descriptor
+            exit_plane: Exit plane descriptor (bottom of hole)
+        
+        Returns:
+            True if blind, False if through
+        """
+        entry_z = entry_plane['center'][2]
+        exit_z = exit_plane['center'][2]
+        
+        # Tolerance: 5% of part height or 1mm, whichever is larger
+        z_tolerance = max(1.0, self.part_size[2] * 0.05)
+        
+        # Check if exit is at bottom face
+        distance_to_bottom = abs(exit_z - self.part_min[2])
+        at_bottom = distance_to_bottom < z_tolerance
+        
+        # Check if exit is at top face (back counterbore case)
+        distance_to_top = abs(exit_z - self.part_max[2])
+        at_top = distance_to_top < z_tolerance
+        
+        # Through hole: exits at either face
+        if at_bottom or at_top:
+            return False
+        
+        # Blind hole: terminates inside part
+        return True
     
     def detect_all_features(self) -> List[Dict]:
         """
@@ -276,98 +339,129 @@ class EdgeFeatureDetector:
     
     def _classify_primary_hole(self, entry_plane: Dict, exit_plane: Dict, num_planes: int) -> DetectedFeature:
         """
-        Classify primary hole based on entry-exit relationship only
-        Ignores middle planes (those are secondary features)
+        HYBRID TAXONOMY-BASED HOLE CLASSIFICATION
+        
+        Step 1: Detect boundary condition (blind vs through) - TOPOLOGY
+        Step 2: Detect geometry (diameter relationships) - EDGE-BASED
+        Step 3: Map to taxonomy feature type - TAXONOMY INTEGRATION
+        
+        Consults feature_taxonomy.py for proper classification
         """
         entry_diameter = entry_plane['diameter']
         exit_diameter = exit_plane['diameter']
         
-        # Check if diameters are similar (within 1mm tolerance)
+        # STEP 1: Determine boundary condition (blind vs through)
+        if num_planes == 1:
+            # Single plane = always blind
+            is_blind = True
+        else:
+            # Multiple planes: check if hole exits part
+            is_blind = self._is_hole_blind(entry_plane, exit_plane)
+        
+        # STEP 2: Detect geometric features
         diameter_similar = abs(entry_diameter - exit_diameter) < 1.0
+        has_counterbore = entry_diameter > exit_diameter * 1.2
+        has_diameter_step = abs(entry_diameter - exit_diameter) > 1.0 and not has_counterbore
+        
+        # STEP 3: Map to taxonomy type using hybrid logic
+        taxonomy_type = None
         
         if num_planes == 1:
-            # Single plane = blind hole
-            return DetectedFeature(
-                feature_type='blind_hole',
-                subtype='hole',
-                confidence=0.82,
-                dimensions={'diameter': entry_diameter, 'radius': entry_plane['radius']},
-                location=entry_plane['center'],
-                orientation=entry_plane['normal'],
-                edge_indices=entry_plane['edge_ids'],
-                detection_method='edge_single_plane',
-                boundary_condition='blind',
-                profile_type='circular'
-            )
+            # Single plane blind hole
+            taxonomy_type = 'blind_hole'
         
         elif diameter_similar:
-            # Entry and exit same diameter = through hole
-            return DetectedFeature(
-                feature_type='through_hole',
-                subtype='hole',
-                confidence=0.85,
-                dimensions={
-                    'diameter': (entry_diameter + exit_diameter) / 2,
-                    'radius': (entry_plane['radius'] + exit_plane['radius']) / 2
-                },
-                location=entry_plane['center'],
-                orientation=entry_plane['normal'],
-                edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
-                detection_method='edge_entry_exit_same',
-                boundary_condition='through',
-                profile_type='circular'
-            )
+            # Same diameter entry/exit
+            if is_blind:
+                taxonomy_type = 'blind_hole'
+            else:
+                taxonomy_type = 'through_hole'
         
-        elif entry_diameter > exit_diameter * 1.2:
-            # Entry larger than exit = counterbore
-            return DetectedFeature(
-                feature_type='counterbore',
-                subtype='hole',
-                confidence=0.88,
-                dimensions={
-                    'cb_diameter': entry_diameter,
-                    'cb_radius': entry_plane['radius'],
-                    'pilot_diameter': exit_diameter,
-                    'pilot_radius': exit_plane['radius']
-                },
-                location=entry_plane['center'],
-                orientation=entry_plane['normal'],
-                edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
-                detection_method='edge_entry_larger',
-                boundary_condition='through',
-                profile_type='circular'
-            )
+        elif has_counterbore:
+            # Entry significantly larger than exit
+            if is_blind:
+                taxonomy_type = 'counterbore'  # Standard counterbore (blind)
+            else:
+                taxonomy_type = 'back_counterbore'  # Through with counterbore from opposite side
+        
+        elif has_diameter_step:
+            # Complex diameter changes
+            if is_blind:
+                taxonomy_type = 'blind_stepped_hole'  # Custom type
+            else:
+                taxonomy_type = 'stepped_hole'
         
         else:
-            # Complex diameter relationship = stepped hole
-            return DetectedFeature(
-                feature_type='stepped_hole',
-                subtype='hole',
-                confidence=0.80,
-                dimensions={
-                    'num_steps': num_planes,
-                    'entry_diameter': entry_diameter,
-                    'exit_diameter': exit_diameter
-                },
-                location=entry_plane['center'],
-                orientation=entry_plane['normal'],
-                edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
-                detection_method='edge_complex_diameters',
-                boundary_condition='through',
-                profile_type='circular'
-            )
+            # Fallback
+            taxonomy_type = 'blind_hole' if is_blind else 'through_hole'
+        
+        # STEP 4: Get taxonomy definition and create feature
+        taxonomy_def = get_feature_definition(taxonomy_type)
+        
+        if not taxonomy_def:
+            # Fallback for custom types not in taxonomy
+            taxonomy_def_type = 'blind_hole' if is_blind else 'through_hole'
+            taxonomy_def = get_feature_definition(taxonomy_def_type)
+        
+        # Build dimensions based on geometry
+        if has_counterbore:
+            dimensions = {
+                'cb_diameter': entry_diameter,
+                'cb_radius': entry_plane['radius'],
+                'pilot_diameter': exit_diameter,
+                'pilot_radius': exit_plane['radius']
+            }
+        elif has_diameter_step:
+            dimensions = {
+                'num_steps': num_planes,
+                'entry_diameter': entry_diameter,
+                'exit_diameter': exit_diameter
+            }
+        else:
+            dimensions = {
+                'diameter': (entry_diameter + exit_diameter) / 2,
+                'radius': (entry_plane['radius'] + exit_plane['radius']) / 2
+            }
+        
+        # Determine confidence based on detection quality
+        if num_planes == 1:
+            confidence = 0.82
+        elif diameter_similar and not is_blind:
+            confidence = 0.85  # Through holes are most reliable
+        elif has_counterbore:
+            confidence = 0.88  # Counterbores have clear signature
+        else:
+            confidence = 0.80
+        
+        # Create feature with taxonomy metadata
+        return DetectedFeature(
+            feature_type=taxonomy_type,
+            subtype='hole',
+            confidence=confidence,
+            dimensions=dimensions,
+            location=entry_plane['center'],
+            orientation=entry_plane['normal'],
+            edge_indices=entry_plane['edge_ids'] + exit_plane['edge_ids'],
+            detection_method='hybrid_taxonomy_based',
+            boundary_condition=taxonomy_def.boundary.value if taxonomy_def else ('blind' if is_blind else 'through'),
+            profile_type=taxonomy_def.profile.value if taxonomy_def else 'circular'
+        )
     
     def _detect_secondary_features(self, middle_planes: List[Dict], base_diameter: float, primary_hole: DetectedFeature):
         """
         Detect secondary features in middle planes (grooves, intermediate steps)
         These are separate features that occur within the primary hole
+        
+        HYBRID: Uses taxonomy definitions for proper classification
         """
         for i, plane in enumerate(middle_planes):
             plane_diameter = plane['diameter']
             
-            # Groove signature: diameter larger than base
+            # Groove signature: diameter larger than base (O-ring groove pattern)
             if plane_diameter > base_diameter * 1.05:
-                # This is an O-ring groove or relief groove
+                # Get taxonomy definition for O-ring groove
+                taxonomy_def = get_feature_definition('o_ring_groove')
+                
                 groove_width = 2.0  # Approximate, would need axial extent calculation
                 
                 groove = DetectedFeature(
@@ -382,15 +476,15 @@ class EdgeFeatureDetector:
                     location=plane['center'],
                     orientation=plane['normal'],
                     edge_indices=plane['edge_ids'],
-                    detection_method='edge_middle_plane_expanded',
-                    boundary_condition=None,
-                    profile_type='rectangular'
+                    detection_method='hybrid_middle_plane_groove',
+                    boundary_condition=taxonomy_def.boundary.value if taxonomy_def else None,
+                    profile_type=taxonomy_def.profile.value if taxonomy_def else 'rectangular'
                 )
                 self.detected_features.append(groove)
             
             # Step signature: diameter significantly different from base
             elif abs(plane_diameter - base_diameter) > 1.0:
-                # This is an intermediate step
+                # This is an intermediate step (not in standard taxonomy)
                 step = DetectedFeature(
                     feature_type='intermediate_step',
                     subtype='step',
@@ -403,8 +497,8 @@ class EdgeFeatureDetector:
                     location=plane['center'],
                     orientation=plane['normal'],
                     edge_indices=plane['edge_ids'],
-                    detection_method='edge_middle_plane_step',
-                    boundary_condition=None,
+                    detection_method='hybrid_middle_plane_step',
+                    boundary_condition='partial',
                     profile_type='circular'
                 )
                 self.detected_features.append(step)
@@ -414,7 +508,7 @@ class EdgeFeatureDetector:
     # ========================================================================
     
     def _detect_all_fillets(self):
-        """Detect all 4 fillet types from arc edges"""
+        """Detect all 4 fillet types from arc edges using taxonomy"""
         logger.info("\n🌊 FILLETS (4 types)")
         
         if not self.arc_edges:
@@ -427,47 +521,36 @@ class EdgeFeatureDetector:
             radius = arc.get('radius', 0)
             convexity = arc.get('convexity')
             
-            # Fillet signature: small radius arc at convex edge
+            # Fillet signature: small radius arc
             if 0.5 <= radius <= 10.0:
+                # Determine taxonomy type based on convexity
                 if convexity == 'convex':
-                    # External fillet
-                    feature = DetectedFeature(
-                        feature_type='constant_radius_fillet',
-                        subtype='fillet',
-                        confidence=0.88,
-                        dimensions={
-                            'radius': radius,
-                            'length': arc.get('length', 0)
-                        },
-                        location=arc['midpoint'],
-                        orientation=(0, 0, 1),  # Simplified
-                        edge_indices=[arc['edge_id']],
-                        detection_method='edge_convex_arc',
-                        boundary_condition=None,
-                        profile_type=None
-                    )
-                    self.detected_features.append(feature)
-                    count += 1
-                
+                    taxonomy_type = 'constant_radius_fillet'  # External fillet
                 elif convexity == 'concave':
-                    # Internal fillet (corner blend)
-                    feature = DetectedFeature(
-                        feature_type='corner_fillet',
-                        subtype='fillet',
-                        confidence=0.82,
-                        dimensions={
-                            'radius': radius,
-                            'length': arc.get('length', 0)
-                        },
-                        location=arc['midpoint'],
-                        orientation=(0, 0, 1),
-                        edge_indices=[arc['edge_id']],
-                        detection_method='edge_concave_arc',
-                        boundary_condition=None,
-                        profile_type=None
-                    )
-                    self.detected_features.append(feature)
-                    count += 1
+                    taxonomy_type = 'corner_fillet'  # Internal corner blend
+                else:
+                    taxonomy_type = 'constant_radius_fillet'  # Default
+                
+                # Get taxonomy definition
+                taxonomy_def = get_feature_definition(taxonomy_type)
+                
+                feature = DetectedFeature(
+                    feature_type=taxonomy_type,
+                    subtype='fillet',
+                    confidence=0.88 if convexity == 'convex' else 0.82,
+                    dimensions={
+                        'radius': radius,
+                        'length': arc.get('length', 0)
+                    },
+                    location=arc['midpoint'],
+                    orientation=(0, 0, 1),  # Simplified
+                    edge_indices=[arc['edge_id']],
+                    detection_method='hybrid_arc_detection',
+                    boundary_condition=taxonomy_def.boundary.value if taxonomy_def else None,
+                    profile_type=taxonomy_def.profile.value if taxonomy_def else None
+                )
+                self.detected_features.append(feature)
+                count += 1
         
         if count > 0:
             logger.info(f"   ✅ Detected {count} fillets")
@@ -526,7 +609,7 @@ class EdgeFeatureDetector:
     # ========================================================================
     
     def _detect_all_slots(self):
-        """Detect all 9 slot types from elongated edge patterns"""
+        """Detect all 9 slot types from elongated edge patterns using taxonomy"""
         logger.info("\n➖ SLOTS (9 types)")
         
         # Find parallel concave edge pairs (slot signature)
@@ -542,10 +625,14 @@ class EdgeFeatureDetector:
             )
             length = max(edge1.get('length', 0), edge2.get('length', 0))
             
-            # Slot signature: length >> width
+            # Slot signature: length >> width (aspect ratio > 3)
             if length > distance * 3:
+                # Default to blind slot (most common)
+                taxonomy_type = 'blind_slot_rectangular'
+                taxonomy_def = get_feature_definition(taxonomy_type)
+                
                 feature = DetectedFeature(
-                    feature_type='blind_slot_rectangular',
+                    feature_type=taxonomy_type,
                     subtype='slot',
                     confidence=0.72,
                     dimensions={
@@ -556,9 +643,9 @@ class EdgeFeatureDetector:
                     location=tuple((np.array(edge1['midpoint']) + np.array(edge2['midpoint'])) / 2),
                     orientation=(0, 0, 1),
                     edge_indices=[edge1['edge_id'], edge2['edge_id']],
-                    detection_method='edge_parallel_pairs',
-                    boundary_condition='blind',
-                    profile_type='rectangular'
+                    detection_method='hybrid_parallel_edges',
+                    boundary_condition=taxonomy_def.boundary.value if taxonomy_def else 'blind',
+                    profile_type=taxonomy_def.profile.value if taxonomy_def else 'rectangular'
                 )
                 self.detected_features.append(feature)
                 count += 1
