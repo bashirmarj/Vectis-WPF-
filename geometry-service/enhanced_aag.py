@@ -25,6 +25,7 @@ from OCC.Core.TopoDS import TopoDS_Face, TopoDS_Edge, TopoDS_Shape, topods
 from OCC.Core.TopExp import TopExp_Explorer, topexp
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Copy
 from OCC.Core.GeomAbs import (GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, 
                               GeomAbs_Sphere, GeomAbs_Torus)
 from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Dir
@@ -261,7 +262,10 @@ class EnhancedAAG:
             # Process each edge
             for i in range(1, num_edges + 1):
                 try:
-                    edge = topods.Edge(edge_face_map.FindKey(i))
+                    # CRITICAL: Make a deep copy to avoid dangling pointer when edge_face_map is destroyed
+                    edge_shape = edge_face_map.FindKey(i)
+                    edge_copy = BRepBuilderAPI_Copy(edge_shape).Shape()
+                    edge = topods.Edge(edge_copy)
                     face_list = edge_face_map.FindFromIndex(i)
                     
                     # Get the faces that share this edge
