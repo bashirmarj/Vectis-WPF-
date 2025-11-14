@@ -25,7 +25,7 @@ from OCC.Core.TopoDS import TopoDS_Face, TopoDS_Edge, TopoDS_Shape, topods
 from OCC.Core.TopExp import TopExp_Explorer, topexp
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
-from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Copy
+
 from OCC.Core.GeomAbs import (GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, 
                               GeomAbs_Sphere, GeomAbs_Torus)
 from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Dir
@@ -237,10 +237,10 @@ class EnhancedAAG:
     def _find_adjacencies_v772(self):
         """
         Find face adjacencies - pythonocc 7.7.2 compatible version.
-        This is the fixed version that works with your conda installation.
+        Uses TopExp_Explorer to extract edges (not from the map itself).
         """
         try:
-            # Build map of edges to faces
+            # Build map of edges to faces (for LOOKUPS ONLY)
             edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
             topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
             
@@ -259,45 +259,48 @@ class EnhancedAAG:
             
             edge_id = 0
             
-            # Process each edge
-            for i in range(1, num_edges + 1):
+            # CRITICAL FIX: Extract edges from shape, NOT from map
+            edge_explorer = TopExp_Explorer(self.shape, TopAbs_EDGE)
+            
+            while edge_explorer.More():
                 try:
-                    # CRITICAL: Make a deep copy to avoid dangling pointer when edge_face_map is destroyed
-                    edge_shape = edge_face_map.FindKey(i)
-                    edge_copy = BRepBuilderAPI_Copy(edge_shape).Shape()
-                    edge = topods.Edge(edge_copy)
-                    face_list = edge_face_map.FindFromIndex(i)
+                    # Get edge from shape (persistent reference)
+                    edge = topods.Edge(edge_explorer.Current())
                     
-                    # Get the faces that share this edge
-                    # In 7.7.2, face_list is a different type
-                    num_faces = face_list.Size() if hasattr(face_list, 'Size') else face_list.Extent()
-                    
-                    if num_faces == 2:
-                        # Get first and last faces
-                        face1 = topods.Face(face_list.First())
-                        face2 = topods.Face(face_list.Last())
+                    # Use map ONLY for lookup
+                    if edge_face_map.Contains(edge):
+                        face_list = edge_face_map.FindFromKey(edge)
                         
-                        # Find face IDs
-                        face1_id = self._find_face_id(face1)
-                        face2_id = self._find_face_id(face2)
+                        # Check if edge connects exactly 2 faces
+                        num_faces = face_list.Size() if hasattr(face_list, 'Size') else face_list.Extent()
                         
-                        if face1_id is not None and face2_id is not None:
-                            # Create adjacency edge
-                            key = (min(face1_id, face2_id), max(face1_id, face2_id))
+                        if num_faces == 2:
+                            # Get first and last faces
+                            face1 = topods.Face(face_list.First())
+                            face2 = topods.Face(face_list.Last())
                             
-                            if key not in self.adjacency_edges:
-                                aag_edge = AAGEdge(
-                                    edge=edge,
-                                    edge_id=edge_id,
-                                    face1_id=face1_id,
-                                    face2_id=face2_id
-                                )
-                                self.adjacency_edges[key] = aag_edge
-                                edge_id += 1
+                            # Find face IDs
+                            face1_id = self._find_face_id(face1)
+                            face2_id = self._find_face_id(face2)
+                            
+                            if face1_id is not None and face2_id is not None:
+                                # Create adjacency edge
+                                key = (min(face1_id, face2_id), max(face1_id, face2_id))
                                 
+                                if key not in self.adjacency_edges:
+                                    aag_edge = AAGEdge(
+                                        edge=edge,  # Edge from shape, not from map
+                                        edge_id=edge_id,
+                                        face1_id=face1_id,
+                                        face2_id=face2_id
+                                    )
+                                    self.adjacency_edges[key] = aag_edge
+                                    edge_id += 1
+                                    
                 except Exception as e:
-                    logger.debug(f"Failed to process edge {i}: {e}")
-                    continue
+                    logger.debug(f"Failed to process edge: {e}")
+                
+                edge_explorer.Next()
             
             logger.info(f"Found {len(self.adjacency_edges)} adjacency relationships")
             
