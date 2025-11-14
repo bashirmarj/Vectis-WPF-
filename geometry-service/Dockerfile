@@ -20,15 +20,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 numpy && \
     conda clean --all --yes
 
-# Install PyTorch CPU-only (before requirements.txt)
+# Install PyTorch CPU-only (before requirements.txt to use cache)
 RUN pip install --no-cache-dir torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
 
-# Copy requirements and install (without occwl)
-COPY requirements.txt .
+# Copy ALL application code FIRST (includes occwl folder)
+COPY . .
+
+# Install Python dependencies (occwl removed from requirements.txt)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy ALL application code (including occwl folder if it exists)
-COPY . .
+# Add occwl to Python path (so imports work)
+ENV PYTHONPATH=/app:$PYTHONPATH
 
 # Create models directory
 RUN mkdir -p models
