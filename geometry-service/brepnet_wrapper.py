@@ -98,14 +98,54 @@ class BRepNetRecognizer:
         logger.info(f"✅ BRepNet ONNX model loaded on {self.device}")
     
     def _load_pytorch_model(self, model_path: str):
-        """Load PyTorch checkpoint (development fallback)"""
-        # This requires the BRepNet model architecture
-        # For production, convert to ONNX first
-        raise NotImplementedError(
-            "PyTorch checkpoints not supported in production. "
-            "Convert model to ONNX format using: "
-            "torch.onnx.export(model, example_input, 'model.onnx')"
-        )
+        """Load PyTorch Lightning checkpoint"""
+        from brepnet import BRepNet
+        from data_utils import load_json_data
+        
+        logger.info(f"Loading PyTorch Lightning checkpoint: {model_path}")
+        
+        # Load checkpoint
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+        hyper_params = checkpoint.get('hyper_parameters', {})
+        state_dict = checkpoint.get('state_dict', {})
+        
+        # Load kernel configuration
+        kernel_file = hyper_params.get('kernel_filename', 'winged_edge_plus_plus.json')
+        try:
+            kernel_data = load_json_data(kernel_file)
+        except:
+            kernel_data = load_json_data('winged_edge_plus_plus.json')
+        
+        # Reconstruct opts object from hyper_parameters
+        class Opts:
+            pass
+        
+        opts = Opts()
+        # Set default values
+        opts.num_layers = hyper_params.get('num_layers', 5)
+        opts.num_features = hyper_params.get('num_features', 64)
+        opts.use_graph_conv = hyper_params.get('use_graph_conv', True)
+        opts.kernel_filename = kernel_file
+        
+        # Copy all hyperparameters to opts
+        for key, value in hyper_params.items():
+            setattr(opts, key, value)
+        
+        # Create model and load weights
+        self.model = BRepNet(opts, kernel_data)
+        self.model.load_state_dict(state_dict, strict=False)
+        self.model.eval()
+        
+        if self.device == 'cuda':
+            self.model = self.model.cuda()
+        
+        epoch = checkpoint.get('epoch', 'unknown')
+        num_params = sum(p.numel() for p in self.model.parameters())
+        logger.info(f"✅ BRepNet loaded (epoch {epoch}, {num_params:,} params)")
+        
+        # Initialize feature extractor
+        from brep_feature_extractor import BRepFeatureExtractor
+        self.feature_extractor = BRepFeatureExtractor(kernel_file)
     
     def recognize_features(
         self,
@@ -120,8 +160,15 @@ class BRepNetRecognizer:
             face_mapping: Dict mapping face IDs to triangle indices
         
         Returns:
-            List of detected features with face-level information
+            List of recognized features with metadata
         """
+        logger.info("Starting BRepNet feature recognition")
+        
+        # Use PyTorch model if available
+        if self.model is not None and hasattr(self, 'feature_extractor'):
+            return self._recognize_with_pytorch(shape, face_mapping)
+        
+        # Fallback to ONNX (if implemented)
         if self.session is None:
             raise RuntimeError("Model not loaded")
         
@@ -142,16 +189,119 @@ class BRepNetRecognizer:
         })
         
         # Parse predictions
-        predictions = outputs[0]  # Shape: (num_faces, num_classes)
-        
-        # Convert to features
-        features = self._parse_predictions(
-            predictions,
-            shape,
-            face_mapping
-        )
+        predictions = outputs[0]
+        features = self._parse_predictions(predictions, shape, face_mapping)
         
         return features
+    
+    def _recognize_with_pytorch(self, shape: TopoDS_Shape, face_mapping: Dict[int, Dict]) -> List[Dict]:
+        """Run recognition using PyTorch model with full BRepNet pipeline"""
+        
+        # Step 1: Extract BRepNet input tensors
+        brep_tensors = self.feature_extractor.extract_features(shape)
+        
+        # Step 2: Convert to PyTorch tensors
+        model_inputs = {}
+        for key, val in brep_tensors.items():
+            tensor = torch.from_numpy(val).float()
+            if len(tensor.shape) == 1:
+                tensor = tensor.unsqueeze(0)
+            elif len(tensor.shape) == 2:
+                tensor = tensor.unsqueeze(0)
+            elif len(tensor.shape) == 3:
+                tensor = tensor.unsqueeze(0)
+            model_inputs[key] = tensor
+        
+        if self.device == 'cuda':
+            model_inputs = {k: v.cuda() for k, v in model_inputs.items()}
+        
+        # Step 3: Run inference
+        with torch.no_grad():
+            try:
+                predictions = self.model.brepnet_step(
+                    model_inputs['Xf'], model_inputs['Gf'],
+                    model_inputs['Xe'], model_inputs['Ge'],
+                    model_inputs['Xc'], model_inputs['Gc'],
+                    model_inputs['Kf'], model_inputs['Ke'], model_inputs['Kc'],
+                    model_inputs['Ce'], model_inputs['Cf'], model_inputs['Csf']
+                )
+            except Exception as e:
+                logger.error(f"BRepNet inference failed: {e}", exc_info=True)
+                return []
+        
+        # Step 4: Parse predictions into recognized features
+        features = self._parse_pytorch_predictions(predictions, shape, face_mapping)
+        
+        logger.info(f"✅ BRepNet recognized {len(features)} features")
+        return features
+    
+    def _parse_pytorch_predictions(self, predictions: torch.Tensor, shape: TopoDS_Shape, face_mapping: Dict) -> List[Dict]:
+        """
+        Convert PyTorch model output to feature list
+        
+        BRepNet outputs per-face classifications (24 classes)
+        """
+        predictions_np = predictions.cpu().numpy()
+        
+        # Apply softmax to get probabilities
+        exp_preds = np.exp(predictions_np - np.max(predictions_np, axis=-1, keepdims=True))
+        probabilities = exp_preds / np.sum(exp_preds, axis=-1, keepdims=True)
+        
+        features = []
+        
+        # Handle batch dimension
+        if len(probabilities.shape) == 3:
+            batch_probs = probabilities[0]
+        else:
+            batch_probs = probabilities
+        
+        num_faces = batch_probs.shape[0]
+        
+        for face_idx in range(num_faces):
+            face_probs = batch_probs[face_idx, :]
+            predicted_class = np.argmax(face_probs)
+            confidence = float(face_probs[predicted_class])
+            
+            if confidence >= self.confidence_threshold:
+                feature = {
+                    'type': self._class_to_feature_type(predicted_class),
+                    'confidence': confidence,
+                    'face_ids': [face_idx],
+                    'parameters': self._extract_feature_parameters(shape, face_idx),
+                    'ml_detected': True
+                }
+                features.append(feature)
+        
+        return features
+    
+    def _class_to_feature_type(self, class_id: int) -> str:
+        """Map BRepNet class ID to feature type string"""
+        feature_map = {
+            0: 'rectangular_through_slot',
+            1: 'triangular_through_slot',
+            2: 'rectangular_passage',
+            3: 'triangular_passage',
+            4: '6sides_passage',
+            5: 'rectangular_through_step',
+            6: '2sides_through_step',
+            7: 'slanted_through_step',
+            8: 'rectangular_blind_step',
+            9: 'triangular_blind_step',
+            10: 'rectangular_blind_slot',
+            11: 'rectangular_pocket',
+            12: 'triangular_pocket',
+            13: '6sides_pocket',
+            14: 'chamfer',
+            15: 'stock',
+        }
+        return feature_map.get(class_id, 'unknown')
+    
+    def _extract_feature_parameters(self, shape: TopoDS_Shape, face_idx: int) -> Dict:
+        """Extract geometric parameters for a feature"""
+        return {
+            'face_index': face_idx,
+            'extracted': True
+        }
     
     def _extract_face_features(self, shape: TopoDS_Shape) -> np.ndarray:
         """

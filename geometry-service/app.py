@@ -68,15 +68,15 @@ brepnet_recognizer = None
 turning_detector = None
 
 try:
-    # Load BRepNet with pre-trained weights
+    # Load BRepNet with pre-trained PyTorch Lightning checkpoint
     brepnet_recognizer = BRepNetRecognizer(
-        model_path="models/brepnet_pretrained.ckpt",
-        device="cpu",  # ONNX-optimized for CPU
+        model_path="models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt",
+        device="cpu",  # Use CPU for production
         confidence_threshold=0.70
     )
     logger.info("✅ BRepNet recognizer loaded")
 except Exception as e:
-    logger.error(f"❌ BRepNet loading failed: {e}")
+    logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
 
 try:
     # Geometric fallback for turning features
