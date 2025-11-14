@@ -1,6 +1,3 @@
-# Production requirements for Vectis Geometry Service
-# Version 2.0.0 - BRepNet + Geometric Fallback
-
 # Core web framework
 flask==3.1.0
 flask-cors==4.0.0
@@ -9,27 +6,14 @@ gunicorn==21.2.0
 # Database client
 supabase==2.7.4
 
-# ONNX Runtime for ML inference (CPU-optimized)
-onnxruntime==1.16.3
-
-# PyTorch (required for ONNX model loading utilities and PyTorch Lightning)
-torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
-
-# PyTorch Lightning for checkpoint loading
-pytorch-lightning==2.0.9
-
-# OCCWL for advanced B-rep operations
-occwl>=1.0.0
-
 # Scientific computing
 numpy==1.24.4
 
-# Graph operations (if needed for B-Rep graph construction)
+# Graph operations
 networkx==3.2.1
 
 # Monitoring
 psutil==5.9.6
 
-# OpenCascade Python bindings (pythonocc-core)
-# NOTE: Must be installed via conda or system package manager
-# Installation instructions in DEPLOYMENT.md
+# NOTE: pythonocc-core installed separately in Dockerfile
+# NOTE: PyTorch/ONNX removed - not needed for basic feature detection
