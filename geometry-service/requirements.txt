@@ -15,5 +15,4 @@ networkx==3.2.1
 # Monitoring
 psutil==5.9.6
 
-# NOTE: pythonocc-core installed separately in Dockerfile
-# NOTE: PyTorch/ONNX removed - not needed for basic feature detection
+# NOTE: pythonocc-core installed via conda in Dockerfile
