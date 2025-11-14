@@ -45,6 +45,8 @@ from retry_utils import exponential_backoff_retry, TransientError, PermanentErro
 from dead_letter_queue import dlq
 from graceful_degradation import GracefulDegradation, ProcessingTier
 from edge_taxonomy_integration import FlaskEdgeRecognizer
+from enhanced_aag import create_aag, EnhancedAAG
+from hybrid_production_detector import HybridProductionDetector
 
 # === OCC imports ===
 from OCC.Core.STEPControl import STEPControl_Reader, STEPControl_Writer
@@ -2415,6 +2417,39 @@ def analyze_cad():
             edge_data['tagged_edges'] = []
         
         # ====================================================================
+        # SHADOW MODE: BUILD AAG FOR VALIDATION (doesn't affect results)
+        # ====================================================================
+        
+        aag = None
+        aag_stats = {}
+        
+        try:
+            logger.info(f"[{request_id}] 📊 [SHADOW] Building Attributed Adjacency Graph...")
+            aag_start_time = time.time()
+            aag = create_aag(shape)
+            aag_stats = aag.get_statistics()
+            aag_build_time = time.time() - aag_start_time
+            
+            logger.info(f"[{request_id}] ✅ [SHADOW] AAG built in {aag_build_time:.3f}s:")
+            logger.info(f"[{request_id}]    📊 Faces: {aag_stats.get('num_faces', 0)}, "
+                       f"Edges: {aag_stats.get('num_edges', 0)}")
+            logger.info(f"[{request_id}]    📊 Concave edges: {aag_stats.get('concave_edges', 0)}, "
+                       f"Convex edges: {aag_stats.get('convex_edges', 0)}")
+            logger.info(f"[{request_id}]    🎯 Potential features (concave cycles): {aag_stats.get('concave_cycles', 0)}")
+            logger.info(f"[{request_id}]    📐 Adaptive tolerance: {aag_stats.get('adaptive_tolerance', 0):.6f}mm")
+            logger.info(f"[{request_id}]    📦 Bounding box diagonal: {aag_stats.get('bounding_box_diagonal', 0):.1f}mm")
+            
+            # Store AAG stats for later database logging
+            aag_stats['build_time_sec'] = aag_build_time
+            aag_stats['algorithm_version'] = 'enhanced_aag_v1.0'
+            
+        except Exception as e:
+            logger.warning(f"[{request_id}] ⚠️ [SHADOW] AAG creation failed: {e}")
+            logger.debug(f"[{request_id}] AAG error traceback:", exc_info=True)
+            aag = None
+            aag_stats = {'error': str(e)}
+        
+        # ====================================================================
         # GEOMETRIC FEATURE RECOGNITION (Tier 1 only)
         # ====================================================================
         
@@ -2499,8 +2534,11 @@ def analyze_cad():
                 )
             },
             
+            # ✅ NEW: Add AAG statistics (shadow mode - for validation only)
+            'aag_statistics': aag_stats if aag_stats else None,
+            
             'status': 'success',
-            'version': '11.0.0-production'
+            'version': '12.0.0-aag-shadow'
         }
         
         # ====================================================================
@@ -2515,7 +2553,8 @@ def analyze_cad():
             "processing_time": processing_time,
             "quality_score": validation_result.quality_score,
             "recognition_status": recognition_status,
-            "feature_count": geometric_features['num_features_detected'] if geometric_features else 0
+            "feature_count": geometric_features['num_features_detected'] if geometric_features else 0,
+            "aag_statistics": aag_stats if aag_stats and 'error' not in aag_stats else None
         })
         
         logger.info(f"✅ Analysis complete in {processing_time:.2f}s (request_id: {request_id})")
