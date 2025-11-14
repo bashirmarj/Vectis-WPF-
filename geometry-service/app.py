@@ -2424,30 +2424,45 @@ def analyze_cad():
         aag_stats = {}
         
         try:
-            logger.info(f"[{request_id}] 📊 [SHADOW] Building Attributed Adjacency Graph...")
+            logger.info(f"[{request_id}] 📊 [SHADOW] Building AAG (pythonocc 7.7.2 compatible)...")
             aag_start_time = time.time()
+            
+            # Import the fixed v7.7.2-compatible AAG
+            from enhanced_aag import create_aag, EnhancedAAG
+            
+            # Create AAG with version compatibility
             aag = create_aag(shape)
-            aag_stats = aag.get_statistics()
-            aag_build_time = time.time() - aag_start_time
             
-            logger.info(f"[{request_id}] ✅ [SHADOW] AAG built in {aag_build_time:.3f}s:")
-            logger.info(f"[{request_id}]    📊 Faces: {aag_stats.get('num_faces', 0)}, "
-                       f"Edges: {aag_stats.get('num_edges', 0)}")
-            logger.info(f"[{request_id}]    📊 Concave edges: {aag_stats.get('concave_edges', 0)}, "
-                       f"Convex edges: {aag_stats.get('convex_edges', 0)}")
-            logger.info(f"[{request_id}]    🎯 Potential features (concave cycles): {aag_stats.get('concave_cycles', 0)}")
-            logger.info(f"[{request_id}]    📐 Adaptive tolerance: {aag_stats.get('adaptive_tolerance', 0):.6f}mm")
-            logger.info(f"[{request_id}]    📦 Bounding box diagonal: {aag_stats.get('bounding_box_diagonal', 0):.1f}mm")
-            
-            # Store AAG stats for later database logging
-            aag_stats['build_time_sec'] = aag_build_time
-            aag_stats['algorithm_version'] = 'enhanced_aag_v1.0'
+            if aag:
+                aag_stats = aag.get_statistics()
+                aag_build_time = time.time() - aag_start_time
+                
+                # Log enhanced statistics with version marker
+                logger.info(f"[{request_id}] ✅ [SHADOW] AAG built in {aag_build_time:.3f}s (v7.7.2):")
+                logger.info(f"[{request_id}]    📊 Faces: {aag_stats.get('num_faces', 0)}, "
+                           f"Total edges: {aag_stats.get('num_edges', 0)}")
+                logger.info(f"[{request_id}]    📊 Concave edges: {aag_stats.get('concave_edges', 0)}, "
+                           f"Convex edges: {aag_stats.get('convex_edges', 0)}")
+                logger.info(f"[{request_id}]    🎯 Concave cycles (potential features): {aag_stats.get('concave_cycles', 0)}")
+                logger.info(f"[{request_id}]    📐 Adaptive tolerance: {aag_stats.get('adaptive_tolerance', 0):.2e}")
+                logger.info(f"[{request_id}]    📦 Bounding box diagonal: {aag_stats.get('bounding_box_diagonal', 0):.1f}mm")
+                
+                # Store AAG stats for later database logging
+                aag_stats['build_time_sec'] = aag_build_time
+                aag_stats['algorithm_version'] = 'enhanced_aag_v1.0_772'  # Mark as 7.7.2 compatible
+                
+                # Validation logging (compare AAG cycles vs detected features later)
+                logger.info(f"[{request_id}]    ℹ️  Will compare concave cycles to detected features...")
+            else:
+                logger.warning(f"[{request_id}] ⚠️ [SHADOW] AAG creation returned None")
+                aag_stats = {}
             
         except Exception as e:
             logger.warning(f"[{request_id}] ⚠️ [SHADOW] AAG creation failed: {e}")
-            logger.debug(f"[{request_id}] AAG error traceback:", exc_info=True)
+            import traceback
+            logger.debug(f"[{request_id}] AAG traceback:\n{traceback.format_exc()}")
             aag = None
-            aag_stats = {'error': str(e)}
+            aag_stats = {}
         
         # ====================================================================
         # GEOMETRIC FEATURE RECOGNITION (Tier 1 only)
