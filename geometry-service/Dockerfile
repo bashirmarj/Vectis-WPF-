@@ -1,4 +1,3 @@
-# Use Debian-based Miniconda (has apt-get AND conda)
 FROM continuumio/miniconda3:24.1.2-0
 
 LABEL maintainer="Vectis Machining"
@@ -6,7 +5,7 @@ LABEL version="2.0.0"
 
 WORKDIR /app
 
-# Install system dependencies (Debian-based, so apt-get works)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgl1-mesa-glx \
@@ -17,30 +16,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pythonocc-core via conda (ONLY way to get it)
+# Install pythonocc-core via conda
 RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 && \
     conda clean --all --yes
 
-# Copy requirements and install Python dependencies via pip
+# Copy requirements and install Python dependencies
 COPY requirements.txt .
+
+# Install PyTorch CPU-only version (much smaller than GPU)
+RUN pip install --no-cache-dir torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+
+# Install other dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY *.py .
 
-# Create models directory
+# Create models directory (for BRepNet checkpoints)
 RUN mkdir -p models
 
-# Expose port
 EXPOSE 5000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5000/health')"
 
-# Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV OMP_NUM_THREADS=4
 
-# Run with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "app:app"]
