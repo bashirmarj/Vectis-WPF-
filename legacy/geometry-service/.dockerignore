@@ -1,0 +1,58 @@
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+README_PRODUCTION.md
+DEPLOYMENT.md
+AAGNET_INTEGRATION.md
+*.md
+
+# Development files
+.vscode/
+.idea/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Testing
+tests/
+smoke_tests.py
+*.test.py
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Model training artifacts (keep only the final model)
+training/
+checkpoints/
+runs/
+*.ckpt
+*.pt
+
+# Cache directories
+.cache/
+pip-log.txt
+pip-delete-this-directory.txt
