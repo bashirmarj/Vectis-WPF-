@@ -59,7 +59,7 @@ class AAGNode:
 @dataclass
 class AAGEdge:
     """Edge in the Attributed Adjacency Graph representing face adjacency"""
-    edge: TopoDS_Edge
+    edge_index: int  # Index into EnhancedAAG.edge_map for persistent storage
     edge_id: int
     face1_id: int
     face2_id: int
@@ -90,6 +90,7 @@ class EnhancedAAG:
         self.graph = nx.Graph()
         self.face_nodes: Dict[int, AAGNode] = {}
         self.adjacency_edges: Dict[Tuple[int, int], AAGEdge] = {}
+        self.edge_map: Dict[int, TopoDS_Edge] = {}  # Persistent edge storage
         
         # Build the graph
         self._build_graph()
@@ -237,36 +238,33 @@ class EnhancedAAG:
     def _find_adjacencies_v772(self):
         """
         Find face adjacencies - pythonocc 7.7.2 compatible version.
-        Uses TopExp_Explorer to extract edges (not from the map itself).
+        CRITICAL FIX: Build persistent edge map FIRST, then use edge_face_map only for lookups.
         """
         try:
-            # Build map of edges to faces (for LOOKUPS ONLY)
-            edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-            topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-            
-            # CRITICAL FIX for pythonocc 7.7.2
-            # Use Size() instead of Extent() for 7.7.2 compatibility
-            try:
-                num_edges = edge_face_map.Size()  # 7.7.2 API
-            except AttributeError:
-                # Fallback for different versions
-                try:
-                    num_edges = edge_face_map.Extent()  # 7.9.0 API
-                except:
-                    num_edges = len(edge_face_map)  # Last resort
-            
-            logger.info(f"Processing {num_edges} edges for adjacency")
-            
-            edge_id = 0
-            
-            # CRITICAL FIX: Extract edges from shape, NOT from map
+            # STEP 1: Build persistent edge storage from shape
+            logger.info("Building persistent edge map...")
+            edge_index = 0
             edge_explorer = TopExp_Explorer(self.shape, TopAbs_EDGE)
             
             while edge_explorer.More():
+                edge = topods.Edge(edge_explorer.Current())
+                self.edge_map[edge_index] = edge
+                edge_index += 1
+                edge_explorer.Next()
+            
+            logger.info(f"Built persistent edge map: {len(self.edge_map)} edges")
+            
+            # STEP 2: Build edge-face map (for LOOKUPS ONLY - never extract edges from this)
+            edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+            topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+            
+            logger.info(f"Processing edges for adjacency...")
+            
+            edge_id = 0
+            
+            # STEP 3: Find adjacencies using persistent edges
+            for edge_idx, edge in self.edge_map.items():
                 try:
-                    # Get edge from shape (persistent reference)
-                    edge = topods.Edge(edge_explorer.Current())
-                    
                     # Use map ONLY for lookup
                     if edge_face_map.Contains(edge):
                         face_list = edge_face_map.FindFromKey(edge)
@@ -289,7 +287,7 @@ class EnhancedAAG:
                                 
                                 if key not in self.adjacency_edges:
                                     aag_edge = AAGEdge(
-                                        edge=edge,  # Edge from shape, not from map
+                                        edge_index=edge_idx,  # Store index, not edge object
                                         edge_id=edge_id,
                                         face1_id=face1_id,
                                         face2_id=face2_id
@@ -298,9 +296,7 @@ class EnhancedAAG:
                                     edge_id += 1
                                     
                 except Exception as e:
-                    logger.debug(f"Failed to process edge: {e}")
-                
-                edge_explorer.Next()
+                    logger.debug(f"Failed to process edge {edge_idx}: {e}")
             
             logger.info(f"Found {len(self.adjacency_edges)} adjacency relationships")
             
@@ -319,14 +315,14 @@ class EnhancedAAG:
     def _calculate_edge_attributes(self):
         """
         CRITICAL FIX: Calculate correct signed dihedral angles for edges.
-        This fixes the main bug in VectisMachining.
+        Retrieves edges from persistent edge_map.
         """
         for key, aag_edge in self.adjacency_edges.items():
             try:
                 face1_id, face2_id = key
                 face1 = self.face_nodes[face1_id].face
                 face2 = self.face_nodes[face2_id].face
-                edge = aag_edge.edge
+                edge = self.edge_map[aag_edge.edge_index]  # Get from persistent storage
                 
                 # Calculate edge length
                 aag_edge.length = self._calculate_edge_length(edge)
