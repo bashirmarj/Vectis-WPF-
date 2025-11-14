@@ -1,18 +1,29 @@
-FROM continuumio/miniconda3:23.10.0-1
+# Use pre-built pythonocc image (fastest option)
+FROM tpaviot/oce:7.7.2
 
 WORKDIR /app
 
-# Install pythonocc-core via conda
-RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 numpy && \
-    conda clean --all --yes
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    flask==3.1.0 \
+    flask-cors==4.0.0 \
+    gunicorn==21.2.0 \
+    supabase==2.7.4 \
+    numpy==1.24.4 \
+    networkx==3.2.1 \
+    psutil==5.9.6
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy application code
+COPY *.py .
 
-# Set up the working directory
-WORKDIR /app
+# Create models directory
+RUN mkdir -p models
 
-# Label the image for better organization
-LABEL org.opencontainers.image.source="https://github.com/bashirmarj/vectismachining"
-LABEL org.opencontainers.image.description="Vectis Machining Geometry Service Base Image"
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s \
+    CMD python -c "import requests; requests.get('http://localhost:5000/health')"
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "app:app"]
