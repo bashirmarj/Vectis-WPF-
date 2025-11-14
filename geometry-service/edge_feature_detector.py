@@ -403,13 +403,19 @@ class EdgeFeatureDetector:
             fallback_type = 'blind_hole' if is_blind else 'through_hole'
             taxonomy_def = get_feature_definition(fallback_type)
         
-        # SAFETY NET: Check taxonomy definition and its attributes exist
-        if taxonomy_def and hasattr(taxonomy_def, 'boundary') and taxonomy_def.boundary:
+        # ENHANCED SAFETY NET: Check taxonomy definition and all nested attributes
+        if (taxonomy_def and 
+            hasattr(taxonomy_def, 'boundary') and 
+            taxonomy_def.boundary is not None and
+            hasattr(taxonomy_def.boundary, 'value')):
             boundary_value = taxonomy_def.boundary.value
         else:
             boundary_value = 'blind' if is_blind else 'through'
         
-        if taxonomy_def and hasattr(taxonomy_def, 'profile') and taxonomy_def.profile:
+        if (taxonomy_def and 
+            hasattr(taxonomy_def, 'profile') and 
+            taxonomy_def.profile is not None and
+            hasattr(taxonomy_def.profile, 'value')):
             profile_value = taxonomy_def.profile.value
         else:
             profile_value = 'circular'
