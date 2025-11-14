@@ -35,7 +35,7 @@ from OCC.Core.GeomAPI import GeomAPI_ProjectPointOnSurf
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
-from OCC.Core.TopExp import TopExp
+from OCC.Core.TopExp import topexp
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +241,7 @@ class EnhancedAAG:
         try:
             # Build map of edges to faces
             edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-            TopExp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+            topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
             
             # CRITICAL FIX for pythonocc 7.7.2
             # Use Size() instead of Extent() for 7.7.2 compatibility

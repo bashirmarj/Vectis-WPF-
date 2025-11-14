@@ -19,7 +19,7 @@ from dataclasses import dataclass, asdict
 from collections import defaultdict
 
 from OCC.Core.TopoDS import TopoDS_Edge, TopoDS_Face, topods
-from OCC.Core.TopExp import TopExp_Explorer, TopExp
+from OCC.Core.TopExp import TopExp_Explorer, topexp
 from OCC.Core.TopAbs import TopAbs_EDGE, TopAbs_FACE, TopAbs_VERTEX
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
 from OCC.Core.GeomAbs import (
@@ -135,7 +135,7 @@ class EnhancedEdgeExtractor:
         
         # Build edge-face map using TopExp
         self.edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-        TopExp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, self.edge_face_map)
+        topexp.MapShapesAndAncestors(self.shape, TopAbs_EDGE, TopAbs_FACE, self.edge_face_map)
         
         # Collect edges
         edge_idx = 0
