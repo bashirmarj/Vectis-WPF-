@@ -33,7 +33,7 @@ from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.GeomAPI import GeomAPI_ProjectPointOnSurf
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
+from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
 from OCC.Core.TopExp import topexp
 
@@ -173,7 +173,7 @@ class EnhancedAAG:
             
             # Calculate area
             props = GProp_GProps()
-            brepgprop_SurfaceProperties(face, props)
+            brepgprop.SurfaceProperties(face, props)
             area = props.Mass()
             
             # Determine surface type
