@@ -1,33 +1,27 @@
-FROM python:3.11-slim-bullseye
+# Use Debian-based Miniconda (has apt-get AND conda)
+FROM continuumio/miniconda3:24.1.2-0
 
 LABEL maintainer="Vectis Machining"
 LABEL version="2.0.0"
 
 WORKDIR /app
 
-# Install system dependencies for pythonocc
+# Install system dependencies (Debian-based, so apt-get works)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    cmake \
-    git \
     libgl1-mesa-glx \
-    libgl1-mesa-dev \
     libglu1-mesa \
-    libglu1-mesa-dev \
     libgomp1 \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# Install pythonocc-core via conda (ONLY way to get it)
+RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 && \
+    conda clean --all --yes
 
-# Install pythonocc-core first (takes longest)
-RUN pip install --no-cache-dir pythonocc-core==7.7.2
-
-# Copy and install requirements
+# Copy requirements and install Python dependencies via pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -37,12 +31,16 @@ COPY *.py .
 # Create models directory
 RUN mkdir -p models
 
+# Expose port
 EXPOSE 5000
 
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5000/health')"
 
+# Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV OMP_NUM_THREADS=4
 
+# Run with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "app:app"]
