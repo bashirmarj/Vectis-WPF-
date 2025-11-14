@@ -1,0 +1,18 @@
+FROM continuumio/miniconda3:23.10.0-1
+
+WORKDIR /app
+
+# Install pythonocc-core via conda
+RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 numpy && \
+    conda clean --all --yes
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Set up the working directory
+WORKDIR /app
+
+# Label the image for better organization
+LABEL org.opencontainers.image.source="https://github.com/bashirmarj/vectismachining"
+LABEL org.opencontainers.image.description="Vectis Machining Geometry Service Base Image"
