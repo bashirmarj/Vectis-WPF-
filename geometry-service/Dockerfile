@@ -17,22 +17,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pythonocc-core via conda
-RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 && \
+RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 numpy && \
     conda clean --all --yes
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-
-# Install PyTorch CPU-only version (much smaller than GPU)
+# Install PyTorch CPU-only (before requirements.txt)
 RUN pip install --no-cache-dir torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
 
-# Install other dependencies
+# Copy requirements and install (without occwl)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY *.py .
+# Copy ALL application code (including occwl folder if it exists)
+COPY . .
 
-# Create models directory (for BRepNet checkpoints)
+# Create models directory
 RUN mkdir -p models
 
 EXPOSE 5000
