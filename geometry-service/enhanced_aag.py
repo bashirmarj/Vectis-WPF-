@@ -501,13 +501,12 @@ class EnhancedAAG:
         return gp_Vec(0, 0, 1)
     
     def _calculate_edge_length(self, edge: TopoDS_Edge) -> float:
-        """Calculate the length of an edge"""
+        """Calculate the length of an edge using pythonocc 7.7.2 compatible method"""
         try:
-            curve = BRepAdaptor_Curve(edge)
-            # For pythonocc 7.7.2, use GCPnts_AbscissaPoint for accurate length
-            from OCC.Core.GCPnts import GCPnts_AbscissaPoint
-            length = GCPnts_AbscissaPoint.Length(curve)
-            return length
+            # Use brepgprop.LinearProperties (memory-safe in 7.7.2)
+            props = GProp_GProps()
+            brepgprop.LinearProperties(edge, props)
+            return props.Mass()
         except:
             try:
                 # Fallback: parameter range approximation
