@@ -12,8 +12,14 @@ supabase==2.7.4
 # ONNX Runtime for ML inference (CPU-optimized)
 onnxruntime==1.16.3
 
-# PyTorch (required for ONNX model loading utilities)
+# PyTorch (required for ONNX model loading utilities and PyTorch Lightning)
 torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+
+# PyTorch Lightning for checkpoint loading
+pytorch-lightning==2.0.9
+
+# OCCWL for advanced B-rep operations
+occwl>=1.0.0
 
 # Scientific computing
 numpy==1.24.4
