@@ -6,13 +6,9 @@ gunicorn==21.2.0
 # Database client
 supabase==2.7.4
 
-# ML/AI dependencies (for BRepNet)
-torch==2.1.0
+# ML dependencies (PyTorch installed separately in Dockerfile)
 pytorch-lightning==2.0.9
 onnxruntime==1.16.3
-
-# OCCWL for B-rep operations
-occwl>=1.0.0
 
 # Scientific computing
 numpy==1.24.4
@@ -22,3 +18,7 @@ networkx==3.2.1
 
 # Monitoring
 psutil==5.9.6
+
+# NOTE: torch installed separately in Dockerfile (CPU-only for smaller size)
+# NOTE: pythonocc-core installed via conda
+# NOTE: occwl is a local folder, imported via PYTHONPATH
