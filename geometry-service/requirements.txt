@@ -7,7 +7,7 @@ gunicorn==21.2.0
 supabase==2.7.4
 
 # ML dependencies (PyTorch installed separately in Dockerfile)
-pytorch-lightning==2.0.9
+pytorch-lightning==2.1.0
 onnxruntime==1.16.3
 
 # Scientific computing
