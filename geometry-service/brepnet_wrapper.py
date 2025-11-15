@@ -141,7 +141,7 @@ class BRepNetRecognizer:
         
         # Set/override critical attributes with proper defaults
         opts.kernel = hyper_params.get('kernel', kernel_file)  # NOT kernel_filename
-        opts.input_features = hyper_params.get('input_features', 'simple_edge.json')
+        opts.input_features = hyper_params.get('input_features', 'all.json')
         opts.num_classes = hyper_params.get('num_classes', 24)
         opts.num_layers = hyper_params.get('num_layers', 5)
         opts.num_mlp_layers = hyper_params.get('num_mlp_layers', 3)
