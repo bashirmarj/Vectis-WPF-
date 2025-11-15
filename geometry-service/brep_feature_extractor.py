@@ -288,7 +288,7 @@ class BRepFeatureExtractor:
         grids = []
         
         for edge, _ in coedges:
-            curve = BRepAdaptor_Curve(edge)
+            curve = BRepAdaptor_Curve(edge.topods_shape())
             grid = np.zeros((12, 10), dtype=np.float32)
             
             t_min = curve.FirstParameter()
