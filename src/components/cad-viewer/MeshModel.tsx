@@ -14,6 +14,7 @@ interface MeshData {
   vertex_colors?: string[];
   triangle_count: number;
   feature_edges?: number[][][];
+  vertex_face_ids?: number[];
   tagged_edges?: Array<{
     feature_id: number;
     start: [number, number, number];
@@ -33,6 +34,9 @@ interface MeshModelProps {
   topologyColors?: boolean;
   useSilhouetteEdges?: boolean;
   controlsRef?: React.RefObject<any>;
+  highlightedFaceIds?: number[];
+  highlightColor?: string;
+  highlightIntensity?: number;
 }
 
 // Professional solid color for CAD rendering
@@ -65,6 +69,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       topologyColors = false,
       useSilhouetteEdges = false,
       controlsRef,
+      highlightedFaceIds = [],
+      highlightColor = "#FFD700",
+      highlightIntensity = 0.7,
     },
     ref,
   ) => {
@@ -94,16 +101,19 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     })();
 
-    // Apply vertex colors to indexed geometry
+    // Apply vertex colors to indexed geometry with highlighting support
     useEffect(() => {
       if (!geometry) return;
 
-      if (topologyColors) {
-        if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
-          // Apply colors to vertices (not triangles)
-          const vertexCount = meshData.vertices.length / 3;
-          const colors = new Float32Array(vertexCount * 3);
+      const vertexCount = meshData.vertices.length / 3;
+      const colors = new Float32Array(vertexCount * 3);
+      const baseColor = new THREE.Color(SOLID_COLOR);
+      const highlightColorObj = new THREE.Color(highlightColor);
+      const highlightSet = new Set(highlightedFaceIds);
 
+      if (topologyColors && !highlightSet.size) {
+        // Topology color mode (only when no highlighting)
+        if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
           for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
             const faceType = meshData.vertex_colors[vertexIdx] || "default";
             const colorHex = TOPOLOGY_COLORS[faceType as keyof typeof TOPOLOGY_COLORS] || TOPOLOGY_COLORS.default;
@@ -113,30 +123,37 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             colors[vertexIdx * 3 + 1] = color.g;
             colors[vertexIdx * 3 + 2] = color.b;
           }
+        }
+        
+        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        geometry.attributes.color.needsUpdate = true;
+      } else {
+        // Solid color mode with optional highlighting
+        for (let i = 0; i < vertexCount; i++) {
+          let finalColor = baseColor.clone();
 
-          geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-          geometry.attributes.color.needsUpdate = true;
-        } else {
-          // No colors provided, use solid color
-          const vertexCount = meshData.vertices.length / 3;
-          const colors = new Float32Array(vertexCount * 3);
-          const solidColor = new THREE.Color(SOLID_COLOR);
-
-          for (let i = 0; i < vertexCount; i++) {
-            colors[i * 3] = solidColor.r;
-            colors[i * 3 + 1] = solidColor.g;
-            colors[i * 3 + 2] = solidColor.b;
+          // Check if this vertex belongs to a highlighted face
+          if (meshData.vertex_face_ids && highlightSet.size > 0) {
+            const faceId = meshData.vertex_face_ids[i];
+            
+            if (faceId !== undefined && highlightSet.has(faceId)) {
+              // Blend highlight color with base color
+              finalColor = baseColor.clone().lerp(highlightColorObj, highlightIntensity);
+            } else {
+              // Dim non-highlighted faces
+              finalColor = baseColor.clone().multiplyScalar(0.4);
+            }
           }
 
-          geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-          geometry.attributes.color.needsUpdate = true;
+          colors[i * 3 + 0] = finalColor.r;
+          colors[i * 3 + 1] = finalColor.g;
+          colors[i * 3 + 2] = finalColor.b;
         }
-      } else {
-        if (geometry?.attributes?.color) {
-          geometry.deleteAttribute("color");
-        }
+
+        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        geometry.attributes.color.needsUpdate = true;
       }
-    }, [topologyColors]);
+    }, [geometry, topologyColors, meshData.vertex_colors, meshData.vertex_face_ids, highlightedFaceIds, highlightColor, highlightIntensity]);
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {

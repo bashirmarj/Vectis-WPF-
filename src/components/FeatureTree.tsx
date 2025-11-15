@@ -39,6 +39,7 @@ interface GeometricFeatures {
 interface FeatureTreeProps {
   features: GeometricFeatures | null | undefined;
   onFeatureSelect?: (featureInstance: FeatureInstance) => void;
+  selectedFeature?: FeatureInstance | null;
 }
 
 // Feature type to display name mapping (supports 60+ taxonomy + legacy)
@@ -298,7 +299,8 @@ const getConfidenceBadge = (confidence: number): string => {
 
 const FeatureTree: React.FC<FeatureTreeProps> = ({ 
   features,
-  onFeatureSelect 
+  onFeatureSelect,
+  selectedFeature 
 }) => {
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
@@ -481,11 +483,15 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       <ScrollArea className="h-[500px]">
         <div className="divide-y divide-border">
           {numberedFeatures.map(({ instance, displayName, icon: Icon }, idx) => (
-            <div
-              key={`${displayName}-${idx}`}
-              onClick={() => onFeatureSelect?.(instance)}
-              className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/50 cursor-pointer transition-colors"
-            >
+                <div 
+                  key={`${displayName}-${idx}`}
+                  onClick={() => onFeatureSelect?.(instance)}
+                  className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${
+                    selectedFeature === instance 
+                      ? 'bg-primary/20 border-l-2 border-primary' 
+                      : 'hover:bg-accent/50'
+                  }`}
+                >
               <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="text-sm font-medium text-foreground flex-1">
                 {displayName}
