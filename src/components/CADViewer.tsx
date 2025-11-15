@@ -245,6 +245,13 @@ export function CADViewer({
   // Set predefined view
   // Feature selection callback
   const handleFeatureSelect = useCallback((feature: any) => {
+    console.log("🎯 Feature selected:", feature);
+    console.log("📋 Feature face IDs:", {
+      face_indices: feature.face_indices,
+      bottom_faces: feature.bottom_faces,
+      total: [...(feature.face_indices || []), ...(feature.bottom_faces || [])].length
+    });
+    
     setSelectedFeature(feature);
     
     // Collect all face indices from the feature
@@ -253,6 +260,7 @@ export function CADViewer({
       ...(feature.bottom_faces || [])
     ];
     
+    console.log("🔦 Highlighting face IDs:", faceIds);
     setHighlightedFaceIds(faceIds);
   }, []);
 
@@ -581,6 +589,9 @@ export function CADViewer({
                   sectionPosition={sectionPosition}
                   useSilhouetteEdges={displayMode === "wireframe"}
                   controlsRef={controlsRef}
+                  highlightedFaceIds={highlightedFaceIds}
+                  highlightColor="#FFD700"
+                  highlightIntensity={0.7}
                 />
 
                 <DimensionAnnotations boundingBox={boundingBox} />
