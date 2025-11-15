@@ -99,6 +99,10 @@ export function CADViewer({
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
   const [showSolidEdges, setShowSolidEdges] = useState(true);
   const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
+  
+  // Feature highlighting state
+  const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
+  const [highlightedFaceIds, setHighlightedFaceIds] = useState<number[]>([]);
 
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
@@ -239,6 +243,19 @@ export function CADViewer({
   }, [fileUrl, fileName]);
 
   // Set predefined view
+  // Feature selection callback
+  const handleFeatureSelect = useCallback((feature: any) => {
+    setSelectedFeature(feature);
+    
+    // Collect all face indices from the feature
+    const faceIds = [
+      ...(feature.face_indices || []),
+      ...(feature.bottom_faces || [])
+    ];
+    
+    setHighlightedFaceIds(faceIds);
+  }, []);
+
   const handleSetView = useCallback(
     (view: "front" | "back" | "left" | "right" | "top" | "bottom" | "isometric") => {
       if (!cameraRef.current || !controlsRef.current) return;
@@ -467,7 +484,11 @@ export function CADViewer({
               <>
                 <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
                   <div className="h-full overflow-hidden">
-                    <FeatureTree features={geometricFeatures} />
+                    <FeatureTree 
+                      features={geometricFeatures} 
+                      onFeatureSelect={handleFeatureSelect}
+                      selectedFeature={selectedFeature}
+                    />
                   </div>
                 </ResizablePanel>
                 <ResizableHandle withHandle />
