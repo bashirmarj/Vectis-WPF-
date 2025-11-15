@@ -108,7 +108,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const vertexCount = meshData.vertices.length / 3;
       const colors = new Float32Array(vertexCount * 3);
       const baseColor = new THREE.Color(SOLID_COLOR);
-      const highlightColorObj = new THREE.Color(highlightColor);
+      const highlightColorObj = new THREE.Color(highlightColor || "#FFD700");
       const highlightSet = new Set(highlightedFaceIds);
 
       if (topologyColors && !highlightSet.size) {
@@ -130,19 +130,20 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       } else {
         // Solid color mode with optional highlighting
         for (let i = 0; i < vertexCount; i++) {
-          let finalColor = baseColor.clone();
-
-          // Check if this vertex belongs to a highlighted face
-          if (meshData.vertex_face_ids && highlightSet.size > 0) {
+          let finalColor = baseColor;
+          
+          // Apply highlighting if vertex_face_ids is available
+          if (meshData.vertex_face_ids) {
             const faceId = meshData.vertex_face_ids[i];
             
-            if (faceId !== undefined && highlightSet.has(faceId)) {
-              // Blend highlight color with base color
+            if (highlightSet.size > 0 && faceId !== undefined && highlightSet.has(faceId)) {
+              // Highlighted face
               finalColor = baseColor.clone().lerp(highlightColorObj, highlightIntensity);
-            } else {
-              // Dim non-highlighted faces
+            } else if (highlightSet.size > 0) {
+              // Dimmed face (when something else is highlighted)
               finalColor = baseColor.clone().multiplyScalar(0.4);
             }
+            // else: finalColor remains baseColor (no highlighting active)
           }
 
           colors[i * 3 + 0] = finalColor.r;
@@ -387,7 +388,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           <meshStandardMaterial
             {...materialProps}
             color={topologyColors ? "#ffffff" : SOLID_COLOR}
-            vertexColors={topologyColors}
+            vertexColors={topologyColors || highlightedFaceIds.length > 0}
             flatShading={true}
             toneMapped={false}
             metalness={0.1}

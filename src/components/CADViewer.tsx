@@ -246,21 +246,9 @@ export function CADViewer({
   // Feature selection callback
   const handleFeatureSelect = useCallback((feature: any) => {
     console.log("🎯 Feature selected:", feature);
-    console.log("📋 Feature face IDs:", {
-      face_indices: feature.face_indices,
-      bottom_faces: feature.bottom_faces,
-      total: [...(feature.face_indices || []), ...(feature.bottom_faces || [])].length
-    });
-    
-    setSelectedFeature(feature);
-    
-    // Collect all face indices from the feature
-    const faceIds = [
-      ...(feature.face_indices || []),
-      ...(feature.bottom_faces || [])
-    ];
-    
+    const faceIds = feature.face_ids || [];
     console.log("🔦 Highlighting face IDs:", faceIds);
+    setSelectedFeature(feature);
     setHighlightedFaceIds(faceIds);
   }, []);
 
