@@ -408,11 +408,15 @@ class BRepNetRecognizer:
         
         BRepNet outputs per-face classifications (24 classes)
         """
+        logger.info(f"[BRepNet DEBUG] Parsing predictions - tensor shape: {predictions.shape}, dtype: {predictions.dtype}")
+        
         predictions_np = predictions.cpu().numpy()
         
         # Apply softmax to get probabilities
         exp_preds = np.exp(predictions_np - np.max(predictions_np, axis=-1, keepdims=True))
         probabilities = exp_preds / np.sum(exp_preds, axis=-1, keepdims=True)
+        
+        logger.info(f"[BRepNet DEBUG] Probabilities after softmax - shape: {probabilities.shape}, min: {np.min(probabilities):.6f}, max: {np.max(probabilities):.6f}")
         
         features = []
         
@@ -426,7 +430,15 @@ class BRepNetRecognizer:
         
         # DEBUG: Log prediction shape and class range
         max_class_predicted = int(np.max(np.argmax(batch_probs, axis=-1)))
+        min_confidence = float(np.min(np.max(batch_probs, axis=-1)))
+        max_confidence = float(np.max(np.max(batch_probs, axis=-1)))
+        avg_confidence = float(np.mean(np.max(batch_probs, axis=-1)))
+        
         logger.info(f"[BRepNet DEBUG] Predictions shape: {batch_probs.shape}, num_classes: {batch_probs.shape[-1]}, max_class_id: {max_class_predicted}")
+        logger.info(f"[BRepNet DEBUG] Confidence stats - min: {min_confidence:.3f}, max: {max_confidence:.3f}, avg: {avg_confidence:.3f}, threshold: {self.confidence_threshold}")
+        
+        features_above_threshold = 0
+        features_below_threshold = 0
         
         for face_idx in range(num_faces):
             face_probs = batch_probs[face_idx, :]
@@ -434,8 +446,9 @@ class BRepNetRecognizer:
             confidence = float(face_probs[predicted_class])
             mapped_type = self._class_to_feature_type(predicted_class)
             
-            # DEBUG: Log each face prediction
-            logger.info(f"[BRepNet DEBUG] Face {face_idx}: class_id={predicted_class}, confidence={confidence:.3f}, mapped_type='{mapped_type}'")
+            # Only log first 5 faces to avoid spam
+            if face_idx < 5:
+                logger.info(f"[BRepNet DEBUG] Face {face_idx}: class_id={predicted_class}, confidence={confidence:.3f}, mapped_type='{mapped_type}'")
             
             if confidence >= self.confidence_threshold:
                 feature = {
@@ -446,9 +459,15 @@ class BRepNetRecognizer:
                     'ml_detected': True
                 }
                 features.append(feature)
-                logger.info(f"[BRepNet DEBUG] ✓ Feature added: {mapped_type} (confidence {confidence:.3f})")
+                features_above_threshold += 1
+                if face_idx < 5:
+                    logger.info(f"[BRepNet DEBUG] ✓ Feature added: {mapped_type} (confidence {confidence:.3f})")
             else:
-                logger.info(f"[BRepNet DEBUG] ✗ Feature skipped: {mapped_type} (confidence {confidence:.3f} < threshold {self.confidence_threshold})")
+                features_below_threshold += 1
+                if face_idx < 5:
+                    logger.info(f"[BRepNet DEBUG] ✗ Feature skipped: {mapped_type} (confidence {confidence:.3f} < threshold {self.confidence_threshold})")
+        
+        logger.info(f"[BRepNet DEBUG] Summary: {features_above_threshold} features above threshold, {features_below_threshold} features below threshold")
         
         return features
     
