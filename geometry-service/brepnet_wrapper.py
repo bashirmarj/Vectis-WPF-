@@ -349,10 +349,15 @@ class BRepNetRecognizer:
         model_inputs = {}
         for short_key, descriptive_key in key_mapping.items():
             if short_key in brep_tensors:
-                # Kernel tensors must be long (int64), feature tensors are float
-                if short_key in kernel_keys:
+                # Special handling for Csf (list of variable-length arrays)
+                if short_key == 'Csf':
+                    # Convert list of arrays to list of tensors
+                    tensor = [torch.from_numpy(arr).long() for arr in brep_tensors[short_key]]
+                elif short_key in kernel_keys:
+                    # Kernel tensors must be long (int64)
                     tensor = torch.from_numpy(brep_tensors[short_key]).long()
                 else:
+                    # Feature tensors are float
                     tensor = torch.from_numpy(brep_tensors[short_key]).float()
                 model_inputs[descriptive_key] = tensor
             else:
