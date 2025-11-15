@@ -429,14 +429,24 @@ class BRepFeatureExtractor:
         """
         Map coedges to faces
         
-        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
-        
         Returns:
-            Cf: Coedges of small faces
-            Csf: Coedges of big faces
+            Cf: [num_faces, max_coedges] array of coedge indices for each face
+            Csf: Same as Cf
         """
-        # Simplified implementation
-        Cf = np.array(coedge_to_face, dtype=np.int64)
-        Csf = np.array(coedge_to_face, dtype=np.int64)
+        # Group coedges by face
+        face_to_coedges = [[] for _ in range(num_faces)]
+        for coedge_idx, face_idx in enumerate(coedge_to_face):
+            face_to_coedges[face_idx].append(coedge_idx)
+        
+        # Find max coedges per face
+        max_coedges = max(len(coedges) for coedges in face_to_coedges) if face_to_coedges else 1
+        
+        # Create padded 2D array: [num_faces, max_coedges_per_face]
+        Cf = np.zeros((num_faces, max_coedges), dtype=np.int64)
+        for face_idx, coedge_list in enumerate(face_to_coedges):
+            for i, coedge_idx in enumerate(coedge_list):
+                Cf[face_idx, i] = coedge_idx
+        
+        Csf = Cf.copy()
         
         return Cf, Csf
