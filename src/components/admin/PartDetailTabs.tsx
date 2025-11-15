@@ -97,6 +97,7 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
               <CADViewer
                 fileName={lineItem.file_name}
                 fileUrl={lineItem.file_path}
+                geometricFeatures={featureTree?.geometric_features || null}
               />
             </div>
           </TabsContent>
