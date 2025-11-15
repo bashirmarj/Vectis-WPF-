@@ -323,20 +323,40 @@ class BRepNetRecognizer:
     def _recognize_with_pytorch(self, shape: TopoDS_Shape, face_mapping: Dict[int, Dict]) -> List[Dict]:
         """Run recognition using PyTorch model with full BRepNet pipeline"""
         
-        # Step 1: Extract BRepNet input tensors
+        # Step 1: Extract BRepNet input tensors (returns short keys)
         brep_tensors = self.feature_extractor.extract_features(shape)
         
-        # Step 2: Convert to PyTorch tensors
+        # Step 2: Map short keys to descriptive keys expected by BRepNet
+        key_mapping = {
+            'Xf': 'face_features',
+            'Gf': 'face_point_grids',
+            'Xe': 'edge_features',
+            'Ge': 'edge_point_grids',
+            'Xc': 'coedge_features',
+            'Gc': 'coedge_point_grids',
+            'Kf': 'face_kernel_tensor',
+            'Ke': 'edge_kernel_tensor',
+            'Kc': 'coedge_kernel_tensor',
+            'Ce': 'coedges_of_edges',
+            'Cf': 'coedges_of_small_faces',
+            'Csf': 'coedges_of_big_faces'
+        }
+        
+        # Step 3: Rename keys and convert to PyTorch tensors
         model_inputs = {}
-        for key, val in brep_tensors.items():
-            tensor = torch.from_numpy(val).float()
-            if len(tensor.shape) == 1:
-                tensor = tensor.unsqueeze(0)
-            elif len(tensor.shape) == 2:
-                tensor = tensor.unsqueeze(0)
-            elif len(tensor.shape) == 3:
-                tensor = tensor.unsqueeze(0)
-            model_inputs[key] = tensor
+        for short_key, descriptive_key in key_mapping.items():
+            if short_key in brep_tensors:
+                tensor = torch.from_numpy(brep_tensors[short_key]).float()
+                # Add batch dimension if needed
+                if len(tensor.shape) == 1:
+                    tensor = tensor.unsqueeze(0)
+                elif len(tensor.shape) == 2:
+                    tensor = tensor.unsqueeze(0)
+                elif len(tensor.shape) == 3:
+                    tensor = tensor.unsqueeze(0)
+                model_inputs[descriptive_key] = tensor
+            else:
+                logger.warning(f"Missing expected tensor: {short_key}")
         
         if self.device == 'cuda':
             model_inputs = {k: v.cuda() for k, v in model_inputs.items()}
