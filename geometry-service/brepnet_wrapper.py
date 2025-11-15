@@ -160,6 +160,10 @@ class BRepNetRecognizer:
         opts.curve_embedding_size = hyper_params.get('curve_embedding_size', 64)
         opts.surf_embedding_size = hyper_params.get('surf_embedding_size', 64)
         
+        # Optional attributes for segment names (used for training statistics, not needed for inference)
+        opts.segment_names = hyper_params.get('segment_names', None)
+        opts.dataset_dir = hyper_params.get('dataset_dir', '.')
+        
         # Create model and load weights
         try:
             self.model = BRepNet(opts)
