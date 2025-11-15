@@ -344,12 +344,11 @@ class BRepNetRecognizer:
         # Step 3: Run inference
         with torch.no_grad():
             try:
+                # brepnet_step expects (batch_dict, batch_idx, save_segmentation_output)
                 predictions = self.model.brepnet_step(
-                    model_inputs['Xf'], model_inputs['Gf'],
-                    model_inputs['Xe'], model_inputs['Ge'],
-                    model_inputs['Xc'], model_inputs['Gc'],
-                    model_inputs['Kf'], model_inputs['Ke'], model_inputs['Kc'],
-                    model_inputs['Ce'], model_inputs['Cf'], model_inputs['Csf']
+                    model_inputs, 
+                    batch_idx=0,  # Single inference, not batched training
+                    save_segmentation_output=False
                 )
             except Exception as e:
                 logger.error(f"BRepNet inference failed: {e}", exc_info=True)
