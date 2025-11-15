@@ -22,7 +22,7 @@ networkx==3.2.1
 psutil==5.9.6
 
 # OCCWL dependency
-deprecate==0.7.0
+deprecate==1.0.5
 
 # NOTE: torch installed separately in Dockerfile (CPU-only for smaller size)
 # NOTE: pythonocc-core installed via conda
