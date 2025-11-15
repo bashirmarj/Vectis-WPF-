@@ -16,6 +16,8 @@ numpy==1.24.4
 # Graph operations
 networkx==3.2.1
 
+# NOTE: occwl is a local folder in geometry-service, not a pip package
+
 # Monitoring
 psutil==5.9.6
 
