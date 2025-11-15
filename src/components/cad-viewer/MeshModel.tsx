@@ -148,8 +148,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
             // Backend handles edge-level deduplication - render all segments
             featureEdgePositions.push(
-              edge.start[0], edge.start[1], edge.start[2],
-              edge.end[0], edge.end[1], edge.end[2]
+              edge.start[0],
+              edge.start[1],
+              edge.start[2],
+              edge.end[0],
+              edge.end[1],
+              edge.end[2],
             );
           }
         });
@@ -287,7 +291,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     })();
 
     // Clean edge geometry for both solid and wireframe modes - NO CACHING
-    const cleanEdgesGeometry = geometry?.attributes?.position ? new THREE.EdgesGeometry(geometry, 1) : new THREE.BufferGeometry();
+    const cleanEdgesGeometry = geometry?.attributes?.position
+      ? new THREE.EdgesGeometry(geometry, 1)
+      : new THREE.BufferGeometry();
 
     // Section plane - NO CACHING
     const clippingPlane = (() => {
@@ -365,7 +371,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             {...materialProps}
             color={topologyColors ? "#ffffff" : SOLID_COLOR}
             vertexColors={topologyColors}
-            flatShading={false}
+            flatShading={true}
             toneMapped={false}
             metalness={0.1}
             roughness={0.6}
