@@ -122,36 +122,47 @@ class BRepNetRecognizer:
         if not state_dict:
             raise ValueError("Checkpoint does not contain 'state_dict'")
         
-        # Load kernel configuration
-        kernel_file = hyper_params.get('kernel_filename', 'winged_edge_plus_plus.json')
-        try:
-            kernel_data = load_json_data(kernel_file)
-            logger.info(f"✅ Loaded kernel config: {kernel_file}")
-        except Exception as e:
-            logger.warning(f"Failed to load {kernel_file}, trying default...")
-            try:
-                kernel_data = load_json_data('winged_edge_plus_plus.json')
-            except Exception as e2:
-                raise RuntimeError(f"Failed to load kernel configuration: {e2}")
+        # Verify kernel configuration exists
+        kernel_file = hyper_params.get('kernel', hyper_params.get('kernel_filename', 'winged_edge_plus_plus.json'))
+        kernel_path = kernel_file if os.path.exists(kernel_file) else f"/app/{kernel_file}"
+        if not os.path.exists(kernel_path):
+            raise RuntimeError(f"Kernel configuration not found: {kernel_file}")
+        logger.info(f"✅ Using kernel config: {kernel_file}")
         
         # Reconstruct opts object from hyper_parameters
         class Opts:
             pass
         
         opts = Opts()
-        # Set default values
-        opts.num_layers = hyper_params.get('num_layers', 5)
-        opts.num_features = hyper_params.get('num_features', 64)
-        opts.use_graph_conv = hyper_params.get('use_graph_conv', True)
-        opts.kernel_filename = kernel_file
         
-        # Copy all hyperparameters to opts
+        # Copy all hyperparameters from checkpoint first
         for key, value in hyper_params.items():
             setattr(opts, key, value)
         
+        # Set/override critical attributes with proper defaults
+        opts.kernel = hyper_params.get('kernel', kernel_file)  # NOT kernel_filename
+        opts.input_features = hyper_params.get('input_features', 'simple_edge.json')
+        opts.num_classes = hyper_params.get('num_classes', 24)
+        opts.num_layers = hyper_params.get('num_layers', 5)
+        opts.num_mlp_layers = hyper_params.get('num_mlp_layers', 3)
+        opts.num_filters = hyper_params.get('num_filters', 64)
+        opts.dropout = hyper_params.get('dropout', 0.0)
+        
+        # Feature usage flags
+        opts.use_face_grids = hyper_params.get('use_face_grids', True)
+        opts.use_edge_grids = hyper_params.get('use_edge_grids', True)
+        opts.use_coedge_grids = hyper_params.get('use_coedge_grids', False)
+        opts.use_face_features = hyper_params.get('use_face_features', True)
+        opts.use_edge_features = hyper_params.get('use_edge_features', True)
+        opts.use_coedge_features = hyper_params.get('use_coedge_features', True)
+        
+        # Embedding sizes
+        opts.curve_embedding_size = hyper_params.get('curve_embedding_size', 64)
+        opts.surf_embedding_size = hyper_params.get('surf_embedding_size', 64)
+        
         # Create model and load weights
         try:
-            self.model = BRepNet(opts, kernel_data)
+            self.model = BRepNet(opts)
             self.model.load_state_dict(state_dict, strict=False)
             self.model.eval()
             
