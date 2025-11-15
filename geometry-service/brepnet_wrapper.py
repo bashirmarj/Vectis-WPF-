@@ -122,6 +122,36 @@ class BRepNetRecognizer:
         if not state_dict:
             raise ValueError("Checkpoint does not contain 'state_dict'")
         
+        # Log checkpoint contents for debugging
+        logger.info(f"📊 Checkpoint hyper_parameters keys: {list(hyper_params.keys())}")
+        logger.info(f"🔍 Critical params from checkpoint:")
+        logger.info(f"   - num_classes: {hyper_params.get('num_classes', 'NOT FOUND')}")
+        logger.info(f"   - num_filters: {hyper_params.get('num_filters', 'NOT FOUND')}")
+        logger.info(f"   - input_features: {hyper_params.get('input_features', 'NOT FOUND')}")
+        logger.info(f"   - use_face_features: {hyper_params.get('use_face_features', 'NOT FOUND')}")
+        logger.info(f"   - use_edge_features: {hyper_params.get('use_edge_features', 'NOT FOUND')}")
+        
+        # Infer missing critical parameters from state_dict if not in hyper_params
+        if 'num_filters' not in hyper_params:
+            # Layer 0 MLP first layer bias shape = num_filters
+            if 'layers.0.mlp.mlp.linear_0.bias' in state_dict:
+                num_filters_inferred = state_dict['layers.0.mlp.mlp.linear_0.bias'].shape[0]
+                hyper_params['num_filters'] = num_filters_inferred
+                logger.info(f"🔧 Inferred num_filters={num_filters_inferred} from state_dict")
+        
+        if 'num_classes' not in hyper_params:
+            # Classification layer bias shape = num_classes
+            if 'classification_layer.bias' in state_dict:
+                num_classes_inferred = state_dict['classification_layer.bias'].shape[0]
+                hyper_params['num_classes'] = num_classes_inferred
+                logger.info(f"🔧 Inferred num_classes={num_classes_inferred} from state_dict")
+        
+        # Infer input feature dimension to determine which feature config to use
+        input_dim_inferred = None
+        if 'layers.0.mlp.mlp.linear_0.weight' in state_dict:
+            input_dim_inferred = state_dict['layers.0.mlp.mlp.linear_0.weight'].shape[1]
+            logger.info(f"🔧 Model expects input dimension: {input_dim_inferred}")
+        
         # Verify kernel configuration exists
         kernel_file = hyper_params.get('kernel', hyper_params.get('kernel_filename', 'winged_edge_plus_plus.json'))
         kernel_path = kernel_file if os.path.exists(kernel_file) else f"/app/{kernel_file}"
@@ -139,30 +169,66 @@ class BRepNetRecognizer:
         for key, value in hyper_params.items():
             setattr(opts, key, value)
         
-        # Set/override critical attributes with proper defaults
-        opts.kernel = hyper_params.get('kernel', kernel_file)  # NOT kernel_filename
-        opts.input_features = hyper_params.get('input_features', 'all.json')
-        opts.num_classes = hyper_params.get('num_classes', 24)
-        opts.num_layers = hyper_params.get('num_layers', 5)
-        opts.num_mlp_layers = hyper_params.get('num_mlp_layers', 3)
-        opts.num_filters = hyper_params.get('num_filters', 64)
-        opts.dropout = hyper_params.get('dropout', 0.0)
+        # Set critical attributes - use checkpoint values when available, defaults only as fallback
+        if 'kernel' not in hyper_params:
+            opts.kernel = kernel_file
+        if 'num_classes' not in hyper_params:
+            opts.num_classes = 24  # Fallback only
+        if 'num_layers' not in hyper_params:
+            opts.num_layers = 5
+        if 'num_mlp_layers' not in hyper_params:
+            opts.num_mlp_layers = 3
+        if 'num_filters' not in hyper_params:
+            opts.num_filters = 64  # Fallback only
+        if 'dropout' not in hyper_params:
+            opts.dropout = 0.0
         
-        # Feature usage flags
-        opts.use_face_grids = hyper_params.get('use_face_grids', True)
-        opts.use_edge_grids = hyper_params.get('use_edge_grids', True)
-        opts.use_coedge_grids = hyper_params.get('use_coedge_grids', False)
-        opts.use_face_features = hyper_params.get('use_face_features', True)
-        opts.use_edge_features = hyper_params.get('use_edge_features', True)
-        opts.use_coedge_features = hyper_params.get('use_coedge_features', True)
+        # Feature usage flags - defaults to True only if not specified
+        if 'use_face_grids' not in hyper_params:
+            opts.use_face_grids = True
+        if 'use_edge_grids' not in hyper_params:
+            opts.use_edge_grids = True
+        if 'use_coedge_grids' not in hyper_params:
+            opts.use_coedge_grids = False
+        if 'use_face_features' not in hyper_params:
+            opts.use_face_features = True
+        if 'use_edge_features' not in hyper_params:
+            opts.use_edge_features = True
+        if 'use_coedge_features' not in hyper_params:
+            opts.use_coedge_features = True
         
         # Embedding sizes
-        opts.curve_embedding_size = hyper_params.get('curve_embedding_size', 64)
-        opts.surf_embedding_size = hyper_params.get('surf_embedding_size', 64)
+        if 'curve_embedding_size' not in hyper_params:
+            opts.curve_embedding_size = 64
+        if 'surf_embedding_size' not in hyper_params:
+            opts.surf_embedding_size = 64
         
-        # Optional attributes for segment names (used for training statistics, not needed for inference)
-        opts.segment_names = hyper_params.get('segment_names', None)
-        opts.dataset_dir = hyper_params.get('dataset_dir', '.')
+        # Optional attributes
+        if 'segment_names' not in hyper_params:
+            opts.segment_names = None
+        if 'dataset_dir' not in hyper_params:
+            opts.dataset_dir = '.'
+        
+        # Determine correct input_features file based on model architecture
+        if 'input_features' not in hyper_params and input_dim_inferred is not None:
+            # Map input dimensions to feature configurations
+            # The exact mapping depends on:
+            # - 64 (face grid embedding) + 64 (edge grid embedding) = 128 base
+            # - Plus hand-crafted features from JSON config
+            # all.json ≈ 822 dims, no_curve_type.json ≈ 517 dims
+            
+            if input_dim_inferred < 600:
+                # Likely an ablation study config (no_curve_type, no_surf_type, etc.)
+                opts.input_features = 'no_curve_type.json'
+                logger.info(f"🎯 Auto-selected no_curve_type.json for input_dim={input_dim_inferred}")
+            else:
+                # Full feature set
+                opts.input_features = 'all.json'
+                logger.info(f"🎯 Auto-selected all.json for input_dim={input_dim_inferred}")
+        elif 'input_features' not in hyper_params:
+            # Default fallback if we couldn't infer
+            opts.input_features = 'all.json'
+            logger.info(f"⚠️  Using default all.json (could not infer input dimension)")
         
         # Create model and load weights
         try:
