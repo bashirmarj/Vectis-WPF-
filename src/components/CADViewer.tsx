@@ -99,7 +99,7 @@ export function CADViewer({
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
   const [showSolidEdges, setShowSolidEdges] = useState(true);
   const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
-  
+
   // Feature highlighting state
   const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
   const [highlightedFaceIds, setHighlightedFaceIds] = useState<number[]>([]);
@@ -117,11 +117,11 @@ export function CADViewer({
 
   // Debug logging for geometric features
   useEffect(() => {
-    console.log('🔍 CADViewer received geometricFeatures:', {
+    console.log("🔍 CADViewer received geometricFeatures:", {
       exists: !!geometricFeatures,
       hasInstances: !!geometricFeatures?.instances,
       instanceCount: geometricFeatures?.instances?.length || 0,
-      data: geometricFeatures
+      data: geometricFeatures,
     });
   }, [geometricFeatures]);
 
@@ -144,7 +144,6 @@ export function CADViewer({
     }
 
     if (propMeshData) {
-
       // CRITICAL: Validate mesh data has required fields before proceeding
       if (!propMeshData.vertices || !propMeshData.indices || !propMeshData.normals) {
         console.error("❌ CADViewer: Invalid mesh data - missing vertices, indices, or normals");
@@ -246,8 +245,15 @@ export function CADViewer({
   // Feature selection callback
   const handleFeatureSelect = useCallback((feature: any) => {
     console.log("🎯 Feature selected:", feature);
-    const faceIds = feature.face_ids || [];
+    // ✅ FIXED: Use face_indices (backend property) instead of face_ids
+    const faceIds = feature.face_indices || feature.face_ids || [];
     console.log("🔦 Highlighting face IDs:", faceIds);
+    console.log("📋 Feature data:", {
+      type: feature.type,
+      subtype: feature.subtype,
+      face_count: faceIds.length,
+      confidence: feature.confidence,
+    });
     setSelectedFeature(feature);
     setHighlightedFaceIds(faceIds);
   }, []);
@@ -422,7 +428,6 @@ export function CADViewer({
     [], // ✅ CRITICAL FIX: Empty array - refs don't need dependencies
   );
 
-
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -480,8 +485,8 @@ export function CADViewer({
               <>
                 <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
                   <div className="h-full overflow-hidden">
-                    <FeatureTree 
-                      features={geometricFeatures} 
+                    <FeatureTree
+                      features={geometricFeatures}
                       onFeatureSelect={handleFeatureSelect}
                       selectedFeature={selectedFeature}
                     />
@@ -507,130 +512,130 @@ export function CADViewer({
                 )}
 
                 <UnifiedCADToolbar
-              onHomeView={() => handleSetView("isometric")}
-              onFrontView={() => handleSetView("front")}
-              onTopView={() => handleSetView("top")}
-              onIsometricView={() => handleSetView("isometric")}
-              onFitView={() => handleSetView("isometric")}
-              displayMode={displayMode}
-              onDisplayModeChange={setDisplayMode}
-              showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
-              onToggleEdges={() => {
-                if (displayMode === "wireframe") {
-                  setShowWireframeHiddenEdges((prev) => !prev);
-                } else {
-                  setShowSolidEdges((prev) => !prev);
-                }
-              }}
-              measurementMode={activeTool}
-              onMeasurementModeChange={setActiveTool}
-              measurementCount={measurements.length}
-              onClearMeasurements={clearAllMeasurements}
-              sectionPlane={sectionPlane}
-              onSectionPlaneChange={setSectionPlane}
-              sectionPosition={sectionPosition}
-              onSectionPositionChange={setSectionPosition}
-              shadowsEnabled={shadowsEnabled}
-              onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
-              ssaoEnabled={ssaoEnabled}
-              onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
-              boundingBox={boundingBox}
-            />
-
-            <Canvas
-              style={{ width: "100%", height: "100%" }}
-              shadows
-              gl={{
-                antialias: true,
-                alpha: true,
-                preserveDrawingBuffer: true,
-                powerPreference: "high-performance",
-              }}
-              onCreated={({ gl }) => {
-                const handleContextLost = (e: Event) => {
-                  e.preventDefault();
-                  console.warn("⚠️ WebGL context lost - browser will auto-recover");
-                };
-
-                const handleContextRestored = () => {
-                  console.log("✅ WebGL context restored automatically");
-                };
-
-                gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
-                gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
-              }}
-            >
-              <color attach="background" args={["#f8f9fa"]} />
-
-              <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
-
-              <Suspense fallback={null}>
-                <ProfessionalLighting intensity={2.85} enableShadows={shadowsEnabled} shadowQuality="high" />
-
-                <MeshModel
-                  ref={meshRef}
-                  meshData={meshData}
-                  displayStyle={displayMode}
-                  showEdges={showSolidEdges}
-                  showHiddenEdges={showWireframeHiddenEdges}
-                  sectionPlane={sectionPlane || "none"}
-                  sectionPosition={sectionPosition}
-                  useSilhouetteEdges={displayMode === "wireframe"}
-                  controlsRef={controlsRef}
-                  highlightedFaceIds={highlightedFaceIds}
-                  highlightColor="#FFD700"
-                  highlightIntensity={0.7}
-                />
-
-                <DimensionAnnotations boundingBox={boundingBox} />
-
-                {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
-                <UnifiedMeasurementTool
-                  meshData={meshData}
-                  meshRef={meshRef.current?.mesh || null}
-                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                  enabled={activeTool === "measure"}
-                  boundingSphere={{
-                    center: boundingBox.center,
-                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                  onHomeView={() => handleSetView("isometric")}
+                  onFrontView={() => handleSetView("front")}
+                  onTopView={() => handleSetView("top")}
+                  onIsometricView={() => handleSetView("isometric")}
+                  onFitView={() => handleSetView("isometric")}
+                  displayMode={displayMode}
+                  onDisplayModeChange={setDisplayMode}
+                  showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
+                  onToggleEdges={() => {
+                    if (displayMode === "wireframe") {
+                      setShowWireframeHiddenEdges((prev) => !prev);
+                    } else {
+                      setShowSolidEdges((prev) => !prev);
+                    }
                   }}
+                  measurementMode={activeTool}
+                  onMeasurementModeChange={setActiveTool}
+                  measurementCount={measurements.length}
+                  onClearMeasurements={clearAllMeasurements}
+                  sectionPlane={sectionPlane}
+                  onSectionPlaneChange={setSectionPlane}
+                  sectionPosition={sectionPosition}
+                  onSectionPositionChange={setSectionPosition}
+                  shadowsEnabled={shadowsEnabled}
+                  onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
+                  ssaoEnabled={ssaoEnabled}
+                  onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
+                  boundingBox={boundingBox}
                 />
 
-                <TrackballControls
-                  ref={controlsRef}
-                  makeDefault
-                  target={boundingBox.center}
-                  dynamicDampingFactor={0.2}
-                  minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
-                  maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
-                  rotateSpeed={1.8}
-                  panSpeed={0.8}
-                  zoomSpeed={1.2}
-                  staticMoving={false}
-                  noPan={false}
-                  noRotate={false}
+                <Canvas
+                  style={{ width: "100%", height: "100%" }}
+                  shadows
+                  gl={{
+                    antialias: true,
+                    alpha: true,
+                    preserveDrawingBuffer: true,
+                    powerPreference: "high-performance",
+                  }}
+                  onCreated={({ gl }) => {
+                    const handleContextLost = (e: Event) => {
+                      e.preventDefault();
+                      console.warn("⚠️ WebGL context lost - browser will auto-recover");
+                    };
+
+                    const handleContextRestored = () => {
+                      console.log("✅ WebGL context restored automatically");
+                    };
+
+                    gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
+                    gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
+                  }}
+                >
+                  <color attach="background" args={["#f8f9fa"]} />
+
+                  <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
+
+                  <Suspense fallback={null}>
+                    <ProfessionalLighting intensity={2.85} enableShadows={shadowsEnabled} shadowQuality="high" />
+
+                    <MeshModel
+                      ref={meshRef}
+                      meshData={meshData}
+                      displayStyle={displayMode}
+                      showEdges={showSolidEdges}
+                      showHiddenEdges={showWireframeHiddenEdges}
+                      sectionPlane={sectionPlane || "none"}
+                      sectionPosition={sectionPosition}
+                      useSilhouetteEdges={displayMode === "wireframe"}
+                      controlsRef={controlsRef}
+                      highlightedFaceIds={highlightedFaceIds}
+                      highlightColor="#FFA500"
+                      highlightIntensity={0.85}
+                    />
+
+                    <DimensionAnnotations boundingBox={boundingBox} />
+
+                    {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
+                    <UnifiedMeasurementTool
+                      meshData={meshData}
+                      meshRef={meshRef.current?.mesh || null}
+                      featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                      enabled={activeTool === "measure"}
+                      boundingSphere={{
+                        center: boundingBox.center,
+                        radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                      }}
+                    />
+
+                    <TrackballControls
+                      ref={controlsRef}
+                      makeDefault
+                      target={boundingBox.center}
+                      dynamicDampingFactor={0.2}
+                      minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
+                      maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
+                      rotateSpeed={1.8}
+                      panSpeed={0.8}
+                      zoomSpeed={1.2}
+                      staticMoving={false}
+                      noPan={false}
+                      noRotate={false}
+                    />
+                  </Suspense>
+                </Canvas>
+
+                {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
+                <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
+
+                {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
+                <OrientationCubeViewport
+                  mainCameraRef={cameraRef}
+                  controlsRef={controlsRef}
+                  onCubeClick={handleCubeClick}
+                  onRotateUp={() => handleRotateCamera("up")}
+                  onRotateDown={() => handleRotateCamera("down")}
+                  onRotateLeft={() => handleRotateCamera("left")}
+                  onRotateRight={() => handleRotateCamera("right")}
+                  onRotateClockwise={() => handleRotateCamera("cw")}
+                  onRotateCounterClockwise={() => handleRotateCamera("ccw")}
                 />
-              </Suspense>
-            </Canvas>
 
-            {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
-            <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
-
-            {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
-            <OrientationCubeViewport
-              mainCameraRef={cameraRef}
-              controlsRef={controlsRef}
-              onCubeClick={handleCubeClick}
-              onRotateUp={() => handleRotateCamera("up")}
-              onRotateDown={() => handleRotateCamera("down")}
-              onRotateLeft={() => handleRotateCamera("left")}
-              onRotateRight={() => handleRotateCamera("right")}
-              onRotateClockwise={() => handleRotateCamera("cw")}
-              onRotateCounterClockwise={() => handleRotateCamera("ccw")}
-            />
-
-            {/* ✅ Measurement Panel - Shows measurement list and controls */}
-            <MeasurementPanel />
+                {/* ✅ Measurement Panel - Shows measurement list and controls */}
+                <MeasurementPanel />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
