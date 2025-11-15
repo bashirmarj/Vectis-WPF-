@@ -165,10 +165,13 @@ class BRepNetRecognizer:
         
         # Verify kernel configuration exists
         kernel_file = hyper_params.get('kernel', hyper_params.get('kernel_filename', 'winged_edge_plus_plus.json'))
-        kernel_path = kernel_file if os.path.exists(kernel_file) else f"/app/{kernel_file}"
+        # Extract just the filename (e.g., "winged_edge.json" from "kernels/winged_edge.json")
+        kernel_basename = os.path.basename(kernel_file)
+        # Look in the kernels directory
+        kernel_path = f"/app/kernels/{kernel_basename}"
         if not os.path.exists(kernel_path):
-            raise RuntimeError(f"Kernel configuration not found: {kernel_file}")
-        logger.info(f"✅ Using kernel config: {kernel_file}")
+            raise RuntimeError(f"Kernel configuration not found: {kernel_basename} (searched at {kernel_path})")
+        logger.info(f"✅ Using kernel config: {kernel_basename}")
         
         # Reconstruct opts object from hyper_parameters
         class Opts:
@@ -182,7 +185,7 @@ class BRepNetRecognizer:
         
         # Set critical attributes - use checkpoint values when available, defaults only as fallback
         if 'kernel' not in hyper_params:
-            opts.kernel = kernel_file
+            opts.kernel = f"kernels/{os.path.basename(kernel_file)}"
         if 'num_classes' not in hyper_params:
             opts.num_classes = num_classes_inferred if num_classes_inferred else 24
         if 'num_layers' not in hyper_params:
@@ -230,15 +233,15 @@ class BRepNetRecognizer:
             
             if input_dim_inferred < 600:
                 # Likely an ablation study config (no_curve_type, no_surf_type, etc.)
-                opts.input_features = 'no_curve_type.json'
+                opts.input_features = 'feature_lists/no_curve_type.json'
                 logger.info(f"🎯 Auto-selected no_curve_type.json for input_dim={input_dim_inferred}")
             else:
                 # Full feature set
-                opts.input_features = 'all.json'
+                opts.input_features = 'feature_lists/all.json'
                 logger.info(f"🎯 Auto-selected all.json for input_dim={input_dim_inferred}")
         elif 'input_features' not in hyper_params:
             # Default fallback if we couldn't infer
-            opts.input_features = 'all.json'
+            opts.input_features = 'feature_lists/all.json'
             logger.info(f"⚠️  Using default all.json (could not infer input dimension)")
         
         # Create model and load weights
