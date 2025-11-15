@@ -343,11 +343,17 @@ class BRepNetRecognizer:
         }
         
         # Step 3: Rename keys and convert to PyTorch tensors (NO batch dimension - already batched)
+        # CRITICAL: Kernel tensors (Kf, Ke, Kc, Ce, Cf, Csf) must be LONG for indexing, others are FLOAT
+        kernel_keys = {'Kf', 'Ke', 'Kc', 'Ce', 'Cf', 'Csf'}
+        
         model_inputs = {}
         for short_key, descriptive_key in key_mapping.items():
             if short_key in brep_tensors:
-                # Just convert to tensor - DON'T add batch dimension
-                tensor = torch.from_numpy(brep_tensors[short_key]).float()
+                # Kernel tensors must be long (int64), feature tensors are float
+                if short_key in kernel_keys:
+                    tensor = torch.from_numpy(brep_tensors[short_key]).long()
+                else:
+                    tensor = torch.from_numpy(brep_tensors[short_key]).float()
                 model_inputs[descriptive_key] = tensor
             else:
                 logger.warning(f"Missing expected tensor: {short_key}")
