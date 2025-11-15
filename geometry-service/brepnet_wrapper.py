@@ -123,9 +123,15 @@ class BRepNetRecognizer:
             raise ValueError("Checkpoint does not contain 'state_dict'")
         
         # CRITICAL FIX: PyTorch Lightning checkpoints store hyperparameters in nested 'opts' object
-        if 'opts' in hyper_params and len(hyper_params) == 1:
+        # The 'opts' can be either a dict or an argparse.Namespace object
+        if 'opts' in hyper_params:
             logger.info("📦 Extracting nested 'opts' from hyper_parameters")
-            hyper_params = hyper_params['opts']
+            opts_obj = hyper_params['opts']
+            # Convert Namespace to dict if needed
+            if hasattr(opts_obj, '__dict__'):
+                hyper_params = vars(opts_obj)
+            else:
+                hyper_params = opts_obj
         
         # Log checkpoint contents for debugging
         logger.info(f"📊 Checkpoint hyper_parameters keys: {list(hyper_params.keys())}")
