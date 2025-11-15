@@ -89,9 +89,10 @@ class BRepFeatureExtractor:
         Gc = self._sample_coedge_grids(coedges)
         Ge = self._sample_edge_grids(edges, coedges)
         
-        # Step 5: Build kernel tensors (topological adjacency)
-        Kf = self._build_face_kernel(topology['face_adjacency'], len(faces))
-        Ke = self._build_edge_kernel(topology['edge_adjacency'], len(edges))
+        # Step 5: Build kernel tensors (coedge-centric)
+        # All kernels are now [num_coedges, max_neighbors]
+        Kf = self._build_face_kernel(topology['face_adjacency'], len(coedges))
+        Ke = self._build_edge_kernel(topology['edge_adjacency'], len(coedges))
         Kc = self._build_coedge_kernel(topology['coedge_adjacency'], len(coedges))
         
         # Step 6: Build coedge mappings
@@ -109,35 +110,101 @@ class BRepFeatureExtractor:
         }
     
     def _build_topology(self, shape: TopoDS_Shape) -> Tuple:
-        """Build topology graph with faces, edges, coedges"""
-        faces = []
-        edges = []
+        """Build coedge-centric topology graph using occwl"""
+        from occwl.solid import Solid
+        from occwl.entity_mapper import EntityMapper
+        
+        # Wrap shape in occwl Solid
+        solid = create_occwl(shape)
+        if not isinstance(solid, Solid):
+            # If it's a compound, try to get first solid
+            try:
+                solid = Solid(shape, allow_compound=True)
+            except:
+                raise ValueError("Shape must be a valid solid")
+        
+        mapper = EntityMapper(solid)
+        
+        # Extract unique faces and edges
+        faces = list(solid.faces())
+        edges = list(solid.edges())
+        
+        # Build COEDGES (oriented edges / half-edges)
         coedges = []
+        coedge_to_edge_map = []
+        coedge_to_face_map = []
         
-        # Extract faces
-        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-        while face_explorer.More():
-            faces.append(face_explorer.Current())
-            face_explorer.Next()
+        for face_idx, face in enumerate(faces):
+            for wire in face.wires():
+                for oriented_edge in wire.ordered_edges():
+                    coedges.append((oriented_edge, face))
+                    # Map coedge to its underlying edge index
+                    try:
+                        edge_idx = mapper.edge_index(oriented_edge)
+                        coedge_to_edge_map.append(edge_idx)
+                    except:
+                        coedge_to_edge_map.append(0)
+                    coedge_to_face_map.append(face_idx)
         
-        # Extract edges (simplified - real implementation needs proper coedge tracking)
-        edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-        while edge_explorer.More():
-            edge = edge_explorer.Current()
-            edges.append((edge, False))
-            coedges.append((edge, False))  # Simplified
-            edge_explorer.Next()
+        num_coedges = len(coedges)
         
-        # Build adjacency (simplified - real implementation needs proper topology analysis)
+        # Build coedge-centric adjacency lists
+        face_adj = [[] for _ in range(num_coedges)]  # Kf[i] = faces adjacent to coedge i
+        edge_adj = [[] for _ in range(num_coedges)]  # Ke[i] = edges adjacent to coedge i
+        coedge_adj = [[] for _ in range(num_coedges)]  # Kc[i] = coedges adjacent to coedge i
+        
+        for i, (oriented_edge_i, face_i) in enumerate(coedges):
+            # Find adjacent faces (via the underlying edge)
+            try:
+                edge_topods = oriented_edge_i.topods_shape()
+                for adj_face in solid.faces_from_edge(oriented_edge_i):
+                    if not adj_face.topods_shape().IsSame(face_i.topods_shape()):
+                        try:
+                            adj_face_idx = faces.index(adj_face)
+                            face_adj[i].append(adj_face_idx)
+                        except:
+                            pass
+            except:
+                pass
+            
+            # Find adjacent coedges on same face
+            for j, (oriented_edge_j, face_j) in enumerate(coedges):
+                if i != j and face_i.topods_shape().IsSame(face_j.topods_shape()):
+                    coedge_adj[i].append(j)
+                    if len(coedge_adj[i]) >= 10:  # Limit neighbors
+                        break
+            
+            # Find adjacent edges (sharing vertices)
+            try:
+                start_v = oriented_edge_i.first_vertex()
+                end_v = oriented_edge_i.last_vertex()
+                
+                for edge_idx, adj_edge in enumerate(edges):
+                    if not oriented_edge_i.topods_shape().IsSame(adj_edge.topods_shape()):
+                        try:
+                            adj_verts = list(solid.vertices_from_edge(adj_edge))
+                            if start_v in adj_verts or end_v in adj_verts:
+                                edge_adj[i].append(edge_idx)
+                                if len(edge_adj[i]) >= 10:  # Limit neighbors
+                                    break
+                        except:
+                            pass
+            except:
+                pass
+        
         topology = {
-            'face_adjacency': [[] for _ in faces],
-            'edge_adjacency': [[] for _ in edges],
-            'coedge_adjacency': [[] for _ in coedges],
-            'coedge_to_edge': list(range(len(coedges))),
-            'coedge_to_face': list(range(len(coedges)))
+            'face_adjacency': face_adj,
+            'edge_adjacency': edge_adj,
+            'coedge_adjacency': coedge_adj,
+            'coedge_to_edge': coedge_to_edge_map,
+            'coedge_to_face': coedge_to_face_map
         }
         
-        return faces, edges, coedges, topology
+        # Convert faces/edges to TopoDS objects for downstream compatibility
+        faces_topods = [f.topods_shape() for f in faces]
+        edges_tuple = [(e.topods_shape(), False) for e in edges]
+        
+        return faces_topods, edges_tuple, coedges, topology
     
     def _extract_face_features(self, faces: List) -> np.ndarray:
         """Extract face features (10 features per face)"""
@@ -246,15 +313,21 @@ class BRepFeatureExtractor:
         """Extract coedge features (14 features per coedge)"""
         features = []
         
-        for edge, reversed_flag in coedges:
-            curve = BRepAdaptor_Curve(edge)
-            length = curve.LastParameter() - curve.FirstParameter()
-            
-            feature_vec = np.zeros(14, dtype=np.float32)
-            feature_vec[0] = length
-            feature_vec[1] = 1.0 if reversed_flag else 0.0
-            
-            features.append(feature_vec)
+        for oriented_edge, face in coedges:
+            try:
+                curve = BRepAdaptor_Curve(oriented_edge.topods_shape())
+                length = curve.LastParameter() - curve.FirstParameter()
+                
+                # Check if edge is reversed relative to its underlying edge
+                is_reversed = oriented_edge.orientation() == 1  # TopAbs_REVERSED
+                
+                feature_vec = np.zeros(14, dtype=np.float32)
+                feature_vec[0] = length
+                feature_vec[1] = 1.0 if is_reversed else 0.0
+                
+                features.append(feature_vec)
+            except:
+                features.append(np.zeros(14, dtype=np.float32))
         
         return np.array(features, dtype=np.float32)
     
@@ -268,38 +341,42 @@ class BRepFeatureExtractor:
         """
         grids = []
         
-        for edge, _ in coedges:
-            curve = BRepAdaptor_Curve(edge)
-            grid = np.zeros((12, 10), dtype=np.float32)
-            
-            t_min = curve.FirstParameter()
-            t_max = curve.LastParameter()
-            
-            for i in range(10):
-                t = t_min + (t_max - t_min) * i / 9
-                try:
-                    pnt = curve.Value(t)
-                    # First representation (channels 0-5)
-                    grid[0:3, i] = [pnt.X(), pnt.Y(), pnt.Z()]
-                    grid[3:6, i] = [1, 0, 0]  # Tangent (simplified)
-                    # Second representation (channels 6-11) - duplicate
-                    grid[6:9, i] = [pnt.X(), pnt.Y(), pnt.Z()]
-                    grid[9:12, i] = [1, 0, 0]  # Tangent (simplified)
-                except:
-                    pass
-            
-            grids.append(grid)
+        for oriented_edge, face in coedges:
+            try:
+                curve = BRepAdaptor_Curve(oriented_edge.topods_shape())
+                grid = np.zeros((12, 10), dtype=np.float32)
+                
+                t_min = curve.FirstParameter()
+                t_max = curve.LastParameter()
+                
+                for i in range(10):
+                    t = t_min + (t_max - t_min) * i / 9
+                    try:
+                        pnt = curve.Value(t)
+                        # First representation (channels 0-5)
+                        grid[0:3, i] = [pnt.X(), pnt.Y(), pnt.Z()]
+                        grid[3:6, i] = [1, 0, 0]  # Tangent (simplified)
+                        # Second representation (channels 6-11) - duplicate
+                        grid[6:9, i] = [pnt.X(), pnt.Y(), pnt.Z()]
+                        grid[9:12, i] = [1, 0, 0]  # Tangent (simplified)
+                    except:
+                        pass
+                
+                grids.append(grid)
+            except:
+                grids.append(np.zeros((12, 10), dtype=np.float32))
         
         return np.array(grids, dtype=np.float32)
     
-    def _build_face_kernel(self, adjacency: List, num_faces: int) -> np.ndarray:
+    def _build_face_kernel(self, adjacency: List, num_coedges: int) -> np.ndarray:
         """
-        Build face kernel tensor
+        Build face kernel tensor (coedge-centric)
         
-        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        adjacency[i] = list of face indices adjacent to coedge i
+        Returns: [num_coedges, max_neighbors] array
         """
-        max_neighbors = max(len(adj) for adj in adjacency) if adjacency else 1
-        kernel = np.zeros((num_faces, max_neighbors), dtype=np.int64)
+        max_neighbors = max(len(adj) for adj in adjacency) if adjacency and any(adjacency) else 1
+        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
             for j, neighbor in enumerate(adj[:max_neighbors]):
@@ -307,14 +384,15 @@ class BRepFeatureExtractor:
         
         return kernel
     
-    def _build_edge_kernel(self, adjacency: List, num_edges: int) -> np.ndarray:
+    def _build_edge_kernel(self, adjacency: List, num_coedges: int) -> np.ndarray:
         """
-        Build edge kernel tensor
+        Build edge kernel tensor (coedge-centric)
         
-        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        adjacency[i] = list of edge indices adjacent to coedge i
+        Returns: [num_coedges, max_neighbors] array
         """
-        max_neighbors = max(len(adj) for adj in adjacency) if adjacency else 1
-        kernel = np.zeros((num_edges, max_neighbors), dtype=np.int64)
+        max_neighbors = max(len(adj) for adj in adjacency) if adjacency and any(adjacency) else 1
+        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
             for j, neighbor in enumerate(adj[:max_neighbors]):
