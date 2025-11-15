@@ -342,18 +342,12 @@ class BRepNetRecognizer:
             'Csf': 'coedges_of_big_faces'
         }
         
-        # Step 3: Rename keys and convert to PyTorch tensors
+        # Step 3: Rename keys and convert to PyTorch tensors (NO batch dimension - already batched)
         model_inputs = {}
         for short_key, descriptive_key in key_mapping.items():
             if short_key in brep_tensors:
+                # Just convert to tensor - DON'T add batch dimension
                 tensor = torch.from_numpy(brep_tensors[short_key]).float()
-                # Add batch dimension if needed
-                if len(tensor.shape) == 1:
-                    tensor = tensor.unsqueeze(0)
-                elif len(tensor.shape) == 2:
-                    tensor = tensor.unsqueeze(0)
-                elif len(tensor.shape) == 3:
-                    tensor = tensor.unsqueeze(0)
                 model_inputs[descriptive_key] = tensor
             else:
                 logger.warning(f"Missing expected tensor: {short_key}")

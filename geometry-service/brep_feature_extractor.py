@@ -16,7 +16,7 @@ from OCC.Core.GeomAbs import (
 )
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
+from OCC.Core.BRepGProp import BRepGProp
 from OCC.Core.gp import gp_Pnt
 
 from utils.create_occwl_from_occ import create_occwl
@@ -175,7 +175,7 @@ class BRepFeatureExtractor:
         for face in faces:
             # Get surface properties
             props = GProp_GProps()
-            brepgprop_SurfaceProperties(face, props)
+            BRepGProp.SurfaceProperties(face, props)
             area = props.Mass()
             centroid = props.CentreOfMass()
             
