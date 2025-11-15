@@ -19,9 +19,9 @@ from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
 from OCC.Core.gp import gp_Pnt
 
-from create_occwl_from_occ import create_occwl
+from utils.create_occwl_from_occ import create_occwl
 from scale_utils import scale_solid_to_unit_box
-from data_utils import load_json_data
+from utils.data_utils import load_json_data
 
 logger = logging.getLogger(__name__)
 
