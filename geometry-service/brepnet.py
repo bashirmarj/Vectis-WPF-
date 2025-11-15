@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import numpy as np
 from pathlib import Path
-from pytorch_lightning.core.lightning import LightningModule
+from pytorch_lightning import LightningModule
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
