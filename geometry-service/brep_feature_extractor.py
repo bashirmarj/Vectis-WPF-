@@ -373,14 +373,15 @@ class BRepFeatureExtractor:
         Build face kernel tensor (coedge-centric)
         
         adjacency[i] = list of face indices adjacent to coedge i
-        Returns: [num_coedges, max_neighbors] array
+        Returns: [num_coedges, kernel_size] array
         """
-        max_neighbors = max(len(adj) for adj in adjacency) if adjacency and any(adjacency) else 1
-        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int64)
+        # Use FIXED kernel size from config (not dynamic!)
+        kernel_size = len(self.kernel['faces'])  # Should be 2 for winged_edge_plus_plus
+        kernel = np.zeros((num_coedges, kernel_size), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
-            for j, neighbor in enumerate(adj[:max_neighbors]):
-                kernel[i, j] = neighbor
+            for j in range(min(len(adj), kernel_size)):
+                kernel[i, j] = adj[j]
         
         return kernel
     
@@ -389,14 +390,15 @@ class BRepFeatureExtractor:
         Build edge kernel tensor (coedge-centric)
         
         adjacency[i] = list of edge indices adjacent to coedge i
-        Returns: [num_coedges, max_neighbors] array
+        Returns: [num_coedges, kernel_size] array
         """
-        max_neighbors = max(len(adj) for adj in adjacency) if adjacency and any(adjacency) else 1
-        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int64)
+        # Use FIXED kernel size from config (should be 9 for winged_edge_plus_plus)
+        kernel_size = len(self.kernel['edges'])
+        kernel = np.zeros((num_coedges, kernel_size), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
-            for j, neighbor in enumerate(adj[:max_neighbors]):
-                kernel[i, j] = neighbor
+            for j in range(min(len(adj), kernel_size)):
+                kernel[i, j] = adj[j]
         
         return kernel
     
@@ -404,14 +406,14 @@ class BRepFeatureExtractor:
         """
         Build coedge kernel tensor
         
-        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        Uses FIXED kernel size from config (should be 14 for winged_edge_plus_plus)
         """
-        max_neighbors = max(len(adj) for adj in adjacency) if adjacency else 1
-        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int64)
+        kernel_size = len(self.kernel['coedges'])
+        kernel = np.zeros((num_coedges, kernel_size), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
-            for j, neighbor in enumerate(adj[:max_neighbors]):
-                kernel[i, j] = neighbor
+            for j in range(min(len(adj), kernel_size)):
+                kernel[i, j] = adj[j]
         
         return kernel
     
