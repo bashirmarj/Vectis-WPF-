@@ -414,26 +414,26 @@ class BRepNetRecognizer:
         return features
     
     def _class_to_feature_type(self, class_id: int) -> str:
-        """Map BRepNet class ID to feature type string"""
+        """
+        Map BRepNet class ID to feature type string
+        
+        Uses 8-class MFCAD2 segment names:
+        - ExtrudeSide (0), ExtrudeEnd (1): Additive features (boss/step)
+        - CutSide (2), CutEnd (3): Subtractive features (pocket/slot/hole)
+        - Fillet (4), Chamfer (5): Edge treatments
+        - RevolveSide (6), RevolveEnd (7): Rotational features
+        """
         feature_map = {
-            0: 'rectangular_through_slot',
-            1: 'triangular_through_slot',
-            2: 'rectangular_passage',
-            3: 'triangular_passage',
-            4: '6sides_passage',
-            5: 'rectangular_through_step',
-            6: '2sides_through_step',
-            7: 'slanted_through_step',
-            8: 'rectangular_blind_step',
-            9: 'triangular_blind_step',
-            10: 'rectangular_blind_slot',
-            11: 'rectangular_pocket',
-            12: 'triangular_pocket',
-            13: '6sides_pocket',
-            14: 'chamfer',
-            15: 'stock',
+            0: 'boss',        # ExtrudeSide → Additive face (extrude operation side)
+            1: 'step',        # ExtrudeEnd → Additive face (extrude operation end)
+            2: 'pocket',      # CutSide → Subtractive face (cut operation side)
+            3: 'slot',        # CutEnd → Subtractive face (cut operation end)
+            4: 'fillet',      # Fillet → Edge rounding
+            5: 'chamfer',     # Chamfer → Edge beveling
+            6: 'boss',        # RevolveSide → Rotational feature side
+            7: 'step',        # RevolveEnd → Rotational feature end
         }
-        return feature_map.get(class_id, 'unknown')
+        return feature_map.get(class_id, 'undefined')
     
     def _extract_feature_parameters(self, shape: TopoDS_Shape, face_idx: int) -> Dict:
         """Extract geometric parameters for a feature"""
