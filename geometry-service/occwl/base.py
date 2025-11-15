@@ -1,8 +1,12 @@
 import numpy as np
+import warnings
+
+# Suppress deprecation warnings from OCC module
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='OCC')
 
 from OCC.Core.gp import gp_Pnt, gp_Dir, gp_Pnt2d, gp_Ax2
 from OCC.Core.Bnd import Bnd_Box
-from OCC.Core.BRepBndLib import BRepBndLib
+from OCC.Core.BRepBndLib import brepbndlib_Add, brepbndlib_AddOptimal
 from OCC.Extend import TopologyUtils
 from OCC.Core.BRepGProp import (
     brepgprop_LinearProperties,
@@ -588,7 +592,7 @@ class BoundingBoxMixin:
         from occwl.geometry import geom_utils
         b = Bnd_Box()
         use_triangulation = True
-        BRepBndLib.AddOptimal(self.topods_shape(), b, use_triangulation, use_shapetolerance)
+        brepbndlib_AddOptimal(self.topods_shape(), b, use_triangulation, use_shapetolerance)
         return geom_utils.box_to_geometry(b)
 
     def scale_to_box(self, box_side, copy=True):
