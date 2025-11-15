@@ -132,6 +132,35 @@ serve(async (req) => {
 
           if (serviceResponse.ok) {
             const serviceResult = await serviceResponse.json();
+            
+            // Transform BRepNet features to frontend format
+            const features = serviceResult.features || [];
+            const geometricFeatures = {
+              instances: features.map((feature: any) => ({
+                type: feature.type,
+                subtype: feature.subtype,
+                face_indices: feature.face_ids || [],
+                confidence: feature.confidence || 0,
+                parameters: feature.parameters || {},
+                bottom_faces: feature.bottom_faces,
+                ml_detected: feature.ml_detected
+              })),
+              num_features_detected: features.length,
+              num_faces_analyzed: serviceResult.mesh_data?.face_count || 0,
+              confidence_score: features.length > 0 
+                ? features.reduce((sum: number, f: any) => sum + (f.confidence || 0), 0) / features.length
+                : 0,
+              inference_time_sec: (serviceResult.processing_time_ms || 0) / 1000,
+              recognition_method: serviceResult.metadata?.recognition_method || 'BRepNet'
+            };
+
+            // Generate feature summary by type
+            const featureSummary = features.reduce((acc: any, feature: any) => {
+              const key = feature.subtype || feature.type;
+              acc[key] = (acc[key] || 0) + 1;
+              return acc;
+            }, {});
+
             console.log(JSON.stringify({
               timestamp: new Date().toISOString(),
               level: 'INFO',
@@ -141,7 +170,7 @@ serve(async (req) => {
                 has_mesh: !!serviceResult.mesh_data,
                 has_face_mapping: !!serviceResult.mesh_data?.face_mapping,
                 has_features: !!serviceResult.features,
-                feature_count: serviceResult.features?.length || 0,
+                feature_count: features.length,
                 recognition_method: serviceResult.metadata?.recognition_method,
                 model_version: serviceResult.metadata?.model_version,
                 processing_time: serviceResult.processing_time_ms
@@ -151,6 +180,10 @@ serve(async (req) => {
             analysisResult = {
               ...analysisResult,
               ...serviceResult,
+              geometric_features: {
+                ...geometricFeatures,
+                feature_summary: featureSummary
+              },
               method: serviceResult.metadata?.recognition_method || 'brepnet'
             };
           } else {
