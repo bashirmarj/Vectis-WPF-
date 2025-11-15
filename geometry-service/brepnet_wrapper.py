@@ -173,13 +173,13 @@ class BRepNetRecognizer:
         if 'kernel' not in hyper_params:
             opts.kernel = kernel_file
         if 'num_classes' not in hyper_params:
-            opts.num_classes = 24  # Fallback only
+            opts.num_classes = num_classes_inferred if num_classes_inferred else 24
         if 'num_layers' not in hyper_params:
             opts.num_layers = 5
         if 'num_mlp_layers' not in hyper_params:
             opts.num_mlp_layers = 3
         if 'num_filters' not in hyper_params:
-            opts.num_filters = 64  # Fallback only
+            opts.num_filters = num_filters_inferred if num_filters_inferred else 64
         if 'dropout' not in hyper_params:
             opts.dropout = 0.0
         
