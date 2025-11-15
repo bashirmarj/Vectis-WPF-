@@ -135,6 +135,23 @@ serve(async (req) => {
             
             // Transform BRepNet features to frontend format
             const features = serviceResult.features || [];
+            
+            // DEBUG: Log raw features from geometry service
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: 'Raw features from geometry service',
+              context: {
+                features_count: features.length,
+                features_sample: features.slice(0, 3).map((f: any) => ({
+                  type: f.type,
+                  confidence: f.confidence,
+                  face_ids: f.face_ids
+                }))
+              }
+            }));
+            
             const geometricFeatures = {
               instances: features.map((feature: any) => ({
                 type: feature.type,
@@ -153,6 +170,25 @@ serve(async (req) => {
               inference_time_sec: (serviceResult.processing_time_ms || 0) / 1000,
               recognition_method: serviceResult.metadata?.recognition_method || 'BRepNet'
             };
+            
+            // DEBUG: Log transformed features
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: 'Transformed features for frontend',
+              context: {
+                instances_count: geometricFeatures.instances.length,
+                instances_sample: geometricFeatures.instances.slice(0, 3).map((inst: any) => ({
+                  type: inst.type,
+                  confidence: inst.confidence
+                })),
+                type_summary: geometricFeatures.instances.reduce((acc: any, inst: any) => {
+                  acc[inst.type] = (acc[inst.type] || 0) + 1;
+                  return acc;
+                }, {})
+              }
+            }));
 
             // Generate feature summary by type
             const featureSummary = features.reduce((acc: any, feature: any) => {
