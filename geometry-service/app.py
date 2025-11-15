@@ -144,6 +144,7 @@ def tessellate_shape(shape, linear_deflection=0.001, angular_deflection=12.0) ->
     indices = []
     normals = []
     face_mapping = {}  # {face_id: [triangle_indices]}
+    vertex_to_face = {}  # NEW: Map vertex index to face ID
     
     global_vertex_index = 0
     global_triangle_index = 0
@@ -171,6 +172,7 @@ def tessellate_shape(shape, linear_deflection=0.001, angular_deflection=12.0) ->
                 if coord not in vertex_map:
                     vertex_map[coord] = global_vertex_index
                     vertices.extend([pnt.X(), pnt.Y(), pnt.Z()])
+                    vertex_to_face[global_vertex_index] = face_id  # NEW: Map vertex to face
                     global_vertex_index += 1
                 
                 face_vertex_map[i] = vertex_map[coord]
@@ -210,14 +212,22 @@ def tessellate_shape(shape, linear_deflection=0.001, angular_deflection=12.0) ->
     # Compute per-vertex normals (average of adjacent face normals)
     normals = compute_vertex_normals(vertices, indices, len(vertices) // 3)
     
+    # NEW: Convert vertex_to_face map to array
+    vertex_count = len(vertices) // 3
+    vertex_face_ids = [-1] * vertex_count
+    for vertex_idx, face_idx in vertex_to_face.items():
+        vertex_face_ids[vertex_idx] = face_idx
+    
     elapsed = (time.time() - start) * 1000
     logger.info(f"Tessellated: {len(vertices)//3} vertices, {len(indices)//3} triangles, {face_id} faces in {elapsed:.1f}ms")
+    logger.info(f"Created vertex_face_ids: {len(vertex_face_ids)} vertices mapped to faces")
     
     return {
         "vertices": vertices,
         "indices": indices,
         "normals": normals,
         "face_mapping": face_mapping,
+        "vertex_face_ids": vertex_face_ids,  # NEW: Add to return dict
         "face_count": face_id,
         "triangle_count": len(indices) // 3,
         "vertex_count": len(vertices) // 3

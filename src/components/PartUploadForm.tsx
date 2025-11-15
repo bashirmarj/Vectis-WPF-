@@ -224,6 +224,8 @@ export const PartUploadForm = () => {
         hasVertices: !!meshData.vertices,
         hasIndices: !!meshData.indices,
         hasNormals: !!meshData.normals,
+        hasVertexFaceIds: !!meshData.vertex_face_ids,
+        vertexFaceIdsCount: meshData.vertex_face_ids?.length,
         hasTaggedEdges: !!meshData.tagged_edges,
         taggedEdgesCount: meshData.tagged_edges?.length || 0,
         hasEdgeClassifications: !!meshData.edge_classifications,
