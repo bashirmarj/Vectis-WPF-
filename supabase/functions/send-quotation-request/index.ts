@@ -19,6 +19,14 @@ interface FileInfo {
   content: string;
   size: number;
   quantity: number;
+  geometric_features?: any;
+  mesh_data?: {
+    vertices: number[];
+    indices: number[];
+    normals: number[];
+    triangle_count: number;
+    vertex_face_ids?: number[];
+  };
 }
 
 interface QuotationRequest {
@@ -43,6 +51,15 @@ interface StorageFileInfo {
 async function hashIP(ip: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(ip);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Helper function to hash strings
+async function hashString(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -198,6 +215,40 @@ const handler = async (req: Request): Promise<Response> => {
         if (!lineItem) return;
 
         try {
+          // Save mesh data and geometric_features to cad_meshes table
+          if (file.mesh_data) {
+            const fileHash = await hashString(file.name + file.size);
+            
+            const { data: meshData, error: meshError } = await supabase
+              .from('cad_meshes')
+              .insert({
+                quotation_id: submission.id,
+                line_item_id: lineItem.id,
+                file_name: file.name,
+                file_hash: fileHash,
+                vertices: file.mesh_data.vertices || [],
+                indices: file.mesh_data.indices || [],
+                normals: file.mesh_data.normals || [],
+                triangle_count: file.mesh_data.triangle_count || 0,
+                vertex_face_ids: file.mesh_data.vertex_face_ids || [],
+                geometric_features: file.geometric_features || null
+              })
+              .select('id')
+              .single();
+            
+            if (!meshError && meshData) {
+              // Update line item with mesh_id
+              await supabase
+                .from('quote_line_items')
+                .update({ mesh_id: meshData.id })
+                .eq('id', lineItem.id);
+              
+              console.log(`✅ Saved mesh data for ${file.name} with geometric_features`);
+            } else if (meshError) {
+              console.error(`Error saving mesh for ${file.name}:`, meshError);
+            }
+          }
+          
           // Call analyze-cad function
           const analysisResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-cad`, {
             method: 'POST',
@@ -244,7 +295,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           const quoteData = await quoteResponse.json();
 
-          // Update line item with preliminary pricing and mesh_id
+          // Update line item with preliminary pricing
           const updateData: any = {
             estimated_volume_cm3: analysisData.volume_cm3,
             estimated_surface_area_cm2: analysisData.surface_area_cm2,
@@ -259,12 +310,6 @@ const handler = async (req: Request): Promise<Response> => {
             finish_type: quoteData.finish,
             estimated_machine_time_hours: quoteData.estimated_hours
           };
-          
-          // Add mesh_id if available from analysis
-          if (analysisData.mesh_id) {
-            updateData.mesh_id = analysisData.mesh_id;
-            console.log(`✅ Linking mesh_id ${analysisData.mesh_id} to line item ${lineItem.id}`);
-          }
           
           await supabase
             .from('quote_line_items')

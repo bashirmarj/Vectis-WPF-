@@ -145,51 +145,66 @@ const QuotationDetails = () => {
       if (!lineItemsError && lineItemsData) {
         setLineItems(lineItemsData as LineItem[]);
 
-        // Fetch feature trees for each line item
+        // Fetch feature trees for each line item from cad_meshes
         const featureTreesMap = new Map();
         for (const item of lineItemsData) {
-          const { data: features } = await supabase
-            .from('part_features')
-            .select('*')
-            .eq('line_item_id', item.id);
+          let geometric_features = null;
           
-          if (features && features.length > 0) {
-            // Reconstruct NEW format: manufacturing_features + feature_summary
-            const manufacturing_features: any = {
-              through_holes: [],
-              blind_holes: [],
-              bores: [],
-              bosses: [],
-              planar_faces: [],
-              fillets: []
-            };
+          // Fetch from cad_meshes if mesh_id exists
+          if (item.mesh_id) {
+            const { data: meshData } = await supabase
+              .from('cad_meshes')
+              .select('geometric_features')
+              .eq('id', item.mesh_id)
+              .maybeSingle();
             
-            let feature_summary: any = null;
+            if (meshData?.geometric_features) {
+              geometric_features = meshData.geometric_features;
+            }
+          }
+          
+          // Fallback to old part_features table if needed
+          if (!geometric_features) {
+            const { data: features } = await supabase
+              .from('part_features')
+              .select('*')
+              .eq('line_item_id', item.id);
             
-            features.forEach(feature => {
-              if (feature.feature_type === 'summary') {
-                feature_summary = feature.parameters;
-              } else if (feature.feature_type === 'through_hole') {
-                manufacturing_features.through_holes.push(feature.parameters);
-              } else if (feature.feature_type === 'blind_hole') {
-                manufacturing_features.blind_holes.push(feature.parameters);
-              } else if (feature.feature_type === 'bore') {
-                manufacturing_features.bores.push(feature.parameters);
-              } else if (feature.feature_type === 'boss') {
-                manufacturing_features.bosses.push(feature.parameters);
-              } else if (feature.feature_type === 'planar_face') {
-                manufacturing_features.planar_faces.push(feature.parameters);
-              } else if (feature.feature_type === 'fillet') {
-                manufacturing_features.fillets.push(feature.parameters);
-              }
-            });
-            
-            const featureTree = {
-              manufacturing_features,
-              feature_summary
-            };
-            
-            featureTreesMap.set(item.id, featureTree);
+            if (features && features.length > 0) {
+              // Reconstruct old format for backward compatibility
+              const manufacturing_features: any = {
+                through_holes: [],
+                blind_holes: [],
+                bores: [],
+                bosses: [],
+                planar_faces: [],
+                fillets: []
+              };
+              
+              let feature_summary: any = null;
+              
+              features.forEach(feature => {
+                if (feature.feature_type === 'summary') {
+                  feature_summary = feature.parameters;
+                } else if (feature.feature_type === 'through_hole') {
+                  manufacturing_features.through_holes.push(feature.parameters);
+                } else if (feature.feature_type === 'blind_hole') {
+                  manufacturing_features.blind_holes.push(feature.parameters);
+                } else if (feature.feature_type === 'bore') {
+                  manufacturing_features.bores.push(feature.parameters);
+                } else if (feature.feature_type === 'boss') {
+                  manufacturing_features.bosses.push(feature.parameters);
+                } else if (feature.feature_type === 'planar_face') {
+                  manufacturing_features.planar_faces.push(feature.parameters);
+                } else if (feature.feature_type === 'fillet') {
+                  manufacturing_features.fillets.push(feature.parameters);
+                }
+              });
+            }
+          }
+          
+          if (geometric_features) {
+            featureTreesMap.set(item.id, { geometric_features });
           }
         }
         setFeatureTrees(featureTreesMap);

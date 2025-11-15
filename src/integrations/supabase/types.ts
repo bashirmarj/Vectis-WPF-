@@ -23,6 +23,7 @@ export type Database = {
           feature_edges: Json | null
           file_hash: string
           file_name: string
+          geometric_features: Json | null
           id: string
           indices: number[]
           line_item_id: string | null
@@ -43,6 +44,7 @@ export type Database = {
           feature_edges?: Json | null
           file_hash: string
           file_name: string
+          geometric_features?: Json | null
           id?: string
           indices: number[]
           line_item_id?: string | null
@@ -63,6 +65,7 @@ export type Database = {
           feature_edges?: Json | null
           file_hash?: string
           file_name?: string
+          geometric_features?: Json | null
           id?: string
           indices?: number[]
           line_item_id?: string | null

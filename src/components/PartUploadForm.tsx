@@ -413,6 +413,8 @@ export const PartUploadForm = () => {
                 content: base64,
                 size: f.file.size,
                 quantity: f.quantity,
+                geometric_features: f.analysis?.geometric_features,
+                mesh_data: f.meshData,
               });
             };
             reader.readAsDataURL(f.file);
