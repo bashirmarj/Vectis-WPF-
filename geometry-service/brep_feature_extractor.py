@@ -164,7 +164,8 @@ class BRepFeatureExtractor:
                     # Map to edge index
                     try:
                         edge_idx = mapper.edge_index(oriented_edge)
-                    except:
+                    except KeyError as e:
+                        logger.warning(f"Edge not found in mapper: {e}, using index 0")
                         edge_idx = 0
                     coedge_to_edge_list.append(edge_idx)
                     
@@ -191,14 +192,14 @@ class BRepFeatureExtractor:
         # Third pass: find mate coedges (same edge, opposite orientation)
         for i, (oriented_edge_i, face_i) in enumerate(coedges):
             edge_idx_i = coedge_to_edge_list[i]
-            orientation_i = oriented_edge_i.orientation()
+            is_reversed_i = oriented_edge_i.reversed()
             
             mate_found = False
             for j, (oriented_edge_j, face_j) in enumerate(coedges):
                 if i != j and coedge_to_edge_list[j] == edge_idx_i:
-                    orientation_j = oriented_edge_j.orientation()
+                    is_reversed_j = oriented_edge_j.reversed()
                     # Check if opposite orientation
-                    if orientation_i != orientation_j:
+                    if is_reversed_i != is_reversed_j:
                         coedge_to_mate_list[i] = j
                         mate_found = True
                         break
@@ -206,6 +207,16 @@ class BRepFeatureExtractor:
             if not mate_found:
                 # Boundary edge - mate to itself
                 coedge_to_mate_list[i] = i
+        
+        # Validate coedge-to-edge mapping
+        num_edges = len(edges)
+        assert all(0 <= idx < num_edges for idx in coedge_to_edge_list), \
+            "Invalid edge index in coedge_to_edge mapping"
+        
+        # Log topology statistics
+        boundary_count = sum(1 for i in range(num_coedges) if coedge_to_mate_list[i] == i)
+        logger.info(f"Topology: {len(faces)} faces, {len(edges)} edges, {len(coedges)} coedges")
+        logger.info(f"Found {boundary_count} boundary coedges (self-mates)")
         
         # Convert to numpy arrays
         coedge_to_next = np.array(coedge_to_next_list, dtype=np.int64)
