@@ -101,7 +101,7 @@ class BRepNetRecognizer:
         """Load PyTorch Lightning checkpoint"""
         try:
             from brepnet import BRepNet
-            from data_utils import load_json_data
+            from utils.data_utils import load_json_data
         except ImportError as e:
             raise ImportError(f"BRepNet dependencies missing: {e}. Ensure 'brepnet.py' and 'data_utils.py' exist.")
         
