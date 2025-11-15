@@ -1,5 +1,5 @@
 # brep_feature_extractor.py - BRepNet Input Tensor Extraction
-# Version 1.0.0
+# Version 1.0.1
 # Extracts 12 required tensors from OpenCascade TopoDS_Shape for BRepNet inference
 
 import logging
@@ -293,9 +293,13 @@ class BRepFeatureExtractor:
         return np.array(grids, dtype=np.float32)
     
     def _build_face_kernel(self, adjacency: List, num_faces: int) -> np.ndarray:
-        """Build face kernel tensor"""
+        """
+        Build face kernel tensor
+        
+        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        """
         max_neighbors = max(len(adj) for adj in adjacency) if adjacency else 1
-        kernel = np.zeros((num_faces, max_neighbors), dtype=np.int32)
+        kernel = np.zeros((num_faces, max_neighbors), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
             for j, neighbor in enumerate(adj[:max_neighbors]):
@@ -304,9 +308,13 @@ class BRepFeatureExtractor:
         return kernel
     
     def _build_edge_kernel(self, adjacency: List, num_edges: int) -> np.ndarray:
-        """Build edge kernel tensor"""
+        """
+        Build edge kernel tensor
+        
+        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        """
         max_neighbors = max(len(adj) for adj in adjacency) if adjacency else 1
-        kernel = np.zeros((num_edges, max_neighbors), dtype=np.int32)
+        kernel = np.zeros((num_edges, max_neighbors), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
             for j, neighbor in enumerate(adj[:max_neighbors]):
@@ -315,9 +323,13 @@ class BRepFeatureExtractor:
         return kernel
     
     def _build_coedge_kernel(self, adjacency: List, num_coedges: int) -> np.ndarray:
-        """Build coedge kernel tensor"""
+        """
+        Build coedge kernel tensor
+        
+        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        """
         max_neighbors = max(len(adj) for adj in adjacency) if adjacency else 1
-        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int32)
+        kernel = np.zeros((num_coedges, max_neighbors), dtype=np.int64)
         
         for i, adj in enumerate(adjacency):
             for j, neighbor in enumerate(adj[:max_neighbors]):
@@ -326,19 +338,25 @@ class BRepFeatureExtractor:
         return kernel
     
     def _map_coedges_to_edges(self, coedge_to_edge: List) -> np.ndarray:
-        """Map coedges to their parent edges"""
-        return np.array(coedge_to_edge, dtype=np.int32)
+        """
+        Map coedges to their parent edges
+        
+        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
+        """
+        return np.array(coedge_to_edge, dtype=np.int64)
     
     def _map_coedges_to_faces(self, coedge_to_face: List, num_faces: int) -> Tuple[np.ndarray, np.ndarray]:
         """
         Map coedges to faces
+        
+        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
         
         Returns:
             Cf: Coedges of small faces
             Csf: Coedges of big faces
         """
         # Simplified implementation
-        Cf = np.array(coedge_to_face, dtype=np.int32)
-        Csf = np.array(coedge_to_face, dtype=np.int32)
+        Cf = np.array(coedge_to_face, dtype=np.int64)
+        Csf = np.array(coedge_to_face, dtype=np.int64)
         
         return Cf, Csf
