@@ -99,22 +99,40 @@ class BRepNetRecognizer:
     
     def _load_pytorch_model(self, model_path: str):
         """Load PyTorch Lightning checkpoint"""
-        from brepnet import BRepNet
-        from data_utils import load_json_data
+        try:
+            from brepnet import BRepNet
+            from data_utils import load_json_data
+        except ImportError as e:
+            raise ImportError(f"BRepNet dependencies missing: {e}. Ensure 'brepnet.py' and 'data_utils.py' exist.")
         
         logger.info(f"Loading PyTorch Lightning checkpoint: {model_path}")
         
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model checkpoint not found: {model_path}")
+        
         # Load checkpoint
-        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+        try:
+            checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load checkpoint: {e}")
+        
         hyper_params = checkpoint.get('hyper_parameters', {})
         state_dict = checkpoint.get('state_dict', {})
+        
+        if not state_dict:
+            raise ValueError("Checkpoint does not contain 'state_dict'")
         
         # Load kernel configuration
         kernel_file = hyper_params.get('kernel_filename', 'winged_edge_plus_plus.json')
         try:
             kernel_data = load_json_data(kernel_file)
-        except:
-            kernel_data = load_json_data('winged_edge_plus_plus.json')
+            logger.info(f"✅ Loaded kernel config: {kernel_file}")
+        except Exception as e:
+            logger.warning(f"Failed to load {kernel_file}, trying default...")
+            try:
+                kernel_data = load_json_data('winged_edge_plus_plus.json')
+            except Exception as e2:
+                raise RuntimeError(f"Failed to load kernel configuration: {e2}")
         
         # Reconstruct opts object from hyper_parameters
         class Opts:
@@ -132,20 +150,29 @@ class BRepNetRecognizer:
             setattr(opts, key, value)
         
         # Create model and load weights
-        self.model = BRepNet(opts, kernel_data)
-        self.model.load_state_dict(state_dict, strict=False)
-        self.model.eval()
-        
-        if self.device == 'cuda':
-            self.model = self.model.cuda()
-        
-        epoch = checkpoint.get('epoch', 'unknown')
-        num_params = sum(p.numel() for p in self.model.parameters())
-        logger.info(f"✅ BRepNet loaded (epoch {epoch}, {num_params:,} params)")
+        try:
+            self.model = BRepNet(opts, kernel_data)
+            self.model.load_state_dict(state_dict, strict=False)
+            self.model.eval()
+            
+            if self.device == 'cuda':
+                self.model = self.model.cuda()
+            
+            epoch = checkpoint.get('epoch', 'unknown')
+            num_params = sum(p.numel() for p in self.model.parameters())
+            logger.info(f"✅ BRepNet loaded (epoch {epoch}, {num_params:,} params)")
+        except Exception as e:
+            raise RuntimeError(f"Failed to create BRepNet model: {e}")
         
         # Initialize feature extractor
-        from brep_feature_extractor import BRepFeatureExtractor
-        self.feature_extractor = BRepFeatureExtractor(kernel_file)
+        try:
+            from brep_feature_extractor import BRepFeatureExtractor
+            self.feature_extractor = BRepFeatureExtractor(kernel_file)
+            logger.info("✅ BRepFeatureExtractor initialized")
+        except ImportError as e:
+            raise ImportError(f"BRepFeatureExtractor not found: {e}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize feature extractor: {e}")
     
     def recognize_features(
         self,
@@ -162,15 +189,19 @@ class BRepNetRecognizer:
         Returns:
             List of recognized features with metadata
         """
-        logger.info("Starting BRepNet feature recognition")
+        logger.info("🔍 Starting BRepNet feature recognition")
         
-        # Use PyTorch model if available
-        if self.model is not None and hasattr(self, 'feature_extractor'):
-            return self._recognize_with_pytorch(shape, face_mapping)
-        
-        # Fallback to ONNX (if implemented)
-        if self.session is None:
-            raise RuntimeError("Model not loaded")
+        try:
+            # Use PyTorch model if available
+            if self.model is not None and hasattr(self, 'feature_extractor'):
+                return self._recognize_with_pytorch(shape, face_mapping)
+            
+            # Fallback to ONNX (if implemented)
+            if self.session is None:
+                raise RuntimeError("Neither PyTorch nor ONNX model loaded")
+        except Exception as e:
+            logger.error(f"❌ Feature recognition failed: {e}", exc_info=True)
+            return []  # Return empty list on failure instead of crashing
         
         # Extract face features for neural network
         face_features = self._extract_face_features(shape)

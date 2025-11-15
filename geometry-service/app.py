@@ -69,14 +69,24 @@ turning_detector = None
 
 try:
     # Load BRepNet with pre-trained PyTorch Lightning checkpoint
+    model_path = "models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt"
+    logger.info(f"🔄 Loading BRepNet from {model_path}...")
+    
     brepnet_recognizer = BRepNetRecognizer(
-        model_path="models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt",
+        model_path=model_path,
         device="cpu",  # Use CPU for production
         confidence_threshold=0.70
     )
-    logger.info("✅ BRepNet recognizer loaded")
+    logger.info("✅ BRepNet recognizer loaded successfully")
+except FileNotFoundError as e:
+    logger.error(f"❌ BRepNet model file not found: {e}")
+    brepnet_recognizer = None
+except ImportError as e:
+    logger.error(f"❌ BRepNet dependencies missing: {e}")
+    brepnet_recognizer = None
 except Exception as e:
     logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
+    brepnet_recognizer = None
 
 try:
     # Geometric fallback for turning features
@@ -411,21 +421,30 @@ def analyze_cad():
             
             logger.info(f"[{correlation_id}] Classifying part type")
             part_type = classify_part_type(shape)
+            logger.info(f"[{correlation_id}] 📊 Part classified as: {part_type}")
             
             # Feature recognition
             features = []
+            recognition_methods = []
             
             if part_type in ["prismatic", "mixed"] and brepnet_recognizer:
-                logger.info(f"[{correlation_id}] Running BRepNet feature recognition")
+                logger.info(f"[{correlation_id}] 🤖 Running BRepNet ML feature recognition")
                 try:
+                    brepnet_start = time.time()
                     brepnet_features = brepnet_recognizer.recognize_features(
                         shape,
                         mesh_data["face_mapping"]
                     )
+                    brepnet_time = int((time.time() - brepnet_start) * 1000)
                     features.extend(brepnet_features)
-                    logger.info(f"[{correlation_id}] BRepNet found {len(brepnet_features)} features")
+                    logger.info(f"[{correlation_id}] ✅ BRepNet found {len(brepnet_features)} features in {brepnet_time}ms")
+                    recognition_methods.append(f"BRepNet ({len(brepnet_features)} features)")
                 except Exception as e:
-                    logger.error(f"[{correlation_id}] BRepNet failed: {e}")
+                    logger.error(f"[{correlation_id}] ❌ BRepNet failed: {e}", exc_info=True)
+                    recognition_methods.append("BRepNet (failed)")
+            elif part_type in ["prismatic", "mixed"]:
+                logger.warning(f"[{correlation_id}] ⚠️ BRepNet not available, skipping ML recognition")
+                recognition_methods.append("BRepNet (unavailable)")
             
             if part_type in ["turning", "mixed"] and turning_detector:
                 logger.info(f"[{correlation_id}] Running geometric turning feature detection")
@@ -444,7 +463,10 @@ def analyze_cad():
                 "volume_mm3": volume * 1000,  # Convert to mm³
                 "surface_area_mm2": surface_area * 1000,  # Convert to mm²
                 "bounding_box": bbox,
-                "feature_count": len(features)
+                "feature_count": len(features),
+                "recognition_methods": recognition_methods,
+                "brepnet_available": brepnet_recognizer is not None,
+                "turning_detector_available": turning_detector is not None
             }
             
             elapsed_ms = int((time.time() - start_time) * 1000)

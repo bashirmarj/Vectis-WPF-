@@ -21,6 +21,9 @@ networkx==3.2.1
 # Monitoring
 psutil==5.9.6
 
+# OCCWL dependency
+deprecate==0.7.0
+
 # NOTE: torch installed separately in Dockerfile (CPU-only for smaller size)
 # NOTE: pythonocc-core installed via conda
 # NOTE: occwl is a local folder, imported via PYTHONPATH
