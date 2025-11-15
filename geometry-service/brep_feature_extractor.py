@@ -5,6 +5,10 @@
 import logging
 from typing import Dict, List, Tuple, Optional
 import numpy as np
+import warnings
+
+# Suppress deprecation warnings from OCC module
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='OCC')
 
 from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Face, TopoDS_Edge
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_WIRE
@@ -16,7 +20,7 @@ from OCC.Core.GeomAbs import (
 )
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import BRepGProp
+from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
 from OCC.Core.gp import gp_Pnt
 
 from utils.create_occwl_from_occ import create_occwl
@@ -175,7 +179,7 @@ class BRepFeatureExtractor:
         for face in faces:
             # Get surface properties
             props = GProp_GProps()
-            BRepGProp.SurfaceProperties(face, props)
+            brepgprop_SurfaceProperties(face, props)
             area = props.Mass()
             centroid = props.CentreOfMass()
             
