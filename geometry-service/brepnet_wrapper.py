@@ -369,18 +369,35 @@ class BRepNetRecognizer:
         # Step 3: Run inference
         with torch.no_grad():
             try:
-                # brepnet_step expects (batch_dict, batch_idx, save_segmentation_output)
-                predictions = self.model.brepnet_step(
-                    model_inputs, 
-                    batch_idx=0,  # Single inference, not batched training
-                    save_segmentation_output=False
+                # For inference, call create_face_embeddings + classification_layer directly
+                # (forward() method has a bug - missing grid parameters)
+                face_embeddings = self.model.create_face_embeddings(
+                    model_inputs["face_features"],
+                    model_inputs["face_point_grids"],
+                    model_inputs["edge_features"],
+                    model_inputs["edge_point_grids"],
+                    model_inputs["coedge_features"],
+                    model_inputs["coedge_point_grids"],
+                    model_inputs["face_kernel_tensor"],
+                    model_inputs["edge_kernel_tensor"],
+                    model_inputs["coedge_kernel_tensor"],
+                    model_inputs["coedges_of_edges"],
+                    model_inputs["coedges_of_small_faces"],
+                    model_inputs["coedges_of_big_faces"]
                 )
+                
+                # Get segmentation scores (logits)
+                segmentation_scores = self.model.classification_layer(face_embeddings)
+                
+                # Get predicted classes using softmax + argmax
+                predicted_classes = self.model.find_predicted_classes(segmentation_scores)
+                
             except Exception as e:
                 logger.error(f"BRepNet inference failed: {e}", exc_info=True)
                 return []
         
         # Step 4: Parse predictions into recognized features
-        features = self._parse_pytorch_predictions(predictions, shape, face_mapping)
+        features = self._parse_pytorch_predictions(segmentation_scores, shape, face_mapping)
         
         logger.info(f"✅ BRepNet recognized {len(features)} features")
         return features

@@ -20,7 +20,7 @@ from OCC.Core.GeomAbs import (
 )
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop_SurfaceProperties
+from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.gp import gp_Pnt
 
 from utils.create_occwl_from_occ import create_occwl
@@ -252,7 +252,7 @@ class BRepFeatureExtractor:
                 
                 # Calculate area
                 props = GProp_GProps()
-                brepgprop_SurfaceProperties(face, props)
+                brepgprop.SurfaceProperties(face, props)
                 area = props.Mass()
                 
                 # Create feature vector (10 dims)
