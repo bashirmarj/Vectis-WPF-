@@ -61,7 +61,7 @@ class BRepFeatureExtractor:
     
     def extract_features(self, shape: TopoDS_Shape) -> Dict[str, np.ndarray]:
         """
-        Main extraction pipeline
+        Main extraction pipeline (follows reference: brepnet_dataset.py)
         
         Args:
             shape: OpenCascade TopoDS_Shape from STEP file
@@ -74,7 +74,7 @@ class BRepFeatureExtractor:
         # Step 1: Scale shape to unit box [-1, 1]^3
         scaled_shape = scale_solid_to_unit_box(shape)
         
-        # Step 2: Build topology graph
+        # Step 2: Build topology graph with topological maps
         faces, edges, coedges, topology = self._build_topology(scaled_shape)
         
         logger.info(f"Topology: {len(faces)} faces, {len(edges)} edges, {len(coedges)} coedges")
@@ -89,15 +89,20 @@ class BRepFeatureExtractor:
         Gc = self._sample_coedge_grids(coedges)
         Ge = self._sample_edge_grids(edges, coedges)
         
-        # Step 5: Build kernel tensors (coedge-centric)
-        # All kernels are now [num_coedges, max_neighbors]
-        Kf = self._build_face_kernel(topology['face_adjacency'], len(coedges))
-        Ke = self._build_edge_kernel(topology['edge_adjacency'], len(coedges))
-        Kc = self._build_coedge_kernel(topology['coedge_adjacency'], len(coedges))
+        # Step 5: Build kernel tensors via topological walks
+        n = topology['coedge_to_next']
+        m = topology['coedge_to_mate']
+        e = topology['coedge_to_edge']
+        f = topology['coedge_to_face']
+        p = self._find_inverse_permutation(n)
+        
+        Kf = self._build_kernel_tensor_from_topology(n, p, m, e, f, self.kernel['faces'])
+        Ke = self._build_kernel_tensor_from_topology(n, p, m, e, f, self.kernel['edges'])
+        Kc = self._build_kernel_tensor_from_topology(n, p, m, e, f, self.kernel['coedges'])
         
         # Step 6: Build coedge mappings
-        Ce = self._map_coedges_to_edges(topology['coedge_to_edge'])
-        Cf, Csf = self._map_coedges_to_faces(topology['coedge_to_face'], len(faces))
+        Ce = self._map_coedges_to_edges(topology['coedge_to_edge'], len(edges))
+        Cf, Csf = self._map_coedges_to_faces(topology['coedge_to_face'], len(faces), len(coedges))
         
         logger.info("✅ BRepNet tensor extraction complete")
         
@@ -110,101 +115,120 @@ class BRepFeatureExtractor:
         }
     
     def _build_topology(self, shape: TopoDS_Shape) -> Tuple:
-        """Build coedge-centric topology graph using occwl"""
+        """
+        Build topology graph from shape using topological maps (reference: brepnet_dataset.py:412-447)
+        
+        Returns:
+            faces: List of TopoDS_Face
+            edges: List of (TopoDS_Edge, reversed_flag)
+            coedges: List of (oriented_edge, face)
+            topology: Dict with coedge_to_next, coedge_to_mate, coedge_to_edge, coedge_to_face
+        """
         from occwl.solid import Solid
         from occwl.entity_mapper import EntityMapper
         
-        # Wrap shape in occwl Solid
+        # Convert to occwl Solid
         solid = create_occwl(shape)
         if not isinstance(solid, Solid):
-            # If it's a compound, try to get first solid
-            try:
-                solid = Solid(shape, allow_compound=True)
-            except:
-                raise ValueError("Shape must be a valid solid")
+            solid = Solid(shape, allow_compound=True)
         
         mapper = EntityMapper(solid)
         
-        # Extract unique faces and edges
+        # Extract faces and edges
         faces = list(solid.faces())
         edges = list(solid.edges())
+        num_faces = len(faces)
+        num_edges = len(edges)
         
-        # Build COEDGES (oriented edges / half-edges)
+        # Build coedge list and topology maps
         coedges = []
-        coedge_to_edge_map = []
-        coedge_to_face_map = []
+        coedge_to_next_list = []
+        coedge_to_mate_list = []
+        coedge_to_edge_list = []
+        coedge_to_face_list = []
+        
+        # First pass: collect all coedges and build edge/face mappings
+        coedge_index = 0
+        wire_starts = []  # Track where each wire starts for next mapping
         
         for face_idx, face in enumerate(faces):
             for wire in face.wires():
-                for oriented_edge in wire.ordered_edges():
+                ordered_edges = list(wire.ordered_edges())
+                num_edges_in_wire = len(ordered_edges)
+                wire_start = coedge_index
+                wire_starts.append((wire_start, num_edges_in_wire))
+                
+                for i, oriented_edge in enumerate(ordered_edges):
                     coedges.append((oriented_edge, face))
-                    # Map coedge to its underlying edge index
+                    
+                    # Map to edge index
                     try:
                         edge_idx = mapper.edge_index(oriented_edge)
-                        coedge_to_edge_map.append(edge_idx)
                     except:
-                        coedge_to_edge_map.append(0)
-                    coedge_to_face_map.append(face_idx)
+                        edge_idx = 0
+                    coedge_to_edge_list.append(edge_idx)
+                    
+                    # Map to face index
+                    coedge_to_face_list.append(face_idx)
+                    
+                    # Placeholder for next (will fill in second pass)
+                    coedge_to_next_list.append(-1)
+                    
+                    # Placeholder for mate (will fill in third pass)
+                    coedge_to_mate_list.append(-1)
+                    
+                    coedge_index += 1
         
         num_coedges = len(coedges)
         
-        # Build coedge-centric adjacency lists
-        face_adj = [[] for _ in range(num_coedges)]  # Kf[i] = faces adjacent to coedge i
-        edge_adj = [[] for _ in range(num_coedges)]  # Ke[i] = edges adjacent to coedge i
-        coedge_adj = [[] for _ in range(num_coedges)]  # Kc[i] = coedges adjacent to coedge i
+        # Second pass: fill in next mappings (loop within each wire)
+        for wire_start, num_edges_in_wire in wire_starts:
+            for i in range(num_edges_in_wire):
+                current_idx = wire_start + i
+                next_idx = wire_start + ((i + 1) % num_edges_in_wire)
+                coedge_to_next_list[current_idx] = next_idx
         
+        # Third pass: find mate coedges (same edge, opposite orientation)
         for i, (oriented_edge_i, face_i) in enumerate(coedges):
-            # Find adjacent faces (via the underlying edge)
-            try:
-                edge_topods = oriented_edge_i.topods_shape()
-                for adj_face in solid.faces_from_edge(oriented_edge_i):
-                    if not adj_face.topods_shape().IsSame(face_i.topods_shape()):
-                        try:
-                            adj_face_idx = faces.index(adj_face)
-                            face_adj[i].append(adj_face_idx)
-                        except:
-                            pass
-            except:
-                pass
+            edge_idx_i = coedge_to_edge_list[i]
+            orientation_i = oriented_edge_i.orientation()
             
-            # Find adjacent coedges on same face
+            mate_found = False
             for j, (oriented_edge_j, face_j) in enumerate(coedges):
-                if i != j and face_i.topods_shape().IsSame(face_j.topods_shape()):
-                    coedge_adj[i].append(j)
-                    if len(coedge_adj[i]) >= 10:  # Limit neighbors
+                if i != j and coedge_to_edge_list[j] == edge_idx_i:
+                    orientation_j = oriented_edge_j.orientation()
+                    # Check if opposite orientation
+                    if orientation_i != orientation_j:
+                        coedge_to_mate_list[i] = j
+                        mate_found = True
                         break
             
-            # Find adjacent edges (sharing vertices)
-            try:
-                start_v = oriented_edge_i.first_vertex()
-                end_v = oriented_edge_i.last_vertex()
-                
-                for edge_idx, adj_edge in enumerate(edges):
-                    if not oriented_edge_i.topods_shape().IsSame(adj_edge.topods_shape()):
-                        try:
-                            adj_verts = list(solid.vertices_from_edge(adj_edge))
-                            if start_v in adj_verts or end_v in adj_verts:
-                                edge_adj[i].append(edge_idx)
-                                if len(edge_adj[i]) >= 10:  # Limit neighbors
-                                    break
-                        except:
-                            pass
-            except:
-                pass
+            if not mate_found:
+                # Boundary edge - mate to itself
+                coedge_to_mate_list[i] = i
+        
+        # Convert to numpy arrays
+        coedge_to_next = np.array(coedge_to_next_list, dtype=np.int64)
+        coedge_to_mate = np.array(coedge_to_mate_list, dtype=np.int64)
+        coedge_to_edge = np.array(coedge_to_edge_list, dtype=np.int64)
+        coedge_to_face = np.array(coedge_to_face_list, dtype=np.int64)
         
         topology = {
-            'face_adjacency': face_adj,
-            'edge_adjacency': edge_adj,
-            'coedge_adjacency': coedge_adj,
-            'coedge_to_edge': coedge_to_edge_map,
-            'coedge_to_face': coedge_to_face_map
+            'coedge_to_next': coedge_to_next,
+            'coedge_to_mate': coedge_to_mate,
+            'coedge_to_edge': coedge_to_edge,
+            'coedge_to_face': coedge_to_face,
         }
         
-        # Convert faces/edges to TopoDS objects for downstream compatibility
-        faces_topods = [f.topods_shape() for f in faces]
-        edges_tuple = [(e.topods_shape(), False) for e in edges]
+        # Build edge list with reverse flags
+        edges_with_flags = []
+        for edge in edges:
+            edges_with_flags.append((edge.topods_shape(), False))
         
-        return faces_topods, edges_tuple, coedges, topology
+        # Convert faces to TopoDS
+        faces_topods = [f.topods_shape() for f in faces]
+        
+        return faces_topods, edges_with_flags, coedges, topology
     
     def _extract_face_features(self, faces: List) -> np.ndarray:
         """Extract face features (10 features per face)"""
@@ -368,85 +392,152 @@ class BRepFeatureExtractor:
         
         return np.array(grids, dtype=np.float32)
     
-    def _build_face_kernel(self, adjacency: List, num_coedges: int) -> np.ndarray:
+    def _find_inverse_permutation(self, perm: np.ndarray) -> np.ndarray:
         """
-        Build face kernel tensor (coedge-centric)
+        Find inverse of a permutation array (reference: brepnet_dataset.py:749-756)
         
-        adjacency[i] = list of face indices adjacent to coedge i
-        Returns: [num_coedges, kernel_size] array
-        """
-        # Use FIXED kernel size from config (not dynamic!)
-        kernel_size = len(self.kernel['faces'])  # Should be 2 for winged_edge_plus_plus
-        kernel = np.zeros((num_coedges, kernel_size), dtype=np.int64)
-        
-        for i, adj in enumerate(adjacency):
-            for j in range(min(len(adj), kernel_size)):
-                kernel[i, j] = adj[j]
-        
-        return kernel
-    
-    def _build_edge_kernel(self, adjacency: List, num_coedges: int) -> np.ndarray:
-        """
-        Build edge kernel tensor (coedge-centric)
-        
-        adjacency[i] = list of edge indices adjacent to coedge i
-        Returns: [num_coedges, kernel_size] array
-        """
-        # Use FIXED kernel size from config (should be 9 for winged_edge_plus_plus)
-        kernel_size = len(self.kernel['edges'])
-        kernel = np.zeros((num_coedges, kernel_size), dtype=np.int64)
-        
-        for i, adj in enumerate(adjacency):
-            for j in range(min(len(adj), kernel_size)):
-                kernel[i, j] = adj[j]
-        
-        return kernel
-    
-    def _build_coedge_kernel(self, adjacency: List, num_coedges: int) -> np.ndarray:
-        """
-        Build coedge kernel tensor
-        
-        Uses FIXED kernel size from config (should be 14 for winged_edge_plus_plus)
-        """
-        kernel_size = len(self.kernel['coedges'])
-        kernel = np.zeros((num_coedges, kernel_size), dtype=np.int64)
-        
-        for i, adj in enumerate(adjacency):
-            for j in range(min(len(adj), kernel_size)):
-                kernel[i, j] = adj[j]
-        
-        return kernel
-    
-    def _map_coedges_to_edges(self, coedge_to_edge: List) -> np.ndarray:
-        """
-        Map coedges to their parent edges
-        
-        FIXED: Changed dtype from int32 to int64 for PyTorch indexing compatibility
-        """
-        return np.array(coedge_to_edge, dtype=np.int64)
-    
-    def _map_coedges_to_faces(self, coedge_to_face: List, num_faces: int) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Map coedges to faces
-        
+        Args:
+            perm: Permutation array (e.g., coedge_to_next)
+            
         Returns:
-            Cf: [num_faces, max_coedges] array of coedge indices for each face
-            Csf: Same as Cf
+            Inverse permutation (e.g., coedge_to_prev)
         """
+        inverse = np.zeros_like(perm)
+        for i in range(perm.size):
+            inverse[perm[i]] = i
+        return inverse
+    
+    def _build_kernel_tensor_from_topology(
+        self,
+        n: np.ndarray,  # next
+        p: np.ndarray,  # prev
+        m: np.ndarray,  # mate
+        e: np.ndarray,  # edge
+        f: np.ndarray,  # face
+        kernel: List[str]
+    ) -> np.ndarray:
+        """
+        Build kernel tensor by following topological walks (reference: brepnet_dataset.py:532-608)
+        
+        Args:
+            n: coedge_to_next mapping
+            p: coedge_to_prev mapping
+            m: coedge_to_mate mapping
+            e: coedge_to_edge mapping
+            f: coedge_to_face mapping
+            kernel: List of walk instructions (e.g., ["f", "mf"] for faces)
+            
+        Returns:
+            Kernel tensor [num_coedges, len(kernel)]
+        """
+        num_coedges = len(n)
+        kernel_tensor_cols = []
+        
+        for walk_instructions in kernel:
+            # Start with identity: [0, 1, 2, ..., num_coedges-1]
+            c = np.arange(num_coedges, dtype=np.int64)
+            
+            # Follow the walk instructions
+            for instruction in walk_instructions:
+                if instruction == "n":
+                    c = n[c]
+                elif instruction == "p":
+                    c = p[c]
+                elif instruction == "m":
+                    c = m[c]
+                elif instruction == "e":
+                    c = e[c]
+                elif instruction == "f":
+                    c = f[c]
+                # Empty string "" means identity, no operation
+            
+            kernel_tensor_cols.append(c)
+        
+        # Stack columns to get [num_coedges, kernel_size]
+        kernel_tensor = np.stack(kernel_tensor_cols, axis=1)
+        
+        assert kernel_tensor.shape == (num_coedges, len(kernel)), \
+            f"Kernel shape mismatch: {kernel_tensor.shape} != ({num_coedges}, {len(kernel)})"
+        
+        return kernel_tensor
+    
+    def _map_coedges_to_edges(self, coedge_to_edge: np.ndarray, num_edges: int) -> np.ndarray:
+        """
+        Build coedges of edges tensor (reference: brepnet_dataset.py:630-656)
+        
+        Args:
+            coedge_to_edge: Mapping from coedge index to edge index
+            num_edges: Total number of edges
+            
+        Returns:
+            Ce: [num_edges, 2] tensor of coedge indices for each edge
+        """
+        # Group coedges by edge
+        coedges_of_edges = [[] for _ in range(num_edges)]
+        for coedge_index, edge_index in enumerate(coedge_to_edge):
+            coedges_of_edges[edge_index].append(coedge_index)
+        
+        # Handle boundary edges (only one coedge) by duplicating
+        for coedges in coedges_of_edges:
+            if len(coedges) == 1:
+                coedges.append(coedges[0])
+        
+        # Convert to numpy array [num_edges, 2]
+        Ce = np.array(coedges_of_edges, dtype=np.int64)
+        
+        assert Ce.shape == (num_edges, 2), \
+            f"Ce shape mismatch: {Ce.shape} != ({num_edges}, 2)"
+        
+        return Ce
+    
+    def _map_coedges_to_faces(self, coedge_to_face: np.ndarray, num_faces: int, num_coedges: int) -> Tuple:
+        """
+        Build coedges of faces tensors (reference: brepnet_dataset.py:659-734)
+        
+        Separates faces into:
+        - Small faces (≤20 coedges): Cf as [num_small_faces, 20] padded array
+        - Big faces (>20 coedges): Csf as list of variable-length tensors
+        
+        Args:
+            coedge_to_face: Mapping from coedge index to face index
+            num_faces: Total number of faces
+            num_coedges: Total number of coedges (used for padding)
+            
+        Returns:
+            Cf: [num_small_faces, 20] with padding index = num_coedges
+            Csf: List of 1D arrays for big faces
+        """
+        MAX_COEDGES_PER_FACE = 20
+        
         # Group coedges by face
-        face_to_coedges = [[] for _ in range(num_faces)]
-        for coedge_idx, face_idx in enumerate(coedge_to_face):
-            face_to_coedges[face_idx].append(coedge_idx)
+        coedges_of_faces = [[] for _ in range(num_faces)]
+        for coedge_index, face_index in enumerate(coedge_to_face):
+            coedges_of_faces[face_index].append(coedge_index)
         
-        # Find max coedges per face
-        max_coedges = max(len(coedges) for coedges in face_to_coedges) if face_to_coedges else 1
+        # Separate small and big faces
+        small_face_indices = []
+        big_face_indices = []
         
-        # Create padded 2D array: [num_faces, max_coedges_per_face]
-        Cf = np.zeros((num_faces, max_coedges), dtype=np.int64)
-        for face_idx, coedge_list in enumerate(face_to_coedges):
-            for i, coedge_idx in enumerate(coedge_list):
-                Cf[face_idx, i] = coedge_idx
+        for face_index, coedges in enumerate(coedges_of_faces):
+            if len(coedges) <= MAX_COEDGES_PER_FACE:
+                small_face_indices.append(face_index)
+            else:
+                big_face_indices.append(face_index)
         
-        Csf = Cf.copy()
+        num_small_faces = len(small_face_indices)
+        
+        # Build Cf for small faces [num_small_faces, 20]
+        Cf = np.full((num_small_faces, MAX_COEDGES_PER_FACE), num_coedges, dtype=np.int64)
+        
+        for i, face_index in enumerate(small_face_indices):
+            coedges = coedges_of_faces[face_index]
+            for j, coedge_index in enumerate(coedges):
+                Cf[i, j] = coedge_index
+        
+        # Build Csf for big faces (list of variable-length arrays)
+        Csf = []
+        for face_index in big_face_indices:
+            coedges = np.array(coedges_of_faces[face_index], dtype=np.int64)
+            Csf.append(coedges)
         
         return Cf, Csf
