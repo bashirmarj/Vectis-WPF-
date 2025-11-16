@@ -373,6 +373,8 @@ class HoleRecognizer:
     ) -> Optional[HoleFeature]:
         """
         Recognize single hole with prioritized pattern matching
+        
+        Tracks rejection reasons for diagnostic purposes
         """
         # Priority order (most specific first)
         recognizers = [
@@ -386,15 +388,31 @@ class HoleRecognizer:
             (self._recognize_through_hole_full, "Through hole"),
         ]
         
+        rejection_reasons = []
+        
         for recognizer_func, name in recognizers:
             try:
                 hole = recognizer_func(node, adjacency, nodes)
                 if hole:
-                    logger.debug(f"  Matched pattern: {name}")
+                    logger.debug(f"  ✓ Matched pattern: {name}")
                     return hole
+                else:
+                    rejection_reasons.append(name)
             except Exception as e:
-                logger.warning(f"  Error in {name} recognizer: {e}")
+                logger.debug(f"  ✗ {name} error: {str(e)[:50]}")
+                rejection_reasons.append(f"{name} (error: {str(e)[:30]})")
                 continue
+        
+        # Log comprehensive rejection info
+        diameter_mm = node.radius * 2000 if node.radius else 0
+        adj_count = len(adjacency.get(node.id, []))
+        planar_count = sum(1 for a in adjacency.get(node.id, []) 
+                          if nodes[a['node_id']].surface_type == SurfaceType.PLANE)
+        
+        logger.debug(
+            f"  ❌ Cylinder {node.id} (Ø{diameter_mm:.1f}mm, {adj_count} adj, "
+            f"{planar_count} planar) rejected by all: {', '.join(rejection_reasons[:3])}"
+        )
         
         return None
     
