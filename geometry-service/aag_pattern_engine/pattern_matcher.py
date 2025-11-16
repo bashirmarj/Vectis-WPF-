@@ -24,7 +24,7 @@ import numpy as np
 
 from .graph_builder import AAGGraphBuilder
 from .recognizers.hole_recognizer import HoleRecognizer
-from .recognizers.pocket_slot_recognizer import PocketSlotRecognizer
+from .recognizers.pocket_recognizer import PocketSlotRecognizer
 from .recognizers.boss_step_island_recognizer import BossStepIslandRecognizer
 from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
 from .recognizers.turning_recognizer import TurningRecognizer
