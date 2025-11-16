@@ -69,6 +69,7 @@ interface MeshData {
     length?: number;
   }>;
   vertex_face_ids?: number[];
+  face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>;
   face_classifications?: Array<{
     face_id: number;
     type: "internal" | "external" | "through" | "planar";
