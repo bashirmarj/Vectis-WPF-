@@ -8,6 +8,7 @@ verify_jwt = false
 
 [functions.analyze-cad]
 verify_jwt = false
+memory_limit_mb = 512
 
 [functions.calculate-preliminary-quote]
 verify_jwt = false
