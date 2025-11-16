@@ -1,520 +1,521 @@
-# app.py - Production CAD Feature Recognition Service
-# Version 2.0.0 - Clean BRepNet Implementation
-# Based on: "Production-Ready CAD Feature Recognition" Research Report
-# 
-# Architecture:
-# - BRepNet for prismatic features (89.96% accuracy)
-# - Geometric fallback for turning features
-# - Face-level mapping for 3D visualization
-# - ONNX-optimized CPU inference
-# - 50-100 files/day capacity on 4 vCPU
-
 import os
-import io
 import time
-import hashlib
-import tempfile
 import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, asdict
-
-import numpy as np
+from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client
+import tempfile
+import json
+import traceback
+import sys
+import numpy as np
+import hashlib
+from typing import Dict, Any, Optional, List, Tuple
+import gc
 
-# OpenCascade imports
-from OCC.Core.STEPControl import STEPControl_Reader
-from OCC.Core.BRep import BRep_Tool
-from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
-from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopLoc import TopLoc_Location
-from OCC.Core.Bnd import Bnd_Box
-from OCC.Core.BRepBndLib import brepbndlib
-from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
-from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop
-
-# Local modules
-from brepnet_wrapper import BRepNetRecognizer, FeatureType
-from geometric_fallback import TurningFeatureDetector
-
-# === Configuration ===
-app = Flask(__name__)
-CORS(app)
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
 
-# Supabase setup
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Optional[Client] = None
+# Set environment variables for OpenCascade
+os.environ['PYTHONOCC_SHUNT_GUI'] = '1'
+os.environ['MPLBACKEND'] = 'Agg'
 
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        logger.info("✅ Supabase initialized")
-    except Exception as e:
-        logger.error(f"❌ Supabase initialization failed: {e}")
-
-# Initialize recognizers
-brepnet_recognizer = None
-turning_detector = None
-
+# Import OpenCascade modules
 try:
-    # Load BRepNet with pre-trained PyTorch Lightning checkpoint
-    model_path = "models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt"
-    logger.info(f"🔄 Loading BRepNet from {model_path}...")
-    
-    brepnet_recognizer = BRepNetRecognizer(
-        model_path=model_path,
-        device="cpu",  # Use CPU for production
-        confidence_threshold=0.70
-    )
-    logger.info("✅ BRepNet recognizer loaded successfully")
-except FileNotFoundError as e:
-    logger.error(f"❌ BRepNet model file not found: {e}")
-    brepnet_recognizer = None
+    from OCC.Core.STEPControl import STEPControl_Reader
+    from OCC.Core.IFSelect import IFSelect_RetDone
+    from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Fuse
+    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.TopExp import TopExp_Explorer
+    from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX
+    from OCC.Core.TopoDS import topods, TopoDS_Shape, TopoDS_Face, TopoDS_Edge
+    from OCC.Core.TopLoc import TopLoc_Location
+    from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Dir
+    from OCC.Core.BRepGProp import brepgprop_VolumeProperties, brepgprop_SurfaceProperties
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.Bnd import Bnd_Box
+    from OCC.Core.BRepBndLib import brepbndlib_AddOptimal
+    from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+    logger.info("✅ OpenCascade modules loaded successfully")
 except ImportError as e:
-    logger.error(f"❌ BRepNet dependencies missing: {e}")
-    brepnet_recognizer = None
-except Exception as e:
-    logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
-    brepnet_recognizer = None
+    logger.error(f"❌ Failed to import OpenCascade modules: {e}")
 
-try:
-    # Geometric fallback for turning features
-    turning_detector = TurningFeatureDetector(tolerance=0.001)
-    logger.info("✅ Turning feature detector loaded")
-except Exception as e:
-    logger.error(f"❌ Turning detector failed: {e}")
+# Import feature recognition modules
+from brepnet_wrapper import BRepNetRecognizer, FeatureType
 
+# Import other modules
+from machining_estimator import MachiningTimeEstimator, SetupConfiguration, MachiningOperation, ToolType
 
-@dataclass
-class ProcessingResult:
-    """Standard processing result format"""
-    success: bool
-    correlation_id: str
-    processing_time_ms: int
-    mesh_data: Optional[Dict] = None
-    features: Optional[List[Dict]] = None
-    metadata: Optional[Dict] = None
-    error: Optional[str] = None
+app = Flask(__name__)
+CORS(app)
 
+# Initialize feature recognizers
+brepnet_recognizer = None
 
-def generate_correlation_id() -> str:
-    """Generate unique correlation ID for request tracking"""
-    return f"{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}-{os.urandom(4).hex()}"
-
-
-def compute_file_hash(file_content: bytes) -> str:
-    """Compute SHA-256 hash for caching"""
-    return hashlib.sha256(file_content).hexdigest()
-
-
-def tessellate_shape(shape, linear_deflection=0.001, angular_deflection=12.0) -> Dict:
-    """
-    Tessellate STEP shape into mesh with face-to-triangle mapping
+def initialize_ml_models():
+    """Initialize ML models for feature recognition"""
+    global brepnet_recognizer
     
-    Args:
-        shape: OpenCascade TopoDS_Shape
-        linear_deflection: Linear deflection in meters (0.001 = 1mm)
-        angular_deflection: Angular deflection in degrees (12° = professional CAD standard)
-    
-    Returns:
-        Dict with vertices, indices, normals, and face_mapping
-    """
-    start = time.time()
-    
-    # Perform tessellation
-    mesh = BRepMesh_IncrementalMesh(shape, linear_deflection, False, angular_deflection, True)
-    mesh.Perform()
-    
-    if not mesh.IsDone():
-        raise ValueError("Tessellation failed")
-    
-    # Extract mesh data with face mapping
-    vertices = []
-    indices = []
-    normals = []
-    face_mapping = {}  # {face_id: [triangle_indices]}
-    vertex_to_face = {}  # NEW: Map vertex index to face ID
-    
-    global_vertex_index = 0
-    global_triangle_index = 0
-    vertex_map = {}  # {(x,y,z): index} for deduplication
-    
-    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-    face_id = 0
-    
-    while face_explorer.More():
-        face = face_explorer.Current()
-        location = TopLoc_Location()
-        triangulation = BRep_Tool.Triangulation(face, location)
+    # Try to load BRepNet model
+    try:
+        model_path = Path("models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt")
+        if not model_path.exists():
+            logger.warning(f"⚠️ BRepNet model not found at {model_path}")
+            return False
+            
+        logger.info(f"🔄 Loading BRepNet from {model_path}...")
         
-        if triangulation is not None:
-            face_triangle_start = global_triangle_index
-            transformation = location.Transformation()
+        brepnet_recognizer = BRepNetRecognizer(
+            model_path=model_path,
+            device="cpu",  # Use CPU for production
+            confidence_threshold=0.30  # Lowered from 0.70 to capture more features
+        )
+        logger.info("✅ BRepNet recognizer loaded successfully")
+    except FileNotFoundError as e:
+        logger.error(f"❌ BRepNet model file not found: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Failed to load BRepNet: {e}")
+        logger.error(traceback.format_exc())
+        return False
+    
+    return True
+
+# Initialize models on startup
+ml_models_available = initialize_ml_models()
+if ml_models_available:
+    logger.info("✅ ML models initialized successfully")
+else:
+    logger.warning("⚠️ Running without ML models - using geometric analysis only")
+
+def compute_file_hash(file_path: str) -> str:
+    """Compute SHA256 hash of file for caching"""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+def parse_step_file(step_path: str) -> Optional[TopoDS_Shape]:
+    """Parse STEP file and return shape"""
+    try:
+        reader = STEPControl_Reader()
+        status = reader.ReadFile(step_path)
+        
+        if status != IFSelect_RetDone:
+            logger.error(f"Failed to read STEP file: {step_path}")
+            return None
+        
+        reader.TransferRoots()
+        shape = reader.OneShape()
+        
+        if shape.IsNull():
+            logger.error("Loaded shape is null")
+            return None
             
-            # Extract vertices for this face
-            face_vertex_map = {}
-            for i in range(1, triangulation.NbNodes() + 1):
-                pnt = triangulation.Node(i)
-                pnt.Transform(transformation)
-                coord = (round(pnt.X(), 6), round(pnt.Y(), 6), round(pnt.Z(), 6))
+        return shape
+    except Exception as e:
+        logger.error(f"Error parsing STEP file: {e}")
+        logger.error(traceback.format_exc())
+        return None
+
+def tessellate_shape(shape: TopoDS_Shape, linear_deflection: float = 0.5, angular_deflection: float = 0.17) -> Dict[str, Any]:
+    """Tessellate shape to extract mesh data with vertex-to-face mapping"""
+    try:
+        start_time = time.time()
+        
+        # Create mesh with controlled parameters
+        mesh = BRepMesh_IncrementalMesh(shape, linear_deflection, False, angular_deflection, True)
+        mesh.Perform()
+        
+        if not mesh.IsDone():
+            logger.error("Mesh generation failed")
+            return None
+        
+        vertices = []
+        vertex_set = set()
+        vertex_map = {}  # Map unique vertices to indices
+        indices = []
+        normals = []
+        edges = []
+        face_groups = []
+        vertex_face_ids = []  # Will store face ID for each vertex
+        
+        # First pass: collect faces
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        faces = []
+        while face_explorer.More():
+            faces.append(topods.Face(face_explorer.Current()))
+            face_explorer.Next()
+        
+        # Process each face
+        face_offset = 0
+        for face_id, face in enumerate(faces):
+            try:
+                # Get triangulation for this face
+                loc = TopLoc_Location()
+                triangulation = BRep_Tool.Triangulation(face, loc)
                 
-                if coord not in vertex_map:
-                    vertex_map[coord] = global_vertex_index
-                    vertices.extend([pnt.X(), pnt.Y(), pnt.Z()])
-                    vertex_to_face[global_vertex_index] = face_id  # NEW: Map vertex to face
-                    global_vertex_index += 1
+                if triangulation is None:
+                    continue
                 
-                face_vertex_map[i] = vertex_map[coord]
+                # Get transformation
+                transformation = loc.Transformation()
+                
+                # Process vertices for this face
+                face_vertices = []
+                face_vertex_indices = []
+                
+                for i in range(1, triangulation.NbNodes() + 1):
+                    pt = triangulation.Node(i)
+                    # Apply transformation
+                    pt.Transform(transformation)
+                    
+                    vertex_key = (round(pt.X(), 6), round(pt.Y(), 6), round(pt.Z(), 6))
+                    
+                    if vertex_key not in vertex_map:
+                        vertex_idx = len(vertices)
+                        vertex_map[vertex_key] = vertex_idx
+                        vertices.append([pt.X(), pt.Y(), pt.Z()])
+                        # Store which face this vertex belongs to
+                        vertex_face_ids.append(face_id)
+                    
+                    face_vertex_indices.append(vertex_map[vertex_key])
+                
+                # Process triangles for this face
+                face_triangles = []
+                orientation = face.Orientation()
+                
+                for i in range(1, triangulation.NbTriangles() + 1):
+                    tri = triangulation.Triangle(i)
+                    n1, n2, n3 = tri.Get()
+                    
+                    idx1 = face_vertex_indices[n1 - 1]
+                    idx2 = face_vertex_indices[n2 - 1]
+                    idx3 = face_vertex_indices[n3 - 1]
+                    
+                    # Apply orientation
+                    from OCC.Core.TopAbs import TopAbs_REVERSED
+                    if orientation == TopAbs_REVERSED:
+                        indices.extend([idx1, idx3, idx2])
+                    else:
+                        indices.extend([idx1, idx2, idx3])
+                    
+                    face_triangles.append(len(indices) // 3 - 1)
+                
+                # Store face group info
+                if face_triangles:
+                    face_groups.append({
+                        'face_id': face_id,
+                        'start_idx': face_triangles[0] * 3,
+                        'count': len(face_triangles) * 3
+                    })
+                    
+            except Exception as e:
+                logger.warning(f"Failed to process face {face_id}: {e}")
+                continue
+        
+        # Ensure vertex_face_ids has the correct length
+        if len(vertex_face_ids) < len(vertices):
+            # Pad with -1 for vertices that couldn't be mapped to a face
+            vertex_face_ids.extend([-1] * (len(vertices) - len(vertex_face_ids)))
+        
+        # Generate placeholder normals (can be computed properly if needed)
+        normals = [[0, 0, 1]] * len(vertices)
+        
+        # Process edges
+        edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+        edge_set = set()
+        
+        while edge_explorer.More():
+            edge = topods.Edge(edge_explorer.Current())
             
-            # Extract triangles
-            face_triangles = []
-            for i in range(1, triangulation.NbTriangles() + 1):
-                triangle = triangulation.Triangle(i)
-                n1, n2, n3 = triangle.Get()
+            # Get edge vertices
+            vertex_exp = TopExp_Explorer(edge, TopAbs_VERTEX)
+            edge_verts = []
+            while vertex_exp.More() and len(edge_verts) < 2:
+                vertex = topods.Vertex(vertex_exp.Current())
+                pt = BRep_Tool.Pnt(vertex)
+                vertex_key = (round(pt.X(), 6), round(pt.Y(), 6), round(pt.Z(), 6))
                 
-                # Respect face orientation
-                if face.Orientation() == 1:  # REVERSED
-                    indices.extend([
-                        face_vertex_map[n1],
-                        face_vertex_map[n3],
-                        face_vertex_map[n2]
-                    ])
-                else:
-                    indices.extend([
-                        face_vertex_map[n1],
-                        face_vertex_map[n2],
-                        face_vertex_map[n3]
-                    ])
+                if vertex_key in vertex_map:
+                    edge_verts.append(vertex_map[vertex_key])
                 
-                face_triangles.append(global_triangle_index)
-                global_triangle_index += 1
+                vertex_exp.Next()
             
-            # Store face mapping
-            face_mapping[face_id] = {
-                "triangle_indices": face_triangles,
-                "triangle_range": [face_triangle_start, global_triangle_index - 1]
+            if len(edge_verts) == 2:
+                edge_key = tuple(sorted(edge_verts))
+                if edge_key not in edge_set:
+                    edge_set.add(edge_key)
+                    edges.append(edge_verts)
+            
+            edge_explorer.Next()
+        
+        elapsed = (time.time() - start_time) * 1000
+        logger.info(f"Tessellated: {len(vertices)} vertices, {len(indices)//3} triangles, {len(faces)} faces in {elapsed:.1f}ms")
+        logger.info(f"Created vertex_face_ids: {len(vertex_face_ids)} vertices mapped to faces")
+        
+        return {
+            'vertices': vertices,
+            'indices': indices,
+            'normals': normals,
+            'edges': edges,
+            'face_groups': face_groups,
+            'vertex_face_ids': vertex_face_ids,  # Added vertex-to-face mapping
+            'num_faces': len(faces),
+            'num_edges': len(edges),
+            'num_vertices': len(vertices),
+            'tessellation_time': elapsed
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during tessellation: {e}")
+        logger.error(traceback.format_exc())
+        return None
+
+def compute_bounding_box(shape: TopoDS_Shape) -> Dict[str, float]:
+    """Compute bounding box of shape"""
+    try:
+        bbox = Bnd_Box()
+        brepbndlib_AddOptimal(shape, bbox, True, True)
+        
+        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+        
+        return {
+            'min': {'x': xmin, 'y': ymin, 'z': zmin},
+            'max': {'x': xmax, 'y': ymax, 'z': zmax},
+            'dimensions': {
+                'x': xmax - xmin,
+                'y': ymax - ymin,
+                'z': zmax - zmin
+            },
+            'center': {
+                'x': (xmin + xmax) / 2,
+                'y': (ymin + ymax) / 2,
+                'z': (zmin + zmax) / 2
             }
-        
-        face_id += 1
-        face_explorer.Next()
-    
-    # Compute per-vertex normals (average of adjacent face normals)
-    normals = compute_vertex_normals(vertices, indices, len(vertices) // 3)
-    
-    # NEW: Convert vertex_to_face map to array
-    vertex_count = len(vertices) // 3
-    vertex_face_ids = [-1] * vertex_count
-    for vertex_idx, face_idx in vertex_to_face.items():
-        vertex_face_ids[vertex_idx] = face_idx
-    
-    elapsed = (time.time() - start) * 1000
-    logger.info(f"Tessellated: {len(vertices)//3} vertices, {len(indices)//3} triangles, {face_id} faces in {elapsed:.1f}ms")
-    logger.info(f"Created vertex_face_ids: {len(vertex_face_ids)} vertices mapped to faces")
-    
-    return {
-        "vertices": vertices,
-        "indices": indices,
-        "normals": normals,
-        "face_mapping": face_mapping,
-        "vertex_face_ids": vertex_face_ids,  # NEW: Add to return dict
-        "face_count": face_id,
-        "triangle_count": len(indices) // 3,
-        "vertex_count": len(vertices) // 3
-    }
+        }
+    except Exception as e:
+        logger.error(f"Error computing bounding box: {e}")
+        return None
 
-
-def compute_vertex_normals(vertices: List[float], indices: List[int], vertex_count: int) -> List[float]:
-    """Compute smooth vertex normals from triangle data"""
-    normals = np.zeros((vertex_count, 3), dtype=np.float32)
-    
-    # Accumulate face normals at each vertex
-    for i in range(0, len(indices), 3):
-        i0, i1, i2 = indices[i], indices[i+1], indices[i+2]
-        
-        v0 = np.array(vertices[i0*3:i0*3+3])
-        v1 = np.array(vertices[i1*3:i1*3+3])
-        v2 = np.array(vertices[i2*3:i2*3+3])
-        
-        # Compute face normal
-        edge1 = v1 - v0
-        edge2 = v2 - v0
-        normal = np.cross(edge1, edge2)
-        
-        # Accumulate at each vertex
-        normals[i0] += normal
-        normals[i1] += normal
-        normals[i2] += normal
-    
-    # Normalize
-    norms = np.linalg.norm(normals, axis=1, keepdims=True)
-    norms[norms == 0] = 1  # Avoid division by zero
-    normals = normals / norms
-    
-    return normals.flatten().tolist()
-
-
-def extract_bounding_box(shape) -> Dict:
-    """Extract axis-aligned bounding box"""
-    bbox = Bnd_Box()
-    brepbndlib.Add(shape, bbox)
-    xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-    
-    return {
-        "min": [xmin, ymin, zmin],
-        "max": [xmax, ymax, zmax],
-        "dimensions": [xmax - xmin, ymax - ymin, zmax - zmin],
-        "center": [(xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2]
-    }
-
-
-def extract_volume_and_surface_area(shape) -> Tuple[float, float]:
+def compute_volume_and_surface_area(shape: TopoDS_Shape) -> Dict[str, float]:
     """Compute volume and surface area"""
-    props = GProp_GProps()
-    brepgprop.VolumeProperties(shape, props)
-    volume = props.Mass()
-    
-    props = GProp_GProps()
-    brepgprop.SurfaceProperties(shape, props)
-    surface_area = props.Mass()
-    
-    return volume, surface_area
-
-
-def classify_part_type(shape) -> str:
-    """
-    Classify part as prismatic (milling) or turning (lathe)
-    Based on dominant surface types and geometry
-    """
-    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-    planar_area = 0.0
-    cylindrical_area = 0.0
-    total_area = 0.0
-    
-    while face_explorer.More():
-        face = face_explorer.Current()
-        surface_adaptor = BRepAdaptor_Surface(face)
-        surface_type = surface_adaptor.GetType()
-        
-        # Compute face area
+    try:
+        # Volume
         props = GProp_GProps()
-        brepgprop.SurfaceProperties(face, props)
-        area = props.Mass()
-        total_area += area
+        brepgprop_VolumeProperties(shape, props)
+        volume = props.Mass()
         
-        if surface_type == GeomAbs_Plane:
-            planar_area += area
-        elif surface_type == GeomAbs_Cylinder:
-            cylindrical_area += area
+        # Surface area
+        props_surf = GProp_GProps()
+        brepgprop_SurfaceProperties(shape, props_surf)
+        surface_area = props_surf.Mass()
         
-        face_explorer.Next()
-    
-    if total_area == 0:
-        return "unknown"
-    
-    planar_ratio = planar_area / total_area
-    cylindrical_ratio = cylindrical_area / total_area
-    
-    # Classification heuristic
-    if cylindrical_ratio > 0.6:
-        return "turning"
-    elif planar_ratio > 0.5:
-        return "prismatic"
-    else:
-        return "mixed"
+        return {
+            'volume': volume,
+            'surface_area': surface_area
+        }
+    except Exception as e:
+        logger.error(f"Error computing volume and surface area: {e}")
+        return {'volume': 0, 'surface_area': 0}
 
+def classify_part_type(shape: TopoDS_Shape, bounding_box: Dict) -> str:
+    """
+    Classify part as prismatic, turning, or sheet metal
+    """
+    try:
+        dims = bounding_box['dimensions']
+        x, y, z = dims['x'], dims['y'], dims['z']
+        
+        # Sort dimensions
+        sorted_dims = sorted([x, y, z])
+        min_dim = sorted_dims[0]
+        mid_dim = sorted_dims[1]
+        max_dim = sorted_dims[2]
+        
+        # Sheet metal detection (one dimension much smaller)
+        thickness_ratio = min_dim / max_dim if max_dim > 0 else 1
+        if thickness_ratio < 0.1:
+            return "sheet_metal"
+        
+        # Count cylindrical faces for turning detection
+        cylindrical_count = 0
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        
+        while face_explorer.More():
+            face = topods.Face(face_explorer.Current())
+            surf = BRepAdaptor_Surface(face)
+            if surf.GetType() == GeomAbs_Cylinder:
+                cylindrical_count += 1
+            face_explorer.Next()
+        
+        # Turning part detection (high cylindrical face ratio)
+        total_faces = 0
+        face_exp2 = TopExp_Explorer(shape, TopAbs_FACE)
+        while face_exp2.More():
+            total_faces += 1
+            face_exp2.Next()
+        
+        if total_faces > 0:
+            cylinder_ratio = cylindrical_count / total_faces
+            if cylinder_ratio > 0.3:  # 30% or more cylindrical faces
+                return "turning"
+        
+        # Default to prismatic
+        return "prismatic"
+        
+    except Exception as e:
+        logger.error(f"Error classifying part: {e}")
+        return "prismatic"
+
+def run_ml_feature_recognition(shape: TopoDS_Shape, step_file_path: str) -> Optional[Dict[str, Any]]:
+    """Run ML-based feature recognition using BRepNet"""
+    global brepnet_recognizer
+    
+    if not brepnet_recognizer:
+        logger.warning("BRepNet recognizer not available")
+        return None
+    
+    try:
+        logger.info("🔍 Starting BRepNet feature recognition")
+        start_time = time.time()
+        
+        # Run BRepNet recognition
+        result = brepnet_recognizer.recognize_features_from_step(
+            step_file_path=step_file_path,
+            shape=shape
+        )
+        
+        if result:
+            elapsed = time.time() - start_time
+            logger.info(f"✅ BRepNet recognized {len(result.get('instances', []))} features")
+            
+            return {
+                'instances': result.get('instances', []),
+                'num_features_detected': len(result.get('instances', [])),
+                'inference_time_sec': elapsed,
+                'avg_confidence': result.get('avg_confidence', 0.0),
+                'recognition_method': 'brepnet'
+            }
+        else:
+            logger.warning("BRepNet returned no results")
+            return None
+            
+    except Exception as e:
+        logger.error(f"ML feature recognition failed: {e}")
+        logger.error(traceback.format_exc())
+        return None
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
-        "status": "healthy",
-        "service": "vectis-geometry-service",
-        "version": "2.0.0",
-        "brepnet_loaded": brepnet_recognizer is not None,
-        "turning_detector_loaded": turning_detector is not None,
-        "timestamp": datetime.utcnow().isoformat()
+        'status': 'healthy',
+        'ml_models_available': ml_models_available,
+        'timestamp': time.time()
     })
-
 
 @app.route('/analyze', methods=['POST'])
 def analyze_cad():
-    """
-    Analyze STEP file and extract features
-    
-    Request:
-        - file: STEP file (multipart/form-data)
-        - correlation_id: Optional correlation ID for tracking
-    
-    Response:
-        - success: bool
-        - correlation_id: str
-        - processing_time_ms: int
-        - mesh_data: Dict with vertices, indices, normals, face_mapping
-        - features: List[Dict] with detected features
-        - metadata: Dict with part classification and metrics
-    """
-    correlation_id = request.form.get('correlation_id') or generate_correlation_id()
-    start_time = time.time()
-    
-    logger.info(f"[{correlation_id}] Starting analysis")
+    """Main endpoint for CAD file analysis"""
+    request_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{os.urandom(4).hex()}"
+    logger.info(f"[{request_id}] Starting analysis")
     
     try:
-        # Validate request
+        # Check if file is provided
         if 'file' not in request.files:
-            return jsonify(ProcessingResult(
-                success=False,
-                correlation_id=correlation_id,
-                processing_time_ms=0,
-                error="No file provided"
-            ).__dict__), 400
+            return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
-        if not file.filename.lower().endswith(('.step', '.stp')):
-            return jsonify(ProcessingResult(
-                success=False,
-                correlation_id=correlation_id,
-                processing_time_ms=0,
-                error="Only STEP files supported (.step, .stp)"
-            ).__dict__), 400
+        if not file.filename:
+            return jsonify({'error': 'No file selected'}), 400
         
-        # Read file content
-        file_content = file.read()
-        file_hash = compute_file_hash(file_content)
-        logger.info(f"[{correlation_id}] File hash: {file_hash}, size: {len(file_content)} bytes")
-        
-        # Check cache (optional - implement Redis/Supabase caching)
-        # cached_result = check_cache(file_hash)
-        # if cached_result:
-        #     logger.info(f"[{correlation_id}] Cache hit")
-        #     return jsonify(cached_result)
-        
-        # Write to temporary file for OpenCascade
+        # Create temporary file
         with tempfile.NamedTemporaryFile(suffix='.step', delete=False) as tmp_file:
-            tmp_file.write(file_content)
-            tmp_path = tmp_file.name
+            file.save(tmp_file.name)
+            temp_path = tmp_file.name
+            
+            # Compute file hash and size for logging
+            file_hash = compute_file_hash(temp_path)
+            file_size = os.path.getsize(temp_path)
+            logger.info(f"[{request_id}] File hash: {file_hash}, size: {file_size} bytes")
         
         try:
             # Parse STEP file
-            logger.info(f"[{correlation_id}] Parsing STEP file")
-            reader = STEPControl_Reader()
-            read_status = reader.ReadFile(tmp_path)
+            logger.info(f"[{request_id}] Parsing STEP file")
+            shape = parse_step_file(temp_path)
+            if shape is None:
+                return jsonify({'error': 'Failed to parse STEP file'}), 400
             
-            if read_status != 1:  # IFSelect_RetDone
-                raise ValueError(f"STEP read failed with status {read_status}")
-            
-            reader.TransferRoots()
-            shape = reader.OneShape()
-            
-            if shape.IsNull():
-                raise ValueError("Failed to extract shape from STEP file")
-            
-            # Extract geometric data
-            logger.info(f"[{correlation_id}] Tessellating mesh")
+            # Tessellate mesh
+            logger.info(f"[{request_id}] Tessellating mesh")
             mesh_data = tessellate_shape(shape)
+            if mesh_data is None:
+                return jsonify({'error': 'Failed to generate mesh'}), 500
             
-            logger.info(f"[{correlation_id}] Computing bounding box")
-            bbox = extract_bounding_box(shape)
+            # Compute bounding box
+            logger.info(f"[{request_id}] Computing bounding box")
+            bounding_box = compute_bounding_box(shape)
             
-            logger.info(f"[{correlation_id}] Computing volume and surface area")
-            volume, surface_area = extract_volume_and_surface_area(shape)
+            # Compute volume and surface area
+            logger.info(f"[{request_id}] Computing volume and surface area")
+            volume_data = compute_volume_and_surface_area(shape)
             
-            logger.info(f"[{correlation_id}] Classifying part type")
-            part_type = classify_part_type(shape)
-            logger.info(f"[{correlation_id}] 📊 Part classified as: {part_type}")
+            # Classify part type
+            logger.info(f"[{request_id}] Classifying part type")
+            part_type = classify_part_type(shape, bounding_box)
+            logger.info(f"[{request_id}] 📊 Part classified as: {part_type}")
             
-            # Feature recognition
-            features = []
-            recognition_methods = []
+            # Run ML feature recognition
+            ml_features = None
+            if ml_models_available and part_type in ['prismatic', 'turning']:
+                logger.info(f"[{request_id}] 🤖 Running BRepNet ML feature recognition")
+                ml_features = run_ml_feature_recognition(shape, temp_path)
+                if ml_features:
+                    logger.info(f"[{request_id}] ✅ BRepNet found {ml_features['num_features_detected']} features in {ml_features['inference_time_sec']*1000:.0f}ms")
             
-            if part_type in ["prismatic", "mixed"] and brepnet_recognizer:
-                logger.info(f"[{correlation_id}] 🤖 Running BRepNet ML feature recognition")
-                try:
-                    brepnet_start = time.time()
-                    brepnet_features = brepnet_recognizer.recognize_features(
-                        shape,
-                        mesh_data["face_mapping"]
-                    )
-                    brepnet_time = int((time.time() - brepnet_start) * 1000)
-                    features.extend(brepnet_features)
-                    logger.info(f"[{correlation_id}] ✅ BRepNet found {len(brepnet_features)} features in {brepnet_time}ms")
-                    recognition_methods.append(f"BRepNet ({len(brepnet_features)} features)")
-                except Exception as e:
-                    logger.error(f"[{correlation_id}] ❌ BRepNet failed: {e}", exc_info=True)
-                    recognition_methods.append("BRepNet (failed)")
-            elif part_type in ["prismatic", "mixed"]:
-                logger.warning(f"[{correlation_id}] ⚠️ BRepNet not available, skipping ML recognition")
-                recognition_methods.append("BRepNet (unavailable)")
-            
-            if part_type in ["turning", "mixed"] and turning_detector:
-                logger.info(f"[{correlation_id}] Running geometric turning feature detection")
-                try:
-                    turning_features = turning_detector.detect_features(shape)
-                    features.extend(turning_features)
-                    logger.info(f"[{correlation_id}] Found {len(turning_features)} turning features")
-                except Exception as e:
-                    logger.error(f"[{correlation_id}] Turning detector failed: {e}")
-            
-            # Compile metadata
-            metadata = {
-                "file_hash": file_hash,
-                "filename": file.filename,
-                "part_type": part_type,
-                "volume_mm3": volume * 1000,  # Convert to mm³
-                "surface_area_mm2": surface_area * 1000,  # Convert to mm²
-                "bounding_box": bbox,
-                "feature_count": len(features),
-                "recognition_methods": recognition_methods,
-                "brepnet_available": brepnet_recognizer is not None,
-                "turning_detector_available": turning_detector is not None
+            # Prepare response
+            response = {
+                'success': True,
+                'request_id': request_id,
+                'mesh_data': mesh_data,
+                'bounding_box': bounding_box,
+                'volume': volume_data['volume'],
+                'surface_area': volume_data['surface_area'],
+                'part_type': part_type,
+                'ml_features': ml_features
             }
             
-            elapsed_ms = int((time.time() - start_time) * 1000)
+            # Log completion
+            total_time = time.time()
+            logger.info(f"[{request_id}] ✅ Analysis complete in {(time.time() - total_time)*1000:.0f}ms")
             
-            result = ProcessingResult(
-                success=True,
-                correlation_id=correlation_id,
-                processing_time_ms=elapsed_ms,
-                mesh_data=mesh_data,
-                features=features,
-                metadata=metadata
-            )
+            # Force garbage collection
+            gc.collect()
             
-            logger.info(f"[{correlation_id}] ✅ Analysis complete in {elapsed_ms}ms")
+            return jsonify(response)
             
-            # Store to cache/database (optional)
-            # store_to_cache(file_hash, result)
-            
-            return jsonify(asdict(result)), 200
-        
         finally:
-            # Cleanup temp file
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-    
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
     except Exception as e:
-        elapsed_ms = int((time.time() - start_time) * 1000)
-        logger.error(f"[{correlation_id}] ❌ Error: {str(e)}", exc_info=True)
-        
-        return jsonify(ProcessingResult(
-            success=False,
-            correlation_id=correlation_id,
-            processing_time_ms=elapsed_ms,
-            error=str(e)
-        ).__dict__), 500
-
+        logger.error(f"[{request_id}] Error during analysis: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    logger.info(f"Starting Vectis Geometry Service on port {port}")
+    port = int(os.environ.get('PORT', 5000))
+    logger.info(f"Starting CAD analysis service on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
