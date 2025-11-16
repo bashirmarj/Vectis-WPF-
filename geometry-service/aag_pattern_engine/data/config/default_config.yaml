@@ -1,0 +1,31 @@
+# AAG Pattern Matching System - Default Configuration
+
+system:
+  tolerance: 1.0e-6  # Geometric tolerance in meters
+  log_level: INFO
+  
+recognition:
+  enable_holes: true
+  enable_pockets: true
+  enable_slots: true
+  enable_bosses: true
+  enable_steps: true
+  enable_islands: true
+  enable_fillets: true
+  enable_chamfers: true
+  enable_turning: true
+
+validation:
+  enabled: true
+  min_wall_thickness: 0.001  # 1mm
+  max_aspect_ratio: 25.0
+  check_standards: true
+  
+manufacturing:
+  compute_sequences: true
+  estimate_times: true
+  material_removal_rate: 50.0  # cm³/min
+  
+performance:
+  cache_enabled: false
+  max_workers: 4
