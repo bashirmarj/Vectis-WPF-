@@ -137,8 +137,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             const faceId = meshData.vertex_face_ids[i];
             
             if (highlightSet.size > 0 && faceId !== undefined && highlightSet.has(faceId)) {
-              // Highlighted face - use blue color
-              finalColor = baseColor.clone().lerp(highlightColorObj, highlightIntensity);
+              // Highlighted face - use pure blue color
+              finalColor = highlightColorObj;
             }
             // No dimming - all other faces keep their base color
           }
