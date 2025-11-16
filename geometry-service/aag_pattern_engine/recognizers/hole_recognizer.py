@@ -276,6 +276,9 @@ class HoleRecognizer:
         logger.info("Starting comprehensive hole recognition with validation")
         logger.info("=" * 70)
         
+        # Get detected orientation from graph metadata
+        self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
+        
         nodes = graph['nodes']
         edges = graph['edges']
         
@@ -976,7 +979,7 @@ class HoleRecognizer:
             return None
         
         axis = np.array(cylinder_node.axis)
-        vertical = np.array([0, 0, 1])
+        vertical = self._up_axis
         
         dot = np.dot(axis, vertical)
         angle_to_vertical = np.degrees(np.arccos(np.abs(dot)))

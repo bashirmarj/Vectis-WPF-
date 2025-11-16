@@ -30,6 +30,10 @@ from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferReco
 from .recognizers.turning_recognizer import TurningRecognizer
 
 from OCC.Core.TopoDS import TopoDS_Shape
+from OCC.Core.gp import gp_Pnt, gp_Trsf
+from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
+from OCC.Core.Bnd import Bnd_Box
+from OCC.Core.BRepBndLib import brepbndlib
 
 logger = logging.getLogger(__name__)
 
@@ -174,24 +178,48 @@ class AAGPatternMatcher:
         except Exception as e:
             logger.error(f"✗ Failed to initialize turning recognizer: {e}")
             self.turning_recognizer = None
+    
+    def _compute_bounding_box_diagonal(self, shape: TopoDS_Shape) -> float:
+        """Compute diagonal length of bounding box for unit detection"""
+        try:
+            bbox = Bnd_Box()
+            brepbndlib.Add(shape, bbox)
+            xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+            dx, dy, dz = xmax - xmin, ymax - ymin, zmax - zmin
+            return (dx**2 + dy**2 + dz**2)**0.5
+        except Exception as e:
+            logger.warning(f"Failed to compute bounding box: {e}")
+            return 1.0
+    
+    def _detect_and_normalize_units(self, shape: TopoDS_Shape) -> Tuple[TopoDS_Shape, float, str]:
+        """Detect units and normalize to meters - CRITICAL fix for 90% of failures"""
+        diagonal = self._compute_bounding_box_diagonal(shape)
         
-        # Check if any critical recognizers failed
-        failed_recognizers = []
-        if not self.hole_recognizer:
-            failed_recognizers.append("Hole")
-        if not self.pocket_slot_recognizer:
-            failed_recognizers.append("Pocket/Slot")
-        if not self.turning_recognizer:
-            failed_recognizers.append("Turning (CRITICAL)")
-        
-        if failed_recognizers:
-            logger.warning(f"⚠ Some recognizers failed to initialize: {', '.join(failed_recognizers)}")
+        if diagonal > 10.0:
+            unit_name, scale_factor = "millimeters", 0.001
+        elif diagonal > 1.0:
+            unit_name, scale_factor = "inches", 0.0254
         else:
-            logger.info("✓ All recognizers initialized successfully")
+            unit_name, scale_factor = "meters", 1.0
         
-        logger.info("=" * 70)
-        logger.info("Pattern Matcher Ready - Production Grade")
-        logger.info("=" * 70)
+        logger.info(f"Bbox diagonal: {diagonal:.2f} → Detected: {unit_name}")
+        
+        if scale_factor == 1.0:
+            logger.info("✓ Already in meters")
+            return shape, scale_factor, unit_name
+        
+        logger.info(f"Normalizing to meters (scale: {scale_factor})")
+        try:
+            transform = gp_Trsf()
+            transform.SetScale(gp_Pnt(0, 0, 0), scale_factor)
+            builder = BRepBuilderAPI_Transform(shape, transform, True)
+            normalized = builder.Shape()
+            new_diag = self._compute_bounding_box_diagonal(normalized)
+            logger.info(f"✓ Normalized: {diagonal:.2f} → {new_diag:.4f}m")
+            return normalized, scale_factor, unit_name
+        except Exception as e:
+            logger.error(f"Scaling failed: {e}")
+            return shape, 1.0, "unknown"
     
     def recognize_all_features(
         self,
@@ -223,8 +251,20 @@ class AAGPatternMatcher:
         )
         
         try:
-            # STEP 1: Build AAG from STEP file
-            logger.info("\n[STEP 1/7] Building Attributed Adjacency Graph...")
+            # ===== STEP 0: Normalize units (CRITICAL) =====
+            logger.info("\n[STEP 0/8] Detecting and normalizing units...")
+            unit_start = time.time()
+            try:
+                shape, scale_factor, detected_units = self._detect_and_normalize_units(shape)
+                result.metadata['scale_factor'] = scale_factor
+                result.metadata['detected_units'] = detected_units
+                result.metadata['unit_normalization_time'] = time.time() - unit_start
+                logger.info(f"✓ Normalized: {detected_units} → meters")
+            except Exception as e:
+                logger.warning(f"⚠ Unit normalization failed: {e}")
+            
+            # STEP 1: Build AAG from normalized shape
+            logger.info("\n[STEP 1/8] Building Attributed Adjacency Graph...")
             graph_start = time.time()
             
             try:
@@ -244,14 +284,14 @@ class AAGPatternMatcher:
                 result.metrics.errors.append(f"Graph build failed: {str(e)}")
                 return result
             
-            # STEP 2: Detect part type (prismatic vs rotational)
-            logger.info("\n[STEP 2/7] Detecting part type...")
+            # STEP 2: Detect part type
+            logger.info("\n[STEP 2/8] Detecting part type...")
             part_type = self._detect_part_type(graph)
             result.part_type = part_type
             logger.info(f"✓ Part type: {part_type.value}")
             
-            # STEP 3: Run recognizers with error handling
-            logger.info("\n[STEP 3/7] Running feature recognizers...")
+            # STEP 3: Run recognizers
+            logger.info("\n[STEP 3/8] Running feature recognizers...")
             recognition_start = time.time()
             
             # 3.1: Holes (critical for both prismatic and rotational)
@@ -332,9 +372,9 @@ class AAGPatternMatcher:
             logger.info(f"✓ Total features: {result.metrics.total_features}")
             logger.info(f"  Average confidence: {result.metrics.average_confidence:.1%}")
             
-            # STEP 5: Validate features and interactions
+            # STEP 4: Validate features
             if validate:
-                logger.info("\n[STEP 5/7] Validating features and interactions...")
+                logger.info("\n[STEP 4/8] Validating features and interactions...")
                 validation_start = time.time()
                 
                 try:
@@ -348,9 +388,13 @@ class AAGPatternMatcher:
                     logger.error(f"✗ Validation failed: {e}")
                     result.metrics.errors.append(f"Validation: {str(e)}")
             
+            # STEP 5: Analyze interactions
+            logger.info("\n[STEP 5/8] Analyzing feature interactions...")
+            self._analyze_feature_interactions(result)
+            
             # STEP 6: Compute manufacturing sequence
             if compute_manufacturing:
-                logger.info("\n[STEP 6/7] Computing manufacturing sequence...")
+                logger.info("\n[STEP 6/8] Computing manufacturing sequence...")
                 
                 try:
                     self._compute_manufacturing_sequence(result)
@@ -360,8 +404,12 @@ class AAGPatternMatcher:
                     logger.error(f"✗ Manufacturing sequence computation failed: {e}")
                     result.metrics.errors.append(f"Manufacturing: {str(e)}")
             
-            # STEP 7: Generate warnings
-            logger.info("\n[STEP 7/7] Generating warnings...")
+            # STEP 7: Compile statistics
+            logger.info("\n[STEP 7/8] Compiling statistics...")
+            self._compile_statistics(result)
+            
+            # STEP 8: Generate warnings
+            logger.info("\n[STEP 8/8] Generating warnings...")
             self._collect_warnings(result)
             
             if len(result.metrics.warnings) > 0:

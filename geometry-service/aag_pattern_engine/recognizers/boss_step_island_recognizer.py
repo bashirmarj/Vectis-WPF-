@@ -192,6 +192,9 @@ class BossStepIslandRecognizer:
             logger.warning("Adjacency not in graph - rebuilding (performance hit)")
             adjacency = self._build_adjacency_map(nodes, edges)
         
+        # Get detected orientation from graph metadata
+        self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
+        
         # Find upward-facing planar candidates
         planar_nodes = [n for n in nodes if n.surface_type == SurfaceType.PLANE]
         self.stats['total_candidates'] = len(planar_nodes)
@@ -696,7 +699,7 @@ class BossStepIslandRecognizer:
             
             if wall.surface_type == SurfaceType.PLANE:
                 normal = np.array(wall.normal)
-                vertical = np.array([0, 0, 1])
+                vertical = self._up_axis
                 
                 dot = abs(np.dot(normal, vertical))
                 angle = np.degrees(np.arccos(np.clip(dot, 0, 1)))
@@ -1067,7 +1070,7 @@ class BossStepIslandRecognizer:
             return False
         
         normal = np.array(node.normal)
-        up = np.array([0, 0, 1])
+        up = self._up_axis
         dot = np.dot(normal, up)
         
         return dot > 0.85
@@ -1075,7 +1078,7 @@ class BossStepIslandRecognizer:
     def _is_horizontal_face(self, node: GraphNode) -> bool:
         """Check if face is horizontal"""
         normal = np.array(node.normal)
-        up = np.array([0, 0, 1])
+        up = self._up_axis
         dot = abs(np.dot(normal, up))
         return dot > 0.85
     
@@ -1100,14 +1103,14 @@ class BossStepIslandRecognizer:
         """Check if wall is vertical"""
         if node.surface_type == SurfaceType.PLANE:
             normal = np.array(node.normal)
-            up = np.array([0, 0, 1])
+            up = self._up_axis
             dot = abs(np.dot(normal, up))
             return dot < 0.2
         elif node.surface_type == SurfaceType.CYLINDER:
             if not node.axis:
                 return False
             axis = np.array(node.axis)
-            up = np.array([0, 0, 1])
+            up = self._up_axis
             dot = abs(np.dot(axis, up))
             return dot > 0.85
         return False
