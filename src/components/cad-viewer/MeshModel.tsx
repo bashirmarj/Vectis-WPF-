@@ -70,8 +70,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       useSilhouetteEdges = false,
       controlsRef,
       highlightedFaceIds = [],
-      highlightColor = "#FFD700",
-      highlightIntensity = 0.7,
+      highlightColor = "#3B82F6", // Blue highlight color
+      highlightIntensity = 0.8,
     },
     ref,
   ) => {
@@ -108,7 +108,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const vertexCount = meshData.vertices.length / 3;
       const colors = new Float32Array(vertexCount * 3);
       const baseColor = new THREE.Color(SOLID_COLOR);
-      const highlightColorObj = new THREE.Color(highlightColor || "#FFD700");
+      const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
       const highlightSet = new Set(highlightedFaceIds);
 
       if (topologyColors && !highlightSet.size) {
@@ -137,13 +137,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             const faceId = meshData.vertex_face_ids[i];
             
             if (highlightSet.size > 0 && faceId !== undefined && highlightSet.has(faceId)) {
-              // Highlighted face
+              // Highlighted face - use blue color
               finalColor = baseColor.clone().lerp(highlightColorObj, highlightIntensity);
-            } else if (highlightSet.size > 0) {
-              // Dimmed face (when something else is highlighted)
-              finalColor = baseColor.clone().multiplyScalar(0.4);
             }
-            // else: finalColor remains baseColor (no highlighting active)
+            // No dimming - all other faces keep their base color
           }
 
           colors[i * 3 + 0] = finalColor.r;
