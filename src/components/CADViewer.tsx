@@ -583,7 +583,7 @@ export function CADViewer({
                       useSilhouetteEdges={displayMode === "wireframe"}
                       controlsRef={controlsRef}
                       highlightedFaceIds={highlightedFaceIds}
-                      highlightColor="#FFA500"
+                      highlightColor="#3B82F6"
                       highlightIntensity={0.85}
                     />
 
