@@ -222,7 +222,12 @@ class PocketSlotRecognizer:
         
         nodes = graph['nodes']
         edges = graph['edges']
-        adjacency = self._build_adjacency_map(nodes, edges)
+        
+        # Get pre-built adjacency from graph (performance optimization)
+        adjacency = graph.get('adjacency')
+        if adjacency is None:
+            logger.warning("Adjacency not in graph - rebuilding (performance hit)")
+            adjacency = self._build_adjacency_map(nodes, edges)
         
         # Find bottom candidates
         planar_nodes = [n for n in nodes if n.surface_type == SurfaceType.PLANE]
@@ -927,14 +932,14 @@ class PocketSlotRecognizer:
         if feature.width and feature.width < self.min_width:
             errors.append(f'Width too small: {feature.width*1000:.2f}mm')
         
-        # Aspect ratio check
-        if feature.length and feature.width and feature.width > 0:
+        # Aspect ratio check (safe division)
+        if feature.length and feature.width and feature.width > self.tolerance:
             aspect_ratio = feature.length / feature.width
             if aspect_ratio > 20:
                 warnings.append(f'High aspect ratio: {aspect_ratio:.1f}:1')
         
-        # Depth/width ratio
-        if feature.width and feature.depth and feature.width > 0:
+        # Depth/width ratio (safe division)
+        if feature.depth and feature.width and feature.width > self.tolerance:
             depth_ratio = feature.depth / feature.width
             if depth_ratio > 5:
                 warnings.append(f'Deep feature: depth/width = {depth_ratio:.1f}')

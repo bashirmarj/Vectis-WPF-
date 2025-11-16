@@ -226,7 +226,12 @@ class FilletRecognizer:
         
         nodes = graph['nodes']
         edges = graph['edges']
-        adjacency = self._build_adjacency_map(nodes, edges)
+        
+        # Get pre-built adjacency from graph (performance optimization)
+        adjacency = graph.get('adjacency')
+        if adjacency is None:
+            logger.warning("Adjacency not in graph - rebuilding (performance hit)")
+            adjacency = self._build_adjacency_map(nodes, edges)
         
         # Find blend surface candidates
         blend_candidates = self._find_blend_candidates(nodes)
@@ -939,7 +944,12 @@ class ChamferRecognizer:
         
         nodes = graph['nodes']
         edges = graph['edges']
-        adjacency = self._build_adjacency_map(nodes, edges)
+        
+        # Get pre-built adjacency from graph (performance optimization)
+        adjacency = graph.get('adjacency')
+        if adjacency is None:
+            logger.warning("Adjacency not in graph - rebuilding (performance hit)")
+            adjacency = self._build_adjacency_map(nodes, edges)
         
         # Find chamfer candidates
         chamfer_candidates = self._find_chamfer_candidates(nodes, adjacency)

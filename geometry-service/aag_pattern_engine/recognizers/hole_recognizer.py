@@ -277,7 +277,12 @@ class HoleRecognizer:
         
         nodes = graph['nodes']
         edges = graph['edges']
-        adjacency = self._build_adjacency_map(nodes, edges)
+        
+        # Get pre-built adjacency from graph (performance optimization)
+        adjacency = graph.get('adjacency')
+        if adjacency is None:
+            logger.warning("Adjacency not in graph - rebuilding (performance hit)")
+            adjacency = self._build_adjacency_map(nodes, edges)
         
         # Find candidates
         cylinder_nodes = [n for n in nodes if n.surface_type == SurfaceType.CYLINDER]
@@ -680,9 +685,10 @@ class HoleRecognizer:
         depth = self._compute_hole_depth(cylinder_node, bottom_node)
         diameter = cylinder_node.radius * 2
         
-        # Validate aspect ratio
-        aspect_ratio = depth / diameter
-        if aspect_ratio < 0.05 or aspect_ratio > 25:
+        # Validate aspect ratio (safe division)
+        if diameter and diameter > self.tolerance:
+            aspect_ratio = depth / diameter
+            if aspect_ratio < 0.05 or aspect_ratio > 25:
             return None
         
         hole = HoleFeature(
@@ -1074,8 +1080,8 @@ class HoleRecognizer:
         if hole.diameter > self.max_hole_diameter:
             errors.append(f'Diameter too large: {hole.diameter*1000:.2f}mm')
         
-        # Depth validation
-        if hole.depth:
+        # Depth validation (safe division)
+        if hole.depth and hole.diameter and hole.diameter > self.tolerance:
             aspect_ratio = hole.depth / hole.diameter
             
             if aspect_ratio > self.max_depth_diameter_ratio:
@@ -1132,7 +1138,8 @@ class HoleRecognizer:
         
         if hole.type == HoleType.BLIND:
             recommended_tool = 'twist_drill'
-            if hole.depth and hole.diameter:
+            # Safe division check for aspect ratio
+            if hole.depth and hole.diameter and hole.diameter > self.tolerance:
                 aspect_ratio = hole.depth / hole.diameter
                 if aspect_ratio > 10:
                     warnings_mfg.append(ManufacturingWarning.DEEP_HOLE)
@@ -1150,9 +1157,9 @@ class HoleRecognizer:
         # Check tool access
         requires_special = len(warnings_mfg) > 0
         
-        # Chip evacuation concern for deep holes
+        # Chip evacuation concern for deep holes (safe division)
         chip_concern = False
-        if hole.depth and hole.diameter:
+        if hole.depth and hole.diameter and hole.diameter > self.tolerance:
             if hole.depth / hole.diameter > 5:
                 chip_concern = True
         
