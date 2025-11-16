@@ -2,7 +2,7 @@
 
 from .hole_recognizer import HoleRecognizer, HoleFeature, HoleType
 from .pocket_recognizer import PocketSlotRecognizer, PocketSlotFeature, PocketType, SlotType, PassageType
-from .slot_recognizer import SlotRecognizer, SlotFeature, SlotType
+from .slot_recognizer import SlotRecognizer, SlotFeature
 from .boss_step_island_recognizer import (
     BossStepIslandRecognizer,
     BossStepIslandFeature,
