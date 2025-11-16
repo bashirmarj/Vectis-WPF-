@@ -77,9 +77,9 @@ def initialize_ml_models():
         brepnet_recognizer = BRepNetRecognizer(
             model_path=model_path,
             device="cpu",  # Use CPU for production
-            confidence_threshold=0.30  # Lowered from 0.70 to capture more features
+            confidence_threshold=0.30  # LOWERED FROM 0.70 to capture more features like chamfers and fillets
         )
-        logger.info("✅ BRepNet recognizer loaded successfully")
+        logger.info("✅ BRepNet recognizer loaded successfully with confidence threshold=0.30")
     except FileNotFoundError as e:
         logger.error(f"❌ BRepNet model file not found: {e}")
         return False
