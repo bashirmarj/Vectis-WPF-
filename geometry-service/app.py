@@ -514,6 +514,167 @@ def analyze_cad():
         ).__dict__), 500
 
 
+@app.route('/analyze-aag', methods=['POST'])
+def analyze_aag():
+    """
+    AAG-based geometric pattern matching feature recognition.
+    Returns multi-face features using AAG Pattern Matcher.
+    """
+    correlation_id = request.headers.get('X-Correlation-ID', generate_correlation_id())
+    start_time = time.time()
+    
+    logger.info(f"[{correlation_id}] ⚙️ AAG recognition request received")
+    
+    try:
+        # Get file from request
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file provided',
+                'correlation_id': correlation_id
+            }), 400
+        
+        file = request.files['file']
+        if not file.filename:
+            return jsonify({
+                'success': False,
+                'error': 'Empty filename',
+                'correlation_id': correlation_id
+            }), 400
+        
+        # Read file content
+        file_content = file.read()
+        file_hash = compute_file_hash(file_content)
+        logger.info(f"[{correlation_id}] 📁 File hash: {file_hash}")
+        
+        # Write to temporary file
+        with tempfile.NamedTemporaryFile(suffix='.step', delete=False) as tmp_file:
+            tmp_file.write(file_content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # === STEP 1: Load STEP file ===
+            logger.info(f"[{correlation_id}] 📂 Loading STEP file")
+            reader = STEPControl_Reader()
+            read_status = reader.ReadFile(tmp_path)
+            
+            if read_status != 1:
+                raise ValueError(f"STEP read failed with status {read_status}")
+            
+            reader.TransferRoots()
+            shape = reader.OneShape()
+            
+            if shape.IsNull():
+                raise ValueError("Failed to extract shape from STEP file")
+            
+            # === STEP 2: Tessellate with face mapping ===
+            logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
+            mesh_data = tessellate_shape(shape)
+            
+            # === STEP 3: Initialize AAG Pattern Matcher ===
+            logger.info(f"[{correlation_id}] 🔍 Initializing AAG Pattern Matcher")
+            from aag_pattern_engine.pattern_matcher import AAGPatternMatcher
+            
+            pattern_matcher = AAGPatternMatcher(tolerance=1e-6)
+            
+            # === STEP 4: Run comprehensive feature recognition ===
+            logger.info(f"[{correlation_id}] 🎯 Running AAG pattern recognition")
+            recognition_result = pattern_matcher.recognize_all_features(
+                shape=shape,
+                validate=True,
+                compute_manufacturing=True
+            )
+            
+            logger.info(f"[{correlation_id}] ✅ AAG found {recognition_result.metrics.total_features} features")
+            
+            # === STEP 5: Convert AAG features to standard format ===
+            features = []
+            
+            # Collect all feature types
+            all_features = (
+                recognition_result.holes +
+                recognition_result.pockets +
+                recognition_result.slots +
+                recognition_result.bosses +
+                recognition_result.steps +
+                recognition_result.fillets +
+                recognition_result.chamfers +
+                recognition_result.turning_features
+            )
+            
+            for aag_feat in all_features:
+                feature_dict = {
+                    'type': aag_feat.feature_type,
+                    'subtype': getattr(aag_feat, 'subtype', None),
+                    'face_ids': aag_feat.face_ids,  # MULTI-FACE! Key difference from BRepNet
+                    'confidence': aag_feat.confidence,
+                    'parameters': getattr(aag_feat, 'parameters', {}),
+                    'ml_detected': False,  # AAG is geometric, not ML
+                    'method': 'aag'
+                }
+                features.append(feature_dict)
+                
+                # Log multi-face features
+                if len(aag_feat.face_ids) > 1:
+                    logger.info(f"[{correlation_id}] 🎨 {aag_feat.feature_type}: {len(aag_feat.face_ids)} faces")
+            
+            # === STEP 6: Extract metadata ===
+            bbox = extract_bounding_box(shape)
+            volume, surface_area = extract_volume_and_surface_area(shape)
+            part_type = classify_part_type(shape)
+            
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            
+            metadata = {
+                "file_hash": file_hash,
+                "filename": file.filename,
+                "part_type": recognition_result.part_type.value,
+                "volume_mm3": volume * 1000,
+                "surface_area_mm2": surface_area * 1000000,
+                "bounding_box_mm": {
+                    "x": bbox[0] * 1000,
+                    "y": bbox[1] * 1000,
+                    "z": bbox[2] * 1000
+                },
+                "recognition_method": "AAG Pattern Matching",
+                "total_features": recognition_result.metrics.total_features,
+                "recognition_time_s": recognition_result.metrics.recognition_time,
+                "average_confidence": recognition_result.metrics.average_confidence,
+                "multi_face_features": sum(1 for f in features if len(f['face_ids']) > 1)
+            }
+            
+            # === STEP 7: Build response ===
+            result = ProcessingResult(
+                success=True,
+                correlation_id=correlation_id,
+                processing_time_ms=processing_time_ms,
+                mesh_data=mesh_data,
+                features=features,
+                metadata=metadata
+            )
+            
+            logger.info(f"[{correlation_id}] 🎉 AAG analysis complete in {processing_time_ms}ms")
+            logger.info(f"[{correlation_id}] 📈 Multi-face features: {metadata['multi_face_features']}/{len(features)}")
+            
+            return jsonify(asdict(result)), 200
+            
+        finally:
+            # Cleanup temp file
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+    
+    except Exception as e:
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"[{correlation_id}] ❌ AAG analysis failed: {e}", exc_info=True)
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'correlation_id': correlation_id,
+            'processing_time_ms': processing_time_ms
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     logger.info(f"Starting Vectis Geometry Service on port {port}")
