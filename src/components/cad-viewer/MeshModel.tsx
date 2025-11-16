@@ -15,7 +15,7 @@ interface MeshData {
   triangle_count: number;
   feature_edges?: number[][][];
   vertex_face_ids?: number[];
-  face_mapping?: Record<number, number>; // Maps BREP face index -> mesh face index
+  face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>; // Maps BREP face index -> mesh triangles
   tagged_edges?: Array<{
     feature_id: number;
     start: [number, number, number];
@@ -112,13 +112,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
       const highlightSet = new Set(highlightedFaceIds);
       
-      // 🔑 Translate BREP face indices to mesh face indices using face_mapping
+      // 🔑 Translate BREP face indices to mesh triangle indices using face_mapping
       const meshFaceIds = new Set<number>();
       if (meshData.face_mapping) {
         highlightedFaceIds.forEach(brepFaceId => {
-          const meshFaceId = meshData.face_mapping![brepFaceId];
-          if (meshFaceId !== undefined) {
-            meshFaceIds.add(meshFaceId);
+          const mapping = meshData.face_mapping![brepFaceId];
+          if (mapping && mapping.triangle_indices) {
+            // Add all triangle indices for this BREP face
+            mapping.triangle_indices.forEach((triIdx: number) => meshFaceIds.add(triIdx));
           }
         });
       } else {
