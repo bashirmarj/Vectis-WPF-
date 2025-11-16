@@ -1,0 +1,11 @@
+{
+  "standard": "ISO 4762 Socket Head Cap Screws",
+  "counterbores": {
+    "M3": {"thread_mm": 3.0, "cb_diameter_mm": 6.0, "cb_depth_mm": 3.0},
+    "M4": {"thread_mm": 4.0, "cb_diameter_mm": 7.5, "cb_depth_mm": 3.5},
+    "M5": {"thread_mm": 5.0, "cb_diameter_mm": 9.0, "cb_depth_mm": 4.0},
+    "M6": {"thread_mm": 6.0, "cb_diameter_mm": 11.0, "cb_depth_mm": 4.5},
+    "M8": {"thread_mm": 8.0, "cb_diameter_mm": 14.0, "cb_depth_mm": 6.0},
+    "M10": {"thread_mm": 10.0, "cb_diameter_mm": 17.0, "cb_depth_mm": 7.5}
+  }
+}
