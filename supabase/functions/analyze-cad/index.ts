@@ -103,24 +103,34 @@ serve(async (req) => {
       confidence: 0.85,
     };
 
-    // Call BRepNet geometry service v2.0 if file data available
+    // Call geometry service if file data available
     if (fileData && isSTEP) {
       const geometryServiceUrl = Deno.env.get('GEOMETRY_SERVICE_URL');
+      const recognitionMethod = Deno.env.get('RECOGNITION_METHOD') || 'brepnet';
       
       if (geometryServiceUrl) {
         try {
+          // Determine endpoint based on recognition method
+          const endpoint = recognitionMethod.toLowerCase() === 'aag' 
+            ? '/analyze-aag'  // AAG pattern matching
+            : '/analyze';     // BRepNet ML
+
           console.log(JSON.stringify({
             timestamp: new Date().toISOString(),
             level: 'INFO',
             correlation_id: correlationId,
-            message: 'Calling BRepNet service v2.0',
-            context: { serviceUrl: geometryServiceUrl }
+            message: `Calling geometry service (${recognitionMethod})`,
+            context: { 
+              serviceUrl: geometryServiceUrl,
+              endpoint: endpoint,
+              method: recognitionMethod
+            }
           }));
 
           const serviceFormData = new FormData();
           serviceFormData.append('file', new Blob([fileData]), fileName);
 
-          const serviceResponse = await fetch(`${geometryServiceUrl}/analyze`, {
+          const serviceResponse = await fetch(`${geometryServiceUrl}${endpoint}`, {
             method: 'POST',
             body: serviceFormData,
             headers: {
