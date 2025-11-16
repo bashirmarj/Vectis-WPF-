@@ -435,6 +435,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                         <CADViewer
                           meshData={selectedFile.meshData}
                           fileName={selectedFile.file.name}
+                          geometricFeatures={selectedFile.analysis?.geometric_features || null}
                           isSidebarCollapsed={isSidebarCollapsed}
                           onMeshLoaded={(meshData) => {
                             console.log("✅ Mesh loaded successfully:", {
