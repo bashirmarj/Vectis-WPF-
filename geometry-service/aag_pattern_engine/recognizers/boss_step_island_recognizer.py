@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
+from ..utils.vexity_helpers import is_depression_edge
 
 logger = logging.getLogger(__name__)
 
@@ -846,12 +847,12 @@ class BossStepIslandRecognizer:
             
             # Through hole: cylinder with no bottom
             if adj_node.surface_type == SurfaceType.CYLINDER:
-                if adj['vexity'] == Vexity.CONCAVE:
+                if is_depression_edge(adj['vexity']):
                     # Check for bottom
                     cyl_adjacent = adjacency[adj_node.id]
                     has_bottom = any(
                         nodes[a['node_id']].surface_type == SurfaceType.PLANE and
-                        a['vexity'] == Vexity.CONCAVE
+                        is_depression_edge(a['vexity'])
                         for a in cyl_adjacent
                     )
                     
@@ -1176,7 +1177,7 @@ class BossStepIslandRecognizer:
         for adj in adjacent:
             adj_node = nodes[adj['node_id']]
             
-            if adj['vexity'] == Vexity.CONCAVE:
+            if is_depression_edge(adj['vexity']):
                 if adj_node.surface_type == SurfaceType.CYLINDER:
                     holes.append(adj_node.id)
                 elif adj_node.surface_type == SurfaceType.PLANE:
@@ -1197,7 +1198,7 @@ class BossStepIslandRecognizer:
         adjacent = adjacency[top.id]
         
         for adj in adjacent:
-            if adj['vexity'] == Vexity.CONCAVE:
+            if is_depression_edge(adj['vexity']):
                 features.append(adj['node_id'])
         
         return features

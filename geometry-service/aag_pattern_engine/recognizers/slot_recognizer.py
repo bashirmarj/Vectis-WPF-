@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, field
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
+from ..utils.vexity_helpers import is_vertical_wall_transition
 
 logger = logging.getLogger(__name__)
 
@@ -269,7 +270,7 @@ class SlotRecognizer:
         adjacent = adjacency[node.id]
         concave_adjacent = [
             adj for adj in adjacent
-            if adj['vexity'] == Vexity.CONCAVE
+            if is_vertical_wall_transition(adj['vexity'])
         ]
         
         if len(concave_adjacent) < 2:
@@ -347,7 +348,7 @@ class SlotRecognizer:
         # Find all vertical walls with concave transition
         wall_candidates = []
         for adj in adjacent:
-            if adj['vexity'] != Vexity.CONCAVE:
+            if not is_vertical_wall_transition(adj['vexity']):
                 continue
             
             wall_node = nodes[adj['node_id']]
@@ -444,8 +445,8 @@ class SlotRecognizer:
             if adj_node.id in wall_set:
                 continue
             
-            # Skip non-concave transitions
-            if adj['vexity'] != Vexity.CONCAVE:
+            # Skip non-vertical wall transitions
+            if not is_vertical_wall_transition(adj['vexity']):
                 continue
             
             # End caps are typically:

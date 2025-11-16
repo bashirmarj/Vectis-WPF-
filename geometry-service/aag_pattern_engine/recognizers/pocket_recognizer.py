@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
+from ..utils.vexity_helpers import is_depression_edge, is_vertical_wall_transition
 
 logger = logging.getLogger(__name__)
 
@@ -1094,7 +1095,7 @@ class PocketSlotRecognizer:
         
         walls = []
         for adj in adjacent:
-            if adj['vexity'] != Vexity.CONCAVE:
+            if not is_vertical_wall_transition(adj['vexity']):
                 continue
             
             wall_node = nodes[adj['node_id']]
@@ -1233,7 +1234,7 @@ class PocketSlotRecognizer:
             if adj_node.id in wall_set:
                 continue
             
-            if adj['vexity'] != Vexity.CONCAVE:
+            if not is_vertical_wall_transition(adj['vexity']):
                 continue
             
             if adj_node.surface_type in [SurfaceType.CYLINDER, SurfaceType.PLANE]:
@@ -1321,7 +1322,7 @@ class PocketSlotRecognizer:
             adj_node = nodes[adj['node_id']]
             
             if adj_node.surface_type == SurfaceType.CYLINDER:
-                if adj['vexity'] == Vexity.CONCAVE:
+                if is_depression_edge(adj['vexity']):
                     holes.append(adj_node.id)
         
         return holes
