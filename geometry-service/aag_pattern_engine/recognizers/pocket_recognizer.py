@@ -113,11 +113,6 @@ class GeometricValidation:
 @dataclass
 class ManufacturingAnalysis:
     """Manufacturing feasibility"""
-    
-    def recognize_pockets(self, graph: Dict) -> List[PocketSlotFeature]:
-        """Recognize pockets with orientation-agnostic logic"""
-        # Get detected orientation from graph metadata
-        self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
     is_manufacturable: bool
     tool_type: Optional[str] = None
     tool_diameter: Optional[float] = None
@@ -225,6 +220,9 @@ class PocketSlotRecognizer:
         logger.info("=" * 70)
         logger.info("Starting unified pocket/slot/passage recognition")
         logger.info("=" * 70)
+        
+        # Get detected orientation from graph metadata
+        self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
         
         nodes = graph['nodes']
         edges = graph['edges']
