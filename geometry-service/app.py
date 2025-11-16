@@ -547,13 +547,20 @@ def analyze_aag():
         file_hash = compute_file_hash(file_content)
         logger.info(f"[{correlation_id}] 📁 File hash: {file_hash}")
         
+        # Track what succeeded for graceful degradation
+        mesh_data = None
+        features = []
+        metadata = {}
+        errors = []
+        warnings = []
+        
         # Write to temporary file
         with tempfile.NamedTemporaryFile(suffix='.step', delete=False) as tmp_file:
             tmp_file.write(file_content)
             tmp_path = tmp_file.name
         
         try:
-            # === STEP 1: Load STEP file ===
+            # === STEP 1: Load STEP file (CRITICAL) ===
             logger.info(f"[{correlation_id}] 📂 Loading STEP file")
             reader = STEPControl_Reader()
             read_status = reader.ReadFile(tmp_path)
@@ -571,81 +578,99 @@ def analyze_aag():
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
             
-            # === STEP 3: Initialize AAG Pattern Matcher ===
-            logger.info(f"[{correlation_id}] 🔍 Initializing AAG Pattern Matcher")
-            from aag_pattern_engine.pattern_matcher import AAGPatternMatcher
-            
-            pattern_matcher = AAGPatternMatcher(tolerance=1e-6)
-            
-            # === STEP 4: Run comprehensive feature recognition ===
-            logger.info(f"[{correlation_id}] 🎯 Running AAG pattern recognition")
-            recognition_result = pattern_matcher.recognize_all_features(
-                shape=shape,
-                validate=True,
-                compute_manufacturing=True
-            )
-            
-            logger.info(f"[{correlation_id}] ✅ AAG found {recognition_result.metrics.total_features} features")
-            
-            # === STEP 5: Convert AAG features to standard format ===
-            features = []
-            
-            # Collect all feature types
-            all_features = (
-                recognition_result.holes +
-                recognition_result.pockets +
-                recognition_result.slots +
-                recognition_result.bosses +
-                recognition_result.steps +
-                recognition_result.fillets +
-                recognition_result.chamfers +
-                recognition_result.turning_features
-            )
-            
-            for aag_feat in all_features:
-                feature_dict = {
-                    'type': aag_feat.type.value,  # Access enum value to get the string
-                    'subtype': getattr(aag_feat, 'subtype', None),
-                    'face_ids': aag_feat.face_ids,  # MULTI-FACE! Key difference from BRepNet
-                    'confidence': aag_feat.confidence,
-                    'parameters': getattr(aag_feat, 'parameters', {}),
-                    'ml_detected': False,  # AAG is geometric, not ML
-                    'method': 'aag'
-                }
-                features.append(feature_dict)
+            # === STEP 3 & 4: Feature Recognition (NON-CRITICAL) ===
+            try:
+                logger.info(f"[{correlation_id}] 🔍 Initializing AAG Pattern Matcher")
+                from aag_pattern_engine.pattern_matcher import AAGPatternMatcher
                 
-                # Log multi-face features
-                if len(aag_feat.face_ids) > 1:
-                    logger.info(f"[{correlation_id}] 🎨 {aag_feat.feature_type}: {len(aag_feat.face_ids)} faces")
+                pattern_matcher = AAGPatternMatcher(tolerance=1e-6)
+                
+                logger.info(f"[{correlation_id}] 🎯 Running AAG pattern recognition")
+                recognition_result = pattern_matcher.recognize_all_features(
+                    shape=shape,
+                    validate=True,
+                    compute_manufacturing=True
+                )
+                
+                logger.info(f"[{correlation_id}] ✅ AAG found {recognition_result.metrics.total_features} features")
+                
+                # Convert AAG features to standard format
+                all_features = (
+                    recognition_result.holes +
+                    recognition_result.pockets +
+                    recognition_result.slots +
+                    recognition_result.bosses +
+                    recognition_result.steps +
+                    recognition_result.fillets +
+                    recognition_result.chamfers +
+                    recognition_result.turning_features
+                )
+                
+                for aag_feat in all_features:
+                    try:
+                        feature_dict = {
+                            'type': aag_feat.type.value,
+                            'subtype': getattr(aag_feat, 'subtype', None),
+                            'face_ids': aag_feat.face_ids,
+                            'confidence': aag_feat.confidence,
+                            'parameters': getattr(aag_feat, 'parameters', {}),
+                            'ml_detected': False,
+                            'method': 'aag'
+                        }
+                        features.append(feature_dict)
+                        
+                        if len(aag_feat.face_ids) > 1:
+                            logger.info(f"[{correlation_id}] 🎨 {aag_feat.type.value}: {len(aag_feat.face_ids)} faces")
+                    except Exception as feat_err:
+                        logger.warning(f"[{correlation_id}] ⚠️ Failed to serialize feature: {feat_err}")
+                        warnings.append(f"Feature serialization error: {str(feat_err)}")
             
-            # === STEP 6: Extract metadata ===
-            bbox = extract_bounding_box(shape)
-            volume, surface_area = extract_volume_and_surface_area(shape)
-            part_type = classify_part_type(shape)
+            except Exception as e:
+                logger.error(f"[{correlation_id}] ❌ Feature recognition failed: {e}", exc_info=True)
+                errors.append(f"Feature recognition failed: {str(e)}")
+                warnings.append("Mesh will be returned without features")
             
+            # === STEP 5: Extract metadata (NON-CRITICAL) ===
+            try:
+                bbox = extract_bounding_box(shape)
+                volume, surface_area = extract_volume_and_surface_area(shape)
+                part_type = classify_part_type(shape)
+                
+                metadata = {
+                    "file_hash": file_hash,
+                    "filename": file.filename,
+                    "part_type": recognition_result.part_type.value if 'recognition_result' in locals() else part_type,
+                    "volume_mm3": volume * 1000,
+                    "surface_area_mm2": surface_area * 1000000,
+                    "bounding_box_mm": {
+                        "x": bbox["dimensions"][0] * 1000,
+                        "y": bbox["dimensions"][1] * 1000,
+                        "z": bbox["dimensions"][2] * 1000
+                    },
+                    "recognition_method": "AAG Pattern Matching",
+                    "total_features": len(features),
+                    "recognition_time_s": recognition_result.metrics.recognition_time if 'recognition_result' in locals() else 0,
+                    "average_confidence": recognition_result.metrics.average_confidence if 'recognition_result' in locals() else 0,
+                    "multi_face_features": sum(1 for f in features if len(f['face_ids']) > 1)
+                }
+            except Exception as e:
+                logger.warning(f"[{correlation_id}] ⚠️ Metadata extraction failed: {e}")
+                warnings.append(f"Metadata extraction failed: {str(e)}")
+                metadata = {
+                    "file_hash": file_hash,
+                    "filename": file.filename,
+                    "recognition_method": "AAG Pattern Matching",
+                    "total_features": len(features)
+                }
+            
+            # === STEP 6: Build response ===
             processing_time_ms = int((time.time() - start_time) * 1000)
             
-            metadata = {
-                "file_hash": file_hash,
-                "filename": file.filename,
-                "part_type": recognition_result.part_type.value,
-                "volume_mm3": volume * 1000,
-                "surface_area_mm2": surface_area * 1000000,
-                "bounding_box_mm": {
-                    "x": bbox["dimensions"][0] * 1000,
-                    "y": bbox["dimensions"][1] * 1000,
-                    "z": bbox["dimensions"][2] * 1000
-                },
-                "recognition_method": "AAG Pattern Matching",
-                "total_features": recognition_result.metrics.total_features,
-                "recognition_time_s": recognition_result.metrics.recognition_time,
-                "average_confidence": recognition_result.metrics.average_confidence,
-                "multi_face_features": sum(1 for f in features if len(f['face_ids']) > 1)
-            }
+            success = len(errors) == 0
+            status = "success" if success else "partial_success" if mesh_data else "failure"
             
-            # === STEP 7: Build response ===
             result = ProcessingResult(
-                success=True,
+                success=success,
                 correlation_id=correlation_id,
                 processing_time_ms=processing_time_ms,
                 mesh_data=mesh_data,
@@ -653,10 +678,22 @@ def analyze_aag():
                 metadata=metadata
             )
             
-            logger.info(f"[{correlation_id}] 🎉 AAG analysis complete in {processing_time_ms}ms")
-            logger.info(f"[{correlation_id}] 📈 Multi-face features: {metadata['multi_face_features']}/{len(features)}")
+            response_data = asdict(result)
             
-            return jsonify(asdict(result)), 200
+            if errors:
+                response_data['errors'] = errors
+            if warnings:
+                response_data['warnings'] = warnings
+            
+            response_data['status'] = status
+            
+            logger.info(f"[{correlation_id}] 🎉 AAG analysis complete in {processing_time_ms}ms")
+            logger.info(f"[{correlation_id}] 📊 Status: {status}, Features: {len(features)}, Errors: {len(errors)}, Warnings: {len(warnings)}")
+            
+            if mesh_data:
+                logger.info(f"[{correlation_id}] ✅ Mesh data available: {len(mesh_data['vertices'])//3} vertices")
+            
+            return jsonify(response_data), 200 if success else 206
             
         finally:
             # Cleanup temp file
@@ -665,14 +702,24 @@ def analyze_aag():
     
     except Exception as e:
         processing_time_ms = int((time.time() - start_time) * 1000)
-        logger.error(f"[{correlation_id}] ❌ AAG analysis failed: {e}", exc_info=True)
+        logger.error(f"[{correlation_id}] ❌ Unexpected error: {e}", exc_info=True)
         
-        return jsonify({
+        response = {
             'success': False,
+            'status': 'partial_success' if mesh_data else 'failure',
             'error': str(e),
             'correlation_id': correlation_id,
-            'processing_time_ms': processing_time_ms
-        }), 500
+            'processing_time_ms': processing_time_ms,
+            'errors': [str(e)]
+        }
+        
+        if mesh_data:
+            response['mesh_data'] = mesh_data
+            response['features'] = features
+            response['metadata'] = metadata or {}
+            logger.info(f"[{correlation_id}] ⚠️ Returning mesh despite error")
+        
+        return jsonify(response), 206 if mesh_data else 500
 
 
 if __name__ == '__main__':
