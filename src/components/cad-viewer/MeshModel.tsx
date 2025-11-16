@@ -110,31 +110,19 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const colors = new Float32Array(vertexCount * 3);
       const baseColor = new THREE.Color(SOLID_COLOR);
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
-      
-      // 🔑 Translate BREP face indices to mesh face indices using face_mapping
-      const meshFaceIds = new Set<number>();
-      if (meshData.face_mapping) {
-        highlightedFaceIds.forEach(brepFaceId => {
-          const meshFaceId = meshData.face_mapping![brepFaceId];
-          if (meshFaceId !== undefined) {
-            meshFaceIds.add(meshFaceId);
-          } else {
-            console.warn(`⚠️ BREP face ${brepFaceId} not found in face_mapping`);
-          }
-        });
-      } else {
-        // Fallback: assume face IDs are already mesh face IDs
-        highlightedFaceIds.forEach(id => meshFaceIds.add(id));
-      }
+      const highlightSet = new Set(highlightedFaceIds);
 
-      console.log("🗺️ FACE MAPPING:", {
-        requestedBrepFaceIds: highlightedFaceIds,
-        translatedMeshFaceIds: Array.from(meshFaceIds),
+      // 🔍 DEBUG: Check mesh data structure
+      console.log("🔍 MESH DATA CHECK:", {
         hasFaceMapping: !!meshData.face_mapping,
-        mappingSample: meshData.face_mapping ? Object.entries(meshData.face_mapping).slice(0, 10) : null
+        faceMappingType: typeof meshData.face_mapping,
+        faceMappingKeys: meshData.face_mapping ? Object.keys(meshData.face_mapping).slice(0, 20) : null,
+        hasVertexFaceIds: !!meshData.vertex_face_ids,
+        vertexFaceIdsSample: meshData.vertex_face_ids?.slice(0, 20),
+        highlightedFaceIds: Array.from(highlightSet)
       });
 
-      if (topologyColors && !meshFaceIds.size) {
+      if (topologyColors && !highlightSet.size) {
         // Topology color mode (only when no highlighting)
         if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
           for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
@@ -151,17 +139,17 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else {
-        // Solid color mode with optional highlighting
+        // Solid color mode with optional highlighting (use direct face IDs)
         let matchedVertices = 0;
         
         for (let i = 0; i < vertexCount; i++) {
           let finalColor = baseColor;
           
           // Apply highlighting if vertex_face_ids is available
-          if (meshData.vertex_face_ids && meshFaceIds.size > 0) {
+          if (meshData.vertex_face_ids && highlightSet.size > 0) {
             const vertexFaceId = meshData.vertex_face_ids[i];
             
-            if (vertexFaceId !== undefined && vertexFaceId !== -1 && meshFaceIds.has(vertexFaceId)) {
+            if (vertexFaceId !== undefined && vertexFaceId !== -1 && highlightSet.has(vertexFaceId)) {
               // Highlighted face - use pure blue color
               finalColor = highlightColorObj;
               matchedVertices++;
@@ -180,7 +168,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         }
         
         // ✅ Log matching results (only if highlighting requested)
-        if (meshFaceIds.size > 0) {
+        if (highlightSet.size > 0) {
           console.log("🎯 VERTEX MATCHING:", {
             totalVertices: vertexCount,
             matchedVertices,
@@ -192,7 +180,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
-    }, [geometry, topologyColors, meshData.vertex_colors, meshData.vertex_face_ids, meshData.face_mapping, highlightedFaceIds, highlightColor, highlightIntensity]);
+    }, [geometry, topologyColors, meshData.vertex_colors, meshData.vertex_face_ids, highlightedFaceIds, highlightColor, highlightIntensity]);
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
