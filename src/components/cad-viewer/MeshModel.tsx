@@ -111,6 +111,15 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
       const highlightSet = new Set(highlightedFaceIds);
 
+      // 🔍 DEBUG: Log highlighting state
+      console.log("🎨 HIGHLIGHT DEBUG:", {
+        highlightedFaceIds: Array.from(highlightSet),
+        highlightedCount: highlightSet.size,
+        vertexFaceIdsSample: meshData.vertex_face_ids?.slice(0, 20),
+        hasVertexFaceIds: !!meshData.vertex_face_ids,
+        vertexCount
+      });
+
       if (topologyColors && !highlightSet.size) {
         // Topology color mode (only when no highlighting)
         if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
@@ -129,6 +138,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.attributes.color.needsUpdate = true;
       } else {
         // Solid color mode with optional highlighting
+        let matchedVertices = 0;
+        
         for (let i = 0; i < vertexCount; i++) {
           let finalColor = baseColor;
           
@@ -139,6 +150,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             if (faceId !== undefined && highlightSet.has(faceId)) {
               // Highlighted face - use pure blue color
               finalColor = highlightColorObj;
+              matchedVertices++;
             } else {
               // Non-highlighted faces - keep base red color
               finalColor = baseColor;
@@ -152,7 +164,23 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           colors[i * 3 + 1] = finalColor.g;
           colors[i * 3 + 2] = finalColor.b;
         }
-
+        
+        // 🔍 DEBUG: Log vertex matching results
+        if (highlightSet.size > 0) {
+          console.log("🎯 VERTEX MATCHING:", {
+            totalVertices: vertexCount,
+            matchedVertices,
+            matchPercentage: ((matchedVertices / vertexCount) * 100).toFixed(2) + "%",
+            highlightColor: { r: highlightColorObj.r, g: highlightColorObj.g, b: highlightColorObj.b },
+            baseColor: { r: baseColor.r, g: baseColor.g, b: baseColor.b },
+            sampleColors: [
+              { vertex: 0, faceId: meshData.vertex_face_ids?.[0], r: colors[0], g: colors[1], b: colors[2] },
+              { vertex: 1, faceId: meshData.vertex_face_ids?.[1], r: colors[3], g: colors[4], b: colors[5] },
+              { vertex: 2, faceId: meshData.vertex_face_ids?.[2], r: colors[6], g: colors[7], b: colors[8] }
+            ]
+          });
+        }
+        
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
