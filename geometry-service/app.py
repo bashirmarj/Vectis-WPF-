@@ -604,7 +604,7 @@ def analyze_aag():
             
             for aag_feat in all_features:
                 feature_dict = {
-                    'type': aag_feat.feature_type,
+                    'type': aag_feat.type.value,  # Access enum value to get the string
                     'subtype': getattr(aag_feat, 'subtype', None),
                     'face_ids': aag_feat.face_ids,  # MULTI-FACE! Key difference from BRepNet
                     'confidence': aag_feat.confidence,
