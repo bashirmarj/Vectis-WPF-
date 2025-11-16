@@ -143,6 +143,43 @@ serve(async (req) => {
           if (serviceResponse.ok) {
             const serviceResult = await serviceResponse.json();
             
+            // Store large mesh data separately to avoid memory limits
+            let meshStorageUrl = null;
+            if (serviceResult.mesh_data) {
+              const supabase = createClient(
+                Deno.env.get('SUPABASE_URL') ?? '',
+                Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+              );
+              
+              const meshFileName = `mesh_${correlationId}.json`;
+              const meshData = JSON.stringify(serviceResult.mesh_data);
+              
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('cad-files')
+                .upload(`meshes/${meshFileName}`, meshData, {
+                  contentType: 'application/json',
+                  upsert: true
+                });
+              
+              if (!uploadError && uploadData) {
+                const { data: urlData } = supabase.storage
+                  .from('cad-files')
+                  .getPublicUrl(`meshes/${meshFileName}`);
+                meshStorageUrl = urlData.publicUrl;
+                
+                console.log(JSON.stringify({
+                  timestamp: new Date().toISOString(),
+                  level: 'INFO',
+                  correlation_id: correlationId,
+                  message: 'Mesh data stored separately',
+                  context: { mesh_url: meshStorageUrl, size_bytes: meshData.length }
+                }));
+              }
+              
+              // Remove mesh_data from result to save memory
+              delete serviceResult.mesh_data;
+            }
+            
             // ENHANCED: Detailed logging of raw geometry service response
             console.log(JSON.stringify({
               timestamp: new Date().toISOString(),
@@ -153,12 +190,8 @@ serve(async (req) => {
                 has_features: !!serviceResult.features,
                 features_count: serviceResult.features?.length || 0,
                 features_sample: serviceResult.features?.slice(0, 2),
-                has_mesh_data: !!serviceResult.mesh_data,
-                has_face_mapping: !!serviceResult.mesh_data?.face_mapping,
-                has_vertex_face_ids: !!serviceResult.mesh_data?.vertex_face_ids,
-                vertex_face_ids_length: serviceResult.mesh_data?.vertex_face_ids?.length,
-                response_keys: Object.keys(serviceResult),
-                mesh_data_keys: serviceResult.mesh_data ? Object.keys(serviceResult.mesh_data) : []
+                mesh_stored_separately: !!meshStorageUrl,
+                response_keys: Object.keys(serviceResult)
               }
             }));
             
@@ -266,6 +299,7 @@ serve(async (req) => {
             analysisResult = {
               ...analysisResult,
               ...serviceResult,
+              mesh_url: meshStorageUrl, // Reference to stored mesh data
               geometric_features: {
                 ...geometricFeatures,
                 feature_summary: featureSummary

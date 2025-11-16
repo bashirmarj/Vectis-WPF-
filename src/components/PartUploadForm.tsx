@@ -209,8 +209,23 @@ export const PartUploadForm = () => {
       console.log("🏭 Manufacturing features:", result.manufacturing_features);
       console.log("📋 Feature summary:", result.feature_summary);
 
-      // ✅ Extract mesh data directly from response (no meshId)
-      const meshData = result.mesh_data || result.meshData || {};
+      // ✅ Fetch mesh data from URL if stored separately (for large meshes)
+      let meshData = result.mesh_data || result.meshData || {};
+      
+      if (result.mesh_url && !meshData.vertices) {
+        console.log("📥 Fetching large mesh data from:", result.mesh_url);
+        try {
+          const meshResponse = await fetch(result.mesh_url);
+          if (meshResponse.ok) {
+            meshData = await meshResponse.json();
+            console.log("✅ Large mesh data fetched successfully");
+          } else {
+            console.warn("⚠️ Failed to fetch mesh data from URL");
+          }
+        } catch (meshError) {
+          console.error("❌ Error fetching mesh data:", meshError);
+        }
+      }
 
       // Add vertex_colors to meshData if available
       if (result.vertex_colors || meshData.vertex_colors) {
