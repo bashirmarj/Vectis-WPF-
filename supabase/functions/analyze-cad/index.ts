@@ -137,7 +137,7 @@ serve(async (req) => {
               'X-Correlation-ID': correlationId,
               'Accept': 'application/json'
             },
-            signal: AbortSignal.timeout(30000) // 30 seconds
+            signal: AbortSignal.timeout(60000) // 60 seconds
           });
 
           if (serviceResponse.ok) {
