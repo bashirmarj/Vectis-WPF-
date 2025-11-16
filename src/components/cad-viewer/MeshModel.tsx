@@ -111,31 +111,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const baseColor = new THREE.Color(SOLID_COLOR);
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
       const highlightSet = new Set(highlightedFaceIds);
-      
-      // 🔑 Translate BREP face indices to mesh triangle indices using face_mapping
-      const meshFaceIds = new Set<number>();
-      if (meshData.face_mapping) {
-        highlightedFaceIds.forEach(brepFaceId => {
-          const mapping = meshData.face_mapping![brepFaceId];
-          if (mapping && mapping.triangle_indices) {
-            // Add all triangle indices for this BREP face
-            mapping.triangle_indices.forEach((triIdx: number) => meshFaceIds.add(triIdx));
-          }
-        });
-      } else {
-        // Fallback: assume face IDs are already mesh face IDs
-        highlightedFaceIds.forEach(id => meshFaceIds.add(id));
-      }
 
-      console.log("🗺️ FACE MAPPING TRANSLATION:", {
-        brepFaceIds: highlightedFaceIds,
-        translatedMeshFaceIds: Array.from(meshFaceIds),
-        mappingSample: meshData.face_mapping ? 
-          Object.fromEntries(highlightedFaceIds.map(id => [id, meshData.face_mapping![id]])) : 
-          "not available"
-      });
-
-      if (topologyColors && !meshFaceIds.size) {
+      if (topologyColors && !highlightSet.size) {
         // Topology color mode (only when no highlighting)
         if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
           for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
@@ -159,10 +136,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           let finalColor = baseColor;
           
           // Apply highlighting if vertex_face_ids is available
-          if (meshData.vertex_face_ids && meshFaceIds.size > 0) {
+          if (meshData.vertex_face_ids && highlightSet.size > 0) {
             const vertexFaceId = meshData.vertex_face_ids[i];
             
-            if (vertexFaceId !== undefined && vertexFaceId !== -1 && meshFaceIds.has(vertexFaceId)) {
+            if (vertexFaceId !== undefined && vertexFaceId !== -1 && highlightSet.has(vertexFaceId)) {
               // Highlighted face - use pure blue color
               finalColor = highlightColorObj;
               matchedVertices++;
@@ -181,7 +158,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         }
         
         // ✅ Log matching results (only if highlighting requested)
-        if (meshFaceIds.size > 0) {
+        if (highlightSet.size > 0) {
           console.log("🎯 VERTEX MATCHING:", {
             totalVertices: vertexCount,
             matchedVertices,
@@ -193,7 +170,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
-    }, [geometry, topologyColors, meshData.vertex_colors, meshData.vertex_face_ids, meshData.face_mapping, highlightedFaceIds, highlightColor, highlightIntensity]);
+    }, [geometry, topologyColors, meshData.vertex_colors, meshData.vertex_face_ids, highlightedFaceIds, highlightColor, highlightIntensity]);
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
