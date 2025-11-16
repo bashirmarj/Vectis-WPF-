@@ -133,14 +133,19 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           let finalColor = baseColor;
           
           // Apply highlighting if vertex_face_ids is available
-          if (meshData.vertex_face_ids) {
+          if (meshData.vertex_face_ids && highlightSet.size > 0) {
             const faceId = meshData.vertex_face_ids[i];
             
-            if (highlightSet.size > 0 && faceId !== undefined && highlightSet.has(faceId)) {
+            if (faceId !== undefined && highlightSet.has(faceId)) {
               // Highlighted face - use pure blue color
               finalColor = highlightColorObj;
+            } else {
+              // Non-highlighted faces - keep base red color
+              finalColor = baseColor;
             }
-            // No dimming - all other faces keep their base color
+          } else {
+            // No highlighting active - use base color
+            finalColor = baseColor;
           }
 
           colors[i * 3 + 0] = finalColor.r;
@@ -384,7 +389,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         <mesh ref={meshRef} geometry={geometry} castShadow={false} receiveShadow>
           <meshStandardMaterial
             {...materialProps}
-            color={topologyColors || highlightedFaceIds.length > 0 ? "#ffffff" : SOLID_COLOR}
+            color={highlightedFaceIds.length > 0 ? "#ffffff" : (topologyColors ? "#ffffff" : SOLID_COLOR)}
             vertexColors={topologyColors || highlightedFaceIds.length > 0}
             flatShading={true}
             toneMapped={false}
