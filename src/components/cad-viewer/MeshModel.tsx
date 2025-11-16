@@ -112,6 +112,31 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
       const highlightSet = new Set(highlightedFaceIds);
 
+      // 🔍 DETAILED DEBUGGING - Check what's actually in the data
+      if (highlightSet.size > 0 && meshData.vertex_face_ids) {
+        const vertexFaceIdsSample = meshData.vertex_face_ids.slice(0, 50);
+        const uniqueFaceIds = new Set(meshData.vertex_face_ids);
+        const containsHighlighted = highlightedFaceIds.some(id => 
+          meshData.vertex_face_ids!.includes(id)
+        );
+        
+        console.log("🔍 DETAILED DATA INSPECTION:", {
+          highlightedFaceIds,
+          highlightedFaceIdsType: typeof highlightedFaceIds[0],
+          vertexFaceIdsSample,
+          vertexFaceIdsType: typeof meshData.vertex_face_ids[0],
+          uniqueFaceIdsInMesh: Array.from(uniqueFaceIds).sort((a, b) => a - b),
+          totalUniqueFaces: uniqueFaceIds.size,
+          doesArrayContainHighlightedIds: containsHighlighted,
+          vertexFaceIdsLength: meshData.vertex_face_ids.length,
+          setHasCheck: highlightedFaceIds.map(id => ({
+            id,
+            existsInArray: meshData.vertex_face_ids!.includes(id),
+            setHas: highlightSet.has(id)
+          }))
+        });
+      }
+
       if (topologyColors && !highlightSet.size) {
         // Topology color mode (only when no highlighting)
         if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
