@@ -10,7 +10,7 @@ from OCC.Core.TopLoc import TopLoc_Location
 
 def tessellate_shape(
     shape,
-    linear_deflection: float = 0.001,
+    linear_deflection: float = 0.005,
     angular_deflection: float = 12.0
 ) -> Dict:
     """

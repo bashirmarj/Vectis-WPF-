@@ -118,7 +118,7 @@ def compute_file_hash(file_content: bytes) -> str:
     return hashlib.sha256(file_content).hexdigest()
 
 
-def tessellate_shape(shape, linear_deflection=0.001, angular_deflection=12.0) -> Dict:
+def tessellate_shape(shape, linear_deflection=0.005, angular_deflection=12.0) -> Dict:
     """
     Tessellate STEP shape into mesh with face-to-triangle mapping
     
