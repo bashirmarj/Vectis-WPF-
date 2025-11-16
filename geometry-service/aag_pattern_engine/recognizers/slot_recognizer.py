@@ -118,11 +118,10 @@ class SlotRecognizer:
             graph: AAG with 'nodes' and 'edges'
             
         Returns:
+            List of detected slot features
         """
         # Get detected orientation from graph metadata
         self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
-            List of detected slot features
-        """
         logger.info("Starting slot recognition...")
         
         nodes = graph['nodes']
