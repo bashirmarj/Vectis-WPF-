@@ -74,7 +74,7 @@ def initialize_ml_models():
         logger.info(f"🔄 Loading BRepNet from {model_path}...")
         
         brepnet_recognizer = BRepNetRecognizer(
-            model_path=model_path,
+            model_path=str(model_path),  # Convert Path to string
             device="cpu",  # Use CPU for production
             confidence_threshold=0.30  # LOWERED FROM 0.70 to capture more features like chamfers and fillets
         )
