@@ -1,7 +1,7 @@
 """Feature recognizers package"""
 
 from .hole_recognizer import HoleRecognizer, HoleFeature, HoleType
-from .pocket_recognizer import PocketRecognizer, PocketFeature, PocketType
+from .pocket_recognizer import PocketSlotRecognizer, PocketSlotFeature, PocketType, SlotType, PassageType
 from .slot_recognizer import SlotRecognizer, SlotFeature, SlotType
 from .boss_step_island_recognizer import (
     BossStepIslandRecognizer,
@@ -28,12 +28,13 @@ __all__ = [
     "HoleRecognizer",
     "HoleFeature",
     "HoleType",
-    "PocketRecognizer",
-    "PocketFeature",
+    "PocketSlotRecognizer",
+    "PocketSlotFeature",
     "PocketType",
+    "SlotType",
+    "PassageType",
     "SlotRecognizer",
     "SlotFeature",
-    "SlotType",
     "BossStepIslandRecognizer",
     "BossStepIslandFeature",
     "BossType",
