@@ -111,14 +111,21 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
       const highlightSet = new Set(highlightedFaceIds);
 
-      // 🔍 DEBUG: Log highlighting state
-      console.log("🎨 HIGHLIGHT DEBUG:", {
-        highlightedFaceIds: Array.from(highlightSet),
-        highlightedCount: highlightSet.size,
-        vertexFaceIdsSample: meshData.vertex_face_ids?.slice(0, 20),
-        hasVertexFaceIds: !!meshData.vertex_face_ids,
-        vertexCount
-      });
+      // 🔍 Check which face IDs actually exist in the mesh
+      const availableFaceIds = meshData.vertex_face_ids 
+        ? new Set(meshData.vertex_face_ids.filter((id): id is number => id !== -1))
+        : new Set<number>();
+      
+      const missingFaceIds = Array.from(highlightSet).filter(id => !availableFaceIds.has(id));
+      
+      if (missingFaceIds.length > 0 && highlightSet.size > 0) {
+        console.warn("⚠️ FACE ID MISMATCH:", {
+          requestedFaceIds: Array.from(highlightSet),
+          missingFaceIds,
+          availableFaceIds: Array.from(availableFaceIds).sort((a: number, b: number) => a - b),
+          message: `Face IDs ${missingFaceIds.join(', ')} not found in mesh. These faces may be too small or were filtered during tessellation.`
+        });
+      }
 
       if (topologyColors && !highlightSet.size) {
         // Topology color mode (only when no highlighting)
@@ -147,7 +154,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           if (meshData.vertex_face_ids && highlightSet.size > 0) {
             const faceId = meshData.vertex_face_ids[i];
             
-            if (faceId !== undefined && highlightSet.has(faceId)) {
+            if (faceId !== undefined && faceId !== -1 && highlightSet.has(faceId)) {
               // Highlighted face - use pure blue color
               finalColor = highlightColorObj;
               matchedVertices++;
@@ -165,19 +172,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           colors[i * 3 + 2] = finalColor.b;
         }
         
-        // 🔍 DEBUG: Log vertex matching results
+        // ✅ Log matching results (only if highlighting requested)
         if (highlightSet.size > 0) {
           console.log("🎯 VERTEX MATCHING:", {
             totalVertices: vertexCount,
             matchedVertices,
             matchPercentage: ((matchedVertices / vertexCount) * 100).toFixed(2) + "%",
-            highlightColor: { r: highlightColorObj.r, g: highlightColorObj.g, b: highlightColorObj.b },
-            baseColor: { r: baseColor.r, g: baseColor.g, b: baseColor.b },
-            sampleColors: [
-              { vertex: 0, faceId: meshData.vertex_face_ids?.[0], r: colors[0], g: colors[1], b: colors[2] },
-              { vertex: 1, faceId: meshData.vertex_face_ids?.[1], r: colors[3], g: colors[4], b: colors[5] },
-              { vertex: 2, faceId: meshData.vertex_face_ids?.[2], r: colors[6], g: colors[7], b: colors[8] }
-            ]
+            success: matchedVertices > 0
           });
         }
         
