@@ -689,6 +689,8 @@ class HoleRecognizer:
         if diameter and diameter > self.tolerance:
             aspect_ratio = depth / diameter
             if aspect_ratio < 0.05 or aspect_ratio > 25:
+                return None
+        else:
             return None
         
         hole = HoleFeature(
