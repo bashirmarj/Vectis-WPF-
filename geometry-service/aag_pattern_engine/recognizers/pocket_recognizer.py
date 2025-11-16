@@ -113,6 +113,11 @@ class GeometricValidation:
 @dataclass
 class ManufacturingAnalysis:
     """Manufacturing feasibility"""
+    
+    def recognize_pockets(self, graph: Dict) -> List[PocketSlotFeature]:
+        """Recognize pockets with orientation-agnostic logic"""
+        # Get detected orientation from graph metadata
+        self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
     is_manufacturable: bool
     tool_type: Optional[str] = None
     tool_diameter: Optional[float] = None
@@ -1085,7 +1090,7 @@ class PocketSlotRecognizer:
     def _is_horizontal_face(self, node: GraphNode) -> bool:
         """Check if face is horizontal"""
         normal = np.array(node.normal)
-        up = np.array([0, 0, 1])
+        up = self._up_axis
         dot = abs(np.dot(normal, up))
         return dot > 0.85
     
@@ -1112,14 +1117,14 @@ class PocketSlotRecognizer:
         """Check if wall is vertical"""
         if node.surface_type == SurfaceType.PLANE:
             normal = np.array(node.normal)
-            up = np.array([0, 0, 1])
+            up = self._up_axis
             dot = abs(np.dot(normal, up))
             return dot < 0.2
         elif node.surface_type == SurfaceType.CYLINDER:
             if not node.axis:
                 return False
             axis = np.array(node.axis)
-            up = np.array([0, 0, 1])
+            up = self._up_axis
             dot = abs(np.dot(axis, up))
             return dot > 0.85
         return False
@@ -1129,7 +1134,7 @@ class PocketSlotRecognizer:
         if not node.axis:
             return False
         axis = np.array(node.axis)
-        up = np.array([0, 0, 1])
+        up = self._up_axis
         dot = abs(np.dot(axis, up))
         return dot > 0.9
     

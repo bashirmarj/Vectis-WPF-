@@ -118,6 +118,9 @@ class SlotRecognizer:
             graph: AAG with 'nodes' and 'edges'
             
         Returns:
+        """
+        # Get detected orientation from graph metadata
+        self._up_axis = np.array(graph['metadata'].get('up_axis', [0.0, 0.0, 1.0]))
             List of detected slot features
         """
         logger.info("Starting slot recognition...")
@@ -296,7 +299,7 @@ class SlotRecognizer:
     def _is_horizontal_face(self, node: GraphNode) -> bool:
         """Check if face is horizontal"""
         normal = np.array(node.normal)
-        up = np.array([0, 0, 1])
+        up = self._up_axis
         dot = abs(np.dot(normal, up))
         return dot > 0.9  # Within ~25° of horizontal
     
@@ -304,7 +307,7 @@ class SlotRecognizer:
         """Check if face is vertical (slot wall)"""
         if node.surface_type == SurfaceType.PLANE:
             normal = np.array(node.normal)
-            up = np.array([0, 0, 1])
+            up = self._up_axis
             dot = abs(np.dot(normal, up))
             return dot < 0.2  # Within ~80° of horizontal normal = vertical face
         
@@ -312,7 +315,7 @@ class SlotRecognizer:
             if not node.axis:
                 return False
             axis = np.array(node.axis)
-            up = np.array([0, 0, 1])
+            up = self._up_axis
             dot = abs(np.dot(axis, up))
             return dot > 0.9  # Cylinder axis vertical
         

@@ -150,6 +150,14 @@ class AAGGraphBuilder:
             logger.info("Building adjacency map...")
             self._build_adjacency_map_internal()
             
+            # Step 5.5: Detect orientation
+            logger.info("Detecting part orientation...")
+            up_vector, up_axis_name = self._detect_dominant_axis()
+            is_rotated = self._is_part_rotated()
+            
+            if is_rotated:
+                logger.warning("⚠ Part appears rotated from axis alignment")
+            
             # Step 6: Validate graph integrity
             logger.info("Validating graph integrity...")
             self._validate_graph()
@@ -169,7 +177,10 @@ class AAGGraphBuilder:
                     'boundary_edges': self.stats['boundary_edges'],
                     'degenerate_faces': self.stats['degenerate_faces'],
                     'convex_percentage': self.stats['convex_edges'] / max(1, len(self.edges)) * 100,
-                    'is_valid': self._is_graph_valid()
+                    'is_valid': self._is_graph_valid(),
+                    'up_axis': up_vector.tolist(),
+                    'up_axis_name': up_axis_name,
+                    'is_rotated': is_rotated
                 }
             }
         
@@ -673,6 +684,55 @@ class AAGGraphBuilder:
         """Cleanup to prevent memory leaks"""
         if hasattr(self, 'face_list'):
             del self.face_list
+    
+    def _detect_dominant_axis(self) -> Tuple[np.ndarray, str]:
+        """Detect 'up' axis by analyzing planar face normals"""
+        planar_faces = [n for n in self.nodes if n.surface_type == SurfaceType.PLANE]
+        
+        if not planar_faces:
+            logger.warning("No planar faces found, defaulting to Z-up")
+            return np.array([0.0, 0.0, 1.0]), 'Z'
+        
+        axis_votes = np.zeros(3)
+        total_area = 0.0
+        
+        for face in planar_faces:
+            normal = np.abs(np.array(face.normal))
+            weight = face.area
+            axis_votes += normal * weight
+            total_area += weight
+        
+        if total_area > 0:
+            axis_votes /= total_area
+        
+        dominant_idx = np.argmax(axis_votes)
+        up_vector = np.zeros(3)
+        up_vector[dominant_idx] = 1.0
+        
+        axis_names = ['X', 'Y', 'Z']
+        axis_name = axis_names[dominant_idx]
+        
+        vote_pct = axis_votes / np.sum(axis_votes) * 100 if np.sum(axis_votes) > 0 else axis_votes
+        logger.info(f"Orientation detection:")
+        logger.info(f"  X: {vote_pct[0]:.1f}%, Y: {vote_pct[1]:.1f}%, Z: {vote_pct[2]:.1f}%")
+        logger.info(f"✓ Detected: {axis_name}-up")
+        
+        return up_vector, axis_name
+    
+    def _is_part_rotated(self) -> bool:
+        """Check if part is rotated >15° from axis alignment"""
+        planar_faces = [n for n in self.nodes if n.surface_type == SurfaceType.PLANE]
+        
+        if not planar_faces:
+            return False
+        
+        for face in planar_faces:
+            if face.area < 0.0001:
+                continue
+            normal = np.abs(np.array(face.normal))
+            if np.max(normal) < 0.95:
+                return True
+        return False
     
     def _log_statistics(self):
         """Log comprehensive statistics"""
