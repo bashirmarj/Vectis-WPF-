@@ -1,5 +1,5 @@
 # brepnet_wrapper.py - BRepNet Integration for Production Feature Recognition
-# Version 1.0.0
+# Version 1.0.1 - Updated with lowered confidence threshold
 # Based on: Autodesk BRepNet (CVPR 2021) - 89.96% accuracy on manufacturing features
 #
 # Pre-trained model: https://github.com/AutodeskAILab/BRepNet
@@ -63,7 +63,7 @@ class BRepNetRecognizer:
         self,
         model_path: str,
         device: str = "cpu",
-        confidence_threshold: float = 0.70
+        confidence_threshold: float = 0.30  # LOWERED FROM 0.70 to capture more features
     ):
         """
         Initialize BRepNet recognizer
@@ -72,6 +72,8 @@ class BRepNetRecognizer:
             model_path: Path to pre-trained BRepNet checkpoint or ONNX model
             device: 'cpu' or 'cuda'
             confidence_threshold: Minimum confidence for feature detection (0.0-1.0)
+                                 Lowered to 0.30 to capture chamfers, fillets, and other
+                                 features that were being filtered out at 0.70
         """
         self.device = device
         self.confidence_threshold = confidence_threshold
@@ -79,6 +81,7 @@ class BRepNetRecognizer:
         self.session = None
         
         logger.info(f"Loading BRepNet model from {model_path}")
+        logger.info(f"Confidence threshold set to {confidence_threshold} (lowered for better feature capture)")
         
         # Check if model is ONNX (production) or PyTorch checkpoint (development)
         if model_path.endswith('.onnx'):
@@ -643,6 +646,20 @@ class BRepNetRecognizer:
         logger.info(f"Recognized {len(features)} features above threshold {self.confidence_threshold}")
         
         return features
+    
+    def update_confidence_threshold(self, new_threshold: float):
+        """
+        Update the confidence threshold dynamically
+        
+        Args:
+            new_threshold: New confidence threshold (0.0-1.0)
+        """
+        if 0.0 <= new_threshold <= 1.0:
+            old_threshold = self.confidence_threshold
+            self.confidence_threshold = new_threshold
+            logger.info(f"Updated confidence threshold from {old_threshold} to {new_threshold}")
+        else:
+            logger.warning(f"Invalid threshold {new_threshold}, must be between 0.0 and 1.0")
 
 
 def convert_pytorch_to_onnx(
