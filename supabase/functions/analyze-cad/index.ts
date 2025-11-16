@@ -133,8 +133,43 @@ serve(async (req) => {
           if (serviceResponse.ok) {
             const serviceResult = await serviceResponse.json();
             
+            // ENHANCED: Detailed logging of raw geometry service response
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: 'Geometry service raw response',
+              context: {
+                has_features: !!serviceResult.features,
+                features_count: serviceResult.features?.length || 0,
+                features_sample: serviceResult.features?.slice(0, 2),
+                has_mesh_data: !!serviceResult.mesh_data,
+                has_face_mapping: !!serviceResult.mesh_data?.face_mapping,
+                has_vertex_face_ids: !!serviceResult.mesh_data?.vertex_face_ids,
+                vertex_face_ids_length: serviceResult.mesh_data?.vertex_face_ids?.length,
+                response_keys: Object.keys(serviceResult),
+                mesh_data_keys: serviceResult.mesh_data ? Object.keys(serviceResult.mesh_data) : []
+              }
+            }));
+            
             // Transform BRepNet features to frontend format
             const features = serviceResult.features || [];
+            
+            // WARNING: Log if no features detected
+            if (!serviceResult.features || features.length === 0) {
+              console.warn(JSON.stringify({
+                timestamp: new Date().toISOString(),
+                level: 'WARN',
+                correlation_id: correlationId,
+                message: 'Geometry service returned NO features',
+                context: {
+                  file_name: fileName,
+                  file_size: fileSize,
+                  response_structure: Object.keys(serviceResult),
+                  mesh_data_available: !!serviceResult.mesh_data
+                }
+              }));
+            }
             
             // DEBUG: Log raw features from geometry service
             console.log(JSON.stringify({
@@ -205,6 +240,11 @@ serve(async (req) => {
               context: { 
                 has_mesh: !!serviceResult.mesh_data,
                 has_face_mapping: !!serviceResult.mesh_data?.face_mapping,
+                has_vertex_face_ids: !!serviceResult.mesh_data?.vertex_face_ids,
+                vertex_face_ids_length: serviceResult.mesh_data?.vertex_face_ids?.length,
+                unique_face_ids: serviceResult.mesh_data?.vertex_face_ids 
+                  ? [...new Set(serviceResult.mesh_data.vertex_face_ids.filter((id: number) => id !== -1))].length 
+                  : 0,
                 has_features: !!serviceResult.features,
                 feature_count: features.length,
                 recognition_method: serviceResult.metadata?.recognition_method,
@@ -247,11 +287,58 @@ serve(async (req) => {
             message: 'BRepNet service error - using fallback',
             context: { error: (serviceErr as Error).message }
           }));
+          
+          // MOCK FEATURES: Add test data if enabled for development
+          const enableMockFeatures = Deno.env.get('ENABLE_MOCK_FEATURES') === 'true';
+          if (enableMockFeatures) {
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'INFO',
+              correlation_id: correlationId,
+              message: 'Using mock features for testing'
+            }));
+            
+            analysisResult.geometric_features = {
+              instances: [
+                {
+                  type: 'hole',
+                  subtype: 'through_hole',
+                  face_indices: [0, 1, 2, 3],
+                  confidence: 0.95,
+                  parameters: { diameter: 10.0, depth: 50.0 }
+                },
+                {
+                  type: 'pocket',
+                  subtype: 'rectangular',
+                  face_indices: [4, 5, 6, 7, 8, 9],
+                  confidence: 0.88,
+                  parameters: { width: 20.0, length: 30.0, depth: 15.0 }
+                },
+                {
+                  type: 'boss',
+                  subtype: 'cylindrical',
+                  face_indices: [10, 11, 12],
+                  confidence: 0.92,
+                  parameters: { diameter: 15.0, height: 25.0 }
+                }
+              ],
+              num_features_detected: 3,
+              num_faces_analyzed: 13,
+              confidence_score: 0.917,
+              inference_time_sec: 0.1,
+              recognition_method: 'mock_fallback',
+              feature_summary: {
+                hole: 1,
+                pocket: 1,
+                boss: 1
+              }
+            };
+          }
         }
       }
     }
 
-    // Perform basic heuristic analysis if no geometry service result
+    // Fallback heuristic analysis for non-STEP files or if no geometry service
     if (!analysisResult.mesh_data && fileSize > 0) {
       const estimatedVolume = Math.pow(fileSize / 10000, 0.6);
       const estimatedComplexity = Math.min(10, Math.max(1, Math.floor(Math.log10(fileSize / 1000))));
