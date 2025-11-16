@@ -26,6 +26,13 @@ from .standards_database import (
     get_o_ring_standard
 )
 from .logging_config import setup_logging
+from .vexity_helpers import (
+    is_depression_edge,
+    is_protrusion_edge,
+    is_vertical_wall_transition,
+    is_smooth_blend,
+    requires_strict_concave
+)
 
 __all__ = [
     "compute_distance",
@@ -46,4 +53,9 @@ __all__ = [
     "get_thread_standard",
     "get_o_ring_standard",
     "setup_logging",
+    "is_depression_edge",
+    "is_protrusion_edge",
+    "is_vertical_wall_transition",
+    "is_smooth_blend",
+    "requires_strict_concave",
 ]

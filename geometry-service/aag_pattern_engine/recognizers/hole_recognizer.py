@@ -23,6 +23,7 @@ from enum import Enum
 import warnings
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
+from ..utils.vexity_helpers import is_depression_edge
 
 logger = logging.getLogger(__name__)
 
@@ -688,7 +689,7 @@ class HoleRecognizer:
         planar_bottoms = [
             adj for adj in adjacent
             if nodes[adj['node_id']].surface_type == SurfaceType.PLANE
-            and adj['vexity'] == Vexity.CONCAVE
+            and is_depression_edge(adj['vexity'])
         ]
         
         if len(planar_bottoms) != 1:
@@ -1021,7 +1022,7 @@ class HoleRecognizer:
         """Full tapered hole recognition"""
         adjacent = adjacency[cone_node.id]
         
-        concave_count = sum(1 for adj in adjacent if adj['vexity'] == Vexity.CONCAVE)
+        concave_count = sum(1 for adj in adjacent if is_depression_edge(adj['vexity']))
         if concave_count == 0:
             return None
         

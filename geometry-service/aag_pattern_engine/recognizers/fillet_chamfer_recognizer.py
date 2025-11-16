@@ -33,6 +33,7 @@ from enum import Enum
 from collections import defaultdict
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
+from ..utils.vexity_helpers import is_protrusion_edge
 
 logger = logging.getLogger(__name__)
 
@@ -329,7 +330,7 @@ class FilletRecognizer:
         # Count convex transitions
         convex_count = sum(
             1 for adj in adjacent
-            if adj['vexity'] == Vexity.CONVEX
+            if is_protrusion_edge(adj['vexity'])
         )
         
         # Fillet must blend at least 2 faces
@@ -359,7 +360,7 @@ class FilletRecognizer:
         
         blended_faces = []
         for adj in adjacent:
-            if adj['vexity'] == Vexity.CONVEX:
+            if is_protrusion_edge(adj['vexity']):
                 blended_faces.append(adj['node_id'])
         
         return blended_faces
