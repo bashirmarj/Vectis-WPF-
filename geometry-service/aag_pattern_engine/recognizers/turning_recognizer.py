@@ -268,7 +268,12 @@ class TurningRecognizer:
         
         nodes = graph['nodes']
         edges = graph['edges']
-        adjacency = self._build_adjacency_map(nodes, edges)
+        
+        # Get pre-built adjacency from graph (performance optimization)
+        adjacency = graph.get('adjacency')
+        if adjacency is None:
+            logger.warning("Adjacency not in graph - rebuilding (performance hit)")
+            adjacency = self._build_adjacency_map(nodes, edges)
         
         # STEP 1: Detect if this is a turning part
         turning_axis = self._detect_turning_axis(nodes, adjacency)
@@ -651,8 +656,8 @@ class TurningRecognizer:
                 confidence=0.93
             )
             
-            # Validate L/D ratio
-            if length > 0 and diameter > 0:
+            # Validate L/D ratio (safe division)
+            if length > self.tolerance and diameter > self.tolerance:
                 ld_ratio = length / diameter
                 if ld_ratio > self.max_length_diameter_ratio:
                     feature.warnings.append(f'High L/D ratio: {ld_ratio:.1f} (may require tailstock support)')
@@ -710,8 +715,8 @@ class TurningRecognizer:
                 confidence=0.91
             )
             
-            # Validate boring depth/diameter ratio
-            if depth > 0 and diameter > 0:
+            # Validate boring depth/diameter ratio (safe division)
+            if depth > self.tolerance and diameter > self.tolerance:
                 depth_dia_ratio = depth / diameter
                 if depth_dia_ratio > 5.0:
                     feature.warnings.append(f'Deep bore: D/d={depth_dia_ratio:.1f} (requires boring bar)')

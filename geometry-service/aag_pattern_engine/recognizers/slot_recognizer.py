@@ -124,7 +124,11 @@ class SlotRecognizer:
         nodes = graph['nodes']
         edges = graph['edges']
         
-        adjacency = self._build_adjacency_map(nodes, edges)
+        # Get pre-built adjacency from graph (performance optimization)
+        adjacency = graph.get('adjacency')
+        if adjacency is None:
+            logger.warning("Adjacency not in graph - rebuilding (performance hit)")
+            adjacency = self._build_adjacency_map(nodes, edges)
         
         # Find planar bottom candidates (elongated faces)
         planar_nodes = [n for n in nodes if n.surface_type == SurfaceType.PLANE]
