@@ -1,0 +1,11 @@
+{
+  "standard": "DIN 6885 / ISO R773 Parallel Keys",
+  "keyways": {
+    "6mm": {"shaft_mm": 6.0, "width_mm": 2.0, "depth_mm": 1.0},
+    "8mm": {"shaft_mm": 8.0, "width_mm": 3.0, "depth_mm": 1.5},
+    "10mm": {"shaft_mm": 10.0, "width_mm": 4.0, "depth_mm": 2.0},
+    "12mm": {"shaft_mm": 12.0, "width_mm": 4.0, "depth_mm": 2.0},
+    "16mm": {"shaft_mm": 16.0, "width_mm": 5.0, "depth_mm": 3.0},
+    "20mm": {"shaft_mm": 20.0, "width_mm": 6.0, "depth_mm": 4.0}
+  }
+}
