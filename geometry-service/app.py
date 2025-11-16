@@ -632,9 +632,9 @@ def analyze_aag():
                 "volume_mm3": volume * 1000,
                 "surface_area_mm2": surface_area * 1000000,
                 "bounding_box_mm": {
-                    "x": bbox[0] * 1000,
-                    "y": bbox[1] * 1000,
-                    "z": bbox[2] * 1000
+                    "x": bbox["dimensions"][0] * 1000,
+                    "y": bbox["dimensions"][1] * 1000,
+                    "z": bbox["dimensions"][2] * 1000
                 },
                 "recognition_method": "AAG Pattern Matching",
                 "total_features": recognition_result.metrics.total_features,
