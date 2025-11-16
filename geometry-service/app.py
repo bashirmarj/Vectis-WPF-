@@ -52,8 +52,7 @@ except ImportError as e:
 # Import feature recognition modules
 from brepnet_wrapper import BRepNetRecognizer, FeatureType
 
-# Import other modules
-from machining_estimator import MachiningTimeEstimator, SetupConfiguration, MachiningOperation, ToolType
+# Note: machining_estimator only has estimate_machining_time_and_cost function, not classes
 
 app = Flask(__name__)
 CORS(app)
