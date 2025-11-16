@@ -115,28 +115,52 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const highlightSet = new Set<number>();
       
       if (meshData.face_mapping && highlightedFaceIds.length > 0) {
-        // Translate BREP face IDs to vertex indices using face_mapping
         highlightedFaceIds.forEach(brepFaceId => {
           const mapping = meshData.face_mapping![brepFaceId];
-          if (mapping && mapping.triangle_indices) {
-            // Add all triangle indices for this BREP face
-            mapping.triangle_indices.forEach(triIdx => {
-              // Each triangle has 3 vertices
-              if (meshData.indices) {
-                const v0 = meshData.indices[triIdx * 3 + 0];
-                const v1 = meshData.indices[triIdx * 3 + 1];
-                const v2 = meshData.indices[triIdx * 3 + 2];
-                highlightSet.add(v0);
-                highlightSet.add(v1);
-                highlightSet.add(v2);
+          
+          console.log(`🗺️ Mapping for face ${brepFaceId}:`, {
+            hasMapping: !!mapping,
+            triangle_indices_length: mapping?.triangle_indices?.length,
+            triangle_range: mapping?.triangle_range,
+            sample_indices: mapping?.triangle_indices?.slice(0, 5)
+          });
+          
+          if (mapping) {
+            // Prioritize triangle_range if it exists
+            if (mapping.triangle_range) {
+              const [start, end] = mapping.triangle_range;
+              for (let triIdx = start; triIdx <= end; triIdx++) {
+                if (meshData.indices) {
+                  const v0 = meshData.indices[triIdx * 3 + 0];
+                  const v1 = meshData.indices[triIdx * 3 + 1];
+                  const v2 = meshData.indices[triIdx * 3 + 2];
+                  highlightSet.add(v0);
+                  highlightSet.add(v1);
+                  highlightSet.add(v2);
+                }
               }
-            });
+            }
+            // Fallback to triangle_indices if no range
+            else if (mapping.triangle_indices) {
+              mapping.triangle_indices.forEach(triIdx => {
+                if (meshData.indices) {
+                  const v0 = meshData.indices[triIdx * 3 + 0];
+                  const v1 = meshData.indices[triIdx * 3 + 1];
+                  const v2 = meshData.indices[triIdx * 3 + 2];
+                  highlightSet.add(v0);
+                  highlightSet.add(v1);
+                  highlightSet.add(v2);
+                }
+              });
+            }
           }
         });
         
         console.log("🗺️ Face mapping translation:", {
           brepFaceIds: highlightedFaceIds,
           vertexIndicesCount: highlightSet.size,
+          triangleCount: Math.floor(highlightSet.size / 3),
+          percentageOfMesh: ((highlightSet.size / (meshData.vertices.length / 3)) * 100).toFixed(2) + '%',
           hasFaceMapping: !!meshData.face_mapping,
           mappedFaces: highlightedFaceIds.filter(id => meshData.face_mapping![id])
         });
