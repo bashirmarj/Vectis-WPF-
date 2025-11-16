@@ -16,7 +16,7 @@ def is_depression_edge(vexity: Vexity) -> bool:
     
     Used for: pocket bottoms, hole bottoms, slot bottoms
     
-    Includes TANGENT edges because CAD systems often create smooth blends
+    Includes SMOOTH edges because CAD systems often create smooth blends
     at depression boundaries due to:
     - Export precision loss
     - B-spline approximations
@@ -26,9 +26,9 @@ def is_depression_edge(vexity: Vexity) -> bool:
         vexity: Edge vexity classification
         
     Returns:
-        True if edge is concave, sharp, or tangent (typical depression boundary)
+        True if edge is concave or smooth (typical depression boundary)
     """
-    return vexity in (Vexity.CONCAVE, Vexity.SHARP, Vexity.TANGENT)
+    return vexity in (Vexity.CONCAVE, Vexity.SMOOTH)
 
 
 def is_protrusion_edge(vexity: Vexity) -> bool:
@@ -37,8 +37,8 @@ def is_protrusion_edge(vexity: Vexity) -> bool:
     
     Used for: fillet blends, boss edges, chamfer ridges
     
-    TANGENT is excluded - true protrusions must be > 180° dihedral angle.
-    TANGENT edges at fillet boundaries usually indicate G1 continuity,
+    SMOOTH is excluded - true protrusions must be > 180° dihedral angle.
+    SMOOTH edges at fillet boundaries usually indicate G1 continuity,
     not the convex blend itself.
     
     Args:
@@ -56,8 +56,8 @@ def is_vertical_wall_transition(vexity: Vexity) -> bool:
     
     Used for: pocket walls, slot walls, hole walls, boss walls
     
-    Includes TANGENT because vertical walls in real CAD files often have
-    slight curvature or tangent continuity with floor/ceiling faces.
+    Includes SMOOTH because vertical walls in real CAD files often have
+    slight curvature or smooth continuity with floor/ceiling faces.
     
     Args:
         vexity: Edge vexity classification
@@ -65,7 +65,7 @@ def is_vertical_wall_transition(vexity: Vexity) -> bool:
     Returns:
         True if edge could represent a vertical feature boundary
     """
-    return vexity in (Vexity.CONCAVE, Vexity.SHARP, Vexity.TANGENT)
+    return vexity in (Vexity.CONCAVE, Vexity.SMOOTH)
 
 
 def is_smooth_blend(vexity: Vexity) -> bool:
@@ -78,9 +78,9 @@ def is_smooth_blend(vexity: Vexity) -> bool:
         vexity: Edge vexity classification
         
     Returns:
-        True if edge has tangent or smooth classification
+        True if edge has smooth classification
     """
-    return vexity == Vexity.TANGENT
+    return vexity == Vexity.SMOOTH
 
 
 def requires_strict_concave(vexity: Vexity) -> bool:
@@ -94,6 +94,6 @@ def requires_strict_concave(vexity: Vexity) -> bool:
         vexity: Edge vexity classification
         
     Returns:
-        True only if edge is concave or sharp (excludes TANGENT)
+        True only if edge is concave (excludes SMOOTH)
     """
-    return vexity in (Vexity.CONCAVE, Vexity.SHARP)
+    return vexity == Vexity.CONCAVE
