@@ -110,30 +110,35 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const colors = new Float32Array(vertexCount * 3);
       const baseColor = new THREE.Color(SOLID_COLOR);
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
-      const highlightSet = new Set(highlightedFaceIds);
-
-      // 🔍 DETAILED DEBUGGING - Check what's actually in the data
-      if (highlightSet.size > 0 && meshData.vertex_face_ids) {
-        const vertexFaceIdsSample = meshData.vertex_face_ids.slice(0, 50);
-        const uniqueFaceIds = new Set(meshData.vertex_face_ids);
-        const containsHighlighted = highlightedFaceIds.some(id => 
-          meshData.vertex_face_ids!.includes(id)
-        );
+      
+      // 🗺️ Translate BREP face IDs to vertex indices using face_mapping
+      const highlightSet = new Set<number>();
+      
+      if (meshData.face_mapping && highlightedFaceIds.length > 0) {
+        // Translate BREP face IDs to vertex indices using face_mapping
+        highlightedFaceIds.forEach(brepFaceId => {
+          const mapping = meshData.face_mapping![brepFaceId];
+          if (mapping && mapping.triangle_indices) {
+            // Add all triangle indices for this BREP face
+            mapping.triangle_indices.forEach(triIdx => {
+              // Each triangle has 3 vertices
+              if (meshData.indices) {
+                const v0 = meshData.indices[triIdx * 3 + 0];
+                const v1 = meshData.indices[triIdx * 3 + 1];
+                const v2 = meshData.indices[triIdx * 3 + 2];
+                highlightSet.add(v0);
+                highlightSet.add(v1);
+                highlightSet.add(v2);
+              }
+            });
+          }
+        });
         
-        console.log("🔍 DETAILED DATA INSPECTION:", {
-          highlightedFaceIds,
-          highlightedFaceIdsType: typeof highlightedFaceIds[0],
-          vertexFaceIdsSample,
-          vertexFaceIdsType: typeof meshData.vertex_face_ids[0],
-          uniqueFaceIdsInMesh: Array.from(uniqueFaceIds).sort((a, b) => a - b),
-          totalUniqueFaces: uniqueFaceIds.size,
-          doesArrayContainHighlightedIds: containsHighlighted,
-          vertexFaceIdsLength: meshData.vertex_face_ids.length,
-          setHasCheck: highlightedFaceIds.map(id => ({
-            id,
-            existsInArray: meshData.vertex_face_ids!.includes(id),
-            setHas: highlightSet.has(id)
-          }))
+        console.log("🗺️ Face mapping translation:", {
+          brepFaceIds: highlightedFaceIds,
+          vertexIndicesCount: highlightSet.size,
+          hasFaceMapping: !!meshData.face_mapping,
+          mappedFaces: highlightedFaceIds.filter(id => meshData.face_mapping![id])
         });
       }
 
@@ -160,23 +165,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         for (let i = 0; i < vertexCount; i++) {
           let finalColor = baseColor;
           
-          // Apply highlighting if vertex_face_ids is available
-          if (meshData.vertex_face_ids && highlightSet.size > 0) {
-            const vertexFaceId = meshData.vertex_face_ids[i];
-            
-            if (vertexFaceId !== undefined && vertexFaceId !== -1 && highlightSet.has(vertexFaceId)) {
-              // Highlighted face - use pure blue color
-              finalColor = highlightColorObj;
-              matchedVertices++;
-            } else {
-              // Non-highlighted faces - keep base red color
-              finalColor = baseColor;
-            }
-          } else {
-            // No highlighting active - use base color
-            finalColor = baseColor;
+          // Check if this vertex index is in the highlight set
+          if (highlightSet.size > 0 && highlightSet.has(i)) {
+            finalColor = highlightColorObj;
+            matchedVertices++;
           }
-
+          
           colors[i * 3 + 0] = finalColor.r;
           colors[i * 3 + 1] = finalColor.g;
           colors[i * 3 + 2] = finalColor.b;
@@ -195,7 +189,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
-    }, [geometry, topologyColors, meshData.vertex_colors, meshData.vertex_face_ids, highlightedFaceIds, highlightColor, highlightIntensity]);
+    }, [geometry, topologyColors, meshData.vertex_colors, meshData.face_mapping, highlightedFaceIds, highlightColor]);
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
