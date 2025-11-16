@@ -31,7 +31,7 @@ from OCC.Core.GeomAbs import (
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.gp import gp_Pnt, gp_Vec
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.TopExp import topexp
 from OCC.Core.BRepTools import breptools
 
@@ -211,13 +211,16 @@ class AAGGraphBuilder:
                 face_list_for_edge = edge_face_map_occ.FindFromKey(edge)
                 face_ids = []
                 
-                for i in range(face_list_for_edge.Size()):
-                    face = face_list_for_edge.Value(i + 1)
+                # Use iterator pattern for TopTools_ListOfShape
+                list_iter = TopTools_ListIteratorOfListOfShape(face_list_for_edge)
+                while list_iter.More():
+                    face = list_iter.Value()
                     try:
                         face_id = self.face_list.index(face)
                         face_ids.append(face_id)
                     except ValueError:
                         pass
+                    list_iter.Next()
                 
                 self.edge_face_map[edge_hash] = face_ids
                 
