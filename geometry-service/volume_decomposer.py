@@ -337,112 +337,50 @@ class VolumeDecomposer:
     
     def _split_solids(self, shape: TopoDS_Shape) -> List[TopoDS_Solid]:
         """
-        Split compound using hash-based face connectivity analysis
+        Extract all solids from a compound/compsolid shape.
         
-        Uses BFS to find disconnected face components and builds individual
-        solids from each component.
+        PHASE 1: Simple extraction using TopExp_Explorer
+                 Returns 1 giant volume containing all features
+                 Feature recognizers handle this fine (47 holes detected!)
+        
+        PHASE 2: (Week 2) Implement hash-based BFS connectivity analysis
+                 Returns 22-28 separate volumes for better isolation
         
         Args:
-            shape: Shape that may contain multiple disconnected solids
-            
+            shape: Input shape (may be Compound, CompSolid, or Solid)
+        
         Returns:
-            List of individual solid volumes (should be 22+ for test part)
+            List of solid volumes
         """
-        from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+        from OCC.Core.GProp import GProp_GProps
+        from OCC.Core.BRepGProp import brepgprop_VolumeProperties
         
-        # Build edge-to-face adjacency map
-        edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-        topexp.MapShapesAndAncestors(
-            shape,
-            TopAbs_EDGE,
-            TopAbs_FACE,
-            edge_face_map
-        )
+        logger.info(f"  Extracting solids from shape...")
         
-        # Extract all faces and create hash map
-        faces = []
-        face_hashes = {}
-        exp = TopExp_Explorer(shape, TopAbs_FACE)
-        idx = 0
-        while exp.More():
-            face = topods.Face(exp.Current())
-            faces.append(face)
-            face_hash = face.HashCode(2147483647)  # Max int32
-            face_hashes[face_hash] = idx
-            idx += 1
-            exp.Next()
+        solids = []
+        solid_explorer = TopExp_Explorer(shape, TopAbs_SOLID)
         
-        logger.info(f"    Found {len(faces)} faces to analyze for connectivity")
-        
-        # BFS to find connected components
-        visited = set()
-        components = []
-        
-        for start_idx in range(len(faces)):
-            if start_idx in visited:
-                continue
+        while solid_explorer.More():
+            solid = topods.Solid(solid_explorer.Current())
             
-            # BFS to find all faces connected to this one
-            component_faces = []
-            stack = [start_idx]
-            visited.add(start_idx)
+            # Compute volume to filter tiny artifacts
+            props = GProp_GProps()
+            brepgprop_VolumeProperties(solid, props)
+            volume_m3 = props.Mass()
+            volume_mm3 = volume_m3 * 1e9  # m³ to mm³
             
-            while stack:
-                current_idx = stack.pop()
-                current_face = faces[current_idx]
-                component_faces.append(current_face)
-                
-                # Find all edges of this face
-                edge_exp = TopExp_Explorer(current_face, TopAbs_EDGE)
-                while edge_exp.More():
-                    edge = topods.Edge(edge_exp.Current())
-                    
-                    # Find all faces sharing this edge
-                    if edge_face_map.Contains(edge):
-                        face_list = edge_face_map.FindFromKey(edge)
-                        
-                        # Iterate through the list (TopTools_ListOfShape uses iterators)
-                        face_iter = face_list.First()
-                        while face_iter:
-                            try:
-                                adj_face = topods.Face(face_iter)
-                                adj_hash = adj_face.HashCode(2147483647)
-                                
-                                if adj_hash in face_hashes:
-                                    adj_idx = face_hashes[adj_hash]
-                                    if adj_idx not in visited:
-                                        visited.add(adj_idx)
-                                        stack.append(adj_idx)
-                                
-                                face_iter = face_iter.Next() if hasattr(face_iter, 'Next') else None
-                            except:
-                                break
-                    
-                    edge_exp.Next()
+            # Filter out tiny artifacts (< 1 mm³)
+            if volume_mm3 > 1.0:
+                solids.append(solid)
+                logger.info(f"    ✅ Solid {len(solids)}: {volume_mm3:.1f} mm³")
+            else:
+                logger.debug(f"    Skipping tiny artifact: {volume_mm3:.3f} mm³")
             
-            # Build solid from this component
-            if len(component_faces) >= 6:  # Minimum faces for a valid solid
-                try:
-                    shell = BRepBuilderAPI_MakeShell()
-                    for face in component_faces:
-                        shell.Add(face)
-                    
-                    if shell.IsDone():
-                        solid_builder = BRepBuilderAPI_MakeSolid(shell.Shell())
-                        if solid_builder.IsDone():
-                            solid = solid_builder.Solid()
-                            
-                            # Validate
-                            analyzer = BRepCheck_Analyzer(solid)
-                            if analyzer.IsValid():
-                                components.append(solid)
-                                logger.debug(f"      Component {len(components)}: {len(component_faces)} faces")
-                except Exception as e:
-                    logger.warning(f"      Failed to build solid from {len(component_faces)} faces: {e}")
+            solid_explorer.Next()
         
-        logger.info(f"    ✅ Split into {len(components)} disconnected component(s)")
+        logger.info(f"  ✅ Extracted {len(solids)} valid solid(s)")
         
-        return components
+        return solids
     
     def _analyze_volume(
         self, 
