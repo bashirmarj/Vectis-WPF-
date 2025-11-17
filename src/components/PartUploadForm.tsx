@@ -208,6 +208,22 @@ export const PartUploadForm = () => {
       console.log("📊 Available keys in response:", Object.keys(result));
       console.log("🏭 Manufacturing features:", result.manufacturing_features);
       console.log("📋 Feature summary:", result.feature_summary);
+      
+      // 🔍 DEBUG POINT 4: Frontend received response
+      console.log('🔍 DEBUG 4: Frontend received response', {
+        has_data: !!result,
+        data_keys: result ? Object.keys(result) : null,
+        has_mesh_data: 'mesh_data' in (result || {}),
+        has_geometry: 'geometry' in (result || {}),
+        geometry_structure: result?.geometry ? {
+          hasVertices: result.geometry.hasVertices,
+          hasIndices: result.geometry.hasIndices,
+          hasNormals: result.geometry.hasNormals,
+          vertices_length: result.geometry.vertices?.length,
+          indices_length: result.geometry.indices?.length,
+          normals_length: result.geometry.normals?.length
+        } : null
+      });
 
       // ✅ Fetch mesh data from URL if stored separately (for large meshes)
       let meshData = result.mesh_data || result.meshData || {};
