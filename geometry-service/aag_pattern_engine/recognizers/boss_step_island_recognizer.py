@@ -423,21 +423,20 @@ class BossStepIslandRecognizer:
     ) -> Optional[BossStepIslandFeature]:
         """
         Recognize boss (protruding elevated pad)
+        
+        V2.0: Uses detailed shape classification to reduce irregular classifications
         """
-        # Classify shape
-        shape_type = self._classify_boss_shape(top, walls, nodes)
+        # V2.0 ENHANCEMENT: Use detailed geometric classification
+        detailed_shape = self._classify_boss_shape_detailed(top, walls, nodes)
         
         # Map to boss type
-        if shape_type == 'cylindrical':
+        if detailed_shape == 'cylindrical':
             boss_type = BossType.CYLINDRICAL
-            diameter = nodes[walls[0]].radius * 2 if walls else None
-        elif shape_type == 'rectangular':
+            diameter = nodes[walls[0]].radius * 2 if walls and nodes[walls[0]].surface_type == SurfaceType.CYLINDER else None
+        elif detailed_shape == 'rectangular':
             boss_type = BossType.RECTANGULAR
             diameter = None
-        elif shape_type == 'triangular':
-            boss_type = BossType.TRIANGULAR
-            diameter = None
-        elif shape_type == 'hexagonal':
+        elif detailed_shape == 'hexagonal':
             boss_type = BossType.HEXAGONAL
             diameter = None
         else:
@@ -1141,7 +1140,100 @@ class BossStepIslandRecognizer:
         length = area / width if width > 0 else 0
         return width, length
     
-    def _find_base_faces(
+    def _classify_boss_shape_detailed(
+        self,
+        top: GraphNode,
+        walls: List[int],
+        nodes: List[GraphNode]
+    ) -> str:
+        """
+        Detailed geometric classification of boss shape
+        
+        V2.0 Enhancement: Reduce "irregular" classifications by analyzing
+        geometric properties before defaulting to irregular
+        
+        Returns:
+            "cylindrical", "rectangular", "hexagonal", or "irregular"
+        """
+        # Check if top is planar
+        if top.surface_type != SurfaceType.PLANE:
+            return "irregular"
+        
+        num_walls = len(walls)
+        
+        # Cylindrical: single cylindrical wall
+        if num_walls == 1 and nodes[walls[0]].surface_type == SurfaceType.CYLINDER:
+            return "cylindrical"
+        
+        # Rectangular: 4 walls
+        if num_walls == 4:
+            planar_walls = [w for w in walls if nodes[w].surface_type == SurfaceType.PLANE]
+            if len(planar_walls) == 4:
+                if self._walls_form_rectangle_boss(planar_walls, nodes):
+                    return "rectangular"
+        
+        # Hexagonal: 6 walls
+        if num_walls == 6:
+            planar_walls = [w for w in walls if nodes[w].surface_type == SurfaceType.PLANE]
+            if len(planar_walls) == 6:
+                if self._walls_form_hexagon_boss(planar_walls, nodes):
+                    return "hexagonal"
+        
+        # Many walls might be circular approximation
+        if num_walls > 20:
+            if self._is_circular_boss_approximation(walls, nodes):
+                return "cylindrical"
+        
+        return "irregular"
+    
+    def _walls_form_rectangle_boss(self, walls: List[int], nodes: List[GraphNode]) -> bool:
+        """Check if 4 walls form rectangular pattern"""
+        if len(walls) != 4:
+            return False
+        
+        # Check if walls are vertical
+        for w in walls:
+            wall = nodes[w]
+            if not self._is_vertical_face(wall):
+                return False
+        
+        # All 4 walls vertical and planar → likely rectangular
+        return True
+    
+    def _walls_form_hexagon_boss(self, walls: List[int], nodes: List[GraphNode]) -> bool:
+        """Check if 6 walls form hexagonal pattern"""
+        if len(walls) != 6:
+            return False
+        
+        # Check if walls are roughly equal size
+        areas = [nodes[w].area for w in walls]
+        avg_area = np.mean(areas)
+        std_area = np.std(areas)
+        
+        # Uniform hexagon: similar wall areas
+        if avg_area > 0:
+            return (std_area / avg_area) < 0.3
+        return False
+    
+    def _is_circular_boss_approximation(self, walls: List[int], nodes: List[GraphNode]) -> bool:
+        """Check if many walls form circular boss pattern"""
+        # Many small planar walls can approximate a cylinder
+        if len(walls) < 20:
+            return False
+        
+        # Check if walls are roughly equal size
+        areas = [nodes[w].area for w in walls if nodes[w].surface_type == SurfaceType.PLANE]
+        
+        if not areas or len(areas) < 10:
+            return False
+        
+        avg_area = np.mean(areas)
+        std_area = np.std(areas)
+        
+        # Uniform approximation: low variation
+        return (std_area / avg_area) < 0.3 if avg_area > 0 else False
+    
+
         self,
         top: GraphNode,
         walls: List[int],
