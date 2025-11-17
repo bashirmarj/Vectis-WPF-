@@ -20,21 +20,24 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid, TopoDS_Compound
-from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_SOLID
+from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid, TopoDS_Compound, topods
+from OCC.Core.TopExp import TopExp_Explorer, topexp
+from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_EDGE, TopAbs_FACE
 from OCC.Core.BRepBuilderAPI import (
     BRepBuilderAPI_MakeShape,
-    BRepBuilderAPI_Copy
+    BRepBuilderAPI_Copy,
+    BRepBuilderAPI_MakeSolid
 )
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Common
 from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
+from OCC.Core.BRepOffsetAPI import BRepOffsetAPI_Sewing
 from OCC.Core.gp import gp_Pnt
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepCheck import BRepCheck_Analyzer
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +110,7 @@ class VolumeDecomposer:
             tolerance: Geometric tolerance for boolean operations
         """
         self.tolerance = tolerance
+        self.model_units = None  # Detected during decomposition
         logger.info(f"VolumeDecomposer initialized (tolerance={tolerance})")
     
     def decompose(self, shape: TopoDS_Shape, part_type: str) -> DecompositionResult:
@@ -197,10 +201,23 @@ class VolumeDecomposer:
                 manufacturing_volumes.append(vol_data)
                 logger.info(f"    Volume {i}: {vol_data.volume_mm3:.1f} mm³, hint={vol_data.feature_hint}")
             
+            # Detect model units once for entire decomposition
+            if self.model_units is None:
+                self.model_units = self._detect_model_units(shape)
+            
             # Create stock volume
             stock_props = GProp_GProps()
             brepgprop.VolumeProperties(stock_solid, stock_props)
-            stock_volume_mm3 = stock_props.Mass() * 1e9  # m³ to mm³
+            
+            # Apply correct unit conversion
+            if self.model_units == "mm":
+                stock_volume_mm3 = stock_props.Mass()  # Already in mm³
+            elif self.model_units == "m":
+                stock_volume_mm3 = stock_props.Mass() * 1e9  # m³ to mm³
+            else:
+                stock_volume_mm3 = stock_props.Mass()  # Assume mm³
+            
+            logger.info(f"Stock volume: {stock_volume_mm3:.2f} mm³ (units={self.model_units})")
             
             stock_vol = ManufacturingVolume(
                 geometry=stock_solid,
@@ -335,7 +352,24 @@ class VolumeDecomposer:
         # Compute volume properties
         props = GProp_GProps()
         brepgprop.VolumeProperties(solid, props)
-        volume_mm3 = props.Mass() * 1e9  # m³ to mm³
+        raw_volume = props.Mass()
+        
+        # Apply correct unit conversion based on detected units
+        if self.model_units == "mm":
+            volume_mm3 = raw_volume  # Already in mm³
+            logger.debug(f"Volume {volume_id} (mm³): {volume_mm3:.2f}")
+        elif self.model_units == "m":
+            volume_mm3 = raw_volume * 1e9  # m³ to mm³
+            logger.debug(f"Volume {volume_id} (m³→mm³): {raw_volume:.6f} → {volume_mm3:.2f}")
+        else:
+            volume_mm3 = raw_volume  # Assume mm³
+            logger.warning(f"Unknown units for volume {volume_id}, assuming mm³: {volume_mm3:.2f}")
+        
+        # Sanity check
+        if volume_mm3 > 1_000_000_000:
+            logger.error(f"❌ Absurdly large volume detected: {volume_mm3:.2e} mm³ - unit conversion error!")
+        elif volume_mm3 < 0.1:
+            logger.warning(f"⚠️ Extremely small volume: {volume_mm3:.2e} mm³")
         centroid = props.CentreOfMass()
         
         # Compute bounding box

@@ -564,20 +564,28 @@ class PocketSlotRecognizer:
         """
         Recognize pocket - MFCAD++ classes 2, 8, 15, 20
         Plus stepped and irregular pockets
+        
+        V2.0: Uses detailed shape classification to reduce irregular classifications
         """
         # Check for stepped pocket
         stepped = self._recognize_stepped_pocket(bottom, walls, adjacency, nodes)
         if stepped:
             return stepped
         
-        # Standard pockets by shape
-        if shape_type == 'rectangular':
+        # V2.0 ENHANCEMENT: Use detailed geometric classification
+        detailed_shape = self._classify_pocket_shape_detailed(bottom, walls, nodes)
+        
+        # Map detailed shape to pocket type
+        if detailed_shape == 'rectangular':
             pocket_type = PocketType.RECTANGULAR
-        elif shape_type == 'triangular':
+        elif detailed_shape == 'rounded':
+            # Treat rounded as rectangular with fillets
+            pocket_type = PocketType.RECTANGULAR
+        elif detailed_shape == 'triangular':
             pocket_type = PocketType.TRIANGULAR
-        elif shape_type == 'six_sided':
+        elif detailed_shape == 'six_sided':
             pocket_type = PocketType.SIX_SIDED
-        elif shape_type == 'circular':
+        elif detailed_shape == 'circular':
             pocket_type = PocketType.CIRCULAR
         else:
             pocket_type = PocketType.IRREGULAR
@@ -1347,7 +1355,83 @@ class PocketSlotRecognizer:
                 fillets.append(adj_node.id)
         
         return fillets
+    def _classify_pocket_shape_detailed(
+        self,
+        bottom: GraphNode,
+        walls: List[int],
+        nodes: List[GraphNode]
+    ) -> str:
+        """
+        Detailed geometric classification of pocket shape
+        
+        V2.0 Enhancement: Reduce "irregular" classifications by analyzing
+        geometric properties before defaulting to irregular
+        
+        Returns:
+            "rectangular", "circular", "rounded", "triangular", or "irregular"
+        """
+        # Check if bottom is planar
+        if bottom.surface_type != SurfaceType.PLANE:
+            return "irregular"
+        
+        num_walls = len(walls)
+        
+        # Circular: single cylindrical wall
+        if num_walls == 1 and nodes[walls[0]].surface_type == SurfaceType.CYLINDER:
+            return "circular"
+        
+        # Rectangular: 4 walls
+        if num_walls == 4:
+            if self._walls_form_rectangle(walls, nodes):
+                # Check for fillets at corners
+                if self._has_rounded_corners(walls, nodes):
+                    return "rounded"
+                return "rectangular"
+        
+        # Triangular: 3 walls
+        if num_walls == 3:
+            if self._walls_form_triangle(walls, nodes):
+                return "triangular"
+        
+        # Six-sided: 6 walls
+        if num_walls == 6:
+            if self._walls_form_hexagon(walls, nodes):
+                return "six_sided"
+        
+        # Many small walls might be circular approximation
+        if num_walls > 20:
+            if self._is_circular_approximation(walls, nodes):
+                return "circular"
+        
+        return "irregular"
     
+    def _has_rounded_corners(self, walls: List[int], nodes: List[GraphNode]) -> bool:
+        """Check if rectangular pocket has filleted corners"""
+        # Look for small cylindrical surfaces between planar walls
+        cylindrical_count = sum(1 for w in walls if nodes[w].surface_type == SurfaceType.CYLINDER)
+        
+        # Rounded rectangular: 4 fillets + 4 walls = 8 total
+        return cylindrical_count >= 2 and cylindrical_count <= 4
+    
+    def _is_circular_approximation(self, walls: List[int], nodes: List[GraphNode]) -> bool:
+        """Check if many walls form circular pattern"""
+        # Many small planar walls can approximate a circle
+        if len(walls) < 20:
+            return False
+        
+        # Check if walls are roughly equal size (uniform tessellation)
+        areas = [nodes[w].area for w in walls if nodes[w].surface_type == SurfaceType.PLANE]
+        
+        if not areas or len(areas) < 10:
+            return False
+        
+        avg_area = np.mean(areas)
+        std_area = np.std(areas)
+        
+        # Uniform approximation: low variation in face areas
+        return (std_area / avg_area) < 0.3 if avg_area > 0 else False
+    
+
     def _compute_volume(
         self,
         bottom_area: float,
