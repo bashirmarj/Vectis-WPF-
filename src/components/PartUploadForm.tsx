@@ -29,8 +29,11 @@ interface FileWithQuantity {
       feature_id: number;
       start: [number, number, number];
       end: [number, number, number];
-      type: string;
+      type: "arc" | "circle" | "line";
       iso_type?: string;
+      diameter?: number;
+      radius?: number;
+      length?: number;
     }>;
     edge_classifications?: any[];
   };
