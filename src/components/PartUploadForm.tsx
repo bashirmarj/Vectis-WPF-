@@ -206,27 +206,77 @@ export const PartUploadForm = () => {
 
       console.log("✅ Edge function response:", result);
       console.log("📊 Available keys in response:", Object.keys(result));
-      console.log("🏭 Manufacturing features:", result.manufacturing_features);
-      console.log("📋 Feature summary:", result.feature_summary);
       
-      // 🔍 DEBUG POINT 4: Frontend received response
-      console.log('🔍 DEBUG 4: Frontend received response', {
-        has_data: !!result,
-        data_keys: result ? Object.keys(result) : null,
-        has_mesh_data: 'mesh_data' in (result || {}),
-        has_geometry: 'geometry' in (result || {}),
-        geometry_structure: result?.geometry ? {
-          hasVertices: result.geometry.hasVertices,
-          hasIndices: result.geometry.hasIndices,
-          hasNormals: result.geometry.hasNormals,
-          vertices_length: result.geometry.vertices?.length,
-          indices_length: result.geometry.indices?.length,
-          normals_length: result.geometry.normals?.length
-        } : null
+      // 🔍 ENHANCED DEBUGGING - Deep inspection of response structure
+      console.log("🔍 DEBUG: Detailed response structure:", {
+        hasMeshData: !!result.mesh_data,
+        hasTopLevelVertices: !!result.vertices,
+        meshDataType: typeof result.mesh_data,
+        meshDataKeys: result.mesh_data ? Object.keys(result.mesh_data) : 'null',
+        topLevelVerticesLength: result.vertices?.length || 0,
+        meshDataVerticesLength: result.mesh_data?.vertices?.length || 0,
+        // Log the actual data structure
+        meshDataSample: result.mesh_data ? {
+          vertices: result.mesh_data.vertices?.slice(0, 9),
+          indices: result.mesh_data.indices?.slice(0, 9),
+          normals: result.mesh_data.normals?.slice(0, 9),
+          keys: Object.keys(result.mesh_data)
+        } : 'null',
+        // Check if data is nested elsewhere
+        geometryVertices: result.geometry?.vertices?.length || 0,
       });
 
-      // ✅ Fetch mesh data from URL if stored separately (for large meshes)
-      let meshData = result.mesh_data || result.meshData || {};
+      // ✅ Extract mesh data with fallback checks at multiple levels
+      let meshData = null;
+      
+      // Priority 1: Check mesh_data object
+      if (result.mesh_data && (result.mesh_data.vertices || result.mesh_data.vertex_array)) {
+        meshData = {
+          vertices: result.mesh_data.vertices || result.mesh_data.vertex_array,
+          indices: result.mesh_data.indices || result.mesh_data.index_array || result.mesh_data.faces,
+          normals: result.mesh_data.normals || result.mesh_data.normal_array,
+          vertex_colors: result.mesh_data.vertex_colors || result.mesh_data.colors,
+          tagged_edges: result.mesh_data.tagged_edges,
+          edge_classifications: result.mesh_data.edge_classifications,
+          triangle_count: result.mesh_data.triangle_count || (result.mesh_data.indices?.length / 3),
+        };
+      }
+      // Priority 2: Check top-level
+      else if (result.vertices || result.vertex_array) {
+        meshData = {
+          vertices: result.vertices || result.vertex_array,
+          indices: result.indices || result.index_array || result.faces,
+          normals: result.normals || result.normal_array,
+          vertex_colors: result.vertex_colors || result.colors,
+          tagged_edges: result.tagged_edges,
+          edge_classifications: result.edge_classifications,
+          triangle_count: result.triangle_count || (result.indices?.length / 3),
+        };
+      }
+      // Priority 3: Check geometry object
+      else if (result.geometry?.vertices) {
+        meshData = {
+          vertices: result.geometry.vertices,
+          indices: result.geometry.indices || result.geometry.faces,
+          normals: result.geometry.normals,
+          vertex_colors: result.geometry.vertex_colors,
+          triangle_count: result.geometry.triangle_count,
+        };
+      }
+
+      console.log("🎨 Extracted mesh data:", {
+        source: meshData ? 'found' : 'not found',
+        hasVertices: !!meshData?.vertices,
+        hasIndices: !!meshData?.indices,
+        hasNormals: !!meshData?.normals,
+        vertexCount: meshData?.vertices?.length || 0,
+        indexCount: meshData?.indices?.length || 0,
+        normalCount: meshData?.normals?.length || 0,
+        triangleCount: meshData?.triangle_count || 0,
+        hasVertexColors: !!meshData?.vertex_colors,
+        hasTaggedEdges: !!meshData?.tagged_edges,
+        hasEdgeClassifications: !!meshData?.edge_classifications,
+      });
       
       if (result.mesh_url && !meshData.vertices) {
         console.log("📥 Fetching large mesh data from:", result.mesh_url);
