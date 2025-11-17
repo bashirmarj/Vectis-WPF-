@@ -401,15 +401,22 @@ class VolumeDecomposer:
                     if edge_face_map.Contains(edge):
                         face_list = edge_face_map.FindFromKey(edge)
                         
-                        for j in range(1, face_list.Length() + 1):
-                            adj_face = topods.Face(face_list.Value(j))
-                            adj_hash = adj_face.HashCode(2147483647)
-                            
-                            if adj_hash in face_hashes:
-                                adj_idx = face_hashes[adj_hash]
-                                if adj_idx not in visited:
-                                    visited.add(adj_idx)
-                                    stack.append(adj_idx)
+                        # Iterate through the list (TopTools_ListOfShape uses iterators)
+                        face_iter = face_list.First()
+                        while face_iter:
+                            try:
+                                adj_face = topods.Face(face_iter)
+                                adj_hash = adj_face.HashCode(2147483647)
+                                
+                                if adj_hash in face_hashes:
+                                    adj_idx = face_hashes[adj_hash]
+                                    if adj_idx not in visited:
+                                        visited.add(adj_idx)
+                                        stack.append(adj_idx)
+                                
+                                face_iter = face_iter.Next() if hasattr(face_iter, 'Next') else None
+                            except:
+                                break
                     
                     edge_exp.Next()
             
