@@ -270,16 +270,12 @@ class HoleRecognizer:
     
     def recognize_holes(self, graph: Dict) -> List[HoleFeature]:
         """
-        ✅ FIXED v2.1.0: Recognize holes with COAXIAL GROUPING
+        ✅ v2.2.0: TOP-DOWN ARCHITECTURE (Analysis Situs methodology)
 
-        Ground truth for test part:
-        - 13 blind holes
-        - 3 through holes  
-        - 6 counterbored holes
-        = 22 total expected
+        Phase 1: Recognize each cylinder individually
+        Phase 2: Post-process to merge compound features
 
-        Previous v2.0: 47 detected (2.1x overcounted - each cylinder counted)
-        Fixed v2.1.0: ~22 detected (coaxial cylinders grouped first)
+        Ground truth: 22 holes (13 blind + 3 through + 6 counterbored)
         """
         logger.info("=" * 70)
         logger.info("Starting comprehensive hole recognition with validation")
@@ -305,39 +301,30 @@ class HoleRecognizer:
 
         logger.info(f"Candidates: {len(cylinder_nodes)} cylinders, {len(cone_nodes)} cones")
 
-        # ✅ CRITICAL FIX: Group coaxial cylinders BEFORE recognition
-        cylinder_groups = self._group_coaxial_cylinders(cylinder_nodes, adjacency, nodes)
+        # ✅ PHASE 1: Recognize each cylinder individually (bottom-up)
+        logger.info("Phase 1: Recognizing individual cylinder hints...")
+        individual_hints = self._recognize_individual_cylinders(cylinder_nodes, adjacency, nodes)
+        logger.info(f"  → Created {len(individual_hints)} individual hints")
 
-        logger.info(f"✅ Grouped {len(cylinder_nodes)} cylinders into {len(cylinder_groups)} coaxial groups")
-        logger.info(f"   Expected ~22 holes (13 blind + 3 through + 6 counterbored)")
+        # ✅ PHASE 2: Post-process to merge compound features (top-down)
+        logger.info("Phase 2: Merging compound features...")
+        final_holes = self._merge_compound_features(individual_hints, adjacency, nodes)
+        logger.info(f"  → Merged into {len(final_holes)} final holes")
 
-        holes = []
         processed_nodes = set()
+        for hole in final_holes:
+            processed_nodes.update(hole.face_ids)
 
-        # ✅ Process GROUPS instead of individual cylinders
-        for group_id, cylinder_group in enumerate(cylinder_groups):
-            # Skip if any cylinder in group was already processed
-            if any(cyl.id in processed_nodes for cyl in cylinder_group):
-                continue
+            # Validate and analyze
+            self._validate_hole_comprehensively(hole, nodes[hole.face_ids[0]], adjacency, nodes)
+            self._analyze_manufacturability(hole, nodes[hole.face_ids[0]], adjacency, nodes)
+            self._check_standards_compliance(hole)
+            self._compute_quality_metrics(hole, nodes[hole.face_ids[0]], adjacency, nodes)
+            hole.confidence = self._compute_final_confidence(hole)
 
-            # Recognize hole from the entire group
-            hole = self._recognize_hole_from_group(
-                cylinder_group, adjacency, nodes, processed_nodes
-            )
+            self.recognition_stats['successful_recognitions'] += 1
 
-            if hole:
-                # Validate and analyze (same as before)
-                self._validate_hole_comprehensively(hole, cylinder_group[0], adjacency, nodes)
-                self._analyze_manufacturability(hole, cylinder_group[0], adjacency, nodes)
-                self._check_standards_compliance(hole)
-                self._compute_quality_metrics(hole, cylinder_group[0], adjacency, nodes)
-                hole.confidence = self._compute_final_confidence(hole)
-
-                holes.append(hole)
-                processed_nodes.update(hole.face_ids)
-                self.recognition_stats['successful_recognitions'] += 1
-
-        # Process conical holes (same as before)
+        # Process conical holes (countersinks, etc.)
         for node in cone_nodes:
             if node.id in processed_nodes:
                 continue
@@ -350,11 +337,11 @@ class HoleRecognizer:
                 self._compute_quality_metrics(hole, node, adjacency, nodes)
                 hole.confidence = self._compute_final_confidence(hole)
 
-                holes.append(hole)
+                final_holes.append(hole)
                 processed_nodes.update(hole.face_ids)
                 self.recognition_stats['successful_recognitions'] += 1
 
-        # ✅ Enhanced statistics with ground truth comparison
+        # Statistics
         logger.info("")
         logger.info("=" * 70)
         logger.info("HOLE RECOGNITION STATISTICS")
@@ -366,7 +353,7 @@ class HoleRecognizer:
 
         # Type breakdown
         type_counts = {}
-        for hole in holes:
+        for hole in final_holes:
             type_name = hole.type.value
             type_counts[type_name] = type_counts.get(type_name, 0) + 1
 
@@ -377,7 +364,7 @@ class HoleRecognizer:
 
         logger.info("=" * 70)
 
-        return holes
+        return final_holes
 
     def _recognize_single_hole(
         self,
@@ -1459,104 +1446,235 @@ class HoleRecognizer:
         top_radius = depth * np.tan(angle_rad)
         
         return max(top_radius * 2, self.min_hole_diameter * 1.1)
-    # ===== NEW METHODS FOR COAXIAL GROUPING (v2.1.0 & v2.1.1) =====
+    # ===== TOP-DOWN RECOGNITION METHODS (v2.2.0 - Analysis Situs approach) =====
 
-    def _group_coaxial_cylinders(
-        self, 
-        cylinders: List[GraphNode], 
-        adjacency: Dict, 
+    def _recognize_individual_cylinders(
+        self,
+        cylinders: List[GraphNode],
+        adjacency: Dict,
         nodes: List[GraphNode]
-    ) -> List[List[GraphNode]]:
+    ) -> List[Dict]:
         """
-        ✅ v2.1.0: Group cylinders that share the same axis
+        ✅ PHASE 1: Recognize each cylinder individually
 
-        This prevents double-counting: each group = one hole
+        Create a "hint" for each cylinder with its properties.
+        Don't worry about grouping yet - that's Phase 2.
 
-        Returns: List of cylinder groups
-        Example: [[cyl1, cyl2], [cyl3], [cyl4, cyl5]] = 3 holes from 5 cylinders
+        Returns: List of hint dictionaries
         """
-        groups = []
-        visited = set()
+        hints = []
 
         for cyl in cylinders:
-            if cyl.id in visited:
+            # Classify this single cylinder
+            is_through = self._is_through_hole_cylinder(cyl, adjacency, nodes)
+            bottom_face = self._find_bottom_face_simple(cyl, adjacency, nodes)
+
+            hint = {
+                'cylinder': cyl,
+                'face_id': cyl.id,
+                'type': 'through' if is_through else 'blind',
+                'diameter': cyl.radius * 2 if cyl.radius else 0.01,
+                'axis': cyl.axis,
+                'axis_location': getattr(cyl, 'axis_location', cyl.centroid if hasattr(cyl, 'centroid') else None),
+                'bottom_face': bottom_face,
+                'bottom_face_id': bottom_face.id if bottom_face else None,
+                'depth': self._estimate_cylinder_depth(cyl, bottom_face) if bottom_face else None,
+                'confidence': 0.9
+            }
+
+            hints.append(hint)
+
+        return hints
+
+    def _is_through_hole_cylinder(
+        self,
+        cylinder: GraphNode,
+        adjacency: Dict,
+        nodes: List[GraphNode]
+    ) -> bool:
+        """
+        Check if a cylinder is a through hole (no planar bottom)
+        """
+        # Check all adjacent faces
+        for neighbor in adjacency.get(cylinder.id, []):
+            neighbor_node = nodes[neighbor['node_id']]
+
+            # If has planar bottom with concave edge → blind hole
+            if (neighbor_node.surface_type == SurfaceType.PLANE and
+                neighbor.get('vexity') == Vexity.CONCAVE):
+                return False
+
+        # No planar bottom found → through hole
+        return True
+
+    def _find_bottom_face_simple(
+        self,
+        cylinder: GraphNode,
+        adjacency: Dict,
+        nodes: List[GraphNode]
+    ) -> Optional[GraphNode]:
+        """
+        Find the planar bottom face of a cylinder
+        """
+        for neighbor in adjacency.get(cylinder.id, []):
+            neighbor_node = nodes[neighbor['node_id']]
+
+            if (neighbor_node.surface_type == SurfaceType.PLANE and
+                neighbor.get('vexity') == Vexity.CONCAVE):
+                return neighbor_node
+
+        return None
+
+    def _estimate_cylinder_depth(
+        self,
+        cylinder: GraphNode,
+        bottom_face: Optional[GraphNode]
+    ) -> Optional[float]:
+        """
+        Estimate depth of a blind hole cylinder
+        """
+        if not bottom_face or not hasattr(cylinder, 'bounding_box'):
+            return None
+
+        bbox = cylinder.bounding_box
+        if not bbox:
+            return None
+
+        # Simple estimate: max dimension of bounding box
+        dimensions = [bbox['max'][i] - bbox['min'][i] for i in range(3)]
+        return max(dimensions)
+
+    def _merge_compound_features(
+        self,
+        hints: List[Dict],
+        adjacency: Dict,
+        nodes: List[GraphNode]
+    ) -> List[HoleFeature]:
+        """
+        ✅ PHASE 2: Post-process to merge related hints into compound features
+
+        This is where counterbored holes are detected by merging
+        coaxial hints with different diameters.
+        """
+        final_holes = []
+        processed = set()
+
+        for i, hint in enumerate(hints):
+            if i in processed:
                 continue
 
-            # Start new group
-            group = [cyl]
-            visited.add(cyl.id)
-
-            # Find all coaxial cylinders
-            for other in cylinders:
-                if other.id in visited:
+            # Find all coaxial related hints
+            related_indices = []
+            for j, other_hint in enumerate(hints):
+                if j <= i or j in processed:
                     continue
 
-                # Check if coaxial (same axis)
-                if self._are_coaxial_strict(cyl, other):
-                    # Check if connected (part of same hole)
-                    if self._are_connected_in_hole(cyl.id, other.id, adjacency, max_hops=3):
-                        group.append(other)
-                        visited.add(other.id)
+                if self._are_hints_same_hole(hint, other_hint, adjacency, nodes):
+                    related_indices.append(j)
 
-            groups.append(group)
+            if related_indices:
+                # Merge into compound hole (counterbore)
+                related_hints = [hints[idx] for idx in related_indices]
+                compound_hole = self._create_compound_hole(hint, related_hints, adjacency, nodes)
+                final_holes.append(compound_hole)
 
-        return groups
+                # Mark as processed
+                processed.add(i)
+                for idx in related_indices:
+                    processed.add(idx)
+            else:
+                # Keep as simple hole
+                simple_hole = self._hint_to_feature(hint)
+                final_holes.append(simple_hole)
+                processed.add(i)
 
-    def _are_coaxial_strict(self, cyl1: GraphNode, cyl2: GraphNode) -> bool:
+        return final_holes
+
+    def _are_hints_same_hole(
+        self,
+        hint1: Dict,
+        hint2: Dict,
+        adjacency: Dict,
+        nodes: List[GraphNode]
+    ) -> bool:
         """
-        ✅ v2.1.0: Strict coaxial check
+        Check if two hints belong to the same hole
 
         Criteria:
-        1. Axes parallel (within 5°)
-        2. Axis locations close (within 1mm)
+        1. Coaxial (same axis within tolerance)
+        2. Connected (adjacent or near-adjacent)
+        3. Different diameters (for true compound features)
         """
-        if not (cyl1.axis and cyl2.axis):
+        cyl1 = hint1['cylinder']
+        cyl2 = hint2['cylinder']
+
+        # 1. Check coaxial
+        if not self._are_coaxial_hints(hint1, hint2):
             return False
 
-        # Get axis locations (use centroid as fallback)
-        if hasattr(cyl1, 'axis_location') and hasattr(cyl2, 'axis_location'):
-            loc1 = cyl1.axis_location
-            loc2 = cyl2.axis_location
-        elif cyl1.centroid and cyl2.centroid:
-            loc1 = cyl1.centroid
-            loc2 = cyl2.centroid
-        else:
+        # 2. Check connectivity
+        if not self._are_connected_hints(hint1, hint2, adjacency, max_hops=5):
+            return False
+
+        # 3. Check diameter difference (for true counterbores)
+        # Only merge if diameters are SIGNIFICANTLY different (1.5x+)
+        # Otherwise, keep separate (likely CAD segmentation artifacts)
+        diameter_ratio = max(hint1['diameter'], hint2['diameter']) / min(hint1['diameter'], hint2['diameter'])
+
+        # Only merge if TRUE compound feature (50%+ diameter difference)
+        return diameter_ratio >= 1.5
+
+    def _are_coaxial_hints(self, hint1: Dict, hint2: Dict) -> bool:
+        """
+        Check if two hints are coaxial (same axis)
+        """
+        axis1 = hint1['axis']
+        axis2 = hint2['axis']
+
+        if not (axis1 and axis2):
+            return False
+
+        loc1 = hint1['axis_location']
+        loc2 = hint2['axis_location']
+
+        if not (loc1 and loc2):
             return False
 
         # Check parallel axes
-        axis1 = np.array(cyl1.axis)
-        axis2 = np.array(cyl2.axis)
+        axis1_arr = np.array(axis1)
+        axis2_arr = np.array(axis2)
 
-        dot = abs(np.dot(axis1, axis2))
+        dot = abs(np.dot(axis1_arr, axis2_arr))
         angle = np.degrees(np.arccos(np.clip(dot, 0, 1)))
 
         if angle > self.angle_tolerance:  # 5° from class config
             return False
 
-        # Check axis proximity (distance between parallel lines)
+        # Check axis proximity
         loc1_arr = np.array(loc1)
         loc2_arr = np.array(loc2)
 
         diff = loc2_arr - loc1_arr
-        projection = np.dot(diff, axis1) * axis1
+        projection = np.dot(diff, axis1_arr) * axis1_arr
         perpendicular = diff - projection
         distance = np.linalg.norm(perpendicular)
 
         # Must be on same axis (within 1mm)
         return distance < 0.001
 
-    def _are_connected_in_hole(
-        self, 
-        id1: int, 
-        id2: int, 
-        adjacency: Dict, 
-        max_hops: int = 3
+    def _are_connected_hints(
+        self,
+        hint1: Dict,
+        hint2: Dict,
+        adjacency: Dict,
+        max_hops: int = 5
     ) -> bool:
         """
-        ✅ v2.1.0: Check if two faces are connected
-
-        For counterbored holes, cylinders are 1-2 hops apart
+        Check if two hints are connected (adjacent faces)
         """
+        id1 = hint1['face_id']
+        id2 = hint2['face_id']
+
         visited = set()
         queue = [(id1, 0)]
 
@@ -1578,96 +1696,66 @@ class HoleRecognizer:
 
         return False
 
-    def _recognize_hole_from_group(
+    def _create_compound_hole(
         self,
-        cylinder_group: List[GraphNode],
+        primary_hint: Dict,
+        related_hints: List[Dict],
         adjacency: Dict,
-        nodes: List[GraphNode],
-        processed: Set[int]
-    ) -> Optional[HoleFeature]:
+        nodes: List[GraphNode]
+    ) -> HoleFeature:
         """
-        ✅ v2.1.1: Only classify as counterbore if diameters are DIFFERENT
-
-        Logic:
-        - 1 cylinder → use _recognize_single_hole() (blind/through detection)
-        - 2+ cylinders with SAME diameter → treat as single hole (CAD segmentation)
-        - 2+ cylinders with DIFFERENT diameters → counterbore/counter-drilled
+        Create a compound hole feature from multiple hints (counterbore)
         """
-        if not cylinder_group:
-            return None
+        all_hints = [primary_hint] + related_hints
 
-        # Single cylinder - use existing logic (correctly handles blind/through)
-        if len(cylinder_group) == 1:
-            return self._recognize_single_hole(cylinder_group[0], adjacency, nodes, processed)
+        # Sort by diameter (largest first)
+        sorted_hints = sorted(all_hints, key=lambda h: h['diameter'], reverse=True)
 
-        # Multiple cylinders - check if diameters are actually different
-        sorted_cyls = sorted(cylinder_group, key=lambda c: c.radius, reverse=True)
+        large_hint = sorted_hints[0]
+        small_hint = sorted_hints[-1]
 
-        large_cyl = sorted_cyls[0]
-        small_cyl = sorted_cyls[-1]
+        # Collect all face IDs
+        face_ids = [h['face_id'] for h in sorted_hints]
 
-        # Calculate diameter ratio
-        radius_ratio = large_cyl.radius / small_cyl.radius if small_cyl.radius > 0 else 1.0
+        # Add bottom face if exists
+        if small_hint['bottom_face_id']:
+            face_ids.append(small_hint['bottom_face_id'])
 
-        # ✅ CRITICAL CHECK: Are diameters actually different?
-        DIAMETER_TOLERANCE = 1.10  # 10% tolerance (same diameter if within this)
+        # Determine hole type
+        diameter_ratio = large_hint['diameter'] / small_hint['diameter']
 
-        if radius_ratio < DIAMETER_TOLERANCE:
-            # Diameters are essentially the same - NOT a counterbore
-            # This is likely a CAD artifact (cylinder split into segments)
-            # Treat as a single hole using the larger cylinder
-            logger.debug(f"  Group has {len(sorted_cyls)} cylinders but same diameter "
-                        f"(ratio={radius_ratio:.2f}) - treating as single hole")
-            return self._recognize_single_hole(large_cyl, adjacency, nodes, processed)
-
-        # Diameters are different - proceed with counterbore/counter-drilled detection
-        large_dia = large_cyl.radius * 2
-        small_dia = small_cyl.radius * 2
-
-        face_ids = [c.id for c in sorted_cyls]
-
-        # Check for shoulder face (distinguishes counterbore from counter-drilled)
-        shoulder = self._find_counterbore_shoulder(large_cyl, small_cyl, adjacency, nodes)
-
-        # Find bottom face
-        bottom_face = None
-        for neighbor in adjacency.get(small_cyl.id, []):
-            neighbor_node = nodes[neighbor['node_id']]
-            if (neighbor_node.surface_type == SurfaceType.PLANE and
-                neighbor['vexity'] == Vexity.CONCAVE):
-                bottom_face = neighbor_node
-                break
-
-        # Determine type based on shoulder and diameter ratio
-        if shoulder and radius_ratio > 1.3:
-            # Has shoulder and significant diameter difference → COUNTERBORE
+        if diameter_ratio >= 1.8:
             hole_type = HoleType.COUNTERBORE
-            face_ids.append(shoulder.id)
-        elif radius_ratio > 1.5:
-            # Large diameter difference but no shoulder → COUNTER-DRILLED
+        else:
             hole_type = HoleType.COUNTER_DRILLED
-        else:
-            # Marginal difference (10-30%) - treat as simple hole with variation
-            logger.debug(f"  Marginal diameter ratio ({radius_ratio:.2f}) - treating as single hole")
-            return self._recognize_single_hole(large_cyl, adjacency, nodes, processed)
-
-        if bottom_face:
-            face_ids.append(bottom_face.id)
-            total_depth = self._compute_hole_depth(small_cyl, bottom_face)
-        else:
-            total_depth = None
-
-        logger.debug(f"  Counterbore detected: Ø{small_dia*1000:.1f}mm hole, "
-                    f"Ø{large_dia*1000:.1f}mm bore (ratio={radius_ratio:.2f})")
 
         return HoleFeature(
             type=hole_type,
             face_ids=face_ids,
-            diameter=small_dia,
-            outer_diameter=large_dia,
-            depth=total_depth,
-            axis=small_cyl.axis,
-            axis_location=getattr(small_cyl, 'axis_location', 
-                                 small_cyl.centroid if hasattr(small_cyl, 'centroid') else None),
+            diameter=small_hint['diameter'],
+            outer_diameter=large_hint['diameter'],
+            depth=small_hint['depth'],
+            axis=small_hint['axis'],
+            axis_location=small_hint['axis_location'],
             confidence=0.88
+        )
+
+    def _hint_to_feature(self, hint: Dict) -> HoleFeature:
+        """
+        Convert a simple hint to a HoleFeature
+        """
+        face_ids = [hint['face_id']]
+        if hint['bottom_face_id']:
+            face_ids.append(hint['bottom_face_id'])
+
+        hole_type = HoleType.THROUGH if hint['type'] == 'through' else HoleType.BLIND
+
+        return HoleFeature(
+            type=hole_type,
+            face_ids=face_ids,
+            diameter=hint['diameter'],
+            depth=hint['depth'],
+            axis=hint['axis'],
+            axis_location=hint['axis_location'],
+            confidence=0.9
         )
