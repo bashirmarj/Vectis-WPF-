@@ -19,6 +19,7 @@ export type Database = {
           created_at: string | null
           edge_classifications: Json | null
           face_classifications: Json | null
+          face_mapping: Json | null
           face_types: string[] | null
           feature_edges: Json | null
           file_hash: string
@@ -40,6 +41,7 @@ export type Database = {
           created_at?: string | null
           edge_classifications?: Json | null
           face_classifications?: Json | null
+          face_mapping?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
           file_hash: string
@@ -61,6 +63,7 @@ export type Database = {
           created_at?: string | null
           edge_classifications?: Json | null
           face_classifications?: Json | null
+          face_mapping?: Json | null
           face_types?: string[] | null
           feature_edges?: Json | null
           file_hash?: string
