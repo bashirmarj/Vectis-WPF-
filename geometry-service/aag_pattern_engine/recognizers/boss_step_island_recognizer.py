@@ -468,7 +468,7 @@ class BossStepIslandRecognizer:
             length=length,
             diameter=diameter,
             num_sides=len(walls),
-            shape_type=shape_type,
+            shape_type=detailed_shape,
             base_faces=base_faces,
             holes_on_top=holes,
             pockets_on_top=pockets,
@@ -476,7 +476,7 @@ class BossStepIslandRecognizer:
             confidence=0.90
         )
         
-        logger.debug(f"✓ {boss_type.value}: {shape_type}, H={height*1000:.1f}mm")
+        logger.debug(f"✓ {boss_type.value}: {detailed_shape}, H={height*1000:.1f}mm")
         
         return feature
     
