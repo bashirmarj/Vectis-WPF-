@@ -1194,7 +1194,7 @@ class BossStepIslandRecognizer:
         # Check if walls are vertical
         for w in walls:
             wall = nodes[w]
-            if not self._is_vertical_face(wall):
+            if not self._is_vertical_wall(wall):
                 return False
         
         # All 4 walls vertical and planar → likely rectangular

@@ -201,6 +201,20 @@ class VolumeDecomposer:
             
             removal_shape = cut_op.Shape()
             
+            # Diagnostic logging for boolean result
+            logger.info(f"  Boolean result analysis:")
+            logger.info(f"    Result type: {removal_shape.ShapeType()}")
+            logger.info(f"    Is compound: {removal_shape.ShapeType() == TopAbs_COMPOUND}")
+            logger.info(f"    Is solid: {removal_shape.ShapeType() == TopAbs_SOLID}")
+            
+            # Count faces in result
+            face_count = 0
+            exp = TopExp_Explorer(removal_shape, TopAbs_FACE)
+            while exp.More():
+                face_count += 1
+                exp.Next()
+            logger.info(f"    Total faces in result: {face_count}")
+            
             # Step 3: Split into disconnected solids
             logger.info("  Splitting removal volumes...")
             removal_volumes = self._split_solids(removal_shape)
@@ -323,47 +337,105 @@ class VolumeDecomposer:
     
     def _split_solids(self, shape: TopoDS_Shape) -> List[TopoDS_Solid]:
         """
-        Split compound/shape into individual disconnected solids
+        Split compound using hash-based face connectivity analysis
         
-        CRITICAL FIX: Use TopExp::MapShapes instead of TopExp_Explorer
-        to properly extract ALL solids from compound boolean results.
+        Uses BFS to find disconnected face components and builds individual
+        solids from each component.
         
         Args:
-            shape: Shape that may contain multiple solids
+            shape: Shape that may contain multiple disconnected solids
             
         Returns:
-            List of individual solid volumes (should be 22+ for test part, not 1)
+            List of individual solid volumes (should be 22+ for test part)
         """
-        # Use TopTools_IndexedMapOfShape to extract ALL solids
-        solid_map = TopTools_IndexedMapOfShape()
-        topexp.MapShapes(shape, TopAbs_SOLID, solid_map)
+        from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
         
-        num_solids = solid_map.Size()
-        logger.info(f"    MapShapes found {num_solids} solid(s) in boolean result")
+        # Build edge-to-face adjacency map
+        edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+        topexp.MapShapesAndAncestors(
+            shape,
+            TopAbs_EDGE,
+            TopAbs_FACE,
+            edge_face_map
+        )
         
-        solids = []
-        for i in range(1, num_solids + 1):  # OCC uses 1-based indexing
-            solid_shape = solid_map(i)  # Use parentheses operator to access element
-            
-            try:
-                # Cast to TopoDS_Solid
-                solid = topods.Solid(solid_shape)
-                
-                # Verify solid is valid
-                analyzer = BRepCheck_Analyzer(solid)
-                if analyzer.IsValid():
-                    solids.append(solid)
-                    logger.debug(f"      Solid {i}: VALID")
-                else:
-                    logger.warning(f"      Solid {i}: INVALID - skipping")
-            
-            except Exception as e:
-                logger.warning(f"      Solid {i}: Failed to cast/validate - {e}")
+        # Extract all faces and create hash map
+        faces = []
+        face_hashes = {}
+        exp = TopExp_Explorer(shape, TopAbs_FACE)
+        idx = 0
+        while exp.More():
+            face = topods.Face(exp.Current())
+            faces.append(face)
+            face_hash = face.HashCode(2147483647)  # Max int32
+            face_hashes[face_hash] = idx
+            idx += 1
+            exp.Next()
+        
+        logger.info(f"    Found {len(faces)} faces to analyze for connectivity")
+        
+        # BFS to find connected components
+        visited = set()
+        components = []
+        
+        for start_idx in range(len(faces)):
+            if start_idx in visited:
                 continue
+            
+            # BFS to find all faces connected to this one
+            component_faces = []
+            stack = [start_idx]
+            visited.add(start_idx)
+            
+            while stack:
+                current_idx = stack.pop()
+                current_face = faces[current_idx]
+                component_faces.append(current_face)
+                
+                # Find all edges of this face
+                edge_exp = TopExp_Explorer(current_face, TopAbs_EDGE)
+                while edge_exp.More():
+                    edge = topods.Edge(edge_exp.Current())
+                    
+                    # Find all faces sharing this edge
+                    if edge_face_map.Contains(edge):
+                        face_list = edge_face_map.FindFromKey(edge)
+                        
+                        for j in range(1, face_list.Length() + 1):
+                            adj_face = topods.Face(face_list.Value(j))
+                            adj_hash = adj_face.HashCode(2147483647)
+                            
+                            if adj_hash in face_hashes:
+                                adj_idx = face_hashes[adj_hash]
+                                if adj_idx not in visited:
+                                    visited.add(adj_idx)
+                                    stack.append(adj_idx)
+                    
+                    edge_exp.Next()
+            
+            # Build solid from this component
+            if len(component_faces) >= 6:  # Minimum faces for a valid solid
+                try:
+                    shell = BRepBuilderAPI_MakeShell()
+                    for face in component_faces:
+                        shell.Add(face)
+                    
+                    if shell.IsDone():
+                        solid_builder = BRepBuilderAPI_MakeSolid(shell.Shell())
+                        if solid_builder.IsDone():
+                            solid = solid_builder.Solid()
+                            
+                            # Validate
+                            analyzer = BRepCheck_Analyzer(solid)
+                            if analyzer.IsValid():
+                                components.append(solid)
+                                logger.debug(f"      Component {len(components)}: {len(component_faces)} faces")
+                except Exception as e:
+                    logger.warning(f"      Failed to build solid from {len(component_faces)} faces: {e}")
         
-        logger.info(f"    ✅ Extracted {len(solids)} valid disconnected solid(s)")
+        logger.info(f"    ✅ Split into {len(components)} disconnected component(s)")
         
-        return solids
+        return components
     
     def _analyze_volume(
         self, 
