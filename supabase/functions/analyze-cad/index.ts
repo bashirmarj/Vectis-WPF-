@@ -143,9 +143,33 @@ serve(async (req) => {
           if (serviceResponse.ok) {
             const serviceResult = await serviceResponse.json();
             
+            // 🔍 DEBUG: Log raw response from Render.com BEFORE any processing
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: '🔍 RAW RENDER.COM RESPONSE',
+              context: {
+                response_keys: Object.keys(serviceResult),
+                has_mesh_data: 'mesh_data' in serviceResult,
+                mesh_data_is_null: serviceResult.mesh_data === null,
+                mesh_data_type: typeof serviceResult.mesh_data,
+                mesh_data_keys: serviceResult.mesh_data ? Object.keys(serviceResult.mesh_data) : 'NULL',
+                vertices_exists: !!serviceResult.mesh_data?.vertices,
+                vertices_length: serviceResult.mesh_data?.vertices?.length || 0,
+                indices_length: serviceResult.mesh_data?.indices?.length || 0,
+                normals_length: serviceResult.mesh_data?.normals?.length || 0,
+                response_size_estimate: JSON.stringify(serviceResult).length
+              }
+            }));
+            
             // Store large mesh data separately to avoid memory limits
             let meshStorageUrl = null;
+            let preservedMeshData = null; // ✅ PRESERVE mesh_data before deletion
+            
             if (serviceResult.mesh_data) {
+              // ✅ PRESERVE mesh_data BEFORE storing/deleting
+              preservedMeshData = { ...serviceResult.mesh_data };
               const supabase = createClient(
                 Deno.env.get('SUPABASE_URL') ?? '',
                 Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -176,8 +200,35 @@ serve(async (req) => {
                 }));
               }
               
-              // Remove mesh_data from result to save memory
+              // 🔍 DEBUG: Log before deleting mesh_data
+              console.log(JSON.stringify({
+                timestamp: new Date().toISOString(),
+                level: 'DEBUG',
+                correlation_id: correlationId,
+                message: '🔍 MESH DATA STORED - about to delete from serviceResult',
+                context: {
+                  mesh_stored_at: meshStorageUrl,
+                  preserved_mesh_vertices: preservedMeshData?.vertices?.length || 0,
+                  will_delete_from_serviceResult: true
+                }
+              }));
+              
+              // Remove mesh_data from result to save memory (but we preserved it above)
               delete serviceResult.mesh_data;
+            } else if (serviceResult.mesh_data === null) {
+              console.warn(JSON.stringify({
+                timestamp: new Date().toISOString(),
+                level: 'WARN',
+                correlation_id: correlationId,
+                message: '⚠️ RENDER.COM RETURNED NULL MESH_DATA',
+                context: {
+                  file_name: fileName,
+                  file_size: fileSize,
+                  response_keys: Object.keys(serviceResult),
+                  possible_timeout: fileSize > 10000000, // >10MB
+                  recommendation: 'Check Render.com logs for timeout or memory errors'
+                }
+              }));
             }
             
             // ENHANCED: Detailed logging of raw geometry service response
@@ -318,22 +369,35 @@ serve(async (req) => {
               }
             }));
 
+            // 🔍 DEBUG: Verify preserved mesh data
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: '🔍 USING PRESERVED MESH DATA',
+              context: {
+                preserved_mesh_exists: !!preservedMeshData,
+                preserved_vertices: preservedMeshData?.vertices?.length || 0,
+                mesh_url_exists: !!meshStorageUrl
+              }
+            }));
+            
             analysisResult = {
               ...analysisResult,
               ...serviceResult,
               mesh_url: meshStorageUrl, // Reference to stored mesh data
-              // ✅ EXPLICITLY include mesh_data from geometry service
-              mesh_data: serviceResult.mesh_data || null,
+              // ✅ USE PRESERVED mesh_data (not serviceResult.mesh_data which was deleted)
+              mesh_data: preservedMeshData || null,
               // ✅ ALSO include as 'geometry' for frontend compatibility
-              geometry: serviceResult.mesh_data ? {
-                vertices: serviceResult.mesh_data.vertices || [],
-                indices: serviceResult.mesh_data.indices || [],
-                normals: serviceResult.mesh_data.normals || [],
-                vertex_face_ids: serviceResult.mesh_data.vertex_face_ids || [],
-                face_mapping: serviceResult.mesh_data.face_mapping || {},
-                hasVertices: !!(serviceResult.mesh_data.vertices?.length),
-                hasIndices: !!(serviceResult.mesh_data.indices?.length),
-                hasNormals: !!(serviceResult.mesh_data.normals?.length)
+              geometry: preservedMeshData ? {
+                vertices: preservedMeshData.vertices || [],
+                indices: preservedMeshData.indices || [],
+                normals: preservedMeshData.normals || [],
+                vertex_face_ids: preservedMeshData.vertex_face_ids || [],
+                face_mapping: preservedMeshData.face_mapping || {},
+                hasVertices: !!(preservedMeshData.vertices?.length),
+                hasIndices: !!(preservedMeshData.indices?.length),
+                hasNormals: !!(preservedMeshData.normals?.length)
               } : null,
               geometric_features: {
                 ...geometricFeatures,
@@ -342,21 +406,22 @@ serve(async (req) => {
               method: serviceResult.metadata?.recognition_method || 'brepnet'
             };
             
-            // 🔍 DEBUG POINT 2: Verify geometry object creation
+            // 🔍 DEBUG POINT 2: Verify final response structure
             console.log(JSON.stringify({
               timestamp: new Date().toISOString(),
               level: 'DEBUG',
               correlation_id: correlationId,
-              message: '🔍 DEBUG 2: Geometry object created',
+              message: '🔍 DEBUG 2: FINAL RESPONSE TO FRONTEND',
               context: {
+                response_keys: Object.keys(analysisResult),
+                has_mesh_data: 'mesh_data' in analysisResult,
+                mesh_data_is_null: analysisResult.mesh_data === null,
+                mesh_data_vertices: analysisResult.mesh_data?.vertices?.length || 0,
                 geometry_created: !!analysisResult.geometry,
-                geometry_is_null: analysisResult.geometry === null,
-                hasVertices_flag: analysisResult.geometry?.hasVertices,
-                hasIndices_flag: analysisResult.geometry?.hasIndices,
-                hasNormals_flag: analysisResult.geometry?.hasNormals,
-                vertices_count: analysisResult.geometry?.vertices?.length || 0,
-                indices_count: analysisResult.geometry?.indices?.length || 0,
-                normals_count: analysisResult.geometry?.normals?.length || 0
+                geometry_vertices: analysisResult.geometry?.vertices?.length || 0,
+                mesh_url: analysisResult.mesh_url,
+                has_features: !!analysisResult.geometric_features,
+                feature_count: analysisResult.geometric_features?.num_features_detected || 0
               }
             }));
           } else {
