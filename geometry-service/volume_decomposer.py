@@ -22,7 +22,7 @@ from enum import Enum
 
 from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid, TopoDS_Compound, topods
 from OCC.Core.TopExp import TopExp_Explorer, topexp
-from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_EDGE, TopAbs_FACE
+from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_EDGE, TopAbs_FACE, TopAbs_COMPOUND
 from OCC.Core.TopTools import TopTools_IndexedMapOfShape
 from OCC.Core.BRepBuilderAPI import (
     BRepBuilderAPI_MakeShape,
