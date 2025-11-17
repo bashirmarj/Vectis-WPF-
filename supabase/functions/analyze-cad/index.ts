@@ -195,6 +195,28 @@ serve(async (req) => {
               }
             }));
             
+            // 🔍 DEBUG POINT 1: Log RAW response from Python service
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: '🔍 DEBUG 1: RAW Python service response',
+              context: {
+                response_keys: Object.keys(serviceResult),
+                has_mesh_data_key: 'mesh_data' in serviceResult,
+                mesh_data_type: typeof serviceResult.mesh_data,
+                mesh_data_is_null: serviceResult.mesh_data === null,
+                mesh_data_keys: serviceResult.mesh_data ? Object.keys(serviceResult.mesh_data) : null,
+                vertices_exists: !!serviceResult.mesh_data?.vertices,
+                vertices_type: typeof serviceResult.mesh_data?.vertices,
+                vertices_length: serviceResult.mesh_data?.vertices?.length,
+                indices_exists: !!serviceResult.mesh_data?.indices,
+                indices_length: serviceResult.mesh_data?.indices?.length,
+                normals_exists: !!serviceResult.mesh_data?.normals,
+                normals_length: serviceResult.mesh_data?.normals?.length
+              }
+            }));
+            
             // Transform BRepNet features to frontend format
             const features = serviceResult.features || [];
             
@@ -319,6 +341,24 @@ serve(async (req) => {
               },
               method: serviceResult.metadata?.recognition_method || 'brepnet'
             };
+            
+            // 🔍 DEBUG POINT 2: Verify geometry object creation
+            console.log(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              level: 'DEBUG',
+              correlation_id: correlationId,
+              message: '🔍 DEBUG 2: Geometry object created',
+              context: {
+                geometry_created: !!analysisResult.geometry,
+                geometry_is_null: analysisResult.geometry === null,
+                hasVertices_flag: analysisResult.geometry?.hasVertices,
+                hasIndices_flag: analysisResult.geometry?.hasIndices,
+                hasNormals_flag: analysisResult.geometry?.hasNormals,
+                vertices_count: analysisResult.geometry?.vertices?.length || 0,
+                indices_count: analysisResult.geometry?.indices?.length || 0,
+                normals_count: analysisResult.geometry?.normals?.length || 0
+              }
+            }));
           } else {
             let serviceError = 'Unknown error';
             try {
@@ -417,6 +457,25 @@ serve(async (req) => {
       context: { 
         processingTime,
         method: analysisResult.method
+      }
+    }));
+    
+    // 🔍 DEBUG POINT 3: Final response structure before sending
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: 'DEBUG',
+      correlation_id: correlationId,
+      message: '🔍 DEBUG 3: Final response structure',
+      context: {
+        response_keys: Object.keys(analysisResult),
+        has_mesh_data: 'mesh_data' in analysisResult,
+        mesh_data_is_null: analysisResult.mesh_data === null,
+        has_geometry: 'geometry' in analysisResult,
+        geometry_is_null: analysisResult.geometry === null,
+        geometry_hasVertices: analysisResult.geometry?.hasVertices,
+        final_vertices_count: analysisResult.geometry?.vertices?.length || 0,
+        final_indices_count: analysisResult.geometry?.indices?.length || 0,
+        final_normals_count: analysisResult.geometry?.normals?.length || 0
       }
     }));
 
