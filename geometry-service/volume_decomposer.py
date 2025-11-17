@@ -338,12 +338,12 @@ class VolumeDecomposer:
         solid_map = TopTools_IndexedMapOfShape()
         topexp.MapShapes(shape, TopAbs_SOLID, solid_map)
         
-        num_solids = solid_map.Extent()
+        num_solids = solid_map.Size()  # Changed from .Extent() to .Size()
         logger.info(f"    MapShapes found {num_solids} solid(s) in boolean result")
         
         solids = []
         for i in range(1, num_solids + 1):  # OCC uses 1-based indexing
-            solid_shape = solid_map.FindKey(i)
+            solid_shape = solid_map.Value(i)  # Changed from .FindKey() to .Value()
             
             try:
                 # Cast to TopoDS_Solid
