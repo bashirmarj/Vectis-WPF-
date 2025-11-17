@@ -11,7 +11,7 @@ Instead of:
   STEP File → Build Complete AAG → Search for Features (❌ WRONG)
 
 Author: Vectis Machining
-Version: 2.0.0 - Analysis Situs Compatible
+Version: 2.0.1 - FIXED: Volume Splitting + Unit Detection
 """
 
 import logging
@@ -23,6 +23,7 @@ from enum import Enum
 from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid, TopoDS_Compound, topods
 from OCC.Core.TopExp import TopExp_Explorer, topexp
 from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_EDGE, TopAbs_FACE
+from OCC.Core.TopTools import TopTools_IndexedMapOfShape
 from OCC.Core.BRepBuilderAPI import (
     BRepBuilderAPI_MakeShape,
     BRepBuilderAPI_Copy,
@@ -37,7 +38,7 @@ from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepCheck import BRepCheck_Analyzer
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+from OCC.Core.Interface import Interface_Static
 
 logger = logging.getLogger(__name__)
 
@@ -164,20 +165,31 @@ class VolumeDecomposer:
         logger.info("Decomposing prismatic part...")
         
         try:
+            # Detect model units FIRST before any calculations
+            self.model_units = self._detect_model_units(shape)
+            logger.info(f"  Detected model units: {self.model_units}")
+            
             # Step 1: Compute stock envelope (bounding box)
             bbox = self._compute_bounding_box(shape)
             logger.info(f"  Stock envelope: {bbox['size_x']:.1f} × {bbox['size_y']:.1f} × {bbox['size_z']:.1f} mm")
             
             # Create stock solid from bounding box with padding
-            padding = 0.1  # 0.1mm padding
+            # Use raw values from OCC (in detected units), then convert
+            bbox_raw = Bnd_Box()
+            brepbndlib.Add(shape, bbox_raw)
+            xmin, ymin, zmin, xmax, ymax, zmax = bbox_raw.Get()
+            
+            # Apply padding in the SAME units as model
+            padding = 0.1 if self.model_units == "mm" else 0.0001  # 0.1mm or 0.1mm in meters
             stock_solid = BRepPrimAPI_MakeBox(
-                gp_Pnt(bbox['xmin'] - padding, bbox['ymin'] - padding, bbox['zmin'] - padding),
-                gp_Pnt(bbox['xmax'] + padding, bbox['ymax'] + padding, bbox['zmax'] + padding)
+                gp_Pnt(xmin - padding, ymin - padding, zmin - padding),
+                gp_Pnt(xmax + padding, ymax + padding, zmax + padding)
             ).Shape()
             
             # Step 2: Boolean difference - stock minus part = removed material
             logger.info("  Computing boolean difference (stock - part)...")
             cut_op = BRepAlgoAPI_Cut(stock_solid, shape)
+            cut_op.SetFuzzyValue(self.tolerance)  # Set tolerance for robustness
             cut_op.Build()
             
             if not cut_op.IsDone():
@@ -192,7 +204,11 @@ class VolumeDecomposer:
             # Step 3: Split into disconnected solids
             logger.info("  Splitting removal volumes...")
             removal_volumes = self._split_solids(removal_shape)
-            logger.info(f"  Found {len(removal_volumes)} removal volume(s)")
+            logger.info(f"  ✅ Found {len(removal_volumes)} disconnected removal volume(s)")
+            
+            # Validate we're getting multiple volumes
+            if len(removal_volumes) == 1:
+                logger.warning("  ⚠️ Only 1 volume detected - check if boolean result has merged features")
             
             # Step 4: Create ManufacturingVolume objects
             manufacturing_volumes = []
@@ -200,10 +216,6 @@ class VolumeDecomposer:
                 vol_data = self._analyze_volume(vol_solid, VolumeType.REMOVAL, i)
                 manufacturing_volumes.append(vol_data)
                 logger.info(f"    Volume {i}: {vol_data.volume_mm3:.1f} mm³, hint={vol_data.feature_hint}")
-            
-            # Detect model units once for entire decomposition
-            if self.model_units is None:
-                self.model_units = self._detect_model_units(shape)
             
             # Create stock volume
             stock_props = GProp_GProps()
@@ -217,18 +229,14 @@ class VolumeDecomposer:
             else:
                 stock_volume_mm3 = stock_props.Mass()  # Assume mm³
             
-            logger.info(f"Stock volume: {stock_volume_mm3:.2f} mm³ (units={self.model_units})")
+            logger.info(f"  Stock volume: {stock_volume_mm3:.2f} mm³ (units={self.model_units})")
             
             stock_vol = ManufacturingVolume(
                 geometry=stock_solid,
                 type=VolumeType.STOCK,
                 volume_mm3=stock_volume_mm3,
                 bounding_box=bbox,
-                centroid=(
-                    stock_props.CentreOfMass().X(),
-                    stock_props.CentreOfMass().Y(),
-                    stock_props.CentreOfMass().Z()
-                ),
+                centroid=(0, 0, 0),
                 feature_hint="stock_envelope"
             )
             
@@ -240,6 +248,8 @@ class VolumeDecomposer:
         
         except Exception as e:
             logger.error(f"Prismatic decomposition failed: {e}")
+            import traceback
+            traceback.print_exc()
             return DecompositionResult(
                 success=False,
                 error_message=str(e)
@@ -286,49 +296,72 @@ class VolumeDecomposer:
             shape: Part geometry
             
         Returns:
-            Dictionary with xmin, xmax, ymin, ymax, zmin, zmax, size_x, size_y, size_z
+            Dictionary with xmin, xmax, ymin, ymax, zmin, zmax, size_x, size_y, size_z (all in mm)
         """
         bbox = Bnd_Box()
         brepbndlib.Add(shape, bbox)
         
         xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
         
+        # Convert to millimeters based on detected units
+        if self.model_units == "m":
+            scale_factor = 1000.0  # m → mm
+        else:
+            scale_factor = 1.0  # Already in mm
+        
         return {
-            'xmin': xmin * 1000,  # Convert to mm
-            'xmax': xmax * 1000,
-            'ymin': ymin * 1000,
-            'ymax': ymax * 1000,
-            'zmin': zmin * 1000,
-            'zmax': zmax * 1000,
-            'size_x': (xmax - xmin) * 1000,
-            'size_y': (ymax - ymin) * 1000,
-            'size_z': (zmax - zmin) * 1000
+            'xmin': xmin * scale_factor,
+            'xmax': xmax * scale_factor,
+            'ymin': ymin * scale_factor,
+            'ymax': ymax * scale_factor,
+            'zmin': zmin * scale_factor,
+            'zmax': zmax * scale_factor,
+            'size_x': (xmax - xmin) * scale_factor,
+            'size_y': (ymax - ymin) * scale_factor,
+            'size_z': (zmax - zmin) * scale_factor
         }
     
     def _split_solids(self, shape: TopoDS_Shape) -> List[TopoDS_Solid]:
         """
         Split compound/shape into individual disconnected solids
         
+        CRITICAL FIX: Use TopExp::MapShapes instead of TopExp_Explorer
+        to properly extract ALL solids from compound boolean results.
+        
         Args:
             shape: Shape that may contain multiple solids
             
         Returns:
-            List of individual solid volumes
+            List of individual solid volumes (should be 22+ for test part, not 1)
         """
-        solids = []
-        solid_explorer = TopExp_Explorer(shape, TopAbs_SOLID)
+        # Use TopTools_IndexedMapOfShape to extract ALL solids
+        solid_map = TopTools_IndexedMapOfShape()
+        topexp.MapShapes(shape, TopAbs_SOLID, solid_map)
         
-        while solid_explorer.More():
-            solid = solid_explorer.Current()
+        num_solids = solid_map.Extent()
+        logger.info(f"    MapShapes found {num_solids} solid(s) in boolean result")
+        
+        solids = []
+        for i in range(1, num_solids + 1):  # OCC uses 1-based indexing
+            solid_shape = solid_map.FindKey(i)
             
-            # Verify solid is valid
-            analyzer = BRepCheck_Analyzer(solid)
-            if analyzer.IsValid():
-                solids.append(solid)
-            else:
-                logger.warning(f"  Skipping invalid solid")
+            try:
+                # Cast to TopoDS_Solid
+                solid = topods.Solid(solid_shape)
+                
+                # Verify solid is valid
+                analyzer = BRepCheck_Analyzer(solid)
+                if analyzer.IsValid():
+                    solids.append(solid)
+                    logger.debug(f"      Solid {i}: VALID")
+                else:
+                    logger.warning(f"      Solid {i}: INVALID - skipping")
             
-            solid_explorer.Next()
+            except Exception as e:
+                logger.warning(f"      Solid {i}: Failed to cast/validate - {e}")
+                continue
+        
+        logger.info(f"    ✅ Extracted {len(solids)} valid disconnected solid(s)")
         
         return solids
     
@@ -357,44 +390,54 @@ class VolumeDecomposer:
         # Apply correct unit conversion based on detected units
         if self.model_units == "mm":
             volume_mm3 = raw_volume  # Already in mm³
-            logger.debug(f"Volume {volume_id} (mm³): {volume_mm3:.2f}")
+            logger.debug(f"      Volume {volume_id} (mm³): {volume_mm3:.2f}")
         elif self.model_units == "m":
             volume_mm3 = raw_volume * 1e9  # m³ to mm³
-            logger.debug(f"Volume {volume_id} (m³→mm³): {raw_volume:.6f} → {volume_mm3:.2f}")
+            logger.debug(f"      Volume {volume_id} (m³→mm³): {raw_volume:.6e} → {volume_mm3:.2f}")
         else:
             volume_mm3 = raw_volume  # Assume mm³
-            logger.warning(f"Unknown units for volume {volume_id}, assuming mm³: {volume_mm3:.2f}")
+            logger.warning(f"      Unknown units for volume {volume_id}, assuming mm³: {volume_mm3:.2f}")
         
-        # Sanity check
-        if volume_mm3 > 1_000_000_000:
-            logger.error(f"❌ Absurdly large volume detected: {volume_mm3:.2e} mm³ - unit conversion error!")
-        elif volume_mm3 < 0.1:
-            logger.warning(f"⚠️ Extremely small volume: {volume_mm3:.2e} mm³")
+        # Sanity check for absurd volumes
+        if volume_mm3 > 1_000_000_000:  # 1 cubic meter in mm³
+            logger.error(f"      ❌ ABSURD VOLUME: {volume_mm3:.2e} mm³ - UNIT CONVERSION ERROR!")
+            logger.error(f"         Raw OCC value: {raw_volume:.2e}")
+            logger.error(f"         Detected units: {self.model_units}")
+        elif volume_mm3 < 0.001:
+            logger.warning(f"      ⚠️ Extremely small volume: {volume_mm3:.2e} mm³")
+        
         centroid = props.CentreOfMass()
         
-        # Compute bounding box
+        # Compute bounding box (already handles unit conversion)
         bbox = self._compute_bounding_box(solid)
         
         # Classify feature type based on geometry
         feature_hint = self._classify_feature_hint(solid, bbox, volume_mm3)
         
         # Compute complexity score (number of faces)
-        from OCC.Core.TopAbs import TopAbs_FACE
         face_count = 0
         face_explorer = TopExp_Explorer(solid, TopAbs_FACE)
         while face_explorer.More():
             face_count += 1
             face_explorer.Next()
         
+        logger.debug(f"      Volume {volume_id}: {face_count} faces")
+        
         complexity_score = face_count / 20.0  # Normalize (20 faces = complex)
         is_simple = face_count <= 10
+        
+        # Convert centroid to mm
+        if self.model_units == "m":
+            centroid_mm = (centroid.X() * 1000, centroid.Y() * 1000, centroid.Z() * 1000)
+        else:
+            centroid_mm = (centroid.X(), centroid.Y(), centroid.Z())
         
         return ManufacturingVolume(
             geometry=solid,
             type=vol_type,
             volume_mm3=volume_mm3,
             bounding_box=bbox,
-            centroid=(centroid.X(), centroid.Y(), centroid.Z()),
+            centroid=centroid_mm,
             feature_hint=feature_hint,
             complexity_score=complexity_score,
             is_simple=is_simple
@@ -416,7 +459,7 @@ class VolumeDecomposer:
         
         Args:
             solid: Volume geometry
-            bbox: Bounding box
+            bbox: Bounding box (in mm)
             volume_mm3: Volume in mm³
             
         Returns:
@@ -457,3 +500,49 @@ class VolumeDecomposer:
         
         else:
             return "complex_depression"
+    
+    def _detect_model_units(self, shape: TopoDS_Shape) -> str:
+        """
+        Detect whether model uses millimeters or meters
+        
+        Strategy:
+        1. Compute bounding box diagonal
+        2. If diagonal < 10, likely meters (parts are rarely < 10mm)
+        3. If diagonal > 1000, likely millimeters (parts rarely > 1 meter)
+        4. Ambiguous range: assume millimeters (CAD standard)
+        
+        Args:
+            shape: Part geometry
+            
+        Returns:
+            "mm" or "m"
+        """
+        bbox = Bnd_Box()
+        brepbndlib.Add(shape, bbox)
+        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+        
+        # Compute bounding box diagonal (raw OCC units)
+        dx = xmax - xmin
+        dy = ymax - ymin
+        dz = zmax - zmin
+        diagonal = np.sqrt(dx**2 + dy**2 + dz**2)
+        
+        logger.info(f"    Bounding box diagonal (raw OCC): {diagonal:.4f}")
+        
+        # Heuristic thresholds
+        if diagonal < 1.0:
+            # Very small in OCC units → likely meters
+            # Example: 0.5 m part = 500mm diagonal
+            units = "m"
+            logger.info(f"    Detected METERS (diagonal {diagonal:.4f} < 1.0)")
+        elif diagonal > 100.0:
+            # Large in OCC units → likely millimeters
+            # Example: 500mm part = 500 diagonal
+            units = "mm"
+            logger.info(f"    Detected MILLIMETERS (diagonal {diagonal:.1f} > 100)")
+        else:
+            # Ambiguous range 1-100 → assume millimeters (CAD standard)
+            units = "mm"
+            logger.info(f"    Ambiguous diagonal {diagonal:.2f}, assuming MILLIMETERS")
+        
+        return units
