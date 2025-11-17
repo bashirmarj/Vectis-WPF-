@@ -1233,7 +1233,7 @@ class BossStepIslandRecognizer:
         # Uniform approximation: low variation
         return (std_area / avg_area) < 0.3 if avg_area > 0 else False
     
-
+    def _find_base_faces(
         self,
         top: GraphNode,
         walls: List[int],
