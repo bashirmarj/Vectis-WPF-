@@ -300,6 +300,19 @@ serve(async (req) => {
               ...analysisResult,
               ...serviceResult,
               mesh_url: meshStorageUrl, // Reference to stored mesh data
+              // ✅ EXPLICITLY include mesh_data from geometry service
+              mesh_data: serviceResult.mesh_data || null,
+              // ✅ ALSO include as 'geometry' for frontend compatibility
+              geometry: serviceResult.mesh_data ? {
+                vertices: serviceResult.mesh_data.vertices || [],
+                indices: serviceResult.mesh_data.indices || [],
+                normals: serviceResult.mesh_data.normals || [],
+                vertex_face_ids: serviceResult.mesh_data.vertex_face_ids || [],
+                face_mapping: serviceResult.mesh_data.face_mapping || {},
+                hasVertices: !!(serviceResult.mesh_data.vertices?.length),
+                hasIndices: !!(serviceResult.mesh_data.indices?.length),
+                hasNormals: !!(serviceResult.mesh_data.normals?.length)
+              } : null,
               geometric_features: {
                 ...geometricFeatures,
                 feature_summary: featureSummary
