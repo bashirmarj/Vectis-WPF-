@@ -1459,7 +1459,7 @@ class HoleRecognizer:
         top_radius = depth * np.tan(angle_rad)
         
         return max(top_radius * 2, self.min_hole_diameter * 1.1)
-    # ===== NEW METHODS FOR COAXIAL GROUPING (v2.1.0) =====
+    # ===== NEW METHODS FOR COAXIAL GROUPING (v2.1.0 & v2.1.1) =====
 
     def _group_coaxial_cylinders(
         self, 
@@ -1468,7 +1468,7 @@ class HoleRecognizer:
         nodes: List[GraphNode]
     ) -> List[List[GraphNode]]:
         """
-        ✅ NEW v2.1.0: Group cylinders that share the same axis
+        ✅ v2.1.0: Group cylinders that share the same axis
 
         This prevents double-counting: each group = one hole
 
@@ -1504,7 +1504,7 @@ class HoleRecognizer:
 
     def _are_coaxial_strict(self, cyl1: GraphNode, cyl2: GraphNode) -> bool:
         """
-        ✅ NEW v2.1.0: Strict coaxial check
+        ✅ v2.1.0: Strict coaxial check
 
         Criteria:
         1. Axes parallel (within 5°)
@@ -1553,7 +1553,7 @@ class HoleRecognizer:
         max_hops: int = 3
     ) -> bool:
         """
-        ✅ NEW v2.1.0: Check if two faces are connected
+        ✅ v2.1.0: Check if two faces are connected
 
         For counterbored holes, cylinders are 1-2 hops apart
         """
@@ -1586,32 +1586,47 @@ class HoleRecognizer:
         processed: Set[int]
     ) -> Optional[HoleFeature]:
         """
-        ✅ NEW v2.1.0: Recognize hole from cylinder GROUP
+        ✅ v2.1.1: Only classify as counterbore if diameters are DIFFERENT
 
         Logic:
-        - Single cylinder → use existing _recognize_single_hole()
-        - Multiple cylinders → counterbored/counter-drilled
+        - 1 cylinder → use _recognize_single_hole() (blind/through detection)
+        - 2+ cylinders with SAME diameter → treat as single hole (CAD segmentation)
+        - 2+ cylinders with DIFFERENT diameters → counterbore/counter-drilled
         """
         if not cylinder_group:
             return None
 
-        # Single cylinder - use existing recognition
+        # Single cylinder - use existing logic (correctly handles blind/through)
         if len(cylinder_group) == 1:
             return self._recognize_single_hole(cylinder_group[0], adjacency, nodes, processed)
 
-        # Multiple cylinders - counterbored or counter-drilled
+        # Multiple cylinders - check if diameters are actually different
         sorted_cyls = sorted(cylinder_group, key=lambda c: c.radius, reverse=True)
 
         large_cyl = sorted_cyls[0]
         small_cyl = sorted_cyls[-1]
 
+        # Calculate diameter ratio
+        radius_ratio = large_cyl.radius / small_cyl.radius if small_cyl.radius > 0 else 1.0
+
+        # ✅ CRITICAL CHECK: Are diameters actually different?
+        DIAMETER_TOLERANCE = 1.10  # 10% tolerance (same diameter if within this)
+
+        if radius_ratio < DIAMETER_TOLERANCE:
+            # Diameters are essentially the same - NOT a counterbore
+            # This is likely a CAD artifact (cylinder split into segments)
+            # Treat as a single hole using the larger cylinder
+            logger.debug(f"  Group has {len(sorted_cyls)} cylinders but same diameter "
+                        f"(ratio={radius_ratio:.2f}) - treating as single hole")
+            return self._recognize_single_hole(large_cyl, adjacency, nodes, processed)
+
+        # Diameters are different - proceed with counterbore/counter-drilled detection
         large_dia = large_cyl.radius * 2
         small_dia = small_cyl.radius * 2
 
-        # Collect face IDs
         face_ids = [c.id for c in sorted_cyls]
 
-        # Check for shoulder face (counterbore vs counter-drilled)
+        # Check for shoulder face (distinguishes counterbore from counter-drilled)
         shoulder = self._find_counterbore_shoulder(large_cyl, small_cyl, adjacency, nodes)
 
         # Find bottom face
@@ -1623,17 +1638,27 @@ class HoleRecognizer:
                 bottom_face = neighbor_node
                 break
 
-        if shoulder:
+        # Determine type based on shoulder and diameter ratio
+        if shoulder and radius_ratio > 1.3:
+            # Has shoulder and significant diameter difference → COUNTERBORE
             hole_type = HoleType.COUNTERBORE
             face_ids.append(shoulder.id)
-        else:
+        elif radius_ratio > 1.5:
+            # Large diameter difference but no shoulder → COUNTER-DRILLED
             hole_type = HoleType.COUNTER_DRILLED
+        else:
+            # Marginal difference (10-30%) - treat as simple hole with variation
+            logger.debug(f"  Marginal diameter ratio ({radius_ratio:.2f}) - treating as single hole")
+            return self._recognize_single_hole(large_cyl, adjacency, nodes, processed)
 
         if bottom_face:
             face_ids.append(bottom_face.id)
             total_depth = self._compute_hole_depth(small_cyl, bottom_face)
         else:
             total_depth = None
+
+        logger.debug(f"  Counterbore detected: Ø{small_dia*1000:.1f}mm hole, "
+                    f"Ø{large_dia*1000:.1f}mm bore (ratio={radius_ratio:.2f})")
 
         return HoleFeature(
             type=hole_type,
@@ -1642,6 +1667,7 @@ class HoleRecognizer:
             outer_diameter=large_dia,
             depth=total_depth,
             axis=small_cyl.axis,
-            axis_location=getattr(small_cyl, 'axis_location', small_cyl.centroid if hasattr(small_cyl, 'centroid') else None),
+            axis_location=getattr(small_cyl, 'axis_location', 
+                                 small_cyl.centroid if hasattr(small_cyl, 'centroid') else None),
             confidence=0.88
         )
