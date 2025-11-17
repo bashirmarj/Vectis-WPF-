@@ -612,7 +612,7 @@ def analyze_aag():
                         feature_dict = {
                             'type': aag_feat.type.value,
                             'subtype': getattr(aag_feat, 'subtype', None),
-                            'face_ids': aag_feat.face_ids,
+                            'face_indices': aag_feat.face_ids,
                             'confidence': aag_feat.confidence,
                             'parameters': getattr(aag_feat, 'parameters', {}),
                             'ml_detected': False,
