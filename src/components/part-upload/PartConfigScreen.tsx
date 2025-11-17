@@ -27,17 +27,19 @@ interface FileWithData {
     triangle_count: number;
     face_types?: string[];
     feature_edges?: number[][][];
+    face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>;
+    vertex_face_ids?: number[];
     tagged_edges?: Array<{
       feature_id: number;
       start: [number, number, number];
       end: [number, number, number];
-      type: "line" | "circle" | "arc";
+      type: string;
+      iso_type?: string;
       diameter?: number;
       radius?: number;
       length?: number;
     }>;
     edge_classifications?: any[];
-    vertex_face_ids?: number[];
     face_classifications?: any[];
     geometric_features?: any;
   };

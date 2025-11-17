@@ -23,6 +23,16 @@ interface FileWithQuantity {
     triangle_count: number;
     face_types?: string[];
     feature_edges?: number[][][];
+    face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>; // ✅ Added for feature highlighting
+    vertex_face_ids?: number[]; // ✅ Added for face identification
+    tagged_edges?: Array<{
+      feature_id: number;
+      start: [number, number, number];
+      end: [number, number, number];
+      type: string;
+      iso_type?: string;
+    }>;
+    edge_classifications?: any[];
   };
   analysis?: {
     volume_cm3?: number;
@@ -239,6 +249,8 @@ export const PartUploadForm = () => {
           tagged_edges: result.mesh_data.tagged_edges,
           edge_classifications: result.mesh_data.edge_classifications,
           triangle_count: result.mesh_data.triangle_count || (result.mesh_data.indices?.length / 3),
+          face_mapping: result.mesh_data.face_mapping, // ✅ Added for feature highlighting
+          vertex_face_ids: result.mesh_data.vertex_face_ids, // ✅ Added for face identification
         };
       }
       // Priority 2: Check top-level
@@ -251,6 +263,8 @@ export const PartUploadForm = () => {
           tagged_edges: result.tagged_edges,
           edge_classifications: result.edge_classifications,
           triangle_count: result.triangle_count || (result.indices?.length / 3),
+          face_mapping: result.face_mapping, // ✅ Added for feature highlighting
+          vertex_face_ids: result.vertex_face_ids, // ✅ Added for face identification
         };
       }
       // Priority 3: Check geometry object
@@ -261,6 +275,8 @@ export const PartUploadForm = () => {
           normals: result.geometry.normals,
           vertex_colors: result.geometry.vertex_colors,
           triangle_count: result.geometry.triangle_count,
+          face_mapping: result.geometry.face_mapping, // ✅ Added for feature highlighting
+          vertex_face_ids: result.geometry.vertex_face_ids, // ✅ Added for face identification
         };
       }
 
@@ -276,6 +292,8 @@ export const PartUploadForm = () => {
         hasVertexColors: !!meshData?.vertex_colors,
         hasTaggedEdges: !!meshData?.tagged_edges,
         hasEdgeClassifications: !!meshData?.edge_classifications,
+        hasFaceMapping: !!meshData?.face_mapping, // ✅ Added debug log
+        hasVertexFaceIds: !!meshData?.vertex_face_ids, // ✅ Added debug log
       });
       
       if (result.mesh_url && !meshData.vertices) {
