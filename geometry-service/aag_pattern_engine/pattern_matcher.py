@@ -66,6 +66,7 @@ class RecognitionMetrics:
     confidence_scores: Dict[str, float] = field(default_factory=dict)
     
     # Timing
+    decomposition_time: float = 0.0  # NEW: Volume decomposition timing
     graph_build_time: float = 0.0
     recognition_time: float = 0.0
     validation_time: float = 0.0
@@ -104,6 +105,9 @@ class RecognitionResult:
     
     # Metrics
     metrics: RecognitionMetrics = field(default_factory=RecognitionMetrics)
+    
+    # NEW: Metadata for decomposition and other info
+    metadata: Dict = field(default_factory=dict)
     
     # Manufacturing
     manufacturing_sequence: List = field(default_factory=list)
@@ -225,7 +229,8 @@ class AAGPatternMatcher:
         self,
         shape: TopoDS_Shape,
         validate: bool = True,
-        compute_manufacturing: bool = True
+        compute_manufacturing: bool = True,
+        use_volume_decomposition: bool = True  # NEW: Enable volume decomposition
     ) -> RecognitionResult:
         """
         Recognize all features with comprehensive validation
@@ -263,26 +268,122 @@ class AAGPatternMatcher:
             except Exception as e:
                 logger.warning(f"⚠ Unit normalization failed: {e}")
             
-            # STEP 1: Build AAG from normalized shape
-            logger.info("\n[STEP 1/8] Building Attributed Adjacency Graph...")
+            # ===== STEP 1A: Volume Decomposition (NEW!) =====
+            volumes_to_analyze = []
+            
+            if use_volume_decomposition:
+                logger.info("\n[STEP 1A/8] Decomposing into manufacturing volumes...")
+                decomp_start = time.time()
+                
+                try:
+                    from volume_decomposer import VolumeDecomposer
+                    decomposer = VolumeDecomposer(tolerance=self.tolerance)
+                    
+                    # Classify part type first (quick heuristic)
+                    quick_part_type = self._quick_classify_part_type(shape)
+                    
+                    # Decompose based on type
+                    decomp_result = decomposer.decompose(shape, quick_part_type)
+                    
+                    if decomp_result.success:
+                        logger.info(f"✓ Decomposition successful")
+                        logger.info(f"  Volumes found: {len(decomp_result.removal_volumes)}")
+                        
+                        # Use isolated volumes for analysis
+                        for vol_idx, volume in enumerate(decomp_result.removal_volumes):
+                            volumes_to_analyze.append({
+                                'geometry': volume.geometry,
+                                'context': {
+                                    'volume_id': vol_idx,
+                                    'type': volume.type.value,
+                                    'hint': volume.feature_hint,
+                                    'volume_mm3': volume.volume_mm3,
+                                    'bbox': volume.bounding_box
+                                }
+                            })
+                        
+                        result.metrics.decomposition_time = time.time() - decomp_start
+                        result.metadata['decomposition'] = {
+                            'enabled': True,
+                            'volumes_found': len(decomp_result.removal_volumes),
+                            'time': result.metrics.decomposition_time
+                        }
+                    else:
+                        logger.warning(f"⚠ Decomposition failed: {decomp_result.error_message}")
+                        logger.info("  Falling back to full-shape analysis")
+                        volumes_to_analyze = [{'geometry': shape, 'context': None}]
+                        result.metadata['decomposition'] = {'enabled': True, 'fallback': True}
+                
+                except Exception as e:
+                    logger.error(f"✗ Volume decomposition error: {e}")
+                    logger.info("  Falling back to full-shape analysis")
+                    volumes_to_analyze = [{'geometry': shape, 'context': None}]
+                    result.metrics.errors.append(f"Decomposition failed: {str(e)}")
+                    result.metadata['decomposition'] = {'enabled': True, 'error': str(e)}
+            
+            else:
+                # Old behavior - analyze entire shape
+                logger.info("\n[STEP 1/8] Using full-shape analysis (no decomposition)")
+                volumes_to_analyze = [{'geometry': shape, 'context': None}]
+                result.metadata['decomposition'] = {'enabled': False}
+            
+            # STEP 1B: Build AAG for each volume
+            logger.info(f"\n[STEP 1B/8] Building AAG for {len(volumes_to_analyze)} volume(s)...")
             graph_start = time.time()
             
-            try:
-                graph = self.graph_builder.build_graph(shape)
-                result.graph = graph
-                result.metrics.graph_build_time = time.time() - graph_start
-                
-                logger.info(f"✓ AAG built successfully")
-                logger.info(f"  Nodes: {len(graph['nodes'])}")
-                logger.info(f"  Edges: {len(graph['edges'])}")
-                logger.info(f"  Time: {result.metrics.graph_build_time:.2f}s")
+            all_graphs = []
+            total_nodes = 0
+            total_edges = 0
             
-            except Exception as e:
-                logger.error(f"✗ Failed to build AAG: {e}")
-                logger.error(traceback.format_exc())
+            for vol_data in volumes_to_analyze:
+                vol_geom = vol_data['geometry']
+                vol_context = vol_data['context']
+                
+                try:
+                    if vol_context:
+                        logger.info(f"  Building AAG for volume {vol_context['volume_id']} ({vol_context['hint']})...")
+                    
+                    # Build AAG for this volume
+                    graph = self.graph_builder.build_graph(vol_geom)
+                    
+                    # Attach context to graph
+                    graph['volume_context'] = vol_context
+                    all_graphs.append(graph)
+                    
+                    node_count = len(graph['nodes'])
+                    edge_count = len(graph['edges'])
+                    total_nodes += node_count
+                    total_edges += edge_count
+                    
+                    if vol_context:
+                        logger.info(f"    ✓ {node_count} nodes, {edge_count} edges")
+                
+                except Exception as e:
+                    logger.error(f"  ✗ Failed to build AAG for volume: {e}")
+                    result.metrics.errors.append(f"Graph build failed for volume: {str(e)}")
+            
+            if len(all_graphs) == 0:
+                logger.error("✗ No graphs built successfully")
                 result.status = RecognitionStatus.INVALID_INPUT
-                result.metrics.errors.append(f"Graph build failed: {str(e)}")
+                result.metrics.errors.append("All graph builds failed")
                 return result
+            
+            result.metrics.graph_build_time = time.time() - graph_start
+            
+            logger.info(f"✓ AAG built for {len(all_graphs)} volume(s)")
+            logger.info(f"  Total nodes: {total_nodes} (avg {total_nodes//len(all_graphs)} per volume)")
+            logger.info(f"  Total edges: {total_edges} (avg {total_edges//len(all_graphs)} per volume)")
+            logger.info(f"  Time: {result.metrics.graph_build_time:.2f}s")
+            
+            # Store graphs for later use
+            result.graph = {
+                'volumes': all_graphs,
+                'total_nodes': total_nodes,
+                'total_edges': total_edges
+            }
+            
+            # Use first graph for part type detection (backward compatibility)
+            graph = all_graphs[0]
             
             # STEP 2: Detect part type
             logger.info("\n[STEP 2/8] Detecting part type...")
@@ -290,81 +391,110 @@ class AAGPatternMatcher:
             result.part_type = part_type
             logger.info(f"✓ Part type: {part_type.value}")
             
-            # STEP 3: Run recognizers
-            logger.info("\n[STEP 3/8] Running feature recognizers...")
+            # STEP 3: Run recognizers on each volume's graph
+            logger.info("\n[STEP 3/8] Running feature recognizers on volumes...")
             recognition_start = time.time()
             
-            # 3.1: Holes (critical for both prismatic and rotational)
-            if self.hole_recognizer:
-                try:
-                    logger.info("  [3.1] Recognizing holes...")
-                    result.holes = self.hole_recognizer.recognize_holes(graph)
-                    logger.info(f"  ✓ {len(result.holes)} holes recognized")
-                except Exception as e:
-                    logger.error(f"  ✗ Hole recognition failed: {e}")
-                    result.metrics.errors.append(f"Hole recognition: {str(e)}")
-            
-            # 3.2: Pockets, Slots, Passages (prismatic)
-            if self.pocket_slot_recognizer and part_type in [PartType.PRISMATIC, PartType.MIXED]:
-                try:
-                    logger.info("  [3.2] Recognizing pockets/slots/passages...")
-                    pocket_slot_results = self.pocket_slot_recognizer.recognize_all(graph)
-                    result.pockets = pocket_slot_results['pockets']
-                    result.slots = pocket_slot_results['slots']
-                    result.passages = pocket_slot_results['passages']
-                    logger.info(f"  ✓ {len(result.pockets)} pockets, {len(result.slots)} slots, {len(result.passages)} passages")
-                except Exception as e:
-                    logger.error(f"  ✗ Pocket/Slot recognition failed: {e}")
-                    result.metrics.errors.append(f"Pocket/Slot recognition: {str(e)}")
-            
-            # 3.3: Bosses, Steps, Islands (prismatic)
-            if self.boss_step_island_recognizer and part_type in [PartType.PRISMATIC, PartType.MIXED]:
-                try:
-                    logger.info("  [3.3] Recognizing bosses/steps/islands...")
-                    bsi_results = self.boss_step_island_recognizer.recognize_all(graph)
-                    result.bosses = bsi_results['bosses']
-                    result.steps = bsi_results['steps']
-                    result.islands = bsi_results['islands']
-                    logger.info(f"  ✓ {len(result.bosses)} bosses, {len(result.steps)} steps, {len(result.islands)} islands")
-                except Exception as e:
-                    logger.error(f"  ✗ Boss/Step/Island recognition failed: {e}")
-                    result.metrics.errors.append(f"Boss/Step/Island recognition: {str(e)}")
-            
-            # 3.4: Fillets (both types)
-            if self.fillet_recognizer:
-                try:
-                    logger.info("  [3.4] Recognizing fillets...")
-                    result.fillets = self.fillet_recognizer.recognize_fillets(graph)
-                    logger.info(f"  ✓ {len(result.fillets)} fillets recognized")
-                except Exception as e:
-                    logger.error(f"  ✗ Fillet recognition failed: {e}")
-                    result.metrics.errors.append(f"Fillet recognition: {str(e)}")
-            
-            # 3.5: Chamfers (both types)
-            if self.chamfer_recognizer:
-                try:
-                    logger.info("  [3.5] Recognizing chamfers...")
-                    result.chamfers = self.chamfer_recognizer.recognize_chamfers(graph)
-                    logger.info(f"  ✓ {len(result.chamfers)} chamfers recognized")
-                except Exception as e:
-                    logger.error(f"  ✗ Chamfer recognition failed: {e}")
-                    result.metrics.errors.append(f"Chamfer recognition: {str(e)}")
-            
-            # 3.6: Turning features (CRITICAL for rotational parts)
-            if self.turning_recognizer and part_type in [PartType.ROTATIONAL, PartType.MIXED]:
-                try:
-                    logger.info("  [3.6] Recognizing turning features (CRITICAL)...")
-                    result.turning_features = self.turning_recognizer.recognize_turning_features(graph)
-                    logger.info(f"  ✓ {len(result.turning_features)} turning features recognized")
-                except Exception as e:
-                    logger.error(f"  ✗ Turning recognition failed: {e}")
-                    logger.error(traceback.format_exc())
-                    result.metrics.errors.append(f"Turning recognition: {str(e)}")
-                    # Turning is critical - mark as partial success
-                    if part_type == PartType.ROTATIONAL:
-                        result.status = RecognitionStatus.PARTIAL_SUCCESS
+            # Run recognizers on each volume
+            for graph_idx, graph in enumerate(all_graphs):
+                vol_context = graph.get('volume_context')
+                
+                if vol_context:
+                    logger.info(f"\n  Analyzing volume {vol_context['volume_id']} ({vol_context['hint']})...")
+                
+                # 3.1: Holes
+                if self.hole_recognizer:
+                    try:
+                        volume_holes = self.hole_recognizer.recognize_holes(graph)
+                        result.holes.extend(volume_holes)
+                        
+                        if vol_context and len(volume_holes) > 0:
+                            logger.info(f"    ✓ {len(volume_holes)} holes in this volume")
+                    except Exception as e:
+                        logger.error(f"    ✗ Hole recognition failed: {e}")
+                        result.metrics.errors.append(f"Hole recognition vol {graph_idx}: {str(e)}")
+                
+                # 3.2: Pockets, Slots, Passages (prismatic)
+                if self.pocket_slot_recognizer and part_type in [PartType.PRISMATIC, PartType.MIXED]:
+                    try:
+                        pocket_slot_results = self.pocket_slot_recognizer.recognize_all(graph)
+                        result.pockets.extend(pocket_slot_results['pockets'])
+                        result.slots.extend(pocket_slot_results['slots'])
+                        result.passages.extend(pocket_slot_results['passages'])
+                        
+                        if vol_context:
+                            total = len(pocket_slot_results['pockets']) + len(pocket_slot_results['slots'])
+                            if total > 0:
+                                logger.info(f"    ✓ {total} pocket/slot features in this volume")
+                    except Exception as e:
+                        logger.error(f"    ✗ Pocket/Slot recognition failed: {e}")
+                        result.metrics.errors.append(f"Pocket/Slot recognition vol {graph_idx}: {str(e)}")
+                
+                # 3.3: Bosses, Steps, Islands (prismatic)
+                if self.boss_step_island_recognizer and part_type in [PartType.PRISMATIC, PartType.MIXED]:
+                    try:
+                        bsi_results = self.boss_step_island_recognizer.recognize_all(graph)
+                        result.bosses.extend(bsi_results['bosses'])
+                        result.steps.extend(bsi_results['steps'])
+                        result.islands.extend(bsi_results['islands'])
+                        
+                        if vol_context:
+                            total = len(bsi_results['bosses']) + len(bsi_results['steps']) + len(bsi_results['islands'])
+                            if total > 0:
+                                logger.info(f"    ✓ {total} boss/step/island features in this volume")
+                    except Exception as e:
+                        logger.error(f"    ✗ Boss/Step/Island recognition failed: {e}")
+                        result.metrics.errors.append(f"Boss/Step/Island recognition vol {graph_idx}: {str(e)}")
+                
+                # 3.4: Fillets (both types)
+                if self.fillet_recognizer:
+                    try:
+                        volume_fillets = self.fillet_recognizer.recognize_fillets(graph)
+                        result.fillets.extend(volume_fillets)
+                        
+                        if vol_context and len(volume_fillets) > 0:
+                            logger.info(f"    ✓ {len(volume_fillets)} fillets in this volume")
+                    except Exception as e:
+                        logger.error(f"    ✗ Fillet recognition failed: {e}")
+                        result.metrics.errors.append(f"Fillet recognition vol {graph_idx}: {str(e)}")
+                
+                # 3.5: Chamfers (both types)
+                if self.chamfer_recognizer:
+                    try:
+                        volume_chamfers = self.chamfer_recognizer.recognize_chamfers(graph)
+                        result.chamfers.extend(volume_chamfers)
+                        
+                        if vol_context and len(volume_chamfers) > 0:
+                            logger.info(f"    ✓ {len(volume_chamfers)} chamfers in this volume")
+                    except Exception as e:
+                        logger.error(f"    ✗ Chamfer recognition failed: {e}")
+                        result.metrics.errors.append(f"Chamfer recognition vol {graph_idx}: {str(e)}")
+                
+                # 3.6: Turning features (for full-shape or rotational volumes)
+                if self.turning_recognizer and part_type in [PartType.ROTATIONAL, PartType.MIXED]:
+                    # Turning features analyzed on full shape, not volumes
+                    if graph_idx == 0:  # Only run once
+                        try:
+                            result.turning_features = self.turning_recognizer.recognize_turning_features(graph)
+                            logger.info(f"    ✓ {len(result.turning_features)} turning features")
+                        except Exception as e:
+                            logger.error(f"    ✗ Turning recognition failed: {e}")
+                            logger.error(traceback.format_exc())
+                            result.metrics.errors.append(f"Turning recognition: {str(e)}")
+                            if part_type == PartType.ROTATIONAL:
+                                result.status = RecognitionStatus.PARTIAL_SUCCESS
             
             result.metrics.recognition_time = time.time() - recognition_start
+            
+            logger.info(f"\n✓ Feature recognition complete:")
+            logger.info(f"  Holes: {len(result.holes)}")
+            logger.info(f"  Pockets: {len(result.pockets)}")
+            logger.info(f"  Slots: {len(result.slots)}")
+            logger.info(f"  Bosses: {len(result.bosses)}")
+            logger.info(f"  Steps: {len(result.steps)}")
+            logger.info(f"  Fillets: {len(result.fillets)}")
+            logger.info(f"  Chamfers: {len(result.chamfers)}")
+            logger.info(f"  Turning: {len(result.turning_features)}")
             
             # STEP 4: Compile statistics
             logger.info("\n[STEP 4/7] Compiling statistics...")
@@ -495,7 +625,57 @@ class AAGPatternMatcher:
                 return PartType.ROTATIONAL
         
         return PartType.PRISMATIC
-    
+
+    def _quick_classify_part_type(self, shape: TopoDS_Shape) -> str:
+        """
+        Quick part type classification for decomposition routing
+        
+        Uses simple surface area heuristic (fast, no AAG needed)
+        
+        Returns:
+            "prismatic", "rotational", or "hybrid"
+        """
+        from OCC.Core.TopExp import TopExp_Explorer
+        from OCC.Core.TopAbs import TopAbs_FACE
+        from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+        from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder
+        from OCC.Core.GProp import GProp_GProps
+        from OCC.Core.BRepGProp import brepgprop
+        
+        planar_area = 0.0
+        cylindrical_area = 0.0
+        total_area = 0.0
+        
+        face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+        while face_explorer.More():
+            face = face_explorer.Current()
+            surface = BRepAdaptor_Surface(face)
+            surf_type = surface.GetType()
+            
+            props = GProp_GProps()
+            brepgprop.SurfaceProperties(face, props)
+            area = props.Mass()
+            total_area += area
+            
+            if surf_type == GeomAbs_Plane:
+                planar_area += area
+            elif surf_type == GeomAbs_Cylinder:
+                cylindrical_area += area
+            
+            face_explorer.Next()
+        
+        if total_area == 0:
+            return "prismatic"
+        
+        cyl_ratio = cylindrical_area / total_area
+        
+        if cyl_ratio > 0.6:
+            return "rotational"
+        elif cyl_ratio > 0.3:
+            return "hybrid"
+        else:
+            return "prismatic"
+
     # ===== STATISTICS =====
     
     def _compile_statistics(self, result: RecognitionResult):

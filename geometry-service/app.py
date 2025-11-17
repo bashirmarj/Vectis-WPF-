@@ -589,7 +589,8 @@ def analyze_aag():
                 recognition_result = pattern_matcher.recognize_all_features(
                     shape=shape,
                     validate=True,
-                    compute_manufacturing=True
+                    compute_manufacturing=True,
+                    use_volume_decomposition=True  # NEW: Enable volume decomposition
                 )
                 
                 logger.info(f"[{correlation_id}] ✅ AAG found {recognition_result.metrics.total_features} features")
