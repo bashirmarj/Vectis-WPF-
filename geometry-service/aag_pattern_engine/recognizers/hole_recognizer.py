@@ -269,7 +269,6 @@ class HoleRecognizer:
         }
     
     def recognize_holes(self, graph: Dict) -> List[HoleFeature]:
-def recognize_holes(self, graph: Dict) -> List[HoleFeature]:
         """
         ✅ FIXED v2.1.0: Recognize holes with COAXIAL GROUPING
 
@@ -356,8 +355,8 @@ def recognize_holes(self, graph: Dict) -> List[HoleFeature]:
                 self.recognition_stats['successful_recognitions'] += 1
 
         # ✅ Enhanced statistics with ground truth comparison
-        logger.info("
-" + "=" * 70)
+        logger.info("")
+        logger.info("=" * 70)
         logger.info("HOLE RECOGNITION STATISTICS")
         logger.info("=" * 70)
         logger.info(f"Total candidates analyzed: {self.recognition_stats['total_candidates']}")
@@ -371,8 +370,8 @@ def recognize_holes(self, graph: Dict) -> List[HoleFeature]:
             type_name = hole.type.value
             type_counts[type_name] = type_counts.get(type_name, 0) + 1
 
-        logger.info("
-Feature type breakdown:")
+        logger.info("")
+        logger.info("Feature type breakdown:")
         for hole_type, count in sorted(type_counts.items()):
             logger.info(f"  {hole_type:25s}: {count:3d}")
 
@@ -1460,3 +1459,189 @@ Feature type breakdown:")
         top_radius = depth * np.tan(angle_rad)
         
         return max(top_radius * 2, self.min_hole_diameter * 1.1)
+    # ===== NEW METHODS FOR COAXIAL GROUPING (v2.1.0) =====
+
+    def _group_coaxial_cylinders(
+        self, 
+        cylinders: List[GraphNode], 
+        adjacency: Dict, 
+        nodes: List[GraphNode]
+    ) -> List[List[GraphNode]]:
+        """
+        ✅ NEW v2.1.0: Group cylinders that share the same axis
+
+        This prevents double-counting: each group = one hole
+
+        Returns: List of cylinder groups
+        Example: [[cyl1, cyl2], [cyl3], [cyl4, cyl5]] = 3 holes from 5 cylinders
+        """
+        groups = []
+        visited = set()
+
+        for cyl in cylinders:
+            if cyl.id in visited:
+                continue
+
+            # Start new group
+            group = [cyl]
+            visited.add(cyl.id)
+
+            # Find all coaxial cylinders
+            for other in cylinders:
+                if other.id in visited:
+                    continue
+
+                # Check if coaxial (same axis)
+                if self._are_coaxial_strict(cyl, other):
+                    # Check if connected (part of same hole)
+                    if self._are_connected_in_hole(cyl.id, other.id, adjacency, max_hops=3):
+                        group.append(other)
+                        visited.add(other.id)
+
+            groups.append(group)
+
+        return groups
+
+    def _are_coaxial_strict(self, cyl1: GraphNode, cyl2: GraphNode) -> bool:
+        """
+        ✅ NEW v2.1.0: Strict coaxial check
+
+        Criteria:
+        1. Axes parallel (within 5°)
+        2. Axis locations close (within 1mm)
+        """
+        if not (cyl1.axis and cyl2.axis):
+            return False
+
+        # Get axis locations (use centroid as fallback)
+        if hasattr(cyl1, 'axis_location') and hasattr(cyl2, 'axis_location'):
+            loc1 = cyl1.axis_location
+            loc2 = cyl2.axis_location
+        elif cyl1.centroid and cyl2.centroid:
+            loc1 = cyl1.centroid
+            loc2 = cyl2.centroid
+        else:
+            return False
+
+        # Check parallel axes
+        axis1 = np.array(cyl1.axis)
+        axis2 = np.array(cyl2.axis)
+
+        dot = abs(np.dot(axis1, axis2))
+        angle = np.degrees(np.arccos(np.clip(dot, 0, 1)))
+
+        if angle > self.angle_tolerance:  # 5° from class config
+            return False
+
+        # Check axis proximity (distance between parallel lines)
+        loc1_arr = np.array(loc1)
+        loc2_arr = np.array(loc2)
+
+        diff = loc2_arr - loc1_arr
+        projection = np.dot(diff, axis1) * axis1
+        perpendicular = diff - projection
+        distance = np.linalg.norm(perpendicular)
+
+        # Must be on same axis (within 1mm)
+        return distance < 0.001
+
+    def _are_connected_in_hole(
+        self, 
+        id1: int, 
+        id2: int, 
+        adjacency: Dict, 
+        max_hops: int = 3
+    ) -> bool:
+        """
+        ✅ NEW v2.1.0: Check if two faces are connected
+
+        For counterbored holes, cylinders are 1-2 hops apart
+        """
+        visited = set()
+        queue = [(id1, 0)]
+
+        while queue:
+            current_id, hops = queue.pop(0)
+
+            if current_id == id2:
+                return True
+
+            if hops >= max_hops or current_id in visited:
+                continue
+
+            visited.add(current_id)
+
+            for neighbor in adjacency.get(current_id, []):
+                neighbor_id = neighbor['node_id']
+                if neighbor_id not in visited:
+                    queue.append((neighbor_id, hops + 1))
+
+        return False
+
+    def _recognize_hole_from_group(
+        self,
+        cylinder_group: List[GraphNode],
+        adjacency: Dict,
+        nodes: List[GraphNode],
+        processed: Set[int]
+    ) -> Optional[HoleFeature]:
+        """
+        ✅ NEW v2.1.0: Recognize hole from cylinder GROUP
+
+        Logic:
+        - Single cylinder → use existing _recognize_single_hole()
+        - Multiple cylinders → counterbored/counter-drilled
+        """
+        if not cylinder_group:
+            return None
+
+        # Single cylinder - use existing recognition
+        if len(cylinder_group) == 1:
+            return self._recognize_single_hole(cylinder_group[0], adjacency, nodes, processed)
+
+        # Multiple cylinders - counterbored or counter-drilled
+        sorted_cyls = sorted(cylinder_group, key=lambda c: c.radius, reverse=True)
+
+        large_cyl = sorted_cyls[0]
+        small_cyl = sorted_cyls[-1]
+
+        large_dia = large_cyl.radius * 2
+        small_dia = small_cyl.radius * 2
+
+        # Collect face IDs
+        face_ids = [c.id for c in sorted_cyls]
+
+        # Check for shoulder face (counterbore vs counter-drilled)
+        shoulder = self._find_counterbore_shoulder(large_cyl, small_cyl, adjacency, nodes)
+
+        # Find bottom face
+        bottom_face = None
+        for neighbor in adjacency.get(small_cyl.id, []):
+            neighbor_node = nodes[neighbor['node_id']]
+            if (neighbor_node.surface_type == SurfaceType.PLANE and
+                neighbor['vexity'] == Vexity.CONCAVE):
+                bottom_face = neighbor_node
+                break
+
+        if shoulder:
+            hole_type = HoleType.COUNTERBORE
+            face_ids.append(shoulder.id)
+        else:
+            hole_type = HoleType.COUNTER_DRILLED
+
+        if bottom_face:
+            face_ids.append(bottom_face.id)
+            total_depth = self._compute_hole_depth(small_cyl, bottom_face)
+        else:
+            total_depth = None
+
+        return HoleFeature(
+            type=hole_type,
+            face_ids=face_ids,
+            diameter=small_dia,
+            outer_diameter=large_dia,
+            depth=total_depth,
+            axis=small_cyl.axis,
+            axis_location=getattr(small_cyl, 'axis_location', small_cyl.centroid if hasattr(small_cyl, 'centroid') else None),
+            confidence=0.88
+        )
