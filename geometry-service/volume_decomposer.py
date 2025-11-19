@@ -22,8 +22,8 @@ from enum import Enum
 
 from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid, TopoDS_Compound, topods
 from OCC.Core.TopExp import TopExp_Explorer, topexp
-from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_EDGE, TopAbs_FACE, TopAbs_COMPOUND
-from OCC.Core.TopTools import TopTools_IndexedMapOfShape
+from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_EDGE, TopAbs_FACE, TopAbs_SHELL
+from OCC.Core.TopTools import TopTools_IndexedMapOfShape, TopTools_IndexedDataMapOfShapeListOfShape
 from OCC.Core.BRepBuilderAPI import (
     BRepBuilderAPI_MakeShape,
     BRepBuilderAPI_Copy,
@@ -39,6 +39,7 @@ from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepCheck import BRepCheck_Analyzer
 from OCC.Core.Interface import Interface_Static
+from OCC.Core.ShapeFix import ShapeFix_Solid
 
 logger = logging.getLogger(__name__)
 
@@ -201,20 +202,6 @@ class VolumeDecomposer:
             
             removal_shape = cut_op.Shape()
             
-            # Diagnostic logging for boolean result
-            logger.info(f"  Boolean result analysis:")
-            logger.info(f"    Result type: {removal_shape.ShapeType()}")
-            logger.info(f"    Is compound: {removal_shape.ShapeType() == TopAbs_COMPOUND}")
-            logger.info(f"    Is solid: {removal_shape.ShapeType() == TopAbs_SOLID}")
-            
-            # Count faces in result
-            face_count = 0
-            exp = TopExp_Explorer(removal_shape, TopAbs_FACE)
-            while exp.More():
-                face_count += 1
-                exp.Next()
-            logger.info(f"    Total faces in result: {face_count}")
-            
             # Step 3: Split into disconnected solids
             logger.info("  Splitting removal volumes...")
             removal_volumes = self._split_solids(removal_shape)
@@ -337,50 +324,206 @@ class VolumeDecomposer:
     
     def _split_solids(self, shape: TopoDS_Shape) -> List[TopoDS_Solid]:
         """
-        Extract all solids from a compound/compsolid shape.
+        Split compound/shape into individual disconnected solids
         
-        PHASE 1: Simple extraction using TopExp_Explorer
-                 Returns 1 giant volume containing all features
-                 Feature recognizers handle this fine (47 holes detected!)
-        
-        PHASE 2: (Week 2) Implement hash-based BFS connectivity analysis
-                 Returns 22-28 separate volumes for better isolation
+        CRITICAL FIX: Use TopExp::MapShapes instead of TopExp_Explorer
+        to properly extract ALL solids from compound boolean results.
         
         Args:
-            shape: Input shape (may be Compound, CompSolid, or Solid)
-        
+            shape: Shape that may contain multiple solids
+            
         Returns:
-            List of solid volumes
+            List of individual solid volumes (should be 22+ for test part, not 1)
         """
-        from OCC.Core.GProp import GProp_GProps
-        from OCC.Core.BRepGProp import brepgprop_VolumeProperties
+        # Use TopTools_IndexedMapOfShape to extract ALL solids
+        solid_map = TopTools_IndexedMapOfShape()
+        topexp.MapShapes(shape, TopAbs_SOLID, solid_map)
         
-        logger.info(f"  Extracting solids from shape...")
+        num_solids = solid_map.Size()
+        logger.info(f"    MapShapes found {num_solids} solid(s) in boolean result")
         
-        solids = []
-        solid_explorer = TopExp_Explorer(shape, TopAbs_SOLID)
-        
-        while solid_explorer.More():
-            solid = topods.Solid(solid_explorer.Current())
+        # If we got only 1 solid from boolean operation, it's likely a merged volume
+        # We need to split it by finding disconnected face regions
+        if num_solids == 1:
+            logger.info(f"    ⚠️  Single merged solid detected - attempting connectivity-based splitting...")
+            merged_solid = solid_map(1)
+            disconnected_solids = self._split_by_connectivity(merged_solid)
             
-            # Compute volume to filter tiny artifacts
-            props = GProp_GProps()
-            brepgprop_VolumeProperties(solid, props)
-            volume_m3 = props.Mass()
-            volume_mm3 = volume_m3 * 1e9  # m³ to mm³
-            
-            # Filter out tiny artifacts (< 1 mm³)
-            if volume_mm3 > 1.0:
-                solids.append(solid)
-                logger.info(f"    ✅ Solid {len(solids)}: {volume_mm3:.1f} mm³")
+            if len(disconnected_solids) > 1:
+                logger.info(f"    ✅ Split merged solid into {len(disconnected_solids)} disconnected volumes")
+                return disconnected_solids
             else:
-                logger.debug(f"    Skipping tiny artifact: {volume_mm3:.3f} mm³")
-            
-            solid_explorer.Next()
+                logger.warning(f"    ⚠️  Could not split merged solid - returning as single volume")
+                return [merged_solid]
         
-        logger.info(f"  ✅ Extracted {len(solids)} valid solid(s)")
+        # If we got multiple solids directly, process them normally
+        solids = []
+        for i in range(1, num_solids + 1):  # OCC uses 1-based indexing
+            solid_shape = solid_map(i)  # Use parentheses operator to access element
+            
+            try:
+                # Cast to TopoDS_Solid
+                solid = topods.Solid(solid_shape)
+                
+                # Verify solid is valid
+                analyzer = BRepCheck_Analyzer(solid)
+                if analyzer.IsValid():
+                    solids.append(solid)
+                    logger.debug(f"      Solid {i}: VALID")
+                else:
+                    logger.warning(f"      Solid {i}: INVALID - skipping")
+            
+            except Exception as e:
+                logger.warning(f"      Solid {i}: Failed to cast/validate - {e}")
+                continue
+        
+        logger.info(f"    ✅ Extracted {len(solids)} valid disconnected solid(s)")
         
         return solids
+    
+    def _split_by_connectivity(self, solid: TopoDS_Solid) -> List[TopoDS_Solid]:
+        """
+        Split a merged solid into disconnected volumes using face connectivity analysis
+        
+        Algorithm:
+        1. Extract all faces from the solid
+        2. Build face adjacency graph (which faces share edges)
+        3. Find connected components using DFS
+        4. Group faces by component
+        5. Build separate solids from each face group
+        
+        Args:
+            solid: Merged solid containing multiple disconnected regions
+            
+        Returns:
+            List of separate solid volumes
+        """
+        from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_MakeSolid
+        
+        logger.info(f"      Analyzing face connectivity...")
+        
+        # Step 1: Get all faces and build edge-to-faces map
+        edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+        topexp.MapShapesAndAncestors(solid, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+        
+        # Step 2: Extract all faces
+        face_map = TopTools_IndexedMapOfShape()
+        topexp.MapShapes(solid, TopAbs_FACE, face_map)
+        num_faces = face_map.Size()
+        
+        logger.info(f"      Found {num_faces} faces to analyze")
+        
+        # Step 3: Build face adjacency graph
+        # adjacency[face_idx] = set of adjacent face indices
+        adjacency = {i: set() for i in range(1, num_faces + 1)}
+        
+        for edge_idx in range(1, edge_face_map.Size() + 1):
+            # Get faces sharing this edge
+            face_list = edge_face_map.FindFromIndex(edge_idx)
+            
+            # Convert TopTools_ListOfShape to Python list of face indices
+            adjacent_face_indices = []
+            
+            # Iterate through the list
+            list_iter = face_list.Iterator()
+            while list_iter.More():
+                face_shape = list_iter.Value()
+                
+                # Find this face's index in face_map
+                for face_idx in range(1, num_faces + 1):
+                    if face_map(face_idx).IsSame(face_shape):
+                        adjacent_face_indices.append(face_idx)
+                        break
+                
+                list_iter.Next()
+            
+            # Add bidirectional adjacency
+            for i in range(len(adjacent_face_indices)):
+                for j in range(i + 1, len(adjacent_face_indices)):
+                    adjacency[adjacent_face_indices[i]].add(adjacent_face_indices[j])
+                    adjacency[adjacent_face_indices[j]].add(adjacent_face_indices[i])
+        
+        # Step 4: Find connected components using DFS
+        visited = set()
+        components = []
+        
+        def dfs(face_idx, component):
+            if face_idx in visited:
+                return
+            visited.add(face_idx)
+            component.append(face_idx)
+            for neighbor in adjacency[face_idx]:
+                dfs(neighbor, component)
+        
+        for face_idx in range(1, num_faces + 1):
+            if face_idx not in visited:
+                component = []
+                dfs(face_idx, component)
+                components.append(component)
+        
+        logger.info(f"      Found {len(components)} connected components")
+        
+        # Step 5: Build separate solids from each component
+        disconnected_solids = []
+        
+        for comp_idx, component_faces in enumerate(components):
+            if len(component_faces) < 3:
+                logger.warning(f"      Component {comp_idx}: Only {len(component_faces)} faces - skipping")
+                continue
+            
+            logger.info(f"      Component {comp_idx}: {len(component_faces)} faces")
+            
+            try:
+                # Use sewing to create a closed shell from faces
+                sewing = BRepOffsetAPI_Sewing()
+                sewing.SetTolerance(self.tolerance * 10)  # Slightly larger tolerance for sewing
+                
+                for face_idx in component_faces:
+                    face = face_map(face_idx)
+                    sewing.Add(face)
+                
+                sewing.Perform()
+                sewn_shape = sewing.SewedShape()
+                
+                # Try to make a solid from the sewn shell
+                try:
+                    solid_maker = BRepBuilderAPI_MakeSolid()
+                    
+                    # Extract shells from sewn shape
+                    shell_explorer = TopExp_Explorer(sewn_shape, TopAbs_SHELL)
+                    while shell_explorer.More():
+                        shell = topods.Shell(shell_explorer.Current())
+                        solid_maker.Add(shell)
+                        shell_explorer.Next()
+                    
+                    if solid_maker.IsDone():
+                        component_solid = solid_maker.Solid()
+                        
+                        # Fix the solid
+                        fixer = ShapeFix_Solid()
+                        fixer.Init(component_solid)
+                        fixer.Perform()
+                        fixed_solid = fixer.Solid()
+                        
+                        # Validate
+                        analyzer = BRepCheck_Analyzer(fixed_solid)
+                        if analyzer.IsValid():
+                            disconnected_solids.append(fixed_solid)
+                            logger.info(f"      ✅ Component {comp_idx}: Valid solid created")
+                        else:
+                            logger.warning(f"      ⚠️  Component {comp_idx}: Invalid solid - skipping")
+                    else:
+                        logger.warning(f"      ⚠️  Component {comp_idx}: Could not create solid")
+                
+                except Exception as e:
+                    logger.warning(f"      ⚠️  Component {comp_idx}: Solid creation failed - {e}")
+                    continue
+            
+            except Exception as e:
+                logger.warning(f"      ⚠️  Component {comp_idx}: Sewing failed - {e}")
+                continue
+        
+        return disconnected_solids
     
     def _analyze_volume(
         self, 
