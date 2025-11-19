@@ -209,14 +209,16 @@ class AAGPatternMatcher:
     6. Compile results
     """
     
-    def __init__(self, part_shape, part_type: str = "prismatic"):
+    def __init__(self, tolerance: float = 1e-6):
         """
+        Initialize AAG Pattern Matcher.
+        
         Args:
-            part_shape: TopoDS_Shape of part
-            part_type: "prismatic" or "rotational"
+            tolerance: Geometric tolerance for recognition
         """
-        self.part_shape = part_shape
-        self.part_type = part_type
+        self.tolerance = tolerance
+        self.part_shape = None
+        self.part_type = "prismatic"
         
         # Results storage
         self.volumes = []
@@ -224,6 +226,33 @@ class AAGPatternMatcher:
         self.features = []
         self.statistics = {}
         
+    def recognize_all_features(
+        self,
+        shape,
+        validate: bool = True,
+        compute_manufacturing: bool = True,
+        use_volume_decomposition: bool = True
+    ) -> RecognitionResult:
+        """
+        Recognize all manufacturing features in a CAD part.
+        
+        Args:
+            shape: TopoDS_Shape of the part
+            validate: Run validation checks on detected features
+            compute_manufacturing: Compute manufacturing sequences
+            use_volume_decomposition: Use volume decomposition approach
+            
+        Returns:
+            RecognitionResult with all detected features organized by type
+        """
+        self.part_shape = shape
+        
+        # Run the recognition pipeline
+        result_dict = self.run_recognition()
+        
+        # Convert dict result to RecognitionResult object
+        return self._dict_to_recognition_result(result_dict)
+    
     def run_recognition(self) -> Dict:
         """
         Run complete recognition pipeline.
@@ -399,6 +428,72 @@ class AAGPatternMatcher:
                 'statistics': {},
                 'warnings': []
             }
+            
+    
+    def _dict_to_recognition_result(self, result_dict: Dict) -> RecognitionResult:
+        """Convert dict-based result to RecognitionResult dataclass."""
+        
+        # Categorize features by type
+        features = result_dict.get('features', [])
+        holes = [f for f in features if f.get('type') == 'hole']
+        pockets = [f for f in features if f.get('type') == 'pocket']
+        slots = [f for f in features if f.get('type') == 'slot']
+        bosses = [f for f in features if f.get('type') == 'boss']
+        steps = [f for f in features if f.get('type') == 'step']
+        fillets = [f for f in features if f.get('type') == 'fillet']
+        chamfers = [f for f in features if f.get('type') == 'chamfer']
+        
+        # Create metrics
+        stats = result_dict.get('statistics', {})
+        metrics = RecognitionMetrics(
+            total_features=stats.get('num_features', 0),
+            feature_counts=stats.get('type_counts', {}),
+            total_time=result_dict.get('elapsed_time', 0.0),
+            graph_nodes=stats.get('num_aag_nodes', 0)
+        )
+        
+        # Add confidence scores if available
+        for feature in features:
+            ftype = feature.get('type', 'unknown')
+            conf = feature.get('confidence', 0.0)
+            if ftype not in metrics.confidence_scores:
+                metrics.confidence_scores[ftype] = conf
+        
+        # Determine status
+        if result_dict.get('status') == 'success':
+            status = RecognitionStatus.SUCCESS
+        elif result_dict.get('status') == 'error':
+            status = RecognitionStatus.ERROR
+        else:
+            status = RecognitionStatus.PARTIAL_SUCCESS
+        
+        # Add warnings/errors to metrics
+        warnings = result_dict.get('warnings', [])
+        for warning in warnings:
+            metrics.warnings.append(warning.get('message', str(warning)))
+        
+        if 'error_message' in result_dict:
+            metrics.errors.append(result_dict['error_message'])
+        
+        return RecognitionResult(
+            status=status,
+            part_type=PartType.PRISMATIC if self.part_type == "prismatic" else PartType.ROTATIONAL,
+            holes=holes,
+            pockets=pockets,
+            slots=slots,
+            steps=steps,
+            bosses=bosses,
+            fillets=fillets,
+            chamfers=chamfers,
+            grooves=[],  # Not yet implemented
+            threads=[],  # Not yet implemented
+            islands=[],  # Not yet implemented
+            graph={},  # Can add AAG graph data if needed
+            metrics=metrics,
+            metadata=stats,
+            manufacturing_sequence=[],  # Can be computed later
+            feature_interactions={}
+        )
             
     def _compile_statistics(self) -> Dict:
         """Compile recognition statistics."""
