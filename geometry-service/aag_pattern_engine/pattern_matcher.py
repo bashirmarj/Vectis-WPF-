@@ -22,7 +22,7 @@ import time
 from typing import List, Dict
 
 # Import components with correct relative paths
-from ..volume_decomposer import VolumeDecomposer
+from volume_decomposer import VolumeDecomposer
 from .graph_builder import AAGGraphBuilder
 from .machining_configuration_detector import MachiningConfigurationDetector
 from .recognizers.hole_recognizer import HoleRecognizer
