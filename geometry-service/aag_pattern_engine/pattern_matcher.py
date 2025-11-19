@@ -19,7 +19,9 @@ OLD WORKFLOW (DEPRECATED):
 
 import logging
 import time
-from typing import List, Dict
+from typing import List, Dict, Optional
+from dataclasses import dataclass, field
+from enum import Enum
 
 # Import components with correct relative paths
 from volume_decomposer import VolumeDecomposer
@@ -35,6 +37,99 @@ from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
 from .graph_builder import SurfaceType, Vexity, GraphNode, GraphEdge
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# DATACLASS DEFINITIONS - Recognition API Types
+# ============================================================================
+
+class RecognitionStatus(Enum):
+    """Feature recognition execution status"""
+    SUCCESS = "success"
+    PARTIAL_SUCCESS = "partial_success"
+    INVALID_INPUT = "invalid_input"
+    TIMEOUT = "timeout"
+    ERROR = "error"
+
+
+class PartType(Enum):
+    """Part manufacturing type classification"""
+    PRISMATIC = "prismatic"           # CNC milling
+    ROTATIONAL = "rotational"         # CNC turning/lathe
+    HYBRID = "hybrid"                 # Turn-mill
+    SHEET_METAL = "sheet_metal"       # Bending/forming
+    FREEFORM = "freeform"             # 5-axis/complex
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class RecognitionMetrics:
+    """Comprehensive recognition metrics"""
+    total_features: int = 0
+    feature_counts: Dict[str, int] = field(default_factory=dict)
+    confidence_scores: Dict[str, float] = field(default_factory=dict)
+    
+    # Timing breakdown
+    decomposition_time: float = 0.0      # Volume decomposition
+    graph_build_time: float = 0.0        # AAG construction
+    recognition_time: float = 0.0        # Pattern matching
+    validation_time: float = 0.0         # Result validation
+    total_time: float = 0.0              # End-to-end
+    
+    # Quality metrics
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    
+    # Graph statistics
+    graph_nodes: int = 0
+    graph_edges: int = 0
+
+
+@dataclass
+class RecognitionResult:
+    """
+    Complete feature recognition result
+    
+    This is the main return type for AAG pattern matching
+    """
+    # Status
+    status: RecognitionStatus
+    part_type: PartType
+    
+    # Recognized features (lists of feature dictionaries)
+    holes: List = field(default_factory=list)
+    pockets: List = field(default_factory=list)
+    slots: List = field(default_factory=list)
+    steps: List = field(default_factory=list)
+    bosses: List = field(default_factory=list)
+    fillets: List = field(default_factory=list)
+    chamfers: List = field(default_factory=list)
+    grooves: List = field(default_factory=list)
+    threads: List = field(default_factory=list)
+    islands: List = field(default_factory=list)
+    
+    # Graph representation
+    graph: Dict = field(default_factory=dict)
+    
+    # Metrics
+    metrics: RecognitionMetrics = field(default_factory=RecognitionMetrics)
+    
+    # Metadata (includes volume decomposition info)
+    metadata: Dict = field(default_factory=dict)
+    
+    # Manufacturing sequence (toolpath planning)
+    manufacturing_sequence: List = field(default_factory=list)
+    
+    # Feature interactions
+    feature_interactions: Dict = field(default_factory=dict)
+    
+    def get_all_features(self) -> List:
+        """Return all features as a single list"""
+        return (
+            self.holes + self.pockets + self.slots + self.steps +
+            self.bosses + self.fillets + self.chamfers + self.grooves +
+            self.threads + self.islands
+        )
 
 
 def _convert_graph_to_legacy_format(graph: Dict) -> Dict:
