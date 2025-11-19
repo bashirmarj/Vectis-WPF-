@@ -16,8 +16,10 @@ NEW (Analysis Situs):
 
 import logging
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
+from enum import Enum
+from dataclasses import dataclass
 from OCC.Core.TopoDS import topods
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
@@ -31,6 +33,48 @@ from OCC.Core.TopExp import topexp
 from OCC.Core.gp import gp_Dir, gp_Pnt
 
 logger = logging.getLogger(__name__)
+
+
+# ===== BACKWARD COMPATIBILITY TYPES =====
+# These types are needed by slot_recognizer.py, fillet_chamfer_recognizer.py,
+# and turning_recognizer.py which use the old typed API
+
+class SurfaceType(Enum):
+    """Surface type enumeration for backward compatibility"""
+    PLANE = "plane"
+    CYLINDER = "cylinder"
+    CONE = "cone"
+    SPHERE = "sphere"
+    TORUS = "torus"
+    BSPLINE = "bspline"
+    UNKNOWN = "unknown"
+
+
+class Vexity(Enum):
+    """Edge vexity classification for backward compatibility"""
+    CONVEX = "convex"
+    CONCAVE = "concave"
+    SMOOTH = "smooth"
+
+
+@dataclass
+class GraphNode:
+    """Backward-compatible node representation"""
+    face_id: int
+    surface_type: SurfaceType
+    area: float
+    normal: Tuple[float, float, float]
+    center: Optional[Tuple[float, float, float]] = None
+    radius: Optional[float] = None
+
+
+@dataclass
+class GraphEdge:
+    """Backward-compatible edge representation"""
+    face1: int
+    face2: int
+    vexity: Vexity
+    dihedral_deg: float
 
 
 # CRITICAL: Analysis Situs thresholds
