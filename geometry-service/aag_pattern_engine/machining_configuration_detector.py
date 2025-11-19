@@ -49,7 +49,7 @@ class MachiningConfigurationDetector:
     def __init__(self, aag_graph):
         """
         Args:
-            aag_graph: AAGGraph dict for the removal volume
+            aag_graph: AAGGraph instance for the removal volume
         """
         self.aag = aag_graph
         
@@ -169,9 +169,8 @@ class MachiningConfigurationDetector:
             List of face IDs
         """
         candidates = []
-        nodes = self.aag.get('nodes', {})
         
-        for face_id, face_data in nodes.items():
+        for face_id, face_data in self.aag.nodes.items():
             # Must be planar
             if face_data.get('surface_type') != 'plane':
                 continue
@@ -203,15 +202,10 @@ class MachiningConfigurationDetector:
         Returns:
             Pocket dict or None
         """
-        nodes = self.aag.get('nodes', {})
-        adjacency = self.aag.get('adjacency', {})
-        
-        bottom_face = nodes.get(bottom_id)
-        if not bottom_face:
-            return None
+        bottom_face = self.aag.nodes[bottom_id]
         
         # Get adjacent faces
-        adjacent = adjacency.get(bottom_id, [])
+        adjacent = self.aag.get_adjacent_faces(bottom_id)
         
         if not adjacent:
             return None
@@ -219,45 +213,147 @@ class MachiningConfigurationDetector:
         # Filter for vertical walls
         wall_faces = []
         
-        for adj_data in adjacent:
-            adj_id = adj_data.get('neighbor')
-            if adj_id is None:
-                continue
-                
-            adj_face = nodes.get(adj_id)
-            if not adj_face:
-                continue
+        for adj_id in adjacent:
+            adj_face = self.aag.nodes[adj_id]
             
             # Wall must be perpendicular to axis (parallel to cutting direction)
             adj_normal = np.array(adj_face.get('normal', [0, 0, 1]))
             dot = abs(np.dot(adj_normal, axis))
             
-            if dot < 0.2:  # Nearly perpendicular (within ~11 degrees)
-                # Check if this edge is concave (indicates material removal)
-                vexity = adj_data.get('vexity', 'smooth')
-                if vexity == 'concave' or vexity == 'smooth':
-                    wall_faces.append(adj_id)
-                    
+            if dot < 0.2:  # Perpendicular (within ~78 degrees from axis)
+                wall_faces.append(adj_id)
+                
         if not wall_faces:
             return None
             
-        # Compute depth (distance from bottom to furthest wall top)
-        bottom_center = np.array(bottom_face.get('center', [0, 0, 0]))
-        max_depth = 0.0
+        # Compute depth (distance from bottom to top surface)
+        depth = self._compute_pocket_depth(bottom_id, wall_faces, axis)
         
-        for wall_id in wall_faces:
-            wall_face = nodes.get(wall_id)
-            if wall_face:
-                wall_center = np.array(wall_face.get('center', [0, 0, 0]))
-                depth = abs(np.dot(wall_center - bottom_center, axis))
-                max_depth = max(max_depth, depth)
-                
-        if max_depth < 1.0:  # Less than 1mm - not a significant pocket
+        if depth < 1.0:  # mm - too shallow
+            return None
+            
+        # Validate vexity (walls should be concave for removal feature)
+        if not self._validate_pocket_vexity(bottom_id, wall_faces):
+            logger.debug(f"  Pocket rejected: bottom {bottom_id} has convex walls (likely boss)")
             return None
             
         return {
             'bottom_faces': [bottom_id],
             'wall_faces': wall_faces,
-            'depth': max_depth,
-            'clearance': None  # TODO: Compute tool clearance
+            'depth': depth,
+            'clearance': self._compute_clearance(wall_faces)
         }
+        
+    def _compute_pocket_depth(self, bottom_id: int, wall_ids: List[int], axis: np.ndarray) -> float:
+        """
+        Compute pocket depth along machining axis.
+        
+        Simple approach: Use bounding box projection along axis.
+        
+        Returns:
+            Depth in mm
+        """
+        # Get all involved faces
+        all_face_ids = [bottom_id] + wall_ids
+        
+        # Compute bounding box
+        min_proj = float('inf')
+        max_proj = float('inf')
+        
+        for face_id in all_face_ids:
+            face = self.aag.nodes[face_id]
+            center = face.get('center', [0, 0, 0])
+            
+            # Project center onto axis
+            projection = np.dot(center, axis)
+            
+            min_proj = min(min_proj, projection)
+            max_proj = max(max_proj, projection)
+            
+        depth = abs(max_proj - min_proj)
+        
+        # Convert to mm if needed
+        if depth < 1.0:  # Likely in meters
+            depth *= 1000.0
+            
+        return depth
+        
+    def _validate_pocket_vexity(self, bottom_id: int, wall_ids: List[int]) -> bool:
+        """
+        Validate that walls form concave (removal) feature.
+        
+        Check edges between bottom and walls - should be concave.
+        
+        Returns:
+            True if valid pocket (concave walls)
+        """
+        bottom_face = self.aag.nodes[bottom_id]
+        
+        # Check edges connecting bottom to walls
+        for wall_id in wall_ids:
+            edge_data = self._get_edge_between(bottom_id, wall_id)
+            
+            if edge_data is None:
+                continue
+                
+            vexity = edge_data.get('vexity', 'smooth')
+            
+            # Pocket walls should be concave (inward corners)
+            if vexity == 'convex':
+                return False  # Convex = boss, not pocket
+                
+        return True
+        
+    def _get_edge_between(self, face1_id: int, face2_id: int) -> Dict:
+        """
+        Get edge data between two faces.
+        
+        Returns:
+            Edge dict or None
+        """
+        # Check both directions
+        for neighbor_data in self.aag.adjacency.get(face1_id, []):
+            if neighbor_data['face_id'] == face2_id:
+                return neighbor_data
+                
+        return None
+        
+    def _compute_clearance(self, wall_ids: List[int]) -> float:
+        """
+        Compute tool clearance (minimum distance to opposite wall).
+        
+        Simplified version - returns minimum wall height.
+        
+        Returns:
+            Clearance in mm
+        """
+        if not wall_ids:
+            return None
+            
+        min_height = float('inf')
+        
+        for wall_id in wall_ids:
+            wall = self.aag.nodes[wall_id]
+            area = wall.get('area', 0)
+            
+            # Estimate height from area (assuming rectangular-ish wall)
+            # This is crude but matches Analysis Situs approach
+            height = np.sqrt(area)  # Rough approximation
+            
+            min_height = min(min_height, height)
+            
+        return min_height if min_height != float('inf') else None
+
+
+def detect_machining_configurations(aag_graph):
+    """
+    Convenience function for configuration detection.
+    
+    Args:
+        aag_graph: AAGGraph instance
+        
+    Returns:
+        List of configuration dicts
+    """
+    detector = MachiningConfigurationDetector(aag_graph)
+    return detector.detect_configurations()

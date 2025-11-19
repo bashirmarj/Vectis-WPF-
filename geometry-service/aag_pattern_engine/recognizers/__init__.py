@@ -1,15 +1,9 @@
-"""Feature recognizers package"""
+"""Feature recognizers package - Analysis Situs v2.0"""
 
-from .hole_recognizer import HoleRecognizer, HoleFeature, HoleType
-from .pocket_recognizer import PocketSlotRecognizer, PocketSlotFeature, PocketType, SlotType, PassageType
-from .slot_recognizer import SlotRecognizer, SlotFeature
-from .boss_step_island_recognizer import (
-    BossStepIslandRecognizer,
-    BossStepIslandFeature,
-    BossType,
-    StepType,
-    IslandType
-)
+from .hole_recognizer import HoleRecognizer
+from .pocket_recognizer import PocketRecognizer
+from .slot_recognizer import SlotRecognizer
+from .boss_step_island_recognizer import BossRecognizer
 from .fillet_chamfer_recognizer import (
     FilletRecognizer,
     ChamferRecognizer,
@@ -26,20 +20,9 @@ from .turning_recognizer import (
 
 __all__ = [
     "HoleRecognizer",
-    "HoleFeature",
-    "HoleType",
-    "PocketSlotRecognizer",
-    "PocketSlotFeature",
-    "PocketType",
-    "SlotType",
-    "PassageType",
+    "PocketRecognizer",
     "SlotRecognizer",
-    "SlotFeature",
-    "BossStepIslandRecognizer",
-    "BossStepIslandFeature",
-    "BossType",
-    "StepType",
-    "IslandType",
+    "BossRecognizer",
     "FilletRecognizer",
     "ChamferRecognizer",
     "FilletFeature",
