@@ -21,13 +21,9 @@ from .feature_validator import (
     FeatureConflict,
     QualityMetrics
 )
-from .graph_builder import (
-    AAGGraphBuilder,
-    GraphNode,
-    GraphEdge,
-    SurfaceType,
-    Vexity
-)
+from .graph_builder import AAGGraphBuilder
+from .machining_configuration_detector import MachiningConfigurationDetector
+from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
 
 __all__ = [
     "__version__",
@@ -43,13 +39,11 @@ __all__ = [
     "FeatureConflict",
     "QualityMetrics",
     "AAGGraphBuilder",
-    "GraphNode",
-    "GraphEdge",
-    "SurfaceType",
-    "Vexity",
+    "MachiningConfigurationDetector",
+    "ToolAccessibilityAnalyzer",
 ]
 
-__author__ = "Your Company"
-__email__ = "engineering@yourcompany.com"
+__author__ = "Vectis Machining"
+__email__ = "engineering@vectismachining.com"
 __license__ = "MIT"
-__version__ = "1.0.0"
+__version__ = "2.0.0"
