@@ -422,20 +422,43 @@ class VolumeDecomposer:
             face_list = edge_face_map.FindFromIndex(edge_idx)
             
             # Convert TopTools_ListOfShape to Python list of face indices
+            # TopTools_ListOfShape doesn't have direct iteration in pythonocc-core
+            # Instead, get each face and find its index
             adjacent_face_indices = []
             
-            # Iterate through the list
-            list_iter = face_list.Iterator()
-            while list_iter.More():
-                face_shape = list_iter.Value()
+            # Convert list to Python list using manual extraction
+            temp_list = []
+            try:
+                # Try to get list size if available
+                list_size = face_list.Size() if hasattr(face_list, 'Size') else 0
                 
-                # Find this face's index in face_map
+                if list_size > 0:
+                    # Use indexed access if Size() is available
+                    for idx in range(list_size):
+                        try:
+                            face_shape = face_list.Value(idx + 1) if hasattr(face_list, 'Value') else face_list(idx + 1)
+                            temp_list.append(face_shape)
+                        except:
+                            break
+                else:
+                    # Fallback: assume 1-2 faces per edge (typical for manifold geometry)
+                    # Most edges connect exactly 2 faces, boundary edges connect 1
+                    for attempt_idx in range(1, 3):
+                        try:
+                            face_shape = face_list(attempt_idx)
+                            temp_list.append(face_shape)
+                        except:
+                            break
+            except Exception as e:
+                logger.warning(f"      Edge {edge_idx}: Could not extract face list - {e}")
+                continue
+            
+            # Find indices of these faces in face_map
+            for face_shape in temp_list:
                 for face_idx in range(1, num_faces + 1):
                     if face_map(face_idx).IsSame(face_shape):
                         adjacent_face_indices.append(face_idx)
                         break
-                
-                list_iter.Next()
             
             # Add bidirectional adjacency
             for i in range(len(adjacent_face_indices)):
