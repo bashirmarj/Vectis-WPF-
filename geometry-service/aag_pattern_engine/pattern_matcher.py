@@ -21,14 +21,14 @@ import logging
 import time
 from typing import List, Dict
 
-# Import components
-from volume_decomposer import decompose_part
-from AAGGraphBuilder import build_aag_graph
-from machining_configuration_detector import detect_machining_configurations
-from aag_hole_recognizer import recognize_holes
-from aag_pocket_recognizer import recognize_pockets
-from aag_boss_recognizer import recognize_bosses
-from tool_accessibility_analyzer import annotate_features
+# Import components with correct relative paths
+from ..volume_decomposer import VolumeDecomposer
+from .graph_builder import AAGGraphBuilder
+from .machining_configuration_detector import MachiningConfigurationDetector
+from .recognizers.hole_recognizer import HoleRecognizer
+from .recognizers.pocket_recognizer import PocketRecognizer
+from .recognizers.boss_step_island_recognizer import BossRecognizer
+from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,8 @@ class AAGPatternMatcher:
         try:
             # Step 1: Volume decomposition
             logger.info("\n[STEP 1/8] Decomposing into manufacturing volumes...")
-            self.volumes = decompose_part(self.part_shape, self.part_type)
+            decomposer = VolumeDecomposer()
+            self.volumes = decomposer.decompose(self.part_shape, self.part_type)
             
             if not self.volumes:
                 raise RuntimeError("Volume decomposition failed")
@@ -95,7 +96,8 @@ class AAGPatternMatcher:
             for i, volume_data in enumerate(self.volumes):
                 logger.info(f"  Building AAG for volume {i}...")
                 
-                aag_result = build_aag_graph(volume_data['shape'])
+                builder = AAGGraphBuilder()
+                aag_result = builder.build(volume_data['shape'])
                 
                 self.aag_graphs.append({
                     'volume_index': i,
@@ -133,9 +135,14 @@ class AAGPatternMatcher:
                 )
                 
                 # Run recognizers
-                holes = recognize_holes(graph_obj)
-                pockets = recognize_pockets(graph_obj)
-                bosses = recognize_bosses(graph_obj)
+                hole_recognizer = HoleRecognizer(graph_obj)
+                holes = hole_recognizer.recognize()
+                
+                pocket_recognizer = PocketRecognizer(graph_obj)
+                pockets = pocket_recognizer.recognize()
+                
+                boss_recognizer = BossRecognizer(graph_obj)
+                bosses = boss_recognizer.recognize()
                 
                 all_features.extend(holes)
                 all_features.extend(pockets)
@@ -156,7 +163,8 @@ class AAGPatternMatcher:
                     aag_data['adjacency']
                 )
                 
-                self.features = annotate_features(graph_obj, self.features)
+                analyzer = ToolAccessibilityAnalyzer(graph_obj)
+                self.features = analyzer.annotate_features_with_accessibility(self.features)
                 
             logger.info("✓ Accessibility analysis complete")
             
