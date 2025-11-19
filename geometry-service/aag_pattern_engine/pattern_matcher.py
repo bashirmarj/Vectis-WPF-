@@ -28,9 +28,77 @@ from .machining_configuration_detector import MachiningConfigurationDetector
 from .recognizers.hole_recognizer import HoleRecognizer
 from .recognizers.pocket_recognizer import PocketRecognizer
 from .recognizers.boss_step_island_recognizer import BossRecognizer
+from .recognizers.slot_recognizer import SlotRecognizer
+from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
+from .recognizers.turning_recognizer import TurningRecognizer
 from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
+from .graph_builder import SurfaceType, Vexity, GraphNode, GraphEdge
 
 logger = logging.getLogger(__name__)
+
+
+def _convert_graph_to_legacy_format(graph: Dict) -> Dict:
+    """
+    Convert new dict-based AAG graph to old typed format for legacy recognizers.
+    
+    Args:
+        graph: New format {nodes: {id: {attrs}}, adjacency: {id: [neighbors]}}
+        
+    Returns:
+        Legacy format compatible with slot/fillet/turning recognizers
+    """
+    legacy_nodes = {}
+    legacy_edges = []
+    
+    # Convert nodes
+    for face_id, attrs in graph['nodes'].items():
+        # Map string surface type to enum
+        surface_type_str = attrs.get('surface_type', 'unknown')
+        try:
+            surface_type = SurfaceType(surface_type_str)
+        except ValueError:
+            surface_type = SurfaceType.UNKNOWN
+        
+        legacy_nodes[face_id] = GraphNode(
+            face_id=face_id,
+            surface_type=surface_type,
+            area=attrs.get('area', 0.0),
+            normal=tuple(attrs.get('normal', [0.0, 0.0, 1.0])),
+            center=tuple(attrs.get('center')) if 'center' in attrs else None,
+            radius=attrs.get('radius')
+        )
+    
+    # Convert adjacency to edges
+    seen_edges = set()
+    for face_id, neighbors in graph['adjacency'].items():
+        for neighbor in neighbors:
+            neighbor_id = neighbor['neighbor_id']
+            
+            # Avoid duplicate edges (undirected graph)
+            edge_key = tuple(sorted([face_id, neighbor_id]))
+            if edge_key in seen_edges:
+                continue
+            seen_edges.add(edge_key)
+            
+            # Map vexity string to enum
+            vexity_str = neighbor.get('vexity', 'smooth')
+            try:
+                vexity = Vexity(vexity_str)
+            except ValueError:
+                vexity = Vexity.SMOOTH
+            
+            legacy_edges.append(GraphEdge(
+                face1=face_id,
+                face2=neighbor_id,
+                vexity=vexity,
+                dihedral_deg=neighbor.get('dihedral_deg', 180.0)
+            ))
+    
+    return {
+        'nodes': legacy_nodes,
+        'edges': legacy_edges,
+        'adjacency': graph['adjacency']  # Keep original adjacency for compatibility
+    }
 
 
 class AAGPatternMatcher:
@@ -128,13 +196,13 @@ class AAGPatternMatcher:
             all_features = []
             
             for aag_data in self.aag_graphs:
-                # Create simple graph object for recognizers
+                # Create simple graph object for new recognizers (holes, pockets, bosses)
                 graph_obj = SimpleAAGGraph(
                     aag_data['nodes'],
                     aag_data['adjacency']
                 )
                 
-                # Run recognizers
+                # Run new recognizers (dict-based API)
                 hole_recognizer = HoleRecognizer(graph_obj)
                 holes = hole_recognizer.recognize()
                 
@@ -144,11 +212,34 @@ class AAGPatternMatcher:
                 boss_recognizer = BossRecognizer(graph_obj)
                 bosses = boss_recognizer.recognize()
                 
+                # Convert graph to legacy format for old recognizers
+                legacy_graph = _convert_graph_to_legacy_format({
+                    'nodes': aag_data['nodes'],
+                    'adjacency': aag_data['adjacency']
+                })
+                
+                # Run legacy recognizers (typed API)
+                slot_recognizer = SlotRecognizer()
+                slots = slot_recognizer.recognize_slots(legacy_graph)
+                
+                fillet_recognizer = FilletRecognizer()
+                fillets = fillet_recognizer.recognize_fillets(legacy_graph)
+                
+                chamfer_recognizer = ChamferRecognizer()
+                chamfers = chamfer_recognizer.recognize_chamfers(legacy_graph)
+                
+                # Note: TurningRecognizer needs different input (not AAG graph)
+                # Skip for now - requires face loop extraction
+                
                 all_features.extend(holes)
                 all_features.extend(pockets)
                 all_features.extend(bosses)
+                all_features.extend(slots)
+                all_features.extend([f.__dict__ for f in fillets])  # Convert dataclass to dict
+                all_features.extend([f.__dict__ for f in chamfers])  # Convert dataclass to dict
                 
-                logger.info(f"  Volume {aag_data['volume_index']}: {len(holes)} holes, {len(pockets)} pockets, {len(bosses)} bosses")
+                logger.info(f"  Volume {aag_data['volume_index']}: {len(holes)} holes, {len(pockets)} pockets, "
+                           f"{len(bosses)} bosses, {len(slots)} slots, {len(fillets)} fillets, {len(chamfers)} chamfers")
                 
             self.features = all_features
             
