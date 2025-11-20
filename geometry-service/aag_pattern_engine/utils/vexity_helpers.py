@@ -7,7 +7,7 @@ and tolerant to real-world CAD variations.
 """
 
 from typing import List
-from aag_pattern_engine.graph_builder import Vexity
+from ..graph_builder import Vexity
 
 
 def is_depression_edge(vexity: Vexity) -> bool:
