@@ -375,31 +375,54 @@ class AAGPatternMatcher:
             
             logger.info(f"✓ Decomposition complete: {len(self.volumes)} volume(s)")
             
-            # Step 2: Build AAG graphs
+            # Step 2: Build AAG graphs (DUAL-GRAPH APPROACH)
             logger.info("\n[STEP 2/8] Building AAG for volume(s)...")
             
-            self.graphs = []
+            self.graphs = []         # Removal volume graphs (for holes)
+            self.part_graphs = []    # Part graphs (for pockets, slots, fillets)
+            
             for i, vol_data in enumerate(self.volumes):
                 removal_volume = vol_data['shape']
                 
-                logger.info(f"  Building AAG for volume #{i+1}...")
-                builder = AAGGraphBuilder(removal_volume, tolerance=self.tolerance)
-                graph_result = builder.build()
+                # Build AAG on REMOVAL VOLUME (for holes)
+                logger.info(f"  Building removal volume AAG for volume #{i+1}...")
+                removal_builder = AAGGraphBuilder(removal_volume, tolerance=self.tolerance)
+                removal_graph_result = removal_builder.build()
                 
-                if graph_result and graph_result.get('nodes'):
-                    # Wrap in expected structure for compatibility
-                    aag_data = {
-                        'graph': graph_result,  # The actual graph with nodes/adjacency/statistics
-                        'builder': builder,     # Store builder reference for later use
-                        'num_nodes': len(graph_result.get('nodes', {})),
-                        'num_edges': len(builder.edges) if hasattr(builder, 'edges') else 0
+                if removal_graph_result and removal_graph_result.get('nodes'):
+                    removal_aag_data = {
+                        'graph': removal_graph_result,
+                        'builder': removal_builder,
+                        'volume_index': i,
+                        'type': 'removal_volume',
+                        'num_nodes': len(removal_graph_result.get('nodes', {})),
+                        'num_edges': len(removal_builder.edges) if hasattr(removal_builder, 'edges') else 0
                     }
-                    self.graphs.append(aag_data)
-                    logger.info(f"    ✓ AAG built: {aag_data['num_nodes']} nodes, {aag_data['num_edges']} edges")
+                    self.graphs.append(removal_aag_data)
+                    logger.info(f"    ✓ Removal AAG built: {removal_aag_data['num_nodes']} nodes, {removal_aag_data['num_edges']} edges")
                 else:
-                    logger.warning(f"    ⚠ AAG build failed for volume #{i+1}")
+                    logger.warning(f"    ⚠ Removal AAG build failed for volume #{i+1}")
+                
+                # Build AAG on PART (for pockets, slots, fillets, chamfers)
+                logger.info(f"  Building part AAG for volume #{i+1}...")
+                part_builder = AAGGraphBuilder(self.part_shape, tolerance=self.tolerance)
+                part_graph_result = part_builder.build()
+                
+                if part_graph_result and part_graph_result.get('nodes'):
+                    part_aag_data = {
+                        'graph': part_graph_result,
+                        'builder': part_builder,
+                        'volume_index': i,
+                        'type': 'part',
+                        'num_nodes': len(part_graph_result.get('nodes', {})),
+                        'num_edges': len(part_builder.edges) if hasattr(part_builder, 'edges') else 0
+                    }
+                    self.part_graphs.append(part_aag_data)
+                    logger.info(f"    ✓ Part AAG built: {part_aag_data['num_nodes']} nodes, {part_aag_data['num_edges']} edges")
+                else:
+                    logger.warning(f"    ⚠ Part AAG build failed for volume #{i+1}")
             
-            if not self.graphs:
+            if not self.graphs and not self.part_graphs:
                 logger.error("No AAG graphs were built!")
                 return {
                     'status': 'error',
@@ -409,7 +432,7 @@ class AAGPatternMatcher:
                     'warnings': []
                 }
             
-            logger.info(f"✓ Built {len(self.graphs)} AAG graph(s)")
+            logger.info(f"✓ Built {len(self.graphs)} removal volume graph(s) and {len(self.part_graphs)} part graph(s)")
             
             # Step 3: Detect machining configurations
             logger.info("\n[STEP 3/8] Detecting machining configurations...")
@@ -450,53 +473,58 @@ class AAGPatternMatcher:
                 
                 logger.info(f"  Processing configuration #{config_idx+1} (type: {config_type})...")
                 
-                # Get the graph for this configuration
-                # For now, use first graph (single volume approach)
-                if not self.graphs:
+                # Get graphs for this configuration (DUAL-GRAPH APPROACH)
+                if not self.graphs or not self.part_graphs:
+                    logger.warning("    ⚠ Missing required graphs, skipping configuration")
                     continue
                     
-                aag_data = self.graphs[0]
-                builder = aag_data['builder']  # Use builder object which has nodes/adjacency/methods
+                removal_aag = self.graphs[0]      # Use for holes
+                part_aag = self.part_graphs[0]    # Use for pockets/slots/fillets
                 
                 # Run appropriate recognizers based on config type
                 if config_type in ["2.5D_milling", "3axis_milling", "5axis_milling"]:
-                    # Hole recognizer
-                    hole_rec = HoleRecognizer(builder)
+                    
+                    # === REMOVAL VOLUME RECOGNIZERS ===
+                    
+                    # Hole recognizer (uses removal volume)
+                    hole_rec = HoleRecognizer(removal_aag['builder'])
                     holes = hole_rec.recognize()
                     self.features.extend(holes)
                     if holes:
                         logger.info(f"    ✓ HoleRecognizer: {len(holes)} holes detected")
                     
-                    # Pocket recognizer
-                    pocket_rec = PocketRecognizer(builder)
+                    # === PART RECOGNIZERS ===
+                    
+                    # Pocket recognizer (uses part)
+                    pocket_rec = PocketRecognizer(part_aag['builder'])
                     pockets = pocket_rec.recognize()
                     self.features.extend(pockets)
                     if pockets:
                         logger.info(f"    ✓ PocketRecognizer: {len(pockets)} pockets detected")
                     
-                    # Slot recognizer (standardized API via adapter)
+                    # Slot recognizer (uses part)
                     if HAS_SLOT_RECOGNIZER:
                         try:
-                            slot_rec = SlotRecognizer(builder)  # Adapter accepts builder
-                            slots = slot_rec.recognize()         # Adapter provides recognize()
+                            slot_rec = SlotRecognizer(part_aag['builder'])
+                            slots = slot_rec.recognize()
                             self.features.extend(slots)
                             if slots:
                                 logger.info(f"    ✓ SlotRecognizer: {len(slots)} slots detected")
                         except Exception as e:
                             logger.warning(f"    ⚠️ SlotRecognizer failed: {e}")
                     
-                    # Boss recognizer
-                    boss_rec = BossRecognizer(builder)
+                    # Boss recognizer (uses part - detects raised features)
+                    boss_rec = BossRecognizer(part_aag['builder'])
                     bosses = boss_rec.recognize()
                     self.features.extend(bosses)
                     if bosses:
                         logger.info(f"    ✓ BossRecognizer: {len(bosses)} bosses detected")
                     
-                    # Fillet/Chamfer recognizers (standardized API via adapters)
+                    # Fillet/Chamfer recognizers (uses part)
                     if HAS_FILLET_RECOGNIZER:
                         try:
-                            fillet_rec = FilletRecognizer(builder)  # Adapter accepts builder
-                            fillets = fillet_rec.recognize()        # Adapter provides recognize()
+                            fillet_rec = FilletRecognizer(part_aag['builder'])
+                            fillets = fillet_rec.recognize()
                             self.features.extend(fillets)
                             if fillets:
                                 logger.info(f"    ✓ FilletRecognizer: {len(fillets)} fillets detected")
@@ -504,8 +532,8 @@ class AAGPatternMatcher:
                             logger.warning(f"    ⚠️ FilletRecognizer failed: {e}")
                         
                         try:
-                            chamfer_rec = ChamferRecognizer(builder)  # Adapter accepts builder
-                            chamfers = chamfer_rec.recognize()        # Adapter provides recognize()
+                            chamfer_rec = ChamferRecognizer(part_aag['builder'])
+                            chamfers = chamfer_rec.recognize()
                             self.features.extend(chamfers)
                             if chamfers:
                                 logger.info(f"    ✓ ChamferRecognizer: {len(chamfers)} chamfers detected")
@@ -531,13 +559,15 @@ class AAGPatternMatcher:
             # Step 5: Tool accessibility analysis
             logger.info("\n[STEP 5/8] Analyzing tool accessibility...")
             
-            if self.graphs:
-                builder = self.graphs[0]['builder']
+            # Use part graph for accessibility (features are on the part, not removal volume)
+            if self.part_graphs:
+                builder = self.part_graphs[0]['builder']
                 
                 analyzer = ToolAccessibilityAnalyzer(builder)
                 self.features = analyzer.annotate_features_with_accessibility(self.features)
-                
-            logger.info("✓ Accessibility analysis complete")
+                logger.info("✓ Accessibility analysis complete")
+            else:
+                logger.warning("  ⚠ No part graph available for accessibility analysis")
             
             # Step 6: Standardize feature output format
             logger.info("\n[STEP 6/8] Standardizing feature output...")
