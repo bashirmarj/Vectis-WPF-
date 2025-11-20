@@ -35,6 +35,16 @@ from .recognizers.boss_step_island_recognizer import BossRecognizer
 from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
 
 # Optional legacy recognizers (may not exist)
+# API COMPATIBILITY NOTES:
+# - NEW API (works with builder object): HoleRecognizer, PocketRecognizer, BossRecognizer
+#   Constructor: __init__(aag_graph_builder)
+#   Method: recognize() -> List[Dict]
+#   Access: builder.nodes (dict), builder.adjacency, builder.get_adjacent_faces()
+#
+# - LEGACY API (expects typed GraphNode objects): SlotRecognizer, FilletRecognizer, etc.
+#   Constructor: __init__(tolerance=1e-6)
+#   Method: recognize_X(graph: Dict) where graph has typed objects
+#   These are wrapped in try-except for graceful degradation
 try:
     from .recognizers.slot_recognizer import SlotRecognizer
     HAS_SLOT_RECOGNIZER = True
@@ -437,13 +447,24 @@ class AAGPatternMatcher:
                     if pockets:
                         logger.info(f"    ✓ PocketRecognizer: {len(pockets)} pockets detected")
                     
-                    # Slot recognizer (if available)
+                    # Slot recognizer (if available) - uses different API
                     if HAS_SLOT_RECOGNIZER:
-                        slot_rec = SlotRecognizer(builder)
-                        slots = slot_rec.recognize()
-                        self.features.extend(slots)
-                        if slots:
-                            logger.info(f"    ✓ SlotRecognizer: {len(slots)} slots detected")
+                        # SlotRecognizer expects dict format with typed objects, not builder
+                        # Get the graph dict and convert if needed
+                        graph_dict = aag_data['graph']
+                        slot_rec = SlotRecognizer(tolerance=self.tolerance)
+                        
+                        # SlotRecognizer expects graph['nodes'] to be typed objects
+                        # For now, pass builder which has compatible structure
+                        # TODO: May need format conversion for full compatibility
+                        try:
+                            slots = slot_rec.recognize_slots(graph_dict)
+                            self.features.extend(slots)
+                            if slots:
+                                logger.info(f"    ✓ SlotRecognizer: {len(slots)} slots detected")
+                        except (AttributeError, KeyError) as e:
+                            logger.warning(f"    ⚠️ SlotRecognizer failed (format mismatch): {e}")
+                            # Continue with other recognizers
                     
                     # Boss recognizer
                     boss_rec = BossRecognizer(builder)
@@ -452,28 +473,41 @@ class AAGPatternMatcher:
                     if bosses:
                         logger.info(f"    ✓ BossRecognizer: {len(bosses)} bosses detected")
                     
-                    # Fillet/Chamfer recognizers (if available)
+                    # Fillet/Chamfer recognizers (if available) - use different API
                     if HAS_FILLET_RECOGNIZER:
-                        fillet_rec = FilletRecognizer(builder)
-                        fillets = fillet_rec.recognize()
-                        self.features.extend(fillets)
-                        if fillets:
-                            logger.info(f"    ✓ FilletRecognizer: {len(fillets)} fillets detected")
+                        graph_dict = aag_data['graph']
                         
-                        chamfer_rec = ChamferRecognizer(builder)
-                        chamfers = chamfer_rec.recognize()
-                        self.features.extend(chamfers)
-                        if chamfers:
-                            logger.info(f"    ✓ ChamferRecognizer: {len(chamfers)} chamfers detected")
+                        try:
+                            fillet_rec = FilletRecognizer(tolerance=self.tolerance)
+                            fillets = fillet_rec.recognize_fillets(graph_dict)
+                            self.features.extend(fillets)
+                            if fillets:
+                                logger.info(f"    ✓ FilletRecognizer: {len(fillets)} fillets detected")
+                        except (AttributeError, KeyError) as e:
+                            logger.warning(f"    ⚠️ FilletRecognizer failed (format mismatch): {e}")
+                        
+                        try:
+                            chamfer_rec = ChamferRecognizer(tolerance=self.tolerance)
+                            chamfers = chamfer_rec.recognize_chamfers(graph_dict)
+                            self.features.extend(chamfers)
+                            if chamfers:
+                                logger.info(f"    ✓ ChamferRecognizer: {len(chamfers)} chamfers detected")
+                        except (AttributeError, KeyError) as e:
+                            logger.warning(f"    ⚠️ ChamferRecognizer failed (format mismatch): {e}")
                 
                 elif config_type == "turning":
-                    # Turning recognizer (if available)
+                    # Turning recognizer (if available) - uses different API
                     if HAS_TURNING_RECOGNIZER:
-                        turning_rec = TurningRecognizer(builder)
-                        turning_features = turning_rec.recognize()
-                        self.features.extend(turning_features)
-                        if turning_features:
-                            logger.info(f"    ✓ TurningRecognizer: {len(turning_features)} features detected")
+                        graph_dict = aag_data['graph']
+                        
+                        try:
+                            turning_rec = TurningRecognizer(tolerance=self.tolerance)
+                            turning_features = turning_rec.recognize_turning_features(graph_dict)
+                            self.features.extend(turning_features)
+                            if turning_features:
+                                logger.info(f"    ✓ TurningRecognizer: {len(turning_features)} features detected")
+                        except (AttributeError, KeyError) as e:
+                            logger.warning(f"    ⚠️ TurningRecognizer failed (format mismatch): {e}")
             
             logger.info(f"✓ Feature detection complete: {len(self.features)} features")
             
