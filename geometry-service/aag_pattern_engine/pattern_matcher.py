@@ -393,7 +393,25 @@ class AAGPatternMatcher:
             self.features = []
             
             for config_idx, config in enumerate(self.configurations):
-                logger.info(f"  Processing configuration #{config_idx+1} (type: {config.config_type})...")
+                # Convert dict to have expected fields
+                # The detector returns: {'type': 'primary'/'secondary', 'axis': [...], ...}
+                # We need to determine the actual machining config_type for recognizers:
+                # - 2.5D_milling: Single-axis machining (most common for prismatic)
+                # - 3axis_milling: Multi-axis but no undercuts
+                # - 5axis_milling: Complex geometry with undercuts
+                # - turning: Rotational features (lathe operations)
+                if isinstance(config, dict):
+                    # Determine config_type based on axis and geometry
+                    # For now, assume all are 2.5D milling (most common for prismatic)
+                    config_type = "2.5D_milling"
+                    
+                    # Could add logic here to detect 3axis, 5axis, or turning
+                    # based on axis orientation, feature complexity, etc.
+                else:
+                    # If it's an object (shouldn't happen but be safe)
+                    config_type = getattr(config, 'config_type', '2.5D_milling')
+                
+                logger.info(f"  Processing configuration #{config_idx+1} (type: {config_type})...")
                 
                 # Get the graph for this configuration
                 # For now, use first graph (single volume approach)
@@ -404,7 +422,7 @@ class AAGPatternMatcher:
                 builder = aag_data['builder']  # Use builder object which has nodes/adjacency/methods
                 
                 # Run appropriate recognizers based on config type
-                if config.config_type in ["2.5D_milling", "3axis_milling", "5axis_milling"]:
+                if config_type in ["2.5D_milling", "3axis_milling", "5axis_milling"]:
                     # Hole recognizer
                     hole_rec = HoleRecognizer(builder)
                     holes = hole_rec.recognize()
@@ -448,7 +466,7 @@ class AAGPatternMatcher:
                         if chamfers:
                             logger.info(f"    ✓ ChamferRecognizer: {len(chamfers)} chamfers detected")
                 
-                elif config.config_type == "turning":
+                elif config_type == "turning":
                     # Turning recognizer (if available)
                     if HAS_TURNING_RECOGNIZER:
                         turning_rec = TurningRecognizer(builder)
