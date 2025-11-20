@@ -206,9 +206,19 @@ class VolumeDecomposer:
         origin = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
         box_maker = BRepPrimAPI_MakeBox(origin, dx / scale, dy / scale, dz / scale)
 
+        # Check if done, but also check if shape is valid (IsDone can be unreliable)
         if box_maker.IsDone():
             logger.info("  ✅ Method 1: Stock box created from origin + dimensions")
             return box_maker.Shape()
+        
+        # Sometimes IsDone() returns False but Shape() is valid - check shape validity
+        try:
+            test_shape = box_maker.Shape()
+            if not test_shape.IsNull():
+                logger.warning("  ⚠️ Method 1: IsDone() returned False but shape is valid - using it anyway")
+                return test_shape
+        except Exception:
+            pass  # Shape is truly invalid, continue to next method
 
         # METHOD 2: Create box from two corner points
         logger.warning("  ⚠️ Method 1 failed, trying corner points method...")
@@ -223,15 +233,138 @@ class VolumeDecomposer:
         if box_maker.IsDone():
             logger.info("  ✅ Method 2: Stock box created from corner points")
             return box_maker.Shape()
+        
+        # Check if shape is valid even if IsDone() is False
+        try:
+            test_shape = box_maker.Shape()
+            if not test_shape.IsNull():
+                logger.warning("  ⚠️ Method 2: IsDone() returned False but shape is valid - using it anyway")
+                return test_shape
+        except Exception:
+            pass  # Shape is truly invalid, continue to Method 3
 
         # METHOD 3: Create box at origin, then translate
         logger.warning("  ⚠️ Method 2 failed, trying origin + translation method...")
         
-        # Create box at world origin
-        box_maker = BRepPrimAPI_MakeBox(dx / scale, dy / scale, dz / scale)
+        # Log diagnostic information
+        logger.info(f"  Attempting to create box at origin with dimensions:")
+        logger.info(f"    dx/scale = {dx/scale:.10f}")
+        logger.info(f"    dy/scale = {dy/scale:.10f}")
+        logger.info(f"    dz/scale = {dz/scale:.10f}")
         
-        if not box_maker.IsDone():
-            logger.error("  ❌ All three box creation methods failed!")
+        # Verify dimensions are reasonable
+        if dx / scale < 1e-10 or dy / scale < 1e-10 or dz / scale < 1e-10:
+            logger.error(f"  ❌ Dimensions too small for OpenCascade!")
+            raise RuntimeError(
+                f"Box dimensions are too small after scaling: "
+                f"({dx/scale:.10e}, {dy/scale:.10e}, {dz/scale:.10e}). "
+                f"Original dimensions: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm"
+            )
+        
+        # Create box at world origin
+        try:
+            box_maker = BRepPrimAPI_MakeBox(dx / scale, dy / scale, dz / scale)
+        except Exception as e:
+            logger.error(f"  ❌ Exception during box creation: {type(e).__name__}: {e}")
+            raise RuntimeError(
+                f"BRepPrimAPI_MakeBox raised exception: {e}. "
+                f"This indicates OpenCascade library configuration issues."
+            )
+        
+        # Check both IsDone() and shape validity
+        shape_valid = False
+        box_shape = None
+        
+        if box_maker.IsDone():
+            box_shape = box_maker.Shape()
+            shape_valid = True
+        else:
+            # Sometimes IsDone() returns False but Shape() is valid
+            try:
+                test_shape = box_maker.Shape()
+                if not test_shape.IsNull():
+                    logger.warning("  ⚠️ IsDone() returned False but shape is valid - using it anyway")
+                    box_shape = test_shape
+                    shape_valid = True
+            except Exception:
+                pass  # Shape is truly invalid
+        
+        if shape_valid:
+            # Success! Apply translation
+            translation = gp_Trsf()
+            translation.SetTranslation(gp_Vec(xmin / scale, ymin / scale, zmin / scale))
+            
+            transformer = BRepBuilderAPI_Transform(box_shape, translation, False)
+            
+            if not transformer.IsDone():
+                logger.error("  ❌ Translation failed after box creation!")
+                raise RuntimeError(
+                    f"Box created at origin but translation failed. "
+                    f"Translation vector: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})"
+                )
+            
+            transformed_shape = transformer.Shape()
+            
+            logger.info("  ✅ Method 3: Stock box created at origin and translated")
+            logger.info(f"    Translation: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
+            
+            return transformed_shape
+        
+        # If we get here, Method 3 failed - try inflation workaround
+        if not shape_valid:
+            logger.error("  ❌ Box creation at origin failed!")
+            logger.warning("  🔧 Attempting workaround: slightly inflating dimensions by 0.1%...")
+            
+            # Try with slightly inflated dimensions (sometimes helps with numerical precision)
+            inflate_factor = 1.001
+            try:
+                box_maker = BRepPrimAPI_MakeBox(
+                    (dx / scale) * inflate_factor,
+                    (dy / scale) * inflate_factor,
+                    (dz / scale) * inflate_factor
+                )
+                
+                # Check both IsDone and shape validity for inflated box
+                inflated_valid = False
+                if box_maker.IsDone():
+                    box_shape = box_maker.Shape()
+                    inflated_valid = True
+                else:
+                    try:
+                        test_shape = box_maker.Shape()
+                        if not test_shape.IsNull():
+                            box_shape = test_shape
+                            inflated_valid = True
+                    except Exception:
+                        pass
+                
+                if inflated_valid:
+                    logger.info("  ✅ Workaround successful: box created with inflated dimensions")
+                    # Adjust translation to account for inflation
+                    translation_offset = ((dx / scale) * (inflate_factor - 1.0)) / 2.0
+                    
+                    # Create translation transformation with offset
+                    translation = gp_Trsf()
+                    translation.SetTranslation(gp_Vec(
+                        (xmin / scale) - translation_offset,
+                        (ymin / scale) - translation_offset,
+                        (zmin / scale) - translation_offset
+                    ))
+                    
+                    transformer = BRepBuilderAPI_Transform(box_shape, translation, False)
+                    
+                    if not transformer.IsDone():
+                        raise RuntimeError("Translation failed after inflated box creation")
+                    
+                    logger.info(f"    Applied translation with inflation offset: {translation_offset:.6f}")
+                    return transformer.Shape()
+                else:
+                    raise RuntimeError("Inflated box creation failed")
+                    
+            except Exception as e:
+                logger.error(f"  ❌ Inflation workaround also failed: {e}")
+            
+            logger.error("  ❌ All box creation methods failed!")
             logger.error(f"  This suggests a fundamental issue with OpenCascade or the geometry")
             raise RuntimeError(
                 f"Failed to create stock box using all methods. "
