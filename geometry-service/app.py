@@ -613,6 +613,7 @@ def analyze_aag():
                         feature_dict = {
                             'type': aag_feat.get('type', 'unknown'),
                             'subtype': aag_feat.get('subtype'),
+                            'face_ids': aag_feat.get('face_ids', []),
                             'face_indices': aag_feat.get('face_ids', []),
                             'confidence': aag_feat.get('confidence', 0.0),
                             'parameters': aag_feat.get('parameters', {}),
@@ -655,7 +656,7 @@ def analyze_aag():
                     "total_features": len(features),
                     "recognition_time_s": recognition_result.metrics.recognition_time if 'recognition_result' in locals() else 0,
                     "average_confidence": recognition_result.metrics.average_confidence if 'recognition_result' in locals() else 0,
-                    "multi_face_features": sum(1 for f in features if len(f['face_ids']) > 1)
+                    "multi_face_features": sum(1 for f in features if len(f.get('face_ids', [])) > 1)
                 }
             except Exception as e:
                 logger.warning(f"[{correlation_id}] ⚠️ Metadata extraction failed: {e}")
