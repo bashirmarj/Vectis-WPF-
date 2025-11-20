@@ -475,24 +475,16 @@ class AAGPatternMatcher:
                     if pockets:
                         logger.info(f"    ✓ PocketRecognizer: {len(pockets)} pockets detected")
                     
-                    # Slot recognizer (if available) - uses different API
+                    # Slot recognizer (standardized API via adapter)
                     if HAS_SLOT_RECOGNIZER:
-                        # SlotRecognizer expects dict format with typed objects, not builder
-                        # Get the graph dict and convert if needed
-                        graph_dict = aag_data['graph']
-                        slot_rec = SlotRecognizer(tolerance=self.tolerance)
-                        
-                        # SlotRecognizer expects graph['nodes'] to be typed objects
-                        # For now, pass builder which has compatible structure
-                        # TODO: May need format conversion for full compatibility
                         try:
-                            slots = slot_rec.recognize_slots(graph_dict)
+                            slot_rec = SlotRecognizer(builder)  # Adapter accepts builder
+                            slots = slot_rec.recognize()         # Adapter provides recognize()
                             self.features.extend(slots)
                             if slots:
                                 logger.info(f"    ✓ SlotRecognizer: {len(slots)} slots detected")
-                        except (AttributeError, KeyError) as e:
-                            logger.warning(f"    ⚠️ SlotRecognizer failed (format mismatch): {e}")
-                            # Continue with other recognizers
+                        except Exception as e:
+                            logger.warning(f"    ⚠️ SlotRecognizer failed: {e}")
                     
                     # Boss recognizer
                     boss_rec = BossRecognizer(builder)
@@ -501,27 +493,25 @@ class AAGPatternMatcher:
                     if bosses:
                         logger.info(f"    ✓ BossRecognizer: {len(bosses)} bosses detected")
                     
-                    # Fillet/Chamfer recognizers (if available) - use different API
+                    # Fillet/Chamfer recognizers (standardized API via adapters)
                     if HAS_FILLET_RECOGNIZER:
-                        graph_dict = aag_data['graph']
-                        
                         try:
-                            fillet_rec = FilletRecognizer(tolerance=self.tolerance)
-                            fillets = fillet_rec.recognize_fillets(graph_dict)
+                            fillet_rec = FilletRecognizer(builder)  # Adapter accepts builder
+                            fillets = fillet_rec.recognize()        # Adapter provides recognize()
                             self.features.extend(fillets)
                             if fillets:
                                 logger.info(f"    ✓ FilletRecognizer: {len(fillets)} fillets detected")
-                        except (AttributeError, KeyError) as e:
-                            logger.warning(f"    ⚠️ FilletRecognizer failed (format mismatch): {e}")
+                        except Exception as e:
+                            logger.warning(f"    ⚠️ FilletRecognizer failed: {e}")
                         
                         try:
-                            chamfer_rec = ChamferRecognizer(tolerance=self.tolerance)
-                            chamfers = chamfer_rec.recognize_chamfers(graph_dict)
+                            chamfer_rec = ChamferRecognizer(builder)  # Adapter accepts builder
+                            chamfers = chamfer_rec.recognize()        # Adapter provides recognize()
                             self.features.extend(chamfers)
                             if chamfers:
                                 logger.info(f"    ✓ ChamferRecognizer: {len(chamfers)} chamfers detected")
-                        except (AttributeError, KeyError) as e:
-                            logger.warning(f"    ⚠️ ChamferRecognizer failed (format mismatch): {e}")
+                        except Exception as e:
+                            logger.warning(f"    ⚠️ ChamferRecognizer failed: {e}")
                 
                 elif config_type == "turning":
                     # Turning recognizer (if available) - uses different API
