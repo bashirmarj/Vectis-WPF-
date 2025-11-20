@@ -573,7 +573,7 @@ serve(async (req) => {
               }));
               
               try {
-                // Collect extraction metadata for the log
+                // Collect extraction metadata for the log including full backend logs
                 const extractionMetadata = {
                   processing_time_ms: serviceResult.processing_time_ms,
                   recognition_method: serviceResult.metadata?.recognition_method || 'AAG Pattern Matching',
@@ -583,7 +583,9 @@ serve(async (req) => {
                   service_response: {
                     status: serviceResult.status,
                     success: serviceResult.success
-                  }
+                  },
+                  backend_logs: serviceResult.logs || serviceResult.processing_logs || null,
+                  detailed_stats: serviceResult.metadata || {}
                 };
                 
                 const validationReport = compareWithGroundTruth(features, asGroundTruth, correlationId, extractionMetadata);
