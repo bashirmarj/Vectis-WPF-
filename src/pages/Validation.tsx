@@ -13,6 +13,7 @@ import { ValidationReport } from "@/components/validation/ValidationReport";
 interface ValidationState {
   stepFile: File | null;
   asJsonFile: File | null;
+  supplementaryFiles: File[];
   isValidating: boolean;
   validationReport: any | null;
   error: string | null;
@@ -22,6 +23,7 @@ const Validation = () => {
   const [state, setState] = useState<ValidationState>({
     stepFile: null,
     asJsonFile: null,
+    supplementaryFiles: [],
     isValidating: false,
     validationReport: null,
     error: null,
@@ -62,6 +64,108 @@ const Validation = () => {
     }
   };
 
+  const handleSupplementaryFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      const validFiles = files.filter(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext === 'json' || ext === 'txt';
+      });
+
+      if (validFiles.length !== files.length) {
+        toast({
+          title: "Invalid file types",
+          description: "Only JSON and TXT files are accepted for supplementary features",
+          variant: "destructive",
+        });
+      }
+
+      setState(prev => ({ 
+        ...prev, 
+        supplementaryFiles: [...prev.supplementaryFiles, ...validFiles],
+        validationReport: null, 
+        error: null 
+      }));
+    }
+  };
+
+  const removeSupplementaryFile = (index: number) => {
+    setState(prev => ({
+      ...prev,
+      supplementaryFiles: prev.supplementaryFiles.filter((_, i) => i !== index)
+    }));
+  };
+
+  const mergeSupplementaryFeatures = async (
+    baseGroundTruth: any,
+    supplementaryFiles: File[]
+  ): Promise<any> => {
+    if (supplementaryFiles.length === 0) {
+      return baseGroundTruth;
+    }
+
+    const merged = JSON.parse(JSON.stringify(baseGroundTruth)); // Deep clone
+    const mergeStats: { [key: string]: number } = {};
+
+    for (const file of supplementaryFiles) {
+      try {
+        const content = await file.text();
+        const data = JSON.parse(content);
+
+        // Auto-detect and merge known feature arrays
+        const mergeableArrays = [
+          'filletChains',
+          'chamferChains',
+          'threads',
+          'holes',
+          'pockets',
+          'slots',
+          'shoulders',
+          'shafts'
+        ];
+
+        for (const arrayName of mergeableArrays) {
+          if (Array.isArray(data[arrayName]) && data[arrayName].length > 0) {
+            // Find the correct location in the parts structure
+            if (merged.parts?.[0]) {
+              if (!merged.parts[0][arrayName]) {
+                merged.parts[0][arrayName] = [];
+              }
+              const beforeCount = merged.parts[0][arrayName].length;
+              merged.parts[0][arrayName].push(...data[arrayName]);
+              const addedCount = data[arrayName].length;
+              
+              mergeStats[arrayName] = (mergeStats[arrayName] || 0) + addedCount;
+              
+              console.log(`✅ Merged ${addedCount} ${arrayName} from ${file.name}`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to merge ${file.name}:`, error);
+        toast({
+          title: "Merge warning",
+          description: `Could not merge ${file.name}: ${error instanceof Error ? error.message : 'Invalid JSON'}`,
+          variant: "destructive",
+        });
+      }
+    }
+
+    // Show merge summary
+    const mergedFeatures = Object.entries(mergeStats)
+      .map(([feature, count]) => `${count} ${feature}`)
+      .join(', ');
+    
+    if (mergedFeatures) {
+      toast({
+        title: "Supplementary features merged",
+        description: `Added: ${mergedFeatures}`,
+      });
+    }
+
+    return merged;
+  };
+
   const runValidation = async () => {
     if (!state.stepFile || !state.asJsonFile) {
       toast({
@@ -77,7 +181,10 @@ const Validation = () => {
     try {
       // Read AS JSON ground truth
       const asJsonText = await state.asJsonFile.text();
-      const asGroundTruth = JSON.parse(asJsonText);
+      let asGroundTruth = JSON.parse(asJsonText);
+
+      // Merge supplementary feature files if any
+      asGroundTruth = await mergeSupplementaryFeatures(asGroundTruth, state.supplementaryFiles);
 
       // Upload STEP file to storage
       const fileExt = state.stepFile.name.split('.').pop()?.toLowerCase() || 'step';
@@ -144,6 +251,7 @@ const Validation = () => {
     setState({
       stepFile: null,
       asJsonFile: null,
+      supplementaryFiles: [],
       isValidating: false,
       validationReport: null,
       error: null,
@@ -309,6 +417,71 @@ const Validation = () => {
                       )}
                     </label>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Supplementary Features Upload (Optional) */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Supplementary Features (Optional)
+                </CardTitle>
+                <CardDescription>
+                  Upload additional feature files (e.g., blends.txt, chamfers.txt) that will be automatically merged with the main ground truth
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
+                    <input
+                      type="file"
+                      onChange={handleSupplementaryFilesSelect}
+                      className="hidden"
+                      id="supplementary-upload"
+                      accept=".json,.txt"
+                      multiple
+                    />
+                    <label
+                      htmlFor="supplementary-upload"
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        Click to upload supplementary files
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        JSON or TXT files (multiple files supported)
+                      </span>
+                    </label>
+                  </div>
+
+                  {state.supplementaryFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">
+                        {state.supplementaryFiles.length} supplementary file(s) selected:
+                      </p>
+                      {state.supplementaryFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-muted rounded-md"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <span className="text-sm">{file.name}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSupplementaryFile(index)}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
