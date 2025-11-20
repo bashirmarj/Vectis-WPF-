@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 // Validation comparison function
-function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlationId: string) {
+function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlationId: string, extractionMetadata?: any) {
   const checks: any[] = [];
   
   // Parse AS ground truth structure - access features from correct nested path
@@ -127,7 +127,8 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
       timestamp: new Date().toISOString(),
       aag_feature_count: aagFeatures.length,
       as_feature_count: asHoles.length + asPocketCount + asFillets.length + asChamfers.length + asShoulders.length + asShafts.length
-    }
+    },
+    extraction_log: extractionMetadata || null
   };
 }
 
@@ -572,7 +573,20 @@ serve(async (req) => {
               }));
               
               try {
-                const validationReport = compareWithGroundTruth(features, asGroundTruth, correlationId);
+                // Collect extraction metadata for the log
+                const extractionMetadata = {
+                  processing_time_ms: serviceResult.processing_time_ms,
+                  recognition_method: serviceResult.metadata?.recognition_method || 'AAG Pattern Matching',
+                  correlation_id: correlationId,
+                  features_detected: features.length,
+                  feature_types: serviceResult.metadata?.feature_summary || {},
+                  service_response: {
+                    status: serviceResult.status,
+                    success: serviceResult.success
+                  }
+                };
+                
+                const validationReport = compareWithGroundTruth(features, asGroundTruth, correlationId, extractionMetadata);
                 analysisResult.validation_report = validationReport;
                 
                 console.log(JSON.stringify({
