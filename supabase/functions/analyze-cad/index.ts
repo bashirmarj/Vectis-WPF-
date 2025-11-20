@@ -557,7 +557,7 @@ serve(async (req) => {
               
               try {
                 const validationReport = compareWithGroundTruth(features, asGroundTruth, correlationId);
-                analysisResult.validation = validationReport;
+                analysisResult.validation_report = validationReport;
                 
                 console.log(JSON.stringify({
                   timestamp: new Date().toISOString(),
