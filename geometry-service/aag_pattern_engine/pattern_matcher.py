@@ -44,9 +44,8 @@ try:
     )
     HAS_SLOT_RECOGNIZER = True
     HAS_FILLET_RECOGNIZER = True
-    logger.info("✓ Using standardized recognizer API adapters")
+    # Logger not available at import time - will log during actual recognition
 except ImportError as e:
-    logger.warning(f"Recognizer adapters not available: {e}")
     # Fallback to original recognizers (may have API mismatches)
     try:
         from .recognizers.slot_recognizer import SlotRecognizer
