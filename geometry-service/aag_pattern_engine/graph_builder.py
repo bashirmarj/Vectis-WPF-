@@ -213,11 +213,11 @@ class AAGGraphBuilder:
         non_manifold = 0
         boundary = 0
         
-        for i in range(1, edge_face_map.Extent() + 1):
+        for i in range(1, edge_face_map.Size() + 1):
             edge = topods.Edge(edge_face_map.FindKey(i))
             face_list = edge_face_map.FindFromIndex(i)
             
-            face_count = face_list.Extent()
+            face_count = face_list.Size()
             
             if face_count > 2:
                 non_manifold += 1
@@ -233,7 +233,7 @@ class AAGGraphBuilder:
                 
             self._edge_face_map[edge] = faces
             
-        logger.info(f"Edge-face map: {edge_face_map.Extent()} edges")
+        logger.info(f"Edge-face map: {edge_face_map.Size()} edges")
         logger.info(f"  Non-manifold: {non_manifold}")
         logger.info(f"  Boundary: {boundary}")
         
