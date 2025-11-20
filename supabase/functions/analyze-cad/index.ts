@@ -8,6 +8,113 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE'
 };
 
+// Validation comparison function
+function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlationId: string) {
+  const checks: any[] = [];
+  
+  // Parse AS ground truth structure
+  const asHoles = asGroundTruth.features?.holes || [];
+  const asPockets = asGroundTruth.features?.pockets || [];
+  const asFillets = asGroundTruth.features?.filletChains || [];
+  const asChamfers = asGroundTruth.features?.chamferChains || [];
+  const asShoulders = asGroundTruth.features?.shoulders || [];
+  const asShafts = asGroundTruth.features?.shafts || [];
+  const asThreads = asGroundTruth.features?.threads || [];
+  
+  // Count AAG features by type
+  const aagCounts: Record<string, number> = {};
+  aagFeatures.forEach(f => {
+    const type = f.type || 'unknown';
+    aagCounts[type] = (aagCounts[type] || 0) + 1;
+  });
+  
+  // Normalize AAG feature types to AS categories
+  const aagHoles = (aagCounts['through_hole'] || 0) + 
+                   (aagCounts['blind_hole'] || 0) + 
+                   (aagCounts['counterbore'] || 0) + 
+                   (aagCounts['countersink'] || 0);
+  const aagPockets = (aagCounts['rectangular_pocket'] || 0) + 
+                     (aagCounts['irregular_pocket'] || 0) + 
+                     (aagCounts['circular_end_pocket'] || 0);
+  const aagFillets = aagCounts['fillet'] || 0;
+  const aagChamfers = aagCounts['chamfer'] || 0;
+  const aagSteps = (aagCounts['step'] || 0) + (aagCounts['shoulder'] || 0);
+  const aagShafts = aagCounts['shaft'] || 0;
+  
+  // Structure checks
+  checks.push({
+    category: 'Structure',
+    name: 'Features object exists',
+    passed: !!asGroundTruth.features,
+    expected: 'object',
+    actual: typeof asGroundTruth.features
+  });
+  
+  // Count comparisons
+  const addCountCheck = (name: string, asCount: number, aagCount: number, tolerance = 0) => {
+    const passed = Math.abs(asCount - aagCount) <= tolerance;
+    checks.push({
+      category: 'Counts',
+      name: name,
+      passed: passed,
+      expected: asCount,
+      actual: aagCount,
+      deviation: Math.abs(asCount - aagCount)
+    });
+  };
+  
+  addCountCheck('Holes', asHoles.length, aagHoles);
+  addCountCheck('Pockets', asPockets.length, aagPockets);
+  addCountCheck('Fillets', asFillets.length, aagFillets);
+  addCountCheck('Chamfers', asChamfers.length, aagChamfers);
+  addCountCheck('Shoulders/Steps', asShoulders.length + asShafts.length, aagSteps + aagShafts);
+  addCountCheck('Threads', asThreads.length, aagCounts['thread'] || 0);
+  
+  // Parameter checks (if available)
+  // Check first hole diameter if both have holes
+  if (asHoles.length > 0 && aagHoles > 0) {
+    const asHole = asHoles[0];
+    const aagHoleFeature = aagFeatures.find(f => 
+      ['through_hole', 'blind_hole', 'counterbore', 'countersink'].includes(f.type)
+    );
+    
+    if (asHole.bore?.diameter && aagHoleFeature?.parameters?.diameter) {
+      const asD = asHole.bore.diameter;
+      const aagD = aagHoleFeature.parameters.diameter;
+      const tolerance = asD * 0.05; // 5% tolerance
+      checks.push({
+        category: 'Parameters',
+        name: 'First hole diameter',
+        passed: Math.abs(asD - aagD) <= tolerance,
+        expected: asD.toFixed(2),
+        actual: aagD.toFixed(2),
+        deviation: Math.abs(asD - aagD).toFixed(2)
+      });
+    }
+  }
+  
+  // Calculate summary
+  const passed = checks.filter(c => c.passed).length;
+  const total = checks.length;
+  const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : '0.0';
+  
+  return {
+    summary: {
+      total_checks: total,
+      passed: passed,
+      failed: total - passed,
+      pass_rate: passRate + '%'
+    },
+    checks: checks,
+    metadata: {
+      correlation_id: correlationId,
+      timestamp: new Date().toISOString(),
+      aag_feature_count: aagFeatures.length,
+      as_feature_count: asHoles.length + asPockets.length + asFillets.length + asChamfers.length + asShoulders.length + asShafts.length
+    }
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -34,6 +141,8 @@ serve(async (req) => {
     let fileData: ArrayBuffer | null = null;
     let material: string | undefined;
     let quantity: number = 1;
+    let validationMode: boolean = false;
+    let asGroundTruth: any = null;
 
     const contentType = req.headers.get('content-type') || '';
 
@@ -64,6 +173,10 @@ serve(async (req) => {
       material = body.material;
       quantity = body.quantity || 1;
       
+      // Extract validation parameters
+      validationMode = body.validation_mode === true;
+      asGroundTruth = body.as_ground_truth || null;
+      
       if (body.fileUrl) {
         const fileResponse = await fetch(body.fileUrl);
         fileData = await fileResponse.arrayBuffer();
@@ -85,7 +198,14 @@ serve(async (req) => {
       level: 'INFO',
       correlation_id: correlationId,
       message: 'Parameters parsed successfully',
-      context: { fileName, fileSize, material, quantity }
+      context: { 
+        fileName, 
+        fileSize, 
+        material, 
+        quantity,
+        validationMode: validationMode || false,
+        hasGroundTruth: !!asGroundTruth
+      }
     }));
 
     // Determine file type
@@ -405,6 +525,47 @@ serve(async (req) => {
               },
               method: serviceResult.metadata?.recognition_method || 'brepnet'
             };
+            
+            // Run validation if validation mode enabled
+            if (validationMode && asGroundTruth) {
+              console.log(JSON.stringify({
+                timestamp: new Date().toISOString(),
+                level: 'INFO',
+                correlation_id: correlationId,
+                message: 'Running validation against ground truth',
+                context: {
+                  aag_features: features.length,
+                  has_ground_truth: true
+                }
+              }));
+              
+              try {
+                const validationReport = compareWithGroundTruth(features, asGroundTruth, correlationId);
+                analysisResult.validation = validationReport;
+                
+                console.log(JSON.stringify({
+                  timestamp: new Date().toISOString(),
+                  level: 'INFO',
+                  correlation_id: correlationId,
+                  message: 'Validation complete',
+                  context: {
+                    total_checks: validationReport.summary.total_checks,
+                    passed: validationReport.summary.passed,
+                    pass_rate: validationReport.summary.pass_rate
+                  }
+                }));
+              } catch (validationError: any) {
+                console.log(JSON.stringify({
+                  timestamp: new Date().toISOString(),
+                  level: 'ERROR',
+                  correlation_id: correlationId,
+                  message: 'Validation failed',
+                  context: {
+                    error: validationError?.message || 'Unknown error'
+                  }
+                }));
+              }
+            }
             
             // 🔍 DEBUG POINT 2: Verify final response structure
             console.log(JSON.stringify({
