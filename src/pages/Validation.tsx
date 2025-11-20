@@ -107,10 +107,24 @@ const Validation = () => {
     const merged = JSON.parse(JSON.stringify(baseGroundTruth)); // Deep clone
     const mergeStats: { [key: string]: number } = {};
 
+    console.log('🔍 MERGE DEBUG: Base ground truth structure:', {
+      has_parts: !!merged.parts,
+      parts_length: merged.parts?.length,
+      has_parts_0: !!merged.parts?.[0],
+      parts_0_keys: merged.parts?.[0] ? Object.keys(merged.parts[0]) : null,
+    });
+
     for (const file of supplementaryFiles) {
       try {
         const content = await file.text();
         const data = JSON.parse(content);
+
+        console.log('🔍 MERGE DEBUG: Supplementary file structure:', {
+          file_name: file.name,
+          data_keys: Object.keys(data),
+          has_filletChains: !!data.filletChains,
+          filletChains_length: data.filletChains?.length,
+        });
 
         // Auto-detect and merge known feature arrays
         const mergeableArrays = [
@@ -133,11 +147,16 @@ const Validation = () => {
               }
               const beforeCount = merged.parts[0][arrayName].length;
               merged.parts[0][arrayName].push(...data[arrayName]);
+              const afterCount = merged.parts[0][arrayName].length;
               const addedCount = data[arrayName].length;
               
               mergeStats[arrayName] = (mergeStats[arrayName] || 0) + addedCount;
               
-              console.log(`✅ Merged ${addedCount} ${arrayName} from ${file.name}`);
+              console.log(`✅ Merged ${addedCount} ${arrayName} from ${file.name}`, {
+                before: beforeCount,
+                after: afterCount,
+                added: addedCount,
+              });
             }
           }
         }
@@ -150,6 +169,14 @@ const Validation = () => {
         });
       }
     }
+
+    // Log final merged structure
+    console.log('🔍 MERGE DEBUG: Final merged structure:', {
+      has_parts: !!merged.parts,
+      parts_length: merged.parts?.length,
+      filletChains_length: merged.parts?.[0]?.filletChains?.length,
+      chamferChains_length: merged.parts?.[0]?.chamferChains?.length,
+    });
 
     // Show merge summary
     const mergedFeatures = Object.entries(mergeStats)
@@ -185,6 +212,13 @@ const Validation = () => {
 
       // Merge supplementary feature files if any
       asGroundTruth = await mergeSupplementaryFeatures(asGroundTruth, state.supplementaryFiles);
+
+      // Log what we're sending to the edge function
+      console.log('🔍 CLIENT DEBUG: Sending to edge function:', {
+        has_as_ground_truth: !!asGroundTruth,
+        validation_mode: true,
+        filletChains_in_parts_0: asGroundTruth?.parts?.[0]?.filletChains?.length,
+      });
 
       // Upload STEP file to storage
       const fileExt = state.stepFile.name.split('.').pop()?.toLowerCase() || 'step';
