@@ -168,13 +168,29 @@ serve(async (req) => {
       
     } else if (contentType.includes('application/json')) {
       const body = await req.json();
+      
+      // Debug: Log raw request body
+      console.log(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'DEBUG',
+        correlation_id: correlationId,
+        message: '🔍 RAW REQUEST BODY',
+        context: {
+          body_keys: Object.keys(body),
+          validation_mode_value: body.validation_mode,
+          validation_mode_type: typeof body.validation_mode,
+          has_as_ground_truth: !!body.as_ground_truth,
+          as_ground_truth_keys: body.as_ground_truth ? Object.keys(body.as_ground_truth) : null
+        }
+      }));
+      
       fileName = body.fileName || '';
       fileSize = body.fileSize || 0;
       material = body.material;
       quantity = body.quantity || 1;
       
-      // Extract validation parameters
-      validationMode = body.validation_mode === true;
+      // Extract validation parameters - handle both boolean and string values
+      validationMode = body.validation_mode === true || body.validation_mode === 'true';
       asGroundTruth = body.as_ground_truth || null;
       
       if (body.fileUrl) {
