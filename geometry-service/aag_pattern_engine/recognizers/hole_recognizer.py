@@ -107,6 +107,55 @@ class HoleRecognizer:
                 })
                 
         return cones
+    
+    def _is_pocket_wall_cylinder(self, face_id: int) -> bool:
+        """
+        Check if cylinder is actually a pocket wall, not a hole.
+        
+        Pocket wall cylinders are characterized by:
+        - Adjacent to large planar faces (pocket bottoms)
+        - Relatively large area (wall segments > 200mm²)
+        - Low aspect ratio (wide, not deep)
+        
+        Args:
+            face_id: Candidate cylinder face ID
+            
+        Returns:
+            True if this is a pocket wall cylinder (should be filtered)
+        """
+        # Get cylinder properties
+        cyl_face = self.aag.nodes.get(face_id)
+        if not cyl_face:
+            return False
+        
+        cyl_area = cyl_face.get('area', 0) * (1000**2)  # Convert to mm²
+        
+        # Get adjacent faces
+        adjacent = self.aag.get_adjacent_faces(face_id)
+        
+        # Check for adjacent large planar faces (pocket bottoms/walls)
+        for adj_id in adjacent:
+            adj_face = self.aag.nodes.get(adj_id)
+            if not adj_face:
+                continue
+            
+            # Check if adjacent to large planar face
+            if adj_face.get('surface_type') == 'plane':
+                adj_area = adj_face.get('area', 0) * (1000**2)  # to mm²
+                
+                # Large planar face (> 500 mm²) indicates pocket bottom/wall
+                if adj_area > 500:
+                    logger.debug(f"  Filtered cylinder {face_id}: adjacent to large planar face {adj_id} ({adj_area:.0f} mm²)")
+                    return True
+        
+        # Check if cylinder area is too large for a hole
+        # Holes typically < 100 mm² wall area
+        # Pocket walls can be 200-1000+ mm²
+        if cyl_area > 200:
+            logger.debug(f"  Filtered cylinder {face_id}: large area ({cyl_area:.0f} mm²) indicates pocket wall")
+            return True
+        
+        return False
         
     def _analyze_cylinder(self, cyl_data: Dict) -> Optional[Dict]:
         """
@@ -120,6 +169,10 @@ class HoleRecognizer:
         axis = cyl_data['axis']
         center = cyl_data['center']
         area = cyl_data['area']
+        
+        # Filter pocket wall cylinders FIRST
+        if self._is_pocket_wall_cylinder(face_id):
+            return None
         
         # Filter by size
         diameter = radius * 2000.0  # Convert to mm
