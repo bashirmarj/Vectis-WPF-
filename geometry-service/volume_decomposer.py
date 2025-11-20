@@ -14,9 +14,8 @@ from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.Bnd import Bnd_Box
-from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Ax2, gp_Dir
+from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Ax2, gp_Dir, gp_Trsf
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
-from OCC.Core.gp import gp_Trsf
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_SOLID
 from OCC.Core.GProp import GProp_GProps
@@ -183,7 +182,7 @@ class VolumeDecomposer:
         """
         Create stock block solid from bounding box.
         
-        ✅ ENHANCED with comprehensive debugging and fallback methods
+        ✅ ENHANCED with THREE fallback methods for maximum reliability
         """
         dx = bbox_dict['dx']
         dy = bbox_dict['dy']
@@ -198,42 +197,73 @@ class VolumeDecomposer:
             logger.error(f"Invalid bbox dimensions: dx={dx:.6f}, dy={dy:.6f}, dz={dz:.6f}")
             raise ValueError(f"Stock box dimensions must be positive: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm")
 
-        # Create box in OCC units (convert back from mm)
-        origin = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
-
-        # Log creation parameters for debugging
+        # METHOD 1: Create box from origin point + dimensions
         logger.info(f"  Creating stock box:")
         logger.info(f"    Origin (OCC units): ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
         logger.info(f"    Size (OCC units):   ({dx/scale:.6f}, {dy/scale:.6f}, {dz/scale:.6f})")
         logger.info(f"    Scale factor:       {scale}")
 
+        origin = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
         box_maker = BRepPrimAPI_MakeBox(origin, dx / scale, dy / scale, dz / scale)
 
+        if box_maker.IsDone():
+            logger.info("  ✅ Method 1: Stock box created from origin + dimensions")
+            return box_maker.Shape()
+
+        # METHOD 2: Create box from two corner points
+        logger.warning("  ⚠️ Method 1 failed, trying corner points method...")
+        p1 = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
+        p2 = gp_Pnt((xmin + dx) / scale, (ymin + dy) / scale, (zmin + dz) / scale)
+
+        logger.info(f"  Corner 1: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
+        logger.info(f"  Corner 2: ({(xmin+dx)/scale:.6f}, {(ymin+dy)/scale:.6f}, {(zmin+dz)/scale:.6f})")
+
+        box_maker = BRepPrimAPI_MakeBox(p1, p2)
+
+        if box_maker.IsDone():
+            logger.info("  ✅ Method 2: Stock box created from corner points")
+            return box_maker.Shape()
+
+        # METHOD 3: Create box at origin, then translate
+        logger.warning("  ⚠️ Method 2 failed, trying origin + translation method...")
+        
+        # Create box at world origin
+        box_maker = BRepPrimAPI_MakeBox(dx / scale, dy / scale, dz / scale)
+        
         if not box_maker.IsDone():
-            # Try alternative method: create box from two corner points
-            logger.warning("  ⚠️ Box creation from origin failed, trying corner points method...")
-            p1 = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
-            p2 = gp_Pnt((xmin + dx) / scale, (ymin + dy) / scale, (zmin + dz) / scale)
-
-            logger.info(f"  Corner 1: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
-            logger.info(f"  Corner 2: ({(xmin+dx)/scale:.6f}, {(ymin+dy)/scale:.6f}, {(zmin+dz)/scale:.6f})")
-
-            box_maker = BRepPrimAPI_MakeBox(p1, p2)
-
-            if not box_maker.IsDone():
-                logger.error("  ❌ Both box creation methods failed!")
-                raise RuntimeError(
-                    f"Failed to create stock box. "
-                    f"Dimensions: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm, "
-                    f"Origin: ({xmin:.2f}, {ymin:.2f}, {zmin:.2f}) mm, "
-                    f"Scale: {scale}"
-                )
-            else:
-                logger.info("  ✓ Stock box created successfully using corner points")
-        else:
-            logger.info("  ✓ Stock box created successfully")
-
-        return box_maker.Shape()
+            logger.error("  ❌ All three box creation methods failed!")
+            logger.error(f"  This suggests a fundamental issue with OpenCascade or the geometry")
+            raise RuntimeError(
+                f"Failed to create stock box using all methods. "
+                f"Dimensions: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm, "
+                f"Origin: ({xmin:.2f}, {ymin:.2f}, {zmin:.2f}) mm, "
+                f"Scale: {scale}. "
+                f"This may indicate corrupted geometry or OpenCascade configuration issues."
+            )
+        
+        # Get the box shape
+        box_shape = box_maker.Shape()
+        
+        # Create translation transformation
+        translation = gp_Trsf()
+        translation.SetTranslation(gp_Vec(xmin / scale, ymin / scale, zmin / scale))
+        
+        # Apply transformation
+        transformer = BRepBuilderAPI_Transform(box_shape, translation, False)  # False = don't copy
+        
+        if not transformer.IsDone():
+            logger.error("  ❌ Translation failed after box creation!")
+            raise RuntimeError(
+                f"Box created at origin but translation failed. "
+                f"Translation vector: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})"
+            )
+        
+        transformed_shape = transformer.Shape()
+        
+        logger.info("  ✅ Method 3: Stock box created at origin and translated")
+        logger.info(f"    Translation: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
+        
+        return transformed_shape
         
     def _boolean_cut(self, stock, part):
         """
