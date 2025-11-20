@@ -180,7 +180,11 @@ class VolumeDecomposer:
         }
         
     def _create_stock_box(self, bbox_dict):
-        """Create stock block solid from bounding box."""
+        """
+        Create stock block solid from bounding box.
+        
+        ✅ ENHANCED with comprehensive debugging and fallback methods
+        """
         dx = bbox_dict['dx']
         dy = bbox_dict['dy']
         dz = bbox_dict['dz']
@@ -188,14 +192,47 @@ class VolumeDecomposer:
         ymin = bbox_dict['ymin']
         zmin = bbox_dict['zmin']
         scale = bbox_dict['scale_to_mm']
-        
+
+        # Validate dimensions
+        if dx <= 0 or dy <= 0 or dz <= 0:
+            logger.error(f"Invalid bbox dimensions: dx={dx:.6f}, dy={dy:.6f}, dz={dz:.6f}")
+            raise ValueError(f"Stock box dimensions must be positive: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm")
+
         # Create box in OCC units (convert back from mm)
         origin = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
+
+        # Log creation parameters for debugging
+        logger.info(f"  Creating stock box:")
+        logger.info(f"    Origin (OCC units): ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
+        logger.info(f"    Size (OCC units):   ({dx/scale:.6f}, {dy/scale:.6f}, {dz/scale:.6f})")
+        logger.info(f"    Scale factor:       {scale}")
+
         box_maker = BRepPrimAPI_MakeBox(origin, dx / scale, dy / scale, dz / scale)
-        
+
         if not box_maker.IsDone():
-            raise RuntimeError("Failed to create stock box")
-            
+            # Try alternative method: create box from two corner points
+            logger.warning("  ⚠️ Box creation from origin failed, trying corner points method...")
+            p1 = gp_Pnt(xmin / scale, ymin / scale, zmin / scale)
+            p2 = gp_Pnt((xmin + dx) / scale, (ymin + dy) / scale, (zmin + dz) / scale)
+
+            logger.info(f"  Corner 1: ({xmin/scale:.6f}, {ymin/scale:.6f}, {zmin/scale:.6f})")
+            logger.info(f"  Corner 2: ({(xmin+dx)/scale:.6f}, {(ymin+dy)/scale:.6f}, {(zmin+dz)/scale:.6f})")
+
+            box_maker = BRepPrimAPI_MakeBox(p1, p2)
+
+            if not box_maker.IsDone():
+                logger.error("  ❌ Both box creation methods failed!")
+                raise RuntimeError(
+                    f"Failed to create stock box. "
+                    f"Dimensions: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm, "
+                    f"Origin: ({xmin:.2f}, {ymin:.2f}, {zmin:.2f}) mm, "
+                    f"Scale: {scale}"
+                )
+            else:
+                logger.info("  ✓ Stock box created successfully using corner points")
+        else:
+            logger.info("  ✓ Stock box created successfully")
+
         return box_maker.Shape()
         
     def _boolean_cut(self, stock, part):
