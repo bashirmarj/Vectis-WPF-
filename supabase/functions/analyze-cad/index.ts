@@ -17,12 +17,18 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
   const asFeatures = body?.features || {};
   
   const asHoles = asFeatures.holes || [];
-  const asPockets = asFeatures.pockets || [];
   const asFillets = asFeatures.filletChains || [];
   const asChamfers = asFeatures.chamferChains || [];
   const asShoulders = asFeatures.shoulders || [];
   const asShafts = asFeatures.shafts || [];
   const asThreads = asFeatures.threads || [];
+  
+  // Count pockets from prismaticMilling configurations
+  const asPrismaticMilling = asFeatures.prismaticMilling || [];
+  let asPocketCount = 0;
+  asPrismaticMilling.forEach((pm: any) => {
+    asPocketCount += (pm.configurations || []).length;
+  });
   
   // Count AAG features by type
   const aagCounts: Record<string, number> = {};
@@ -67,7 +73,7 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
   };
   
   addCountCheck('Holes', asHoles.length, aagHoles);
-  addCountCheck('Pockets', asPockets.length, aagPockets);
+  addCountCheck('Pockets', asPocketCount, aagPockets);
   addCountCheck('Fillets', asFillets.length, aagFillets);
   addCountCheck('Chamfers', asChamfers.length, aagChamfers);
   addCountCheck('Shoulders/Steps', asShoulders.length + asShafts.length, aagSteps + aagShafts);
@@ -113,7 +119,7 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
       correlation_id: correlationId,
       timestamp: new Date().toISOString(),
       aag_feature_count: aagFeatures.length,
-      as_feature_count: asHoles.length + asPockets.length + asFillets.length + asChamfers.length + asShoulders.length + asShafts.length
+      as_feature_count: asHoles.length + asPocketCount + asFillets.length + asChamfers.length + asShoulders.length + asShafts.length
     }
   };
 }
