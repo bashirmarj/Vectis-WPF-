@@ -107,10 +107,17 @@ const Validation = () => {
 
       if (error) throw error;
 
+      // Debug logging
+      console.log('🔍 Analyze-cad response:', {
+        has_validation_report: !!data?.validation_report,
+        validation_report_keys: data?.validation_report ? Object.keys(data.validation_report) : null,
+        full_data_keys: data ? Object.keys(data) : null
+      });
+
       setState(prev => ({
         ...prev,
         isValidating: false,
-        validationReport: data.validation_report || data,
+        validationReport: data?.validation_report,
       }));
 
       toast({
