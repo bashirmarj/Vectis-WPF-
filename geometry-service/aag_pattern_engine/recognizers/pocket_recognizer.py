@@ -197,7 +197,12 @@ class PocketRecognizer:
         
     def _validate_concave_walls(self, bottom_id: int, wall_ids: List[int]) -> bool:
         """
-        Validate walls are concave (inward corners) indicating removal feature.
+        Validate walls form a pocket structure.
+        
+        UPDATED LOGIC:
+        - Pockets have MOSTLY concave or smooth edges (internal corners)
+        - A few convex edges OK (e.g., at fillet blends)
+        - Reject if MAJORITY are convex (indicates boss, not pocket)
         
         Args:
             bottom_id: Bottom face ID
@@ -206,9 +211,10 @@ class PocketRecognizer:
         Returns:
             True if walls form concave (pocket) structure
         """
-        # Check edges between bottom and each wall
         concave_count = 0
         convex_count = 0
+        smooth_count = 0
+        total_edges = 0
         
         for wall_id in wall_ids:
             edge_data = self._get_edge_between(bottom_id, wall_id)
@@ -217,18 +223,33 @@ class PocketRecognizer:
                 continue
                 
             vexity = edge_data.get('vexity', 'smooth')
+            total_edges += 1
             
             if vexity == 'concave':
                 concave_count += 1
             elif vexity == 'convex':
                 convex_count += 1
-                
-        # Pocket should have majority concave edges
-        # (Convex would indicate boss, not pocket)
-        if convex_count > 0:
-            return False  # Has convex edges - likely boss
-            
-        return concave_count >= len(wall_ids) / 2
+            elif vexity == 'smooth':
+                smooth_count += 1
+        
+        if total_edges == 0:
+            return False
+        
+        # NEW LOGIC: Reject only if MAJORITY are convex (boss indicator)
+        convex_ratio = convex_count / total_edges
+        
+        if convex_ratio > 0.6:  # More than 60% convex = boss, not pocket
+            logger.debug(f"  Rejected bottom {bottom_id}: {convex_ratio:.1%} convex edges (boss)")
+            return False
+        
+        # Accept if has SOME concave/smooth edges (pocket indicators)
+        non_convex = concave_count + smooth_count
+        
+        if non_convex >= total_edges * 0.3:  # At least 30% non-convex
+            return True
+        
+        logger.debug(f"  Rejected bottom {bottom_id}: insufficient concave/smooth edges")
+        return False
         
     def _get_edge_between(self, face1_id: int, face2_id: int) -> Optional[Dict]:
         """Get edge data between two faces."""
