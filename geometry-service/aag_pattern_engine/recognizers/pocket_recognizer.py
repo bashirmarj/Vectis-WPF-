@@ -20,6 +20,7 @@ NEW APPROACH (Analysis Situs):
 import logging
 import numpy as np
 from typing import List, Dict, Optional, Set
+from .recognizer_utils import standardize_feature_output
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +149,7 @@ class PocketRecognizer:
         # Collect all face IDs
         all_faces = [bottom_id] + walls
         
-        return {
+        pocket_dict = {
             'type': pocket_type,
             'face_ids': all_faces,
             'bottom_faces': [bottom_id],
@@ -157,6 +158,7 @@ class PocketRecognizer:
             'area': bottom_area,
             'confidence': 0.8
         }
+        return standardize_feature_output(pocket_dict)
         
     def _is_horizontal(self, face_data: Dict) -> bool:
         """

@@ -12,6 +12,7 @@ Key improvements:
 import logging
 import numpy as np
 from typing import List, Dict, Optional, Tuple
+from .recognizer_utils import standardize_feature_output
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +192,7 @@ class HoleRecognizer:
         # Check if through hole (no planar bottom)
         has_bottom = self._has_planar_bottom(face_id)
         
-        return {
+        hole_dict = {
             'type': 'through_hole' if not has_bottom else 'blind_hole',
             'face_ids': [face_id],
             'axis': axis.tolist(),
@@ -206,6 +207,7 @@ class HoleRecognizer:
             'fullyRecognized': True,
             'confidence': 0.9
         }
+        return standardize_feature_output(hole_dict)
         
     def _has_planar_bottom(self, cylinder_face_id: int) -> bool:
         """
@@ -372,7 +374,7 @@ class HoleRecognizer:
         # Total depth
         total_depth = max(h['depth'] for h in group)
         
-        return {
+        merged_hole = {
             'type': hole_type,
             'face_ids': all_face_ids,
             'axis': group[0]['axis'],
@@ -382,6 +384,8 @@ class HoleRecognizer:
             'bores': all_bores,
             'fullyRecognized': True,
             'confidence': 0.85
+        }
+        return standardize_feature_output(merged_hole)
         }
         
     def _find_countersink(self, hole: Dict, cones: List[Dict]) -> bool:

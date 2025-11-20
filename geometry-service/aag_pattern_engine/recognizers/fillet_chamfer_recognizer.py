@@ -34,6 +34,7 @@ from collections import defaultdict
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
 from ..utils.vexity_helpers import is_protrusion_edge
+from .recognizer_utils import standardize_feature_output
 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +320,24 @@ class FilletRecognizer:
         logger.info(f"Total recognized: {len(fillets)}")
         logger.info("=" * 70)
         
-        return fillets
+        # Convert FilletFeature objects to standardized dicts
+        fillet_dicts = [self._fillet_to_dict(f) for f in fillets]
+        return [standardize_feature_output(f) for f in fillet_dicts]
+    
+    def _fillet_to_dict(self, fillet: 'FilletFeature') -> Dict:
+        """Convert FilletFeature dataclass to Analysis Situs format dict."""
+        return {
+            'type': fillet.type.value,  # Enum to string
+            'face_ids': fillet.face_ids,
+            'radius': fillet.radius if fillet.radius else fillet.min_radius,
+            'min_radius': fillet.min_radius,
+            'max_radius': fillet.max_radius,
+            'connected_faces': fillet.connected_faces,
+            'total_length': fillet.total_length,
+            'convex': True,  # Fillets are convex blends
+            'confidence': fillet.confidence,
+            'warnings': fillet.warnings
+        }
     
     def _find_blend_candidates(self, nodes: List[GraphNode]) -> List[GraphNode]:
         """Find faces that could be fillets"""
