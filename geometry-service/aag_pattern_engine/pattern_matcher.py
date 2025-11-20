@@ -332,10 +332,17 @@ class AAGPatternMatcher:
                 removal_volume = vol_data['shape']
                 
                 logger.info(f"  Building AAG for volume #{i+1}...")
-                builder = AAGGraphBuilder(tolerance=self.tolerance)
-                aag_data = builder.build_graph(removal_volume)
+                builder = AAGGraphBuilder(removal_volume, tolerance=self.tolerance)
+                graph_result = builder.build()
                 
-                if aag_data:
+                if graph_result and graph_result.get('nodes'):
+                    # Wrap in expected structure for compatibility
+                    aag_data = {
+                        'graph': graph_result,  # The actual graph with nodes/adjacency/statistics
+                        'builder': builder,     # Store builder reference for later use
+                        'num_nodes': len(graph_result.get('nodes', {})),
+                        'num_edges': len(builder.edges) if hasattr(builder, 'edges') else 0
+                    }
                     self.graphs.append(aag_data)
                     logger.info(f"    ✓ AAG built: {aag_data['num_nodes']} nodes, {aag_data['num_edges']} edges")
                 else:
@@ -379,49 +386,49 @@ class AAGPatternMatcher:
                     continue
                     
                 aag_data = self.graphs[0]
-                graph = aag_data['graph']
+                graph = aag_data['graph']  # This is the inner dict with 'nodes', 'adjacency', 'statistics'
                 
                 # Run appropriate recognizers based on config type
                 if config.config_type in ["2.5D_milling", "3axis_milling", "5axis_milling"]:
                     # Hole recognizer
-                    hole_rec = HoleRecognizer(tolerance=self.tolerance)
-                    holes = hole_rec.recognize_holes(graph)
+                    hole_rec = HoleRecognizer(graph)
+                    holes = hole_rec.recognize()
                     self.features.extend(holes)
                     if holes:
                         logger.info(f"    ✓ HoleRecognizer: {len(holes)} holes detected")
                     
                     # Pocket recognizer
-                    pocket_rec = PocketRecognizer(tolerance=self.tolerance)
-                    pockets = pocket_rec.recognize_pockets(graph)
+                    pocket_rec = PocketRecognizer(graph)
+                    pockets = pocket_rec.recognize()
                     self.features.extend(pockets)
                     if pockets:
                         logger.info(f"    ✓ PocketRecognizer: {len(pockets)} pockets detected")
                     
                     # Slot recognizer (if available)
                     if HAS_SLOT_RECOGNIZER:
-                        slot_rec = SlotRecognizer(tolerance=self.tolerance)
-                        slots = slot_rec.recognize_slots(graph)
+                        slot_rec = SlotRecognizer(graph)
+                        slots = slot_rec.recognize()
                         self.features.extend(slots)
                         if slots:
                             logger.info(f"    ✓ SlotRecognizer: {len(slots)} slots detected")
                     
                     # Boss recognizer
-                    boss_rec = BossRecognizer(tolerance=self.tolerance)
-                    bosses = boss_rec.recognize_bosses(graph)
+                    boss_rec = BossRecognizer(graph)
+                    bosses = boss_rec.recognize()
                     self.features.extend(bosses)
                     if bosses:
                         logger.info(f"    ✓ BossRecognizer: {len(bosses)} bosses detected")
                     
                     # Fillet/Chamfer recognizers (if available)
                     if HAS_FILLET_RECOGNIZER:
-                        fillet_rec = FilletRecognizer(tolerance=self.tolerance)
-                        fillets = fillet_rec.recognize_fillets(graph)
+                        fillet_rec = FilletRecognizer(graph)
+                        fillets = fillet_rec.recognize()
                         self.features.extend(fillets)
                         if fillets:
                             logger.info(f"    ✓ FilletRecognizer: {len(fillets)} fillets detected")
                         
-                        chamfer_rec = ChamferRecognizer(tolerance=self.tolerance)
-                        chamfers = chamfer_rec.recognize_chamfers(graph)
+                        chamfer_rec = ChamferRecognizer(graph)
+                        chamfers = chamfer_rec.recognize()
                         self.features.extend(chamfers)
                         if chamfers:
                             logger.info(f"    ✓ ChamferRecognizer: {len(chamfers)} chamfers detected")
@@ -429,8 +436,8 @@ class AAGPatternMatcher:
                 elif config.config_type == "turning":
                     # Turning recognizer (if available)
                     if HAS_TURNING_RECOGNIZER:
-                        turning_rec = TurningRecognizer(tolerance=self.tolerance)
-                        turning_features = turning_rec.recognize_turning_features(graph)
+                        turning_rec = TurningRecognizer(graph)
+                        turning_features = turning_rec.recognize()
                         self.features.extend(turning_features)
                         if turning_features:
                             logger.info(f"    ✓ TurningRecognizer: {len(turning_features)} features detected")
