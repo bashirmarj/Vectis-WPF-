@@ -523,6 +523,12 @@ def analyze_aag():
     correlation_id = request.headers.get('X-Correlation-ID', generate_correlation_id())
     start_time = time.time()
     
+    # Capture logs
+    log_stream = io.StringIO()
+    log_handler = logging.StreamHandler(log_stream)
+    log_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    logger.addHandler(log_handler)
+    
     logger.info(f"[{correlation_id}] ⚙️ AAG recognition request received")
     
     try:
@@ -698,6 +704,11 @@ def analyze_aag():
             if mesh_data:
                 logger.info(f"[{correlation_id}] ✅ Mesh data available: {len(mesh_data['vertices'])//3} vertices")
             
+            # Capture logs and add to response
+            logger.removeHandler(log_handler)
+            captured_logs = log_stream.getvalue()
+            response_data['processing_logs'] = captured_logs
+            
             return jsonify(response_data), 200 if success else 206
             
         finally:
@@ -709,13 +720,18 @@ def analyze_aag():
         processing_time_ms = int((time.time() - start_time) * 1000)
         logger.error(f"[{correlation_id}] ❌ Unexpected error: {e}", exc_info=True)
         
+        # Capture logs even on error
+        logger.removeHandler(log_handler)
+        captured_logs = log_stream.getvalue()
+        
         response = {
             'success': False,
             'status': 'partial_success' if mesh_data else 'failure',
             'error': str(e),
             'correlation_id': correlation_id,
             'processing_time_ms': processing_time_ms,
-            'errors': [str(e)]
+            'errors': [str(e)],
+            'processing_logs': captured_logs
         }
         
         if mesh_data:
