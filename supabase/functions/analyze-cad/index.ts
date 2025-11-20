@@ -584,7 +584,7 @@ serve(async (req) => {
                     status: serviceResult.status,
                     success: serviceResult.success
                   },
-                  backend_logs: serviceResult.logs || serviceResult.processing_logs || null,
+                  backend_logs: serviceResult.processing_logs || null,
                   detailed_stats: serviceResult.metadata || {}
                 };
                 
