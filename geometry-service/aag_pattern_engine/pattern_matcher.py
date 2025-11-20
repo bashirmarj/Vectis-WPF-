@@ -34,28 +34,30 @@ from .recognizers.pocket_recognizer import PocketRecognizer
 from .recognizers.boss_step_island_recognizer import BossRecognizer
 from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
 
-# Optional legacy recognizers (may not exist)
-# API COMPATIBILITY NOTES:
-# - NEW API (works with builder object): HoleRecognizer, PocketRecognizer, BossRecognizer
-#   Constructor: __init__(aag_graph_builder)
-#   Method: recognize() -> List[Dict]
-#   Access: builder.nodes (dict), builder.adjacency, builder.get_adjacent_faces()
-#
-# - LEGACY API (expects typed GraphNode objects): SlotRecognizer, FilletRecognizer, etc.
-#   Constructor: __init__(tolerance=1e-6)
-#   Method: recognize_X(graph: Dict) where graph has typed objects
-#   These are wrapped in try-except for graceful degradation
+# Optional legacy recognizers with standardized API adapters
+# The adapters provide a unified interface for recognizers with different APIs
 try:
-    from .recognizers.slot_recognizer import SlotRecognizer
+    from .recognizers.recognizer_api_adapters import (
+        StandardizedSlotRecognizer as SlotRecognizer,
+        StandardizedFilletRecognizer as FilletRecognizer,
+        StandardizedChamferRecognizer as ChamferRecognizer
+    )
     HAS_SLOT_RECOGNIZER = True
-except ImportError:
-    HAS_SLOT_RECOGNIZER = False
-    
-try:
-    from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
     HAS_FILLET_RECOGNIZER = True
-except ImportError:
-    HAS_FILLET_RECOGNIZER = False
+    logger.info("✓ Using standardized recognizer API adapters")
+except ImportError as e:
+    logger.warning(f"Recognizer adapters not available: {e}")
+    # Fallback to original recognizers (may have API mismatches)
+    try:
+        from .recognizers.slot_recognizer import SlotRecognizer
+        HAS_SLOT_RECOGNIZER = True
+    except ImportError:
+        HAS_SLOT_RECOGNIZER = False
+    try:
+        from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
+        HAS_FILLET_RECOGNIZER = True
+    except ImportError:
+        HAS_FILLET_RECOGNIZER = False
     
 try:
     from .recognizers.turning_recognizer import TurningRecognizer
