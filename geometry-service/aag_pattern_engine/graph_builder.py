@@ -66,6 +66,12 @@ class GraphNode:
     normal: Tuple[float, float, float]
     center: Optional[Tuple[float, float, float]] = None
     radius: Optional[float] = None
+    id: Optional[int] = None  # Alias for face_id for backward compatibility
+    
+    def __post_init__(self):
+        """Ensure id matches face_id for legacy recognizer compatibility"""
+        if self.id is None:
+            self.id = self.face_id
 
 
 @dataclass
