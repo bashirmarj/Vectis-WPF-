@@ -609,19 +609,22 @@ def analyze_aag():
                 
                 for aag_feat in all_features:
                     try:
+                        # AAG features are already dictionaries from recognizers
                         feature_dict = {
-                            'type': aag_feat.type.value,
-                            'subtype': getattr(aag_feat, 'subtype', None),
-                            'face_indices': aag_feat.face_ids,
-                            'confidence': aag_feat.confidence,
-                            'parameters': getattr(aag_feat, 'parameters', {}),
+                            'type': aag_feat.get('type', 'unknown'),
+                            'subtype': aag_feat.get('subtype'),
+                            'face_indices': aag_feat.get('face_ids', []),
+                            'confidence': aag_feat.get('confidence', 0.0),
+                            'parameters': aag_feat.get('parameters', {}),
                             'ml_detected': False,
                             'method': 'aag'
                         }
                         features.append(feature_dict)
                         
-                        if len(aag_feat.face_ids) > 1:
-                            logger.info(f"[{correlation_id}] 🎨 {aag_feat.type.value}: {len(aag_feat.face_ids)} faces")
+                        face_ids = aag_feat.get('face_ids', [])
+                        if len(face_ids) > 1:
+                            feat_type = aag_feat.get('type', 'unknown')
+                            logger.info(f"[{correlation_id}] 🎨 {feat_type}: {len(face_ids)} faces")
                     except Exception as feat_err:
                         logger.warning(f"[{correlation_id}] ⚠️ Failed to serialize feature: {feat_err}")
                         warnings.append(f"Feature serialization error: {str(feat_err)}")
