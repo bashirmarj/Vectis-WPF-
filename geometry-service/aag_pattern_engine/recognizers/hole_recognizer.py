@@ -386,7 +386,6 @@ class HoleRecognizer:
             'confidence': 0.85
         }
         return standardize_feature_output(merged_hole)
-        }
         
     def _find_countersink(self, hole: Dict, cones: List[Dict]) -> bool:
         """Check if hole has countersink cone at top."""
