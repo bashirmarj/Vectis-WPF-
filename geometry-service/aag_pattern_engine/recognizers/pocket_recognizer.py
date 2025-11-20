@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Tolerances
 HORIZONTAL_TOLERANCE = 0.1  # cos(84°) - nearly horizontal
 MIN_POCKET_DEPTH = 1.0  # mm
-MIN_POCKET_AREA = 10.0  # mm²
+MIN_POCKET_AREA = 5.0  # mm² (lowered to catch tiny pockets)
 
 
 class PocketRecognizer:
@@ -99,12 +99,14 @@ class PocketRecognizer:
         
         # Must be horizontal
         if not self._is_horizontal(bottom_face):
+            logger.debug(f"  Face {bottom_id}: rejected (not horizontal)")
             return None
             
         # Get adjacent faces (wall candidates)
         adjacent = self.aag.get_adjacent_faces(bottom_id)
         
         if not adjacent:
+            logger.debug(f"  Face {bottom_id}: rejected (no adjacent faces)")
             return None
             
         # Filter for vertical walls
@@ -115,7 +117,10 @@ class PocketRecognizer:
                 walls.append(adj_id)
                 
         if not walls:
+            logger.debug(f"  Face {bottom_id}: rejected (no vertical walls)")
             return None
+        
+        logger.debug(f"  Face {bottom_id}: found {len(walls)} vertical walls")
             
         # Validate as removal feature (walls must be concave)
         if not self._validate_concave_walls(bottom_id, walls):
@@ -125,13 +130,17 @@ class PocketRecognizer:
         depth = self._compute_depth(bottom_id, walls)
         
         if depth < MIN_POCKET_DEPTH:
+            logger.debug(f"  Face {bottom_id}: rejected (depth {depth:.1f}mm < {MIN_POCKET_DEPTH}mm)")
             return None
             
         # Validate minimum area
         bottom_area = bottom_face.get('area', 0) * (1000**2)  # Convert to mm²
         
         if bottom_area < MIN_POCKET_AREA:
+            logger.debug(f"  Face {bottom_id}: rejected (area {bottom_area:.1f}mm² < {MIN_POCKET_AREA}mm²)")
             return None
+        
+        logger.debug(f"  Face {bottom_id}: ✓ RECOGNIZED as pocket (area={bottom_area:.0f}mm², depth={depth:.1f}mm, walls={len(walls)})")
             
         # Classify pocket type
         pocket_type = self._classify_pocket_type(bottom_id, walls, depth)
