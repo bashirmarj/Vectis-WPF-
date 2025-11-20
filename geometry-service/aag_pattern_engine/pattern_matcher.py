@@ -25,30 +25,30 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
-# CORRECTED IMPORTS - Flat file structure (no recognizers/ subfolder)
-from volume_decomposer import VolumeDecomposer
-from graph_builder import AAGGraphBuilder, SurfaceType, Vexity, GraphNode, GraphEdge
-from machining_configuration_detector import MachiningConfigurationDetector, detect_machining_configurations
-from hole_recognizer import HoleRecognizer
-from pocket_recognizer import PocketRecognizer
-from boss_step_island_recognizer import BossRecognizer
-from tool_accessibility_analyzer import ToolAccessibilityAnalyzer
+# CORRECTED IMPORTS - Fixed relative paths for package structure
+from volume_decomposer import VolumeDecomposer  # Parent directory (geometry-service/)
+from .graph_builder import AAGGraphBuilder, SurfaceType, Vexity, GraphNode, GraphEdge
+from .machining_configuration_detector import MachiningConfigurationDetector, detect_machining_configurations
+from .recognizers.hole_recognizer import HoleRecognizer
+from .recognizers.pocket_recognizer import PocketRecognizer
+from .recognizers.boss_step_island_recognizer import BossRecognizer
+from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
 
 # Optional legacy recognizers (may not exist)
 try:
-    from slot_recognizer import SlotRecognizer
+    from .recognizers.slot_recognizer import SlotRecognizer
     HAS_SLOT_RECOGNIZER = True
 except ImportError:
     HAS_SLOT_RECOGNIZER = False
     
 try:
-    from fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
+    from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
     HAS_FILLET_RECOGNIZER = True
 except ImportError:
     HAS_FILLET_RECOGNIZER = False
     
 try:
-    from turning_recognizer import TurningRecognizer
+    from .recognizers.turning_recognizer import TurningRecognizer
     HAS_TURNING_RECOGNIZER = True
 except ImportError:
     HAS_TURNING_RECOGNIZER = False
