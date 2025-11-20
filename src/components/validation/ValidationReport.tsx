@@ -36,10 +36,20 @@ export const ValidationReport = ({ report }: ValidationReportProps) => {
     URL.revokeObjectURL(url);
   };
 
-  const totalChecks = report.total_checks || 0;
-  const passedChecks = report.passed_checks || 0;
-  const failedChecks = report.failed_checks || 0;
+  const totalChecks = report.summary?.total_checks || 0;
+  const passedChecks = report.summary?.passed || 0;
+  const failedChecks = report.summary?.failed || 0;
   const passRate = totalChecks > 0 ? (passedChecks / totalChecks) * 100 : 0;
+
+  // Group checks by category
+  const groupedChecks = report.checks ? report.checks.reduce((acc: any, check: any) => {
+    const category = check.category || 'Other';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(check);
+    return acc;
+  }, {}) : {};
 
   return (
     <div className="space-y-6">
@@ -88,22 +98,24 @@ export const ValidationReport = ({ report }: ValidationReportProps) => {
       </Card>
 
       {/* Category Breakdown */}
-      {report.categories && (
+      {Object.keys(groupedChecks).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Category Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {Object.entries(report.categories).map(([category, data]: [string, any]) => {
-                const categoryPassRate = data.total > 0 ? (data.passed / data.total) * 100 : 0;
+              {Object.entries(groupedChecks).map(([category, categoryChecks]: [string, any]) => {
+                const passed = categoryChecks.filter((c: any) => c.passed).length;
+                const total = categoryChecks.length;
+                const categoryPassRate = total > 0 ? (passed / total) * 100 : 0;
                 return (
                   <div key={category} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{category}</span>
                         <Badge variant={categoryPassRate >= 80 ? "default" : "destructive"}>
-                          {data.passed}/{data.total}
+                          {passed}/{total}
                         </Badge>
                       </div>
                       <span className={`font-bold ${getPassRateColor(categoryPassRate)}`}>
@@ -120,7 +132,7 @@ export const ValidationReport = ({ report }: ValidationReportProps) => {
       )}
 
       {/* Detailed Checks */}
-      {report.checks && (
+      {Object.keys(groupedChecks).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Detailed Validation Checks</CardTitle>
@@ -130,49 +142,19 @@ export const ValidationReport = ({ report }: ValidationReportProps) => {
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
-              {/* Structure Checks */}
-              {report.checks.structure && (
-                <AccordionItem value="structure">
+              {Object.entries(groupedChecks).map(([category, categoryChecks]: [string, any]) => (
+                <AccordionItem key={category} value={category.toLowerCase()}>
                   <AccordionTrigger>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">Structure Checks</span>
-                      <Badge variant={report.checks.structure.every((c: any) => c.passed) ? "default" : "secondary"}>
-                        {report.checks.structure.filter((c: any) => c.passed).length}/{report.checks.structure.length}
+                      <span className="font-medium">{category} Checks</span>
+                      <Badge variant={categoryChecks.every((c: any) => c.passed) ? "default" : "secondary"}>
+                        {categoryChecks.filter((c: any) => c.passed).length}/{categoryChecks.length}
                       </Badge>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2">
-                      {report.checks.structure.map((check: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <div className="flex items-center gap-2">
-                            {getCheckIcon(check.passed)}
-                            <span className="text-sm">{check.name}</span>
-                          </div>
-                          {check.message && (
-                            <span className="text-xs text-muted-foreground">{check.message}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              )}
-
-              {/* Count Checks */}
-              {report.checks.counts && (
-                <AccordionItem value="counts">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Feature Count Checks</span>
-                      <Badge variant={report.checks.counts.every((c: any) => c.passed) ? "default" : "secondary"}>
-                        {report.checks.counts.filter((c: any) => c.passed).length}/{report.checks.counts.length}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      {report.checks.counts.map((check: any, idx: number) => (
+                      {categoryChecks.map((check: any, idx: number) => (
                         <div key={idx} className="p-3 bg-muted rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -181,59 +163,25 @@ export const ValidationReport = ({ report }: ValidationReportProps) => {
                             </div>
                             {!check.passed && check.deviation !== undefined && (
                               <Badge variant="destructive">
-                                {check.deviation > 0 ? '+' : ''}{check.deviation}
+                                Deviation: {check.deviation}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground ml-6">
-                            <span>Expected: {check.expected}</span>
-                            <span>Actual: {check.actual}</span>
-                            {check.deviation !== undefined && (
-                              <span className={check.deviation === 0 ? 'text-green-600' : 'text-destructive'}>
-                                Deviation: {check.deviation}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              )}
-
-              {/* Parameter Checks */}
-              {report.checks.parameters && report.checks.parameters.length > 0 && (
-                <AccordionItem value="parameters">
-                  <AccordionTrigger>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Parameter Checks</span>
-                      <Badge variant={report.checks.parameters.every((c: any) => c.passed) ? "default" : "secondary"}>
-                        {report.checks.parameters.filter((c: any) => c.passed).length}/{report.checks.parameters.length}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      {report.checks.parameters.map((check: any, idx: number) => (
-                        <div key={idx} className="p-3 bg-muted rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {getCheckIcon(check.passed)}
-                              <span className="text-sm font-medium">{check.name}</span>
+                          {(check.expected !== undefined || check.actual !== undefined) && (
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground ml-6">
+                              {check.expected !== undefined && <span>Expected: {check.expected}</span>}
+                              {check.actual !== undefined && <span>Actual: {check.actual}</span>}
                             </div>
-                            {check.tolerance && (
-                              <Badge variant="outline">±{check.tolerance}%</Badge>
-                            )}
-                          </div>
-                          {check.details && (
-                            <p className="text-xs text-muted-foreground ml-6">{check.details}</p>
+                          )}
+                          {check.message && (
+                            <p className="text-xs text-muted-foreground mt-2 ml-6">{check.message}</p>
                           )}
                         </div>
                       ))}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
-              )}
+              ))}
             </Accordion>
           </CardContent>
         </Card>
@@ -243,17 +191,22 @@ export const ValidationReport = ({ report }: ValidationReportProps) => {
       {report.warnings && report.warnings.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              Warnings
-            </CardTitle>
+              <CardTitle>Warnings</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {report.warnings.map((warning: string, idx: number) => (
-                <div key={idx} className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-yellow-800">{warning}</p>
+              {report.warnings.map((warning: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-900">{warning.message || warning}</p>
+                    {warning.details && (
+                      <p className="text-xs text-yellow-700 mt-1">{warning.details}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
