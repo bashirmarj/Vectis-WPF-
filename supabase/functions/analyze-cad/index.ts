@@ -16,6 +16,13 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
   const body = asGroundTruth.parts?.[0]?.bodies?.[0];
   const asFeatures = body?.features || {};
   
+  console.log('🔍 DEBUG: AS Ground Truth Features Structure:', {
+    has_filletChains: !!asFeatures.filletChains,
+    filletChains_type: typeof asFeatures.filletChains,
+    filletChains_length: asFeatures.filletChains?.length,
+    filletChains_sample: asFeatures.filletChains?.slice(0, 2)
+  });
+  
   const asHoles = asFeatures.holes || [];
   const asFillets = asFeatures.filletChains || [];
   const asChamfers = asFeatures.chamferChains || [];
