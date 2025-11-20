@@ -30,6 +30,7 @@ USAGE:
 import logging
 from typing import List, Dict, Any
 from dataclasses import asdict
+from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +101,19 @@ class StandardizedSlotRecognizer:
         edges = []
         adjacency = {}
         
-        # Get nodes
+        # Get nodes - convert dict to GraphNode objects
         if hasattr(self.aag, 'nodes'):
             for face_id, node_data in self.aag.nodes.items():
-                # Convert to GraphNode-like object
-                nodes.append(node_data)
+                # Convert dict to typed GraphNode object
+                graph_node = GraphNode(
+                    face_id=node_data.get('face_id', face_id),
+                    surface_type=SurfaceType(node_data['surface_type']),  # Convert string → enum
+                    area=node_data['area'],
+                    normal=tuple(node_data.get('normal', [0.0, 0.0, 1.0])),
+                    center=tuple(node_data['center']) if 'center' in node_data else None,
+                    radius=node_data.get('radius')
+                )
+                nodes.append(graph_node)
                 
         # Get edges
         if hasattr(self.aag, 'edges'):
@@ -248,7 +257,16 @@ class StandardizedFilletRecognizer:
         
         if hasattr(self.aag, 'nodes'):
             for face_id, node_data in self.aag.nodes.items():
-                nodes.append(node_data)
+                # Convert dict to typed GraphNode object
+                graph_node = GraphNode(
+                    face_id=node_data.get('face_id', face_id),
+                    surface_type=SurfaceType(node_data['surface_type']),
+                    area=node_data['area'],
+                    normal=tuple(node_data.get('normal', [0.0, 0.0, 1.0])),
+                    center=tuple(node_data['center']) if 'center' in node_data else None,
+                    radius=node_data.get('radius')
+                )
+                nodes.append(graph_node)
                 
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
@@ -360,7 +378,16 @@ class StandardizedChamferRecognizer:
         
         if hasattr(self.aag, 'nodes'):
             for face_id, node_data in self.aag.nodes.items():
-                nodes.append(node_data)
+                # Convert dict to typed GraphNode object
+                graph_node = GraphNode(
+                    face_id=node_data.get('face_id', face_id),
+                    surface_type=SurfaceType(node_data['surface_type']),
+                    area=node_data['area'],
+                    normal=tuple(node_data.get('normal', [0.0, 0.0, 1.0])),
+                    center=tuple(node_data['center']) if 'center' in node_data else None,
+                    radius=node_data.get('radius')
+                )
+                nodes.append(graph_node)
                 
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
