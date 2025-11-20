@@ -111,8 +111,24 @@ const Validation = () => {
       has_parts: !!merged.parts,
       parts_length: merged.parts?.length,
       has_parts_0: !!merged.parts?.[0],
-      parts_0_keys: merged.parts?.[0] ? Object.keys(merged.parts[0]) : null,
+      has_bodies: !!merged.parts?.[0]?.bodies,
+      bodies_length: merged.parts?.[0]?.bodies?.length,
+      has_bodies_0: !!merged.parts?.[0]?.bodies?.[0],
+      has_features: !!merged.parts?.[0]?.bodies?.[0]?.features,
     });
+
+    // Get the correct nested location for features
+    const targetLocation = merged.parts?.[0]?.bodies?.[0]?.features;
+    
+    if (!targetLocation) {
+      console.error('❌ Cannot merge: features location not found in ground truth structure');
+      toast({
+        title: "Merge error",
+        description: "Ground truth JSON doesn't have the expected structure (parts[0].bodies[0].features)",
+        variant: "destructive",
+      });
+      return merged;
+    }
 
     for (const file of supplementaryFiles) {
       try {
@@ -140,24 +156,22 @@ const Validation = () => {
 
         for (const arrayName of mergeableArrays) {
           if (Array.isArray(data[arrayName]) && data[arrayName].length > 0) {
-            // Find the correct location in the parts structure
-            if (merged.parts?.[0]) {
-              if (!merged.parts[0][arrayName]) {
-                merged.parts[0][arrayName] = [];
-              }
-              const beforeCount = merged.parts[0][arrayName].length;
-              merged.parts[0][arrayName].push(...data[arrayName]);
-              const afterCount = merged.parts[0][arrayName].length;
-              const addedCount = data[arrayName].length;
-              
-              mergeStats[arrayName] = (mergeStats[arrayName] || 0) + addedCount;
-              
-              console.log(`✅ Merged ${addedCount} ${arrayName} from ${file.name}`, {
-                before: beforeCount,
-                after: afterCount,
-                added: addedCount,
-              });
+            if (!targetLocation[arrayName]) {
+              targetLocation[arrayName] = [];
             }
+            const beforeCount = targetLocation[arrayName].length;
+            targetLocation[arrayName].push(...data[arrayName]);
+            const afterCount = targetLocation[arrayName].length;
+            const addedCount = data[arrayName].length;
+            
+            mergeStats[arrayName] = (mergeStats[arrayName] || 0) + addedCount;
+            
+            console.log(`✅ Merged ${addedCount} ${arrayName} from ${file.name}`, {
+              before: beforeCount,
+              after: afterCount,
+              added: addedCount,
+              path: 'parts[0].bodies[0].features.' + arrayName,
+            });
           }
         }
       } catch (error) {
@@ -174,8 +188,8 @@ const Validation = () => {
     console.log('🔍 MERGE DEBUG: Final merged structure:', {
       has_parts: !!merged.parts,
       parts_length: merged.parts?.length,
-      filletChains_length: merged.parts?.[0]?.filletChains?.length,
-      chamferChains_length: merged.parts?.[0]?.chamferChains?.length,
+      filletChains_length: merged.parts?.[0]?.bodies?.[0]?.features?.filletChains?.length,
+      chamferChains_length: merged.parts?.[0]?.bodies?.[0]?.features?.chamferChains?.length,
     });
 
     // Show merge summary
@@ -217,7 +231,7 @@ const Validation = () => {
       console.log('🔍 CLIENT DEBUG: Sending to edge function:', {
         has_as_ground_truth: !!asGroundTruth,
         validation_mode: true,
-        filletChains_in_parts_0: asGroundTruth?.parts?.[0]?.filletChains?.length,
+        filletChains_in_features: asGroundTruth?.parts?.[0]?.bodies?.[0]?.features?.filletChains?.length,
       });
 
       // Upload STEP file to storage
