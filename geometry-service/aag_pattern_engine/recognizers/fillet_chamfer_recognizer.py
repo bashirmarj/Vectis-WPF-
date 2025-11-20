@@ -225,14 +225,31 @@ class FilletRecognizer:
         logger.info("Starting comprehensive fillet recognition (MFCAD++ Round)")
         logger.info("=" * 70)
         
-        nodes = graph['nodes']
-        edges = graph['edges']
+        # Convert dict-based nodes to GraphNode objects
+        nodes_data = graph['nodes']
+        
+        if isinstance(nodes_data, dict):
+            # New format: {face_id: {attributes}}
+            nodes = []
+            for face_id, face_data in nodes_data.items():
+                node = GraphNode(
+                    face_id=face_id,
+                    surface_type=SurfaceType(face_data.get('surface_type', 'unknown')),
+                    area=face_data.get('area', 0.0),
+                    normal=tuple(face_data.get('normal', [0, 0, 1])),
+                    center=tuple(face_data.get('center', [0, 0, 0])) if face_data.get('center') else None,
+                    radius=face_data.get('radius')
+                )
+                nodes.append(node)
+        else:
+            # Old format: already list of GraphNode
+            nodes = nodes_data
         
         # Get pre-built adjacency from graph (performance optimization)
         adjacency = graph.get('adjacency')
         if adjacency is None:
             logger.warning("Adjacency not in graph - rebuilding (performance hit)")
-            adjacency = self._build_adjacency_map(nodes, edges)
+            adjacency = self._build_adjacency_map_from_nodes(nodes)
         
         # Find blend surface candidates
         blend_candidates = self._find_blend_candidates(nodes)
@@ -325,26 +342,36 @@ class FilletRecognizer:
         nodes: List[GraphNode]
     ) -> bool:
         """Verify face is a fillet by checking convex transitions"""
-        adjacent = adjacency[candidate.id]
+        candidate_id = candidate.id
         
-        # Count convex transitions
-        convex_count = sum(
-            1 for adj in adjacent
-            if is_protrusion_edge(adj['vexity'])
-        )
+        if candidate_id not in adjacency:
+            return False
+        
+        adjacent = adjacency[candidate_id]
+        
+        # Count edges that indicate blending (convex transitions)
+        convex_count = 0
+        for adj in adjacent:
+            vexity = adj.get('vexity', 'smooth')
+            # Fillets create convex edges on PART geometry
+            if vexity == 'convex':
+                convex_count += 1
         
         # Fillet must blend at least 2 faces
         if convex_count < 2:
+            logger.debug(f"  Fillet candidate {candidate_id} rejected: only {convex_count} convex edges (need 2+)")
             return False
         
         # Validate radius
         if candidate.radius:
             if not (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
+                logger.debug(f"  Fillet candidate {candidate_id} rejected: radius {candidate.radius} out of range")
                 return False
         
         # Cylindrical fillets shouldn't be too large (not a shaft)
         if candidate.surface_type == SurfaceType.CYLINDER:
             if candidate.area > 0.01:  # > 100cm²
+                logger.debug(f"  Fillet candidate {candidate_id} rejected: area {candidate.area} too large for fillet")
                 return False
         
         return True
@@ -356,12 +383,21 @@ class FilletRecognizer:
         nodes: List[GraphNode]
     ) -> List[int]:
         """Get the faces being blended by this fillet"""
-        adjacent = adjacency[fillet.id]
+        fillet_id = fillet.id
         
+        if fillet_id not in adjacency:
+            return []
+        
+        adjacent = adjacency[fillet_id]
         blended_faces = []
+        
         for adj in adjacent:
-            if is_protrusion_edge(adj['vexity']):
-                blended_faces.append(adj['node_id'])
+            # Fillets blend faces across convex edges
+            if adj.get('vexity') == 'convex':
+                # Extract neighbor face ID (key might be 'face_id' or 'node_id')
+                neighbor_id = adj.get('face_id', adj.get('node_id'))
+                if neighbor_id is not None:
+                    blended_faces.append(neighbor_id)
         
         return blended_faces
     
