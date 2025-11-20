@@ -12,14 +12,17 @@ const corsHeaders = {
 function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlationId: string) {
   const checks: any[] = [];
   
-  // Parse AS ground truth structure
-  const asHoles = asGroundTruth.features?.holes || [];
-  const asPockets = asGroundTruth.features?.pockets || [];
-  const asFillets = asGroundTruth.features?.filletChains || [];
-  const asChamfers = asGroundTruth.features?.chamferChains || [];
-  const asShoulders = asGroundTruth.features?.shoulders || [];
-  const asShafts = asGroundTruth.features?.shafts || [];
-  const asThreads = asGroundTruth.features?.threads || [];
+  // Parse AS ground truth structure - access features from correct nested path
+  const body = asGroundTruth.parts?.[0]?.bodies?.[0];
+  const asFeatures = body?.features || {};
+  
+  const asHoles = asFeatures.holes || [];
+  const asPockets = asFeatures.pockets || [];
+  const asFillets = asFeatures.filletChains || [];
+  const asChamfers = asFeatures.chamferChains || [];
+  const asShoulders = asFeatures.shoulders || [];
+  const asShafts = asFeatures.shafts || [];
+  const asThreads = asFeatures.threads || [];
   
   // Count AAG features by type
   const aagCounts: Record<string, number> = {};
@@ -45,9 +48,9 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
   checks.push({
     category: 'Structure',
     name: 'Features object exists',
-    passed: !!asGroundTruth.features,
+    passed: !!body?.features,
     expected: 'object',
-    actual: typeof asGroundTruth.features
+    actual: typeof body?.features
   });
   
   // Count comparisons
