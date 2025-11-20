@@ -2,6 +2,8 @@
 AAG Pattern Matcher - Analysis Situs Workflow
 =============================================
 
+CORRECTED VERSION - Fixed imports to match flat file structure
+
 NEW WORKFLOW:
 1. Volume decomposition (single removal volume)
 2. Build AAG graph
@@ -23,18 +25,33 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Import components with correct relative paths
+# CORRECTED IMPORTS - Flat file structure (no recognizers/ subfolder)
 from volume_decomposer import VolumeDecomposer
-from .graph_builder import AAGGraphBuilder
-from .machining_configuration_detector import MachiningConfigurationDetector
-from .recognizers.hole_recognizer import HoleRecognizer
-from .recognizers.pocket_recognizer import PocketRecognizer
-from .recognizers.boss_step_island_recognizer import BossRecognizer
-from .recognizers.slot_recognizer import SlotRecognizer
-from .recognizers.fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
-from .recognizers.turning_recognizer import TurningRecognizer
-from .tool_accessibility_analyzer import ToolAccessibilityAnalyzer
-from .graph_builder import SurfaceType, Vexity, GraphNode, GraphEdge
+from graph_builder import AAGGraphBuilder, SurfaceType, Vexity, GraphNode, GraphEdge
+from machining_configuration_detector import MachiningConfigurationDetector, detect_machining_configurations
+from hole_recognizer import HoleRecognizer
+from pocket_recognizer import PocketRecognizer
+from boss_step_island_recognizer import BossRecognizer
+from tool_accessibility_analyzer import ToolAccessibilityAnalyzer
+
+# Optional legacy recognizers (may not exist)
+try:
+    from slot_recognizer import SlotRecognizer
+    HAS_SLOT_RECOGNIZER = True
+except ImportError:
+    HAS_SLOT_RECOGNIZER = False
+    
+try:
+    from fillet_chamfer_recognizer import FilletRecognizer, ChamferRecognizer
+    HAS_FILLET_RECOGNIZER = True
+except ImportError:
+    HAS_FILLET_RECOGNIZER = False
+    
+try:
+    from turning_recognizer import TurningRecognizer
+    HAS_TURNING_RECOGNIZER = True
+except ImportError:
+    HAS_TURNING_RECOGNIZER = False
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +184,7 @@ def _convert_graph_to_legacy_format(graph: Dict) -> Dict:
     seen_edges = set()
     for face_id, neighbors in graph['adjacency'].items():
         for neighbor in neighbors:
-            neighbor_id = neighbor['neighbor_id']
+            neighbor_id = neighbor.get('face_id', neighbor.get('neighbor_id'))
             
             # Avoid duplicate edges (undirected graph)
             edge_key = tuple(sorted([face_id, neighbor_id]))
@@ -288,18 +305,21 @@ class AAGPatternMatcher:
             for i, volume_data in enumerate(self.volumes):
                 logger.info(f"  Building AAG for volume {i}...")
                 
-                builder = AAGGraphBuilder()
-                aag_result = builder.build(volume_data['shape'])
+                # CORRECTED: AAGGraphBuilder takes shape in constructor
+                builder = AAGGraphBuilder(volume_data['shape'])
+                aag_result = builder.build()
                 
+                # Store both builder (for recognizers) and result data
                 self.aag_graphs.append({
                     'volume_index': i,
-                    'nodes': aag_result['nodes'],
-                    'adjacency': aag_result['adjacency'],
+                    'builder': builder,  # AAGGraphBuilder instance
+                    'nodes': builder.nodes,
+                    'adjacency': builder.adjacency,
                     'statistics': aag_result['statistics'],
                     'volume_hint': volume_data['hint']
                 })
                 
-                logger.info(f"    ✓ {len(aag_result['nodes'])} nodes, {len(aag_result['statistics']['num_edges'])} edges")
+                logger.info(f"    ✓ {len(builder.nodes)} nodes, {len(builder.edges)} edges")
                 
             logger.info(f"✓ AAG built for {len(self.aag_graphs)} volume(s)")
             
@@ -309,7 +329,8 @@ class AAGPatternMatcher:
             all_configurations = []
             
             for aag_data in self.aag_graphs:
-                configs = detect_machining_configurations(aag_data)
+                # CORRECTED: Pass builder instance to detector
+                configs = detect_machining_configurations(aag_data['builder'])
                 all_configurations.extend(configs)
                 
             logger.info(f"✓ Detected {len(all_configurations)} machining configuration(s)")
@@ -320,50 +341,70 @@ class AAGPatternMatcher:
             all_features = []
             
             for aag_data in self.aag_graphs:
-                # Create simple graph object for new recognizers (holes, pockets, bosses)
-                graph_obj = SimpleAAGGraph(
-                    aag_data['nodes'],
-                    aag_data['adjacency']
-                )
+                # CORRECTED: Use builder instance for recognizers
+                builder = aag_data['builder']
                 
-                # Run new recognizers (dict-based API)
-                hole_recognizer = HoleRecognizer(graph_obj)
+                # Run new recognizers (expect AAGGraphBuilder instance)
+                hole_recognizer = HoleRecognizer(builder)
                 holes = hole_recognizer.recognize()
                 
-                pocket_recognizer = PocketRecognizer(graph_obj)
+                pocket_recognizer = PocketRecognizer(builder)
                 pockets = pocket_recognizer.recognize()
                 
-                boss_recognizer = BossRecognizer(graph_obj)
+                boss_recognizer = BossRecognizer(builder)
                 bosses = boss_recognizer.recognize()
-                
-                # Convert graph to legacy format for old recognizers
-                legacy_graph = _convert_graph_to_legacy_format({
-                    'nodes': aag_data['nodes'],
-                    'adjacency': aag_data['adjacency']
-                })
-                
-                # Run legacy recognizers (typed API)
-                slot_recognizer = SlotRecognizer()
-                slots = slot_recognizer.recognize_slots(legacy_graph)
-                
-                fillet_recognizer = FilletRecognizer()
-                fillets = fillet_recognizer.recognize_fillets(legacy_graph)
-                
-                chamfer_recognizer = ChamferRecognizer()
-                chamfers = chamfer_recognizer.recognize_chamfers(legacy_graph)
-                
-                # Note: TurningRecognizer needs different input (not AAG graph)
-                # Skip for now - requires face loop extraction
                 
                 all_features.extend(holes)
                 all_features.extend(pockets)
                 all_features.extend(bosses)
-                all_features.extend(slots)
-                all_features.extend([f.__dict__ for f in fillets])  # Convert dataclass to dict
-                all_features.extend([f.__dict__ for f in chamfers])  # Convert dataclass to dict
                 
-                logger.info(f"  Volume {aag_data['volume_index']}: {len(holes)} holes, {len(pockets)} pockets, "
-                           f"{len(bosses)} bosses, {len(slots)} slots, {len(fillets)} fillets, {len(chamfers)} chamfers")
+                logger.info(f"  Volume {aag_data['volume_index']}: {len(holes)} holes, "
+                           f"{len(pockets)} pockets, {len(bosses)} bosses")
+                
+                # Optional legacy recognizers
+                slots = []
+                fillets = []
+                chamfers = []
+                
+                if HAS_SLOT_RECOGNIZER:
+                    try:
+                        # Convert graph to legacy format for old recognizers
+                        legacy_graph = _convert_graph_to_legacy_format({
+                            'nodes': aag_data['nodes'],
+                            'adjacency': aag_data['adjacency']
+                        })
+                        
+                        slot_recognizer = SlotRecognizer()
+                        slots = slot_recognizer.recognize_slots(legacy_graph)
+                        all_features.extend(slots)
+                        logger.info(f"  + {len(slots)} slots")
+                    except Exception as e:
+                        logger.warning(f"  Slot recognition failed: {e}")
+                
+                if HAS_FILLET_RECOGNIZER:
+                    try:
+                        legacy_graph = _convert_graph_to_legacy_format({
+                            'nodes': aag_data['nodes'],
+                            'adjacency': aag_data['adjacency']
+                        })
+                        
+                        fillet_recognizer = FilletRecognizer()
+                        fillets = fillet_recognizer.recognize_fillets(legacy_graph)
+                        
+                        chamfer_recognizer = ChamferRecognizer()
+                        chamfers = chamfer_recognizer.recognize_chamfers(legacy_graph)
+                        
+                        # Convert dataclass to dict if needed
+                        if fillets and hasattr(fillets[0], '__dict__'):
+                            fillets = [f.__dict__ for f in fillets]
+                        if chamfers and hasattr(chamfers[0], '__dict__'):
+                            chamfers = [f.__dict__ for f in chamfers]
+                            
+                        all_features.extend(fillets)
+                        all_features.extend(chamfers)
+                        logger.info(f"  + {len(fillets)} fillets, {len(chamfers)} chamfers")
+                    except Exception as e:
+                        logger.warning(f"  Fillet/chamfer recognition failed: {e}")
                 
             self.features = all_features
             
@@ -373,12 +414,9 @@ class AAGPatternMatcher:
             logger.info("\n[STEP 5/8] Analyzing tool accessibility...")
             
             for aag_data in self.aag_graphs:
-                graph_obj = SimpleAAGGraph(
-                    aag_data['nodes'],
-                    aag_data['adjacency']
-                )
+                builder = aag_data['builder']
                 
-                analyzer = ToolAccessibilityAnalyzer(graph_obj)
+                analyzer = ToolAccessibilityAnalyzer(builder)
                 self.features = analyzer.annotate_features_with_accessibility(self.features)
                 
             logger.info("✓ Accessibility analysis complete")
@@ -435,13 +473,13 @@ class AAGPatternMatcher:
         
         # Categorize features by type
         features = result_dict.get('features', [])
-        holes = [f for f in features if f.get('type') == 'hole']
-        pockets = [f for f in features if f.get('type') == 'pocket']
-        slots = [f for f in features if f.get('type') == 'slot']
-        bosses = [f for f in features if f.get('type') == 'boss']
-        steps = [f for f in features if f.get('type') == 'step']
-        fillets = [f for f in features if f.get('type') == 'fillet']
-        chamfers = [f for f in features if f.get('type') == 'chamfer']
+        holes = [f for f in features if 'hole' in f.get('type', '')]
+        pockets = [f for f in features if 'pocket' in f.get('type', '')]
+        slots = [f for f in features if 'slot' in f.get('type', '')]
+        bosses = [f for f in features if 'boss' in f.get('type', '')]
+        steps = [f for f in features if 'step' in f.get('type', '')]
+        fillets = [f for f in features if 'fillet' in f.get('type', '')]
+        chamfers = [f for f in features if 'chamfer' in f.get('type', '')]
         
         # Create metrics
         stats = result_dict.get('statistics', {})
@@ -470,7 +508,10 @@ class AAGPatternMatcher:
         # Add warnings/errors to metrics
         warnings = result_dict.get('warnings', [])
         for warning in warnings:
-            metrics.warnings.append(warning.get('message', str(warning)))
+            if isinstance(warning, dict):
+                metrics.warnings.append(warning.get('message', str(warning)))
+            else:
+                metrics.warnings.append(str(warning))
         
         if 'error_message' in result_dict:
             metrics.errors.append(result_dict['error_message'])
@@ -532,7 +573,7 @@ class AAGPatternMatcher:
                     'code': 'W001',
                     'severity': 'high',
                     'message': f"Feature {feature['type']} may be inaccessible for machining",
-                    'feature_id': feature.get('face_ids', [None])[0]
+                    'feature_id': feature.get('face_ids', [None])[0] if feature.get('face_ids') else None
                 })
                 
         # Check for low confidence
@@ -542,24 +583,10 @@ class AAGPatternMatcher:
                     'code': 'W002',
                     'severity': 'medium',
                     'message': f"Low confidence recognition for {feature['type']}",
-                    'feature_id': feature.get('face_ids', [None])[0]
+                    'feature_id': feature.get('face_ids', [None])[0] if feature.get('face_ids') else None
                 })
                 
         return warnings
-
-
-class SimpleAAGGraph:
-    """
-    Simple wrapper to provide AAG graph interface to recognizers.
-    """
-    
-    def __init__(self, nodes: Dict, adjacency: Dict):
-        self.nodes = nodes
-        self.adjacency = adjacency
-        
-    def get_adjacent_faces(self, face_id: int) -> List[int]:
-        """Get adjacent face IDs."""
-        return [n['face_id'] for n in self.adjacency.get(face_id, [])]
 
 
 def run_aag_recognition(part_shape, part_type: str = "prismatic"):
@@ -573,5 +600,7 @@ def run_aag_recognition(part_shape, part_type: str = "prismatic"):
     Returns:
         Recognition result dict
     """
-    matcher = AAGPatternMatcher(part_shape, part_type)
+    matcher = AAGPatternMatcher()
+    matcher.part_shape = part_shape
+    matcher.part_type = part_type
     return matcher.run_recognition()
