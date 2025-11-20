@@ -63,6 +63,32 @@ try:
 except ImportError:
     HAS_TURNING_RECOGNIZER = False
 
+# DFM analysis and output standardization
+try:
+    import sys
+    import os
+    # Add parent directory to path for dfm_analyzer import
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    from dfm_analyzer import DFMAnalyzer, generate_dfm_summary, format_dfm_warnings_for_output
+    HAS_DFM_ANALYZER = True
+except ImportError:
+    HAS_DFM_ANALYZER = False
+    logger = logging.getLogger(__name__)
+    logger.warning("⚠ DFM analyzer not available")
+
+# Recognizer output utilities
+try:
+    from .recognizers.recognizer_utils import (
+        standardize_features_list,
+        convert_to_analysis_situs_format,
+        merge_duplicate_face_ids
+    )
+    HAS_RECOGNIZER_UTILS = True
+except ImportError:
+    HAS_RECOGNIZER_UTILS = False
+    logger = logging.getLogger(__name__)
+    logger.warning("⚠ Recognizer utilities not available - output format may not match Analysis Situs")
+
 logger = logging.getLogger(__name__)
 
 
@@ -522,19 +548,62 @@ class AAGPatternMatcher:
                 
             logger.info("✓ Accessibility analysis complete")
             
-            # Step 6: Compile statistics
-            logger.info("\n[STEP 6/8] Compiling statistics...")
+            # Step 6: Standardize feature output format
+            logger.info("\n[STEP 6/8] Standardizing feature output...")
+            
+            if HAS_RECOGNIZER_UTILS:
+                # Standardize all features (adds faceIds camelCase format)
+                self.features = standardize_features_list(self.features)
+                
+                # Merge any duplicate features
+                original_count = len(self.features)
+                self.features = merge_duplicate_face_ids(self.features)
+                
+                if len(self.features) < original_count:
+                    logger.info(f"  ✓ Merged {original_count - len(self.features)} duplicate features")
+                    
+                logger.info(f"  ✓ Standardized {len(self.features)} features")
+            else:
+                logger.warning("  ⚠ Feature standardization skipped")
+            
+            # Step 7: DFM Analysis
+            logger.info("\n[STEP 7/8] Running DFM analysis...")
+            
+            dfm_warnings = []
+            if HAS_DFM_ANALYZER and self.graphs:
+                try:
+                    # Run DFM analysis on first graph (primary machining config)
+                    builder = self.graphs[0]['builder']
+                    dfm_analyzer = DFMAnalyzer(aag_graph=builder)
+                    dfm_warnings = dfm_analyzer.analyze_features(self.features)
+                    
+                    if dfm_warnings:
+                        logger.info(f"  ⚠️  Found {len(dfm_warnings)} DFM warnings:")
+                        for warning in dfm_warnings[:5]:  # Log first 5
+                            logger.info(f"    - Code {warning['code']}: {warning['message']}")
+                        if len(dfm_warnings) > 5:
+                            logger.info(f"    ... and {len(dfm_warnings) - 5} more")
+                    else:
+                        logger.info("  ✓ No DFM warnings")
+                except Exception as e:
+                    logger.error(f"  ✗ DFM analysis failed: {e}")
+            else:
+                logger.info("  ⚠ DFM analysis skipped (not available)")
+            
+            # Step 8: Compile statistics and warnings
+            logger.info("\n[STEP 8/8] Compiling statistics...")
             
             self.statistics = self._compile_statistics()
             
             logger.info(f"✓ Average confidence: {self.statistics['avg_confidence']:.1f}%")
             
-            # Step 7: Generate warnings
-            logger.info("\n[STEP 7/8] Generating warnings...")
+            # Generate system warnings (low confidence, missing data, etc.)
+            system_warnings = self._generate_warnings()
             
-            warnings = self._generate_warnings()
+            # Combine system warnings with DFM warnings
+            all_warnings = system_warnings + dfm_warnings
             
-            logger.info(f"⚠ {len(warnings)} warnings generated")
+            logger.info(f"⚠ {len(system_warnings)} system warnings, {len(dfm_warnings)} DFM warnings")
             
             # Done
             elapsed = time.time() - start_time
@@ -546,15 +615,18 @@ class AAGPatternMatcher:
             logger.info(f"Status: success")
             logger.info(f"Total time: {elapsed:.2f}s")
             logger.info(f"Features recognized: {len(self.features)}")
-            logger.info(f"Warnings: {len(warnings)}")
+            logger.info(f"Warnings: {len(all_warnings)}")
             logger.info("=" * 70)
             
             return {
                 'status': 'success',
                 'features': self.features,
                 'statistics': self.statistics,
-                'warnings': warnings,
-                'elapsed_time': elapsed
+                'warnings': all_warnings,  # Combined warnings
+                'dfm_warnings': dfm_warnings,  # NEW: Separate DFM warnings
+                'system_warnings': system_warnings,  # NEW: System warnings
+                'elapsed_time': elapsed,
+                'semantic_codes': format_dfm_warnings_for_output(dfm_warnings) if HAS_DFM_ANALYZER else {}  # NEW
             }
             
         except Exception as e:
@@ -565,7 +637,10 @@ class AAGPatternMatcher:
                 'error_message': str(e),
                 'features': [],
                 'statistics': {},
-                'warnings': []
+                'warnings': [],
+                'dfm_warnings': [],  # NEW
+                'system_warnings': [],  # NEW
+                'semantic_codes': {}  # NEW
             }
             
     
