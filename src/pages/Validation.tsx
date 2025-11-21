@@ -130,30 +130,81 @@ const Validation = () => {
       return merged;
     }
 
+    // Expanded list of Analysis Situs feature types
+    const mergeableArrays = [
+      // Common features
+      'filletChains',
+      'chamferChains',
+      'threads',
+      'holes',
+      'pockets',
+      'slots',
+      'shoulders',
+      'shafts',
+      // Prismatic milling
+      'prismaticMilling',
+      'contours',
+      'blends',
+      // Turning features
+      'turnDiameters',
+      'turnTapers',
+      'turnContours',
+      'turnFaces',
+      'bores',
+      'turnThreads',
+      'turnGrooves',
+      'turnRadii',
+      // Additional features
+      'steps',
+      'bosses',
+      'passages',
+      'chamfers',
+      'fillets',
+      'roundings'
+    ];
+
     for (const file of supplementaryFiles) {
       try {
         const content = await file.text();
-        const data = JSON.parse(content);
+        let data = JSON.parse(content);
 
         console.log('🔍 MERGE DEBUG: Supplementary file structure:', {
           file_name: file.name,
           data_keys: Object.keys(data),
-          has_filletChains: !!data.filletChains,
-          filletChains_length: data.filletChains?.length,
+          has_features_object: !!data.features,
+          features_type: typeof data.features,
         });
 
-        // Auto-detect and merge known feature arrays
-        const mergeableArrays = [
-          'filletChains',
-          'chamferChains',
-          'threads',
-          'holes',
-          'pockets',
-          'slots',
-          'shoulders',
-          'shafts'
-        ];
+        // Handle nested "features" object (e.g., Lathe.json)
+        if (data.features && typeof data.features === 'object' && !Array.isArray(data.features)) {
+          console.log('📦 Detected nested features object in', file.name);
+          console.log('   Features keys:', Object.keys(data.features));
+          
+          // Merge each nested feature array
+          for (const [featureType, featureArray] of Object.entries(data.features)) {
+            if (Array.isArray(featureArray) && featureArray.length > 0) {
+              if (!targetLocation[featureType]) {
+                targetLocation[featureType] = [];
+              }
+              const addedCount = featureArray.length;
+              targetLocation[featureType].push(...featureArray);
+              mergeStats[featureType] = (mergeStats[featureType] || 0) + addedCount;
+              
+              console.log(`✅ Merged ${addedCount} ${featureType} from nested features in ${file.name}`);
+            }
+          }
+          
+          // Handle "extras" object if present
+          if (data.extras && typeof data.extras === 'object') {
+            if (!targetLocation.extras) {
+              targetLocation.extras = {};
+            }
+            Object.assign(targetLocation.extras, data.extras);
+            console.log(`✅ Merged extras from ${file.name}:`, Object.keys(data.extras));
+          }
+        }
 
+        // Process direct feature arrays (backward compatibility)
         for (const arrayName of mergeableArrays) {
           if (Array.isArray(data[arrayName]) && data[arrayName].length > 0) {
             if (!targetLocation[arrayName]) {
@@ -174,6 +225,24 @@ const Validation = () => {
             });
           }
         }
+
+        // Check for unrecognized feature types and log warnings
+        const knownKeys = new Set([...mergeableArrays, 'features', 'extras', 'nvFeatures']);
+        const unrecognizedKeys = Object.keys(data).filter(key => 
+          !knownKeys.has(key) && 
+          Array.isArray(data[key]) && 
+          data[key].length > 0
+        );
+        
+        if (unrecognizedKeys.length > 0) {
+          console.warn(`⚠️ Unrecognized feature types in ${file.name}:`, unrecognizedKeys);
+          toast({
+            title: "Unknown feature types detected",
+            description: `${file.name} contains unrecognized types: ${unrecognizedKeys.join(', ')}`,
+            variant: "default",
+          });
+        }
+
       } catch (error) {
         console.error(`Failed to merge ${file.name}:`, error);
         toast({
@@ -185,23 +254,37 @@ const Validation = () => {
     }
 
     // Log final merged structure
+    const featureKeys = Object.keys(targetLocation);
     console.log('🔍 MERGE DEBUG: Final merged structure:', {
       has_parts: !!merged.parts,
       parts_length: merged.parts?.length,
-      filletChains_length: merged.parts?.[0]?.bodies?.[0]?.features?.filletChains?.length,
-      chamferChains_length: merged.parts?.[0]?.bodies?.[0]?.features?.chamferChains?.length,
+      total_feature_types: featureKeys.length,
+      feature_types: featureKeys,
+      sample_counts: {
+        filletChains: targetLocation.filletChains?.length || 0,
+        chamferChains: targetLocation.chamferChains?.length || 0,
+        holes: targetLocation.holes?.length || 0,
+        turnDiameters: targetLocation.turnDiameters?.length || 0,
+        contours: targetLocation.contours?.length || 0,
+      }
     });
 
-    // Show merge summary
-    const mergedFeatures = Object.entries(mergeStats)
-      .map(([feature, count]) => `${count} ${feature}`)
-      .join(', ');
-    
-    if (mergedFeatures) {
+    // Show comprehensive merge summary
+    if (Object.keys(mergeStats).length > 0) {
+      const mergedFeatures = Object.entries(mergeStats)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([feature, count]) => `${count} ${feature}`)
+        .join(', ');
+      
       toast({
-        title: "Supplementary features merged",
+        title: "Supplementary features merged successfully",
         description: `Added: ${mergedFeatures}`,
+        duration: 5000,
       });
+      
+      console.log('📊 MERGE SUMMARY:', mergeStats);
+    } else {
+      console.warn('⚠️ No features were merged from supplementary files');
     }
 
     return merged;
