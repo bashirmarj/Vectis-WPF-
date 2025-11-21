@@ -21,6 +21,7 @@ CRITICAL FIX (2025-11-21):
 - Adjacency map was missing vexity/angle data
 - FilletRecognizer was rejecting all candidates (0 convex edges)
 - Now properly enriches adjacency from edge data
+- Fixed: edges can be dicts OR GraphEdge objects
 
 USAGE:
     # Old way (broken):
@@ -33,14 +34,14 @@ USAGE:
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from dataclasses import asdict
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
 
 logger = logging.getLogger(__name__)
 
 
-def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[GraphEdge]) -> Dict[int, List[Dict]]:
+def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[Union[GraphEdge, Dict]]) -> Dict[int, List[Dict]]:
     """
     Build adjacency map enriched with vexity and angle data from edges.
     
@@ -48,7 +49,7 @@ def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[GraphEdge]) ->
     
     Args:
         nodes: List of GraphNode objects
-        edges: List of GraphEdge objects with vexity and dihedral_angle
+        edges: List of GraphEdge objects OR edge dicts with vexity and dihedral_angle
         
     Returns:
         Adjacency dict: {face_id: [{node_id: X, face_id: X, vexity: 'convex', angle: 180.0}, ...]}
@@ -56,33 +57,45 @@ def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[GraphEdge]) ->
     # Initialize adjacency for all nodes
     adjacency = {node.face_id: [] for node in nodes}
     
-    # Build edge lookup for fast access
-    edge_lookup = {}
-    for edge in edges:
-        key1 = (edge.from_node, edge.to_node)
-        key2 = (edge.to_node, edge.from_node)
-        edge_lookup[key1] = edge
-        edge_lookup[key2] = edge
-    
     # Populate adjacency with vexity and angle from edges
     for edge in edges:
-        # Convert vexity enum to string
-        vexity_str = edge.vexity.value if hasattr(edge.vexity, 'value') else str(edge.vexity)
+        # Handle both GraphEdge objects and dicts
+        if isinstance(edge, dict):
+            from_node = edge.get('from_node')
+            to_node = edge.get('to_node')
+            vexity = edge.get('vexity', 'smooth')
+            dihedral_angle = edge.get('dihedral_angle', 180.0)
+        else:
+            # GraphEdge object
+            from_node = edge.from_node
+            to_node = edge.to_node
+            vexity = edge.vexity.value if hasattr(edge.vexity, 'value') else str(edge.vexity)
+            dihedral_angle = edge.dihedral_angle
+        
+        # Convert vexity enum to string if needed
+        if hasattr(vexity, 'value'):
+            vexity_str = vexity.value
+        else:
+            vexity_str = str(vexity)
+        
+        # Skip if nodes don't exist
+        if from_node not in adjacency or to_node not in adjacency:
+            continue
         
         # Add forward edge
-        adjacency[edge.from_node].append({
-            'node_id': edge.to_node,
-            'face_id': edge.to_node,
+        adjacency[from_node].append({
+            'node_id': to_node,
+            'face_id': to_node,
             'vexity': vexity_str,
-            'angle': edge.dihedral_angle
+            'angle': dihedral_angle
         })
         
         # Add reverse edge (adjacency is bidirectional)
-        adjacency[edge.to_node].append({
-            'node_id': edge.from_node,
-            'face_id': edge.from_node,
+        adjacency[to_node].append({
+            'node_id': from_node,
+            'face_id': from_node,
             'vexity': vexity_str,
-            'angle': edge.dihedral_angle
+            'angle': dihedral_angle
         })
     
     return adjacency
