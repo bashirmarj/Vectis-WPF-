@@ -341,6 +341,18 @@ class FilletRecognizer:
     
     def _find_blend_candidates(self, nodes: List[GraphNode]) -> List[GraphNode]:
         """Find faces that could be fillets"""
+        
+        # Log surface type distribution at DEBUG level
+        if logger.isEnabledFor(logging.DEBUG):
+            surface_types = {}
+            for n in nodes:
+                st = n.surface_type.value if hasattr(n.surface_type, 'value') else str(n.surface_type)
+                surface_types[st] = surface_types.get(st, 0) + 1
+            
+            logger.debug("Surface type distribution:")
+            for surf_type, count in sorted(surface_types.items()):
+                logger.debug(f"  {surf_type}: {count}")
+        
         candidates = [
             n for n in nodes
             if n.surface_type in [
@@ -350,6 +362,12 @@ class FilletRecognizer:
                 SurfaceType.BSPLINE
             ]
         ]
+        
+        logger.info(f"Found {len(candidates)} blend candidates:")
+        logger.info(f"  Cylinders: {sum(1 for c in candidates if c.surface_type == SurfaceType.CYLINDER)}")
+        logger.info(f"  Tori: {sum(1 for c in candidates if c.surface_type == SurfaceType.TORUS)}")
+        logger.info(f"  Spheres: {sum(1 for c in candidates if c.surface_type == SurfaceType.SPHERE)}")
+        logger.info(f"  B-splines: {sum(1 for c in candidates if c.surface_type == SurfaceType.BSPLINE)}")
         
         return candidates
     
@@ -362,36 +380,61 @@ class FilletRecognizer:
         """Verify face is a fillet by checking convex transitions"""
         candidate_id = candidate.id
         
+        # Detailed per-candidate logging
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"  Evaluating candidate {candidate_id}:")
+            logger.debug(f"    Type: {candidate.surface_type}, Radius: {candidate.radius}, Area: {candidate.area:.6f}")
+        
         if candidate_id not in adjacency:
+            logger.debug(f"    ❌ REJECTED: Not in adjacency map")
             return False
         
         adjacent = adjacency[candidate_id]
         
         # Count edges that indicate blending (convex transitions)
         convex_count = 0
+        concave_count = 0
+        smooth_count = 0
+        
         for adj in adjacent:
             vexity = adj.get('vexity', 'smooth')
             # Fillets create convex edges on PART geometry
             if vexity == 'convex':
                 convex_count += 1
+            elif vexity == 'concave':
+                concave_count += 1
+            else:
+                smooth_count += 1
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"    Vexity: {convex_count} convex, {concave_count} concave, {smooth_count} smooth")
         
         # Fillet must blend at least 2 faces
         if convex_count < 2:
-            logger.debug(f"  Fillet candidate {candidate_id} rejected: only {convex_count} convex edges (need 2+)")
+            logger.debug(f"    ❌ REJECTED: Only {convex_count} convex edges (need 2+)")
             return False
         
         # Validate radius
         if candidate.radius:
+            if logger.isEnabledFor(logging.DEBUG):
+                radius_mm = candidate.radius * 1000
+                logger.debug(f"    Radius: {radius_mm:.3f}mm (range: {self.min_fillet_radius*1000:.1f}-{self.max_fillet_radius*1000:.1f}mm)")
+            
             if not (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
-                logger.debug(f"  Fillet candidate {candidate_id} rejected: radius {candidate.radius} out of range")
+                logger.debug(f"    ❌ REJECTED: Radius out of range")
                 return False
         
         # Cylindrical fillets shouldn't be too large (not a shaft)
         if candidate.surface_type == SurfaceType.CYLINDER:
+            if logger.isEnabledFor(logging.DEBUG):
+                area_cm2 = candidate.area * 10000
+                logger.debug(f"    Area: {area_cm2:.2f} cm² (max: 100 cm²)")
+            
             if candidate.area > 0.01:  # > 100cm²
-                logger.debug(f"  Fillet candidate {candidate_id} rejected: area {candidate.area} too large for fillet")
+                logger.debug(f"    ❌ REJECTED: Area too large (likely shaft, not fillet)")
                 return False
         
+        logger.debug(f"    ✅ PASSED: Valid fillet candidate")
         return True
     
     def _get_blended_faces(
