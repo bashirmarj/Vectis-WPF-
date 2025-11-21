@@ -4,33 +4,10 @@ Recognizer API Adapters
 
 Provides standardized API wrappers for Slot/Fillet/Chamfer recognizers.
 
-PROBLEM:
-- SlotRecognizer, FilletRecognizer, ChamferRecognizer have inconsistent APIs
-- SlotRecognizer.__init__(tolerance) vs HoleRecognizer.__init__(aag_graph)
-- recognize_slots(graph) vs recognize()
-- Return dataclasses vs dicts
-- Missing face_ids/faceIds dual format
-
-SOLUTION:
-- Wrap existing recognizers with standard API
-- Convert outputs to standardized dict format
-- Add missing metadata (confidence, faceIds, etc.)
-- Maintain backward compatibility
-
-CRITICAL FIX (2025-11-21):
-- Adjacency map was missing vexity/angle data
-- FilletRecognizer was rejecting all candidates (0 convex edges)
-- Now properly enriches adjacency from edge data
-- Fixed: edges can be dicts OR GraphEdge objects
-
-USAGE:
-    # Old way (broken):
-    slot_rec = SlotRecognizer(tolerance=1e-6)
-    slots = slot_rec.recognize_slots(graph)
-    
-    # New way (standardized):
-    slot_rec = StandardizedSlotRecognizer(aag_graph)
-    slots = slot_rec.recognize()
+CRITICAL FIX (2025-11-21 v2):
+- Removed unnecessary edge_lookup that was causing AttributeError
+- Edges are dicts with 'from_node'/'to_node' keys, not attributes
+- Directly iterates edges to build adjacency
 """
 
 import logging
@@ -186,16 +163,6 @@ class StandardizedSlotRecognizer:
         # CRITICAL FIX: Build enriched adjacency with vexity and angle data
         adjacency = _build_enriched_adjacency(nodes, edges)
         
-        # DIAGNOSTIC: Verify adjacency is properly enriched
-        if logger.isEnabledFor(logging.DEBUG):
-            sample_node = nodes[0] if nodes else None
-            if sample_node and sample_node.face_id in adjacency:
-                sample_adj = adjacency[sample_node.face_id]
-                logger.debug(f"SlotRecognizer adjacency sample for node {sample_node.face_id}:")
-                logger.debug(f"  Neighbors: {len(sample_adj)}")
-                if sample_adj:
-                    logger.debug(f"  First neighbor: {sample_adj[0]}")
-            
         return {
             'nodes': nodes,
             'edges': edges,
@@ -350,22 +317,6 @@ class StandardizedFilletRecognizer:
         # CRITICAL FIX: Build enriched adjacency with vexity and angle data
         adjacency = _build_enriched_adjacency(nodes, edges)
         
-        # DIAGNOSTIC: Verify adjacency enrichment
-        if logger.isEnabledFor(logging.DEBUG):
-            # Count vexity types
-            vexity_counts = {'convex': 0, 'concave': 0, 'smooth': 0, 'unknown': 0}
-            for face_id, neighbors in adjacency.items():
-                for neighbor in neighbors:
-                    vexity = neighbor.get('vexity', 'unknown')
-                    vexity_counts[vexity] = vexity_counts.get(vexity, 0) + 1
-            
-            logger.debug(f"FilletRecognizer adjacency vexity distribution: {vexity_counts}")
-            
-            # Sample check
-            if nodes and nodes[0].face_id in adjacency:
-                sample_adj = adjacency[nodes[0].face_id]
-                logger.debug(f"Sample adjacency for node {nodes[0].face_id}: {sample_adj[:2] if sample_adj else 'empty'}")
-            
         return {
             'nodes': nodes,
             'edges': edges,
