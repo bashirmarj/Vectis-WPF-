@@ -144,20 +144,23 @@ class HoleRecognizer:
             if adj_face.get('surface_type') == 'plane':
                 adj_area = adj_face.get('area', 0) * (1000**2)  # to mm²
                 
-                # Large planar face (> 500 mm²) indicates pocket bottom/wall
-                if adj_area > 500:
-                    logger.debug(f"  Filtered cylinder {face_id}: adjacent to large planar face {adj_id} ({adj_area:.0f} mm²)")
-                    return True
+        # TOPOLOGICAL FIX: Removed area-based filtering (was filtering ALL holes)
+        # OLD APPROACH: Used magic thresholds (500mm², 200mm²) → Filtered valid holes
+        # NEW APPROACH: Let coaxial grouping decide hole vs pocket wall
+        # 
+        # The area-based heuristics were rejecting valid holes because:
+        # - Small holes can have "large" adjacent faces (e.g., 600mm² top face)
+        # - Cylinder wall area depends on depth, not just diameter
+        # 
+        # Proper hole detection requires:
+        # 1. Group coaxial cylinders first
+        # 2. Check if group connects two parallel faces (topological hole test)
+        # 3. Validate as through-hole, blind-hole, or counterbore
+        #
+        # For now: Always return False (don't filter any cylinders here)
+        # Let the coaxial grouping logic downstream handle classification
         
-        # Check if cylinder area is too large for a hole
-        # Holes typically < 100 mm² wall area
-        # Pocket walls can be 200-1000+ mm²
-        if cyl_area > 200:
-            logger.debug(f"  Filtered cylinder {face_id}: large area ({cyl_area:.0f} mm²) indicates pocket wall")
-            return True
-        
-        return False
-        
+        return False  # Don't pre-filter any cylinders
     def _analyze_cylinder(self, cyl_data: Dict) -> Optional[Dict]:
         """
         Analyze single cylinder as potential hole bore.
