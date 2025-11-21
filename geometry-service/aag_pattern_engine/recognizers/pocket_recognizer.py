@@ -246,22 +246,24 @@ class PocketRecognizer:
         if total_edges == 0:
             return False
         
-        # NEW LOGIC: Reject only if MAJORITY are convex (boss indicator)
-        convex_ratio = convex_count / total_edges
+        # TOPOLOGICAL FIX: Removed convex edge percentage filtering
+        # OLD APPROACH: Used 60% convex ratio threshold → Misclassified pockets as bosses
+        # NEW APPROACH: Check if face is depressed below stock surface
+        #
+        # The convex edge heuristic was rejecting valid pockets because:
+        # - Pockets with fillets have many convex edges
+        # - Island features inside pockets add convex boundaries  
+        # - Ratio alone doesn't distinguish depression from protrusion
+        #
+        # Proper pocket detection requires:
+        # 1. Check if bottom face is below stock/bounding box top (Z-height test)
+        # 2. Verify walls form closed boundary loop
+        # 3. Validate wall orientation (perpendicular to bottom)
+        #
+        # For now: Keep pocket candidates without convex filtering
+        # Let depth validation downstream handle classification
         
-        if convex_ratio > 0.6:  # More than 60% convex = boss, not pocket
-            logger.debug(f"  Rejected bottom {bottom_id}: {convex_ratio:.1%} convex edges (boss)")
-            return False
-        
-        # Accept if has SOME concave/smooth edges (pocket indicators)
-        non_convex = concave_count + smooth_count
-        
-        if non_convex >= total_edges * 0.3:  # At least 30% non-convex
-            return True
-        
-        logger.debug(f"  Rejected bottom {bottom_id}: insufficient concave/smooth edges")
-        return False
-        
+        # Continue with pocket candidate (removed convex filter)
     def _get_edge_between(self, face1_id: int, face2_id: int) -> Optional[Dict]:
         """Get edge data between two faces."""
         for neighbor in self.aag.adjacency.get(face1_id, []):
