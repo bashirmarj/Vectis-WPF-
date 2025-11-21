@@ -232,11 +232,11 @@ class MachiningConfigurationDetector:
         if depth < 1.0:  # mm - too shallow
             return None
             
-        # Validate vexity (walls should be concave for removal feature)
-        if not self._validate_pocket_vexity(bottom_id, wall_faces):
-            logger.debug(f"  Pocket rejected: bottom {bottom_id} has convex walls (likely boss)")
-            return None
-            
+        # UNIVERSAL FIX: Removed convex wall pre-filter
+        # The vexity check was rejecting pockets if ANY edge was convex, which is too restrictive.
+        # Real pockets can have mixed vexity (some convex, some concave edges) depending on geometry.
+        # This pre-filter prevented pockets from reaching the pocket_recognizer for proper topological analysis.
+        # Topological validation should be done in the recognizer, not as a heuristic pre-filter here.            
         return {
             'bottom_faces': [bottom_id],
             'wall_faces': wall_faces,
