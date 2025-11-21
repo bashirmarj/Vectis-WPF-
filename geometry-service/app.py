@@ -523,11 +523,17 @@ def analyze_aag():
     correlation_id = request.headers.get('X-Correlation-ID', generate_correlation_id())
     start_time = time.time()
     
-    # Capture logs
+    # Capture ALL logs from ALL loggers (root logger)
     log_stream = io.StringIO()
     log_handler = logging.StreamHandler(log_stream)
+    log_handler.setLevel(logging.DEBUG)  # Capture all levels
     log_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
-    logger.addHandler(log_handler)
+    
+    # Add to root logger to capture logs from all modules
+    root_logger = logging.getLogger()
+    original_level = root_logger.level
+    root_logger.setLevel(logging.DEBUG)  # Ensure we capture everything
+    root_logger.addHandler(log_handler)
     
     logger.info(f"[{correlation_id}] ⚙️ AAG recognition request received")
     
@@ -705,7 +711,9 @@ def analyze_aag():
                 logger.info(f"[{correlation_id}] ✅ Mesh data available: {len(mesh_data['vertices'])//3} vertices")
             
             # Capture logs and add to response
-            logger.removeHandler(log_handler)
+            root_logger = logging.getLogger()
+            root_logger.removeHandler(log_handler)
+            root_logger.setLevel(original_level)  # Restore original level
             captured_logs = log_stream.getvalue()
             response_data['processing_logs'] = captured_logs
             
@@ -721,7 +729,9 @@ def analyze_aag():
         logger.error(f"[{correlation_id}] ❌ Unexpected error: {e}", exc_info=True)
         
         # Capture logs even on error
-        logger.removeHandler(log_handler)
+        root_logger = logging.getLogger()
+        root_logger.removeHandler(log_handler)
+        root_logger.setLevel(original_level)  # Restore original level
         captured_logs = log_stream.getvalue()
         
         response = {
