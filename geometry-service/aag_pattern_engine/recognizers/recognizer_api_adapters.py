@@ -100,6 +100,12 @@ class StandardizedSlotRecognizer:
         nodes = []
         edges = []
         adjacency = {}
+                
+        # DIAGNOSTIC: Log source graph statistics before processing
+        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG nodes: {len(self.aag.nodes)}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG node keys (first 10): {list(self.aag.nodes.keys())[:10]}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG adjacency: {len(self.aag.adjacency)}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG adjacency keys (first 10): {list(self.aag.adjacency.keys())[:10]}")
         
         # Get nodes - convert dict to GraphNode objects
         if hasattr(self.aag, 'nodes'):
@@ -122,6 +128,12 @@ class StandardizedSlotRecognizer:
         # Get adjacency
         if hasattr(self.aag, 'adjacency'):
             adjacency = self.aag.adjacency
+                    
+        # DIAGNOSTIC: Log output graph statistics before returning
+        logger.error(f"ADAPTER DIAGNOSTIC - Output nodes list length: {len(nodes)}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Output node face_ids (first 10): {[n.face_id for n in nodes[:10]]}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Output adjacency keys (first 10): {list(adjacency.keys())[:10]}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Mismatch check: {[n.face_id in adjacency for n in nodes[:5]]}")
             
         return {
             'nodes': nodes,
