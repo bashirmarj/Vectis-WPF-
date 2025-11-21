@@ -418,6 +418,20 @@ class FilletRecognizer:
             logger.debug(f"    Vexity: {convex_count} convex, {concave_count} concave, {smooth_count} smooth")
         
         # Fillet must blend at least 2 faces
+
+                # CRITICAL FIX: Handle isolated cylindrical blends (hole fillets in removal volume)
+        # These may have empty adjacency lists but are still valid fillets based on geometry
+        if len(adjacent) == 0 and candidate.surface_type == SurfaceType.CYLINDER:
+            if candidate.radius and (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
+                if candidate.area <= 0.01:  # Not too large (< 100 cm²)
+                    logger.debug(f"  ✅ PASSED: Isolated cylindrical blend (hole fillet)")
+                    return True
+                else:
+                    logger.debug(f"  ❌ REJECTED: Isolated cylinder too large (likely shaft, not fillet)")
+                    return False
+            else:
+                logger.debug(f"  ❌ REJECTED: Radius out of range or missing")
+                return False
         if convex_count < 2:
             logger.debug(f"    ❌ REJECTED: Only {convex_count} convex edges (need 2+)")
             return False
@@ -1348,6 +1362,7 @@ class ChamferRecognizer:
             })
         
         return adjacency
+
 
 
 
