@@ -478,6 +478,13 @@ class AAGGraphBuilder:
                 'dihedral_deg': edge['dihedral_deg'],
                 'vexity': edge['vexity']
             })
+
+            # CRITICAL FIX: Analysis Situs method - ensure ALL nodes have adjacency entries
+        # Even isolated faces (cylinders without edges) need entries for recognizers
+        for node_id in self.nodes.keys():
+            if node_id not in self.adjacency:
+                # Initialize empty adjacency list for isolated faces
+                self.adjacency[node_id] = []
             
     def _detect_orientation(self):
         """
