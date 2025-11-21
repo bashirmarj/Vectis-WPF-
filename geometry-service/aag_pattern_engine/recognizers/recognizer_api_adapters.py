@@ -22,19 +22,26 @@ def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[Union[GraphEdg
     """
     Build adjacency map enriched with vexity and angle data from edges.
     
-    CRITICAL: This fixes the fillet recognizer issue where adjacency was missing vexity info.
+    CRITICAL FIX: Uses face_id from nodes to match the GraphNode.face_id values
     
     Args:
-        nodes: List of GraphNode objects
+        nodes: List of GraphNode objects with face_id attribute
         edges: List of GraphEdge objects OR edge dicts with vexity and dihedral_angle
         
     Returns:
         Adjacency dict: {face_id: [{node_id: X, face_id: X, vexity: 'convex', angle: 180.0}, ...]}
     """
-    # Initialize adjacency for all nodes
+    # Initialize adjacency using the ACTUAL face_id from nodes
     adjacency = {node.face_id: [] for node in nodes}
     
+    logger.debug(f"_build_enriched_adjacency: Initialized adjacency for {len(nodes)} nodes")
+    logger.debug(f"  Node face_id range: {min(n.face_id for n in nodes)} - {max(n.face_id for n in nodes)}")
+    logger.debug(f"  Total edges to process: {len(edges)}")
+    
     # Populate adjacency with vexity and angle from edges
+    edges_processed = 0
+    edges_skipped = 0
+    
     for edge in edges:
         # Handle both GraphEdge objects and dicts
         if isinstance(edge, dict):
@@ -55,8 +62,9 @@ def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[Union[GraphEdg
         else:
             vexity_str = str(vexity)
         
-        # Skip if nodes don't exist
+        # Skip if nodes don't exist in our adjacency map
         if from_node not in adjacency or to_node not in adjacency:
+            edges_skipped += 1
             continue
         
         # Add forward edge
@@ -74,6 +82,21 @@ def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[Union[GraphEdg
             'vexity': vexity_str,
             'angle': dihedral_angle
         })
+        
+        edges_processed += 1
+    
+    # Log statistics
+    logger.debug(f"  Edges processed: {edges_processed}")
+    logger.debug(f"  Edges skipped (no matching nodes): {edges_skipped}")
+    
+    # Sample check
+    non_empty = [fid for fid, neighbors in adjacency.items() if len(neighbors) > 0]
+    logger.debug(f"  Non-empty adjacency entries: {len(non_empty)}/{len(adjacency)}")
+    if non_empty:
+        sample_id = non_empty[0]
+        logger.debug(f"  Sample adjacency[{sample_id}] has {len(adjacency[sample_id])} neighbors")
+        if adjacency[sample_id]:
+            logger.debug(f"    First neighbor: {adjacency[sample_id][0]}")
     
     return adjacency
 
