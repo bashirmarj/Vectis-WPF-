@@ -159,6 +159,9 @@ class StandardizedSlotRecognizer:
         """
         Build graph dict from AAGGraphBuilder instance.
         
+        CRITICAL FIX: Use pre-built adjacency from AAG if available (already has vexity).
+        This avoids face ID mismatch when edges reference different face numbering.
+        
         Returns:
             Graph dict compatible with SlotRecognizer.recognize_slots()
         """
@@ -178,12 +181,35 @@ class StandardizedSlotRecognizer:
                     radius=node_data.get('radius')
                 )
                 nodes.append(graph_node)
+        
+        # CRITICAL: Check if AAG already has enriched adjacency with vexity
+        if hasattr(self.aag, 'adjacency') and self.aag.adjacency:
+            # Verify adjacency has vexity information
+            sample_key = list(self.aag.adjacency.keys())[0] if self.aag.adjacency else None
+            if sample_key and self.aag.adjacency[sample_key]:
+                sample_neighbor = self.aag.adjacency[sample_key][0]
+                has_vexity = isinstance(sample_neighbor, dict) and 'vexity' in sample_neighbor
                 
-        # Get edges
+                if has_vexity:
+                    # Adjacency already enriched - use directly
+                    logger.debug(f"SlotRecognizer: Using pre-enriched adjacency from AAG builder")
+                    non_empty = [fid for fid, neighbors in self.aag.adjacency.items() if len(neighbors) > 0]
+                    logger.debug(f"  Adjacency entries: {len(self.aag.adjacency)}, non-empty: {len(non_empty)}")
+                    
+                    return {
+                        'nodes': nodes,
+                        'edges': edges,
+                        'adjacency': dict(self.aag.adjacency),
+                        'metadata': {
+                            'up_axis': [0.0, 0.0, 1.0]
+                        }
+                    }
+        
+        # Fallback: build enriched adjacency from edges
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
         
-        # CRITICAL FIX: Build enriched adjacency with vexity and angle data
+        logger.debug("SlotRecognizer: Fallback to building adjacency from edges")
         adjacency = _build_enriched_adjacency(nodes, edges)
         
         return {
@@ -316,7 +342,8 @@ class StandardizedFilletRecognizer:
         """
         Build graph dict from AAG builder with enriched adjacency.
         
-        CRITICAL FIX: Adjacency now includes vexity and angle data from edges.
+        CRITICAL FIX: Use pre-built adjacency from AAG if available (already has vexity).
+        This avoids face ID mismatch when edges reference different face numbering.
         """
         nodes = []
         edges = []
@@ -333,11 +360,33 @@ class StandardizedFilletRecognizer:
                     radius=node_data.get('radius')
                 )
                 nodes.append(graph_node)
+        
+        # CRITICAL: Check if AAG already has enriched adjacency with vexity
+        if hasattr(self.aag, 'adjacency') and self.aag.adjacency:
+            # Verify adjacency has vexity information
+            sample_key = list(self.aag.adjacency.keys())[0] if self.aag.adjacency else None
+            if sample_key and self.aag.adjacency[sample_key]:
+                sample_neighbor = self.aag.adjacency[sample_key][0]
+                has_vexity = isinstance(sample_neighbor, dict) and 'vexity' in sample_neighbor
                 
+                if has_vexity:
+                    # Adjacency already enriched - use directly
+                    logger.debug(f"FilletRecognizer: Using pre-enriched adjacency from AAG builder")
+                    non_empty = [fid for fid, neighbors in self.aag.adjacency.items() if len(neighbors) > 0]
+                    logger.debug(f"  Adjacency entries: {len(self.aag.adjacency)}, non-empty: {len(non_empty)}")
+                    
+                    return {
+                        'nodes': nodes,
+                        'edges': edges,
+                        'adjacency': dict(self.aag.adjacency),
+                        'metadata': {}
+                    }
+        
+        # Fallback: build enriched adjacency from edges
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
         
-        # CRITICAL FIX: Build enriched adjacency with vexity and angle data
+        logger.debug("FilletRecognizer: Fallback to building adjacency from edges")
         adjacency = _build_enriched_adjacency(nodes, edges)
         
         return {
@@ -440,6 +489,9 @@ class StandardizedChamferRecognizer:
     def _build_graph_dict(self) -> Dict:
         """
         Build graph dict from AAG builder with enriched adjacency.
+        
+        CRITICAL FIX: Use pre-built adjacency from AAG if available (already has vexity).
+        This avoids face ID mismatch when edges reference different face numbering.
         """
         nodes = []
         edges = []
@@ -456,11 +508,33 @@ class StandardizedChamferRecognizer:
                     radius=node_data.get('radius')
                 )
                 nodes.append(graph_node)
+        
+        # CRITICAL: Check if AAG already has enriched adjacency with vexity
+        if hasattr(self.aag, 'adjacency') and self.aag.adjacency:
+            # Verify adjacency has vexity information
+            sample_key = list(self.aag.adjacency.keys())[0] if self.aag.adjacency else None
+            if sample_key and self.aag.adjacency[sample_key]:
+                sample_neighbor = self.aag.adjacency[sample_key][0]
+                has_vexity = isinstance(sample_neighbor, dict) and 'vexity' in sample_neighbor
                 
+                if has_vexity:
+                    # Adjacency already enriched - use directly
+                    logger.debug(f"ChamferRecognizer: Using pre-enriched adjacency from AAG builder")
+                    non_empty = [fid for fid, neighbors in self.aag.adjacency.items() if len(neighbors) > 0]
+                    logger.debug(f"  Adjacency entries: {len(self.aag.adjacency)}, non-empty: {len(non_empty)}")
+                    
+                    return {
+                        'nodes': nodes,
+                        'edges': edges,
+                        'adjacency': dict(self.aag.adjacency),
+                        'metadata': {}
+                    }
+        
+        # Fallback: build enriched adjacency from edges
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
         
-        # CRITICAL FIX: Build enriched adjacency with vexity and angle data
+        logger.debug("ChamferRecognizer: Fallback to building adjacency from edges")
         adjacency = _build_enriched_adjacency(nodes, edges)
             
         return {
