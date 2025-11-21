@@ -125,15 +125,22 @@ class StandardizedSlotRecognizer:
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
             
-        # Get adjacency
+        # CRITICAL FIX: Get adjacency and ensure ALL nodes have entries
         if hasattr(self.aag, 'adjacency'):
-            adjacency = self.aag.adjacency
+            adjacency = dict(self.aag.adjacency)  # Make a copy to avoid modifying source
+        
+        # Add empty adjacency entries for nodes missing from adjacency map
+        for node in nodes:
+            if node.face_id not in adjacency:
+                adjacency[node.face_id] = []
+                logger.warning(f"Node {node.face_id} missing from adjacency - adding empty entry")
                     
         # DIAGNOSTIC: Log output graph statistics before returning
         logger.error(f"ADAPTER DIAGNOSTIC - Output nodes list length: {len(nodes)}")
         logger.error(f"ADAPTER DIAGNOSTIC - Output node face_ids (first 10): {[n.face_id for n in nodes[:10]]}")
+        logger.error(f"ADAPTER DIAGNOSTIC - Output adjacency size: {len(adjacency)} entries for {len(nodes)} nodes")
         logger.error(f"ADAPTER DIAGNOSTIC - Output adjacency keys (first 10): {list(adjacency.keys())[:10]}")
-        logger.error(f"ADAPTER DIAGNOSTIC - Mismatch check: {[n.face_id in adjacency for n in nodes[:5]]}")
+        logger.error(f"ADAPTER DIAGNOSTIC - All nodes in adjacency: {all(n.face_id in adjacency for n in nodes)}")
             
         return {
             'nodes': nodes,
@@ -283,8 +290,15 @@ class StandardizedFilletRecognizer:
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
             
+        # CRITICAL FIX: Get adjacency and ensure ALL nodes have entries
         if hasattr(self.aag, 'adjacency'):
-            adjacency = self.aag.adjacency
+            adjacency = dict(self.aag.adjacency)  # Make a copy
+        
+        # Add empty adjacency entries for nodes missing from adjacency map
+        for node in nodes:
+            if node.face_id not in adjacency:
+                adjacency[node.face_id] = []
+                logger.debug(f"FilletRecognizer: Node {node.face_id} missing from adjacency - adding empty entry")
             
         return {
             'nodes': nodes,
@@ -404,8 +418,15 @@ class StandardizedChamferRecognizer:
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
             
+        # CRITICAL FIX: Get adjacency and ensure ALL nodes have entries
         if hasattr(self.aag, 'adjacency'):
-            adjacency = self.aag.adjacency
+            adjacency = dict(self.aag.adjacency)  # Make a copy
+        
+        # Add empty adjacency entries for nodes missing from adjacency map
+        for node in nodes:
+            if node.face_id not in adjacency:
+                adjacency[node.face_id] = []
+                logger.debug(f"ChamferRecognizer: Node {node.face_id} missing from adjacency - adding empty entry")
             
         return {
             'nodes': nodes,
