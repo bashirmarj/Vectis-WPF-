@@ -3,8 +3,8 @@ Hole Recognizer - Analysis Situs Aligned
 =========================================
 
 Key improvements:
-- Strict coaxiality (0.01mm tolerance)
-- Proper compound merging
+- Relaxed coaxiality (0.5mm tolerance for proper merging)-
+- Proper compound mergingProper compound merging
 - Bottom validation
 - Through-hole detection
 """
@@ -17,8 +17,7 @@ from .recognizer_utils import standardize_feature_output
 logger = logging.getLogger(__name__)
 
 # Analysis Situs tolerances
-COAXIAL_TOLERANCE = 0.01  # mm (was 1.0mm - way too loose!)
-DEPTH_MERGE_TOLERANCE = 0.1  # mm
+COAXIAL_TOLERANCE = 0.5  # mm (loosened from 0.01mm to allow proper coaxial merging)DEPTH_MERGE_TOLERANCE = 0.1  # mm
 MIN_HOLE_DIAMETER = 1.0  # mm
 MIN_HOLE_DEPTH = 0.5  # mm
 
