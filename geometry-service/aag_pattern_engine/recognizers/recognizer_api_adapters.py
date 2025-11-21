@@ -17,6 +17,11 @@ SOLUTION:
 - Add missing metadata (confidence, faceIds, etc.)
 - Maintain backward compatibility
 
+CRITICAL FIX (2025-11-21):
+- Adjacency map was missing vexity/angle data
+- FilletRecognizer was rejecting all candidates (0 convex edges)
+- Now properly enriches adjacency from edge data
+
 USAGE:
     # Old way (broken):
     slot_rec = SlotRecognizer(tolerance=1e-6)
@@ -33,6 +38,54 @@ from dataclasses import asdict
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
 
 logger = logging.getLogger(__name__)
+
+
+def _build_enriched_adjacency(nodes: List[GraphNode], edges: List[GraphEdge]) -> Dict[int, List[Dict]]:
+    """
+    Build adjacency map enriched with vexity and angle data from edges.
+    
+    CRITICAL: This fixes the fillet recognizer issue where adjacency was missing vexity info.
+    
+    Args:
+        nodes: List of GraphNode objects
+        edges: List of GraphEdge objects with vexity and dihedral_angle
+        
+    Returns:
+        Adjacency dict: {face_id: [{node_id: X, face_id: X, vexity: 'convex', angle: 180.0}, ...]}
+    """
+    # Initialize adjacency for all nodes
+    adjacency = {node.face_id: [] for node in nodes}
+    
+    # Build edge lookup for fast access
+    edge_lookup = {}
+    for edge in edges:
+        key1 = (edge.from_node, edge.to_node)
+        key2 = (edge.to_node, edge.from_node)
+        edge_lookup[key1] = edge
+        edge_lookup[key2] = edge
+    
+    # Populate adjacency with vexity and angle from edges
+    for edge in edges:
+        # Convert vexity enum to string
+        vexity_str = edge.vexity.value if hasattr(edge.vexity, 'value') else str(edge.vexity)
+        
+        # Add forward edge
+        adjacency[edge.from_node].append({
+            'node_id': edge.to_node,
+            'face_id': edge.to_node,
+            'vexity': vexity_str,
+            'angle': edge.dihedral_angle
+        })
+        
+        # Add reverse edge (adjacency is bidirectional)
+        adjacency[edge.to_node].append({
+            'node_id': edge.from_node,
+            'face_id': edge.from_node,
+            'vexity': vexity_str,
+            'angle': edge.dihedral_angle
+        })
+    
+    return adjacency
 
 
 class StandardizedSlotRecognizer:
@@ -96,16 +149,8 @@ class StandardizedSlotRecognizer:
         Returns:
             Graph dict compatible with SlotRecognizer.recognize_slots()
         """
-        # Extract nodes and edges from builder
         nodes = []
         edges = []
-        adjacency = {}
-                
-        # DIAGNOSTIC: Log source graph statistics before processing
-        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG nodes: {len(self.aag.nodes)}")
-        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG node keys (first 10): {list(self.aag.nodes.keys())[:10]}")
-        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG adjacency: {len(self.aag.adjacency)}")
-        logger.error(f"ADAPTER DIAGNOSTIC - Source AAG adjacency keys (first 10): {list(self.aag.adjacency.keys())[:10]}")
         
         # Get nodes - convert dict to GraphNode objects
         if hasattr(self.aag, 'nodes'):
@@ -124,23 +169,19 @@ class StandardizedSlotRecognizer:
         # Get edges
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
-            
-        # CRITICAL FIX: Get adjacency and ensure ALL nodes have entries
-        if hasattr(self.aag, 'adjacency'):
-            adjacency = dict(self.aag.adjacency)  # Make a copy to avoid modifying source
         
-        # Add empty adjacency entries for nodes missing from adjacency map
-        for node in nodes:
-            if node.face_id not in adjacency:
-                adjacency[node.face_id] = []
-                logger.warning(f"Node {node.face_id} missing from adjacency - adding empty entry")
-                    
-        # DIAGNOSTIC: Log output graph statistics before returning
-        logger.error(f"ADAPTER DIAGNOSTIC - Output nodes list length: {len(nodes)}")
-        logger.error(f"ADAPTER DIAGNOSTIC - Output node face_ids (first 10): {[n.face_id for n in nodes[:10]]}")
-        logger.error(f"ADAPTER DIAGNOSTIC - Output adjacency size: {len(adjacency)} entries for {len(nodes)} nodes")
-        logger.error(f"ADAPTER DIAGNOSTIC - Output adjacency keys (first 10): {list(adjacency.keys())[:10]}")
-        logger.error(f"ADAPTER DIAGNOSTIC - All nodes in adjacency: {all(n.face_id in adjacency for n in nodes)}")
+        # CRITICAL FIX: Build enriched adjacency with vexity and angle data
+        adjacency = _build_enriched_adjacency(nodes, edges)
+        
+        # DIAGNOSTIC: Verify adjacency is properly enriched
+        if logger.isEnabledFor(logging.DEBUG):
+            sample_node = nodes[0] if nodes else None
+            if sample_node and sample_node.face_id in adjacency:
+                sample_adj = adjacency[sample_node.face_id]
+                logger.debug(f"SlotRecognizer adjacency sample for node {sample_node.face_id}:")
+                logger.debug(f"  Neighbors: {len(sample_adj)}")
+                if sample_adj:
+                    logger.debug(f"  First neighbor: {sample_adj[0]}")
             
         return {
             'nodes': nodes,
@@ -269,10 +310,13 @@ class StandardizedFilletRecognizer:
             return []
             
     def _build_graph_dict(self) -> Dict:
-        """Build graph dict from AAG builder."""
+        """
+        Build graph dict from AAG builder with enriched adjacency.
+        
+        CRITICAL FIX: Adjacency now includes vexity and angle data from edges.
+        """
         nodes = []
         edges = []
-        adjacency = {}
         
         if hasattr(self.aag, 'nodes'):
             for face_id, node_data in self.aag.nodes.items():
@@ -289,16 +333,25 @@ class StandardizedFilletRecognizer:
                 
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
-            
-        # CRITICAL FIX: Get adjacency and ensure ALL nodes have entries
-        if hasattr(self.aag, 'adjacency'):
-            adjacency = dict(self.aag.adjacency)  # Make a copy
         
-        # Add empty adjacency entries for nodes missing from adjacency map
-        for node in nodes:
-            if node.face_id not in adjacency:
-                adjacency[node.face_id] = []
-                logger.debug(f"FilletRecognizer: Node {node.face_id} missing from adjacency - adding empty entry")
+        # CRITICAL FIX: Build enriched adjacency with vexity and angle data
+        adjacency = _build_enriched_adjacency(nodes, edges)
+        
+        # DIAGNOSTIC: Verify adjacency enrichment
+        if logger.isEnabledFor(logging.DEBUG):
+            # Count vexity types
+            vexity_counts = {'convex': 0, 'concave': 0, 'smooth': 0, 'unknown': 0}
+            for face_id, neighbors in adjacency.items():
+                for neighbor in neighbors:
+                    vexity = neighbor.get('vexity', 'unknown')
+                    vexity_counts[vexity] = vexity_counts.get(vexity, 0) + 1
+            
+            logger.debug(f"FilletRecognizer adjacency vexity distribution: {vexity_counts}")
+            
+            # Sample check
+            if nodes and nodes[0].face_id in adjacency:
+                sample_adj = adjacency[nodes[0].face_id]
+                logger.debug(f"Sample adjacency for node {nodes[0].face_id}: {sample_adj[:2] if sample_adj else 'empty'}")
             
         return {
             'nodes': nodes,
@@ -330,10 +383,11 @@ class StandardizedFilletRecognizer:
             'max_radius': fillet_dict.get('max_radius'),
             
             # Metadata
-            'confidence': 0.70,  # Fillet recognition is harder
+            'confidence': fillet_dict.get('confidence', 0.70),
             'fullyRecognized': fillet_dict.get('is_continuous', True),
             'connected_faces': fillet_dict.get('connected_faces', []),
-            'blend_count': fillet_dict.get('blend_count', 2)
+            'blend_count': fillet_dict.get('blend_count', 2),
+            'warnings': fillet_dict.get('warnings', [])
         }
         
         return standardized
@@ -397,10 +451,11 @@ class StandardizedChamferRecognizer:
             return []
             
     def _build_graph_dict(self) -> Dict:
-        """Build graph dict from AAG builder."""
+        """
+        Build graph dict from AAG builder with enriched adjacency.
+        """
         nodes = []
         edges = []
-        adjacency = {}
         
         if hasattr(self.aag, 'nodes'):
             for face_id, node_data in self.aag.nodes.items():
@@ -417,16 +472,9 @@ class StandardizedChamferRecognizer:
                 
         if hasattr(self.aag, 'edges'):
             edges = list(self.aag.edges)
-            
-        # CRITICAL FIX: Get adjacency and ensure ALL nodes have entries
-        if hasattr(self.aag, 'adjacency'):
-            adjacency = dict(self.aag.adjacency)  # Make a copy
         
-        # Add empty adjacency entries for nodes missing from adjacency map
-        for node in nodes:
-            if node.face_id not in adjacency:
-                adjacency[node.face_id] = []
-                logger.debug(f"ChamferRecognizer: Node {node.face_id} missing from adjacency - adding empty entry")
+        # CRITICAL FIX: Build enriched adjacency with vexity and angle data
+        adjacency = _build_enriched_adjacency(nodes, edges)
             
         return {
             'nodes': nodes,
@@ -458,9 +506,10 @@ class StandardizedChamferRecognizer:
             'width': chamfer_dict.get('width'),
             
             # Metadata
-            'confidence': 0.75,
+            'confidence': chamfer_dict.get('confidence', 0.75),
             'fullyRecognized': True,
-            'connected_faces': chamfer_dict.get('connected_faces', [])
+            'connected_faces': chamfer_dict.get('connected_faces', []),
+            'warnings': chamfer_dict.get('warnings', [])
         }
         
         return standardized
