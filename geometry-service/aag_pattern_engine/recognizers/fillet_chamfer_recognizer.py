@@ -264,7 +264,9 @@ class FilletRecognizer:
             adj_keys = list(adjacency.keys())[:10]
             logger.error(f"DIAGNOSTIC - First 5 candidate IDs: {sample_ids}")
             logger.error(f"DIAGNOSTIC - First 10 adjacency keys: {adj_keys}")
-            logger.error(f"DIAGNOSTIC - IDs in adjacency?: {[id in adjacency for id in sample_ids]}")fillets = []
+            logger.error(f"DIAGNOSTIC - IDs in adjacency?: {[id in adjacency for id in sample_ids]}")
+        
+        fillets = []
         processed = set()
         
         # Process candidates
