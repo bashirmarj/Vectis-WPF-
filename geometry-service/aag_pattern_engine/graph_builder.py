@@ -87,9 +87,10 @@ class GraphEdge:
 
 
 # CRITICAL: Analysis Situs thresholds
-SMOOTH_ANGLE_THRESHOLD = 1.0  # degrees (was 5.0 - too permissive!)
-CONVEX_THRESHOLD = 180.0 + SMOOTH_ANGLE_THRESHOLD  # 181.0°
-CONCAVE_THRESHOLD = 180.0 - SMOOTH_ANGLE_THRESHOLD  # 179.0°
+# CRITICAL: Analysis Situs thresholds
+SMOOTH_ANGLE_THRESHOLD = 5.0  # degrees (Relaxed from 1.0 to catch more fillets)
+CONVEX_THRESHOLD = 180.0 + SMOOTH_ANGLE_THRESHOLD  # 185.0°
+CONCAVE_THRESHOLD = 180.0 - SMOOTH_ANGLE_THRESHOLD  # 175.0°
 
 
 class AAGGraphBuilder:
@@ -395,7 +396,9 @@ class AAGGraphBuilder:
                         return np.array([n.X(), n.Y(), n.Z()])
                         
                     return None
-                except Exception:
+                    return None
+                except Exception as e:
+                    # logger.debug(f"Normal calc failed: {e}")
                     return None
 
             # Get normals
@@ -431,6 +434,7 @@ class AAGGraphBuilder:
             if np.dot(cross, edge_dir) < 0:
                 angle_deg = 360.0 - angle_deg
                 
+            # logger.debug(f"  Dihedral: {angle_deg:.2f}°")
             return angle_deg
             
         except Exception as e:

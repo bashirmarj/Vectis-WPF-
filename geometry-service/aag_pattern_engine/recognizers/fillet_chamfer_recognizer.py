@@ -700,7 +700,9 @@ class FilletRecognizer:
         adjacent = adjacency[fillet.id]
         
         for adj in adjacent:
-            if adj['node_id'] in connected_faces:
+            # Fix: Use 'face_id' as per graph_builder structure
+            neighbor_id = adj.get('face_id', adj.get('node_id'))
+            if neighbor_id in connected_faces:
                 angle = adj['angle']
                 
                 # Tangent transition: angle ≈ 180° for convex fillet
