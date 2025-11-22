@@ -395,11 +395,12 @@ class FilletRecognizer:
         
         # Detailed per-candidate logging
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"  Evaluating candidate {candidate_id}:")
-            logger.debug(f"    Type: {candidate.surface_type}, Radius: {candidate.radius}, Area: {candidate.area:.6f}")
+            pass
+            # logger.debug(f"  Evaluating candidate {candidate_id}:")
+            # logger.debug(f"    Type: {candidate.surface_type}, Radius: {candidate.radius}, Area: {candidate.area:.6f}")
         
         if candidate_id not in adjacency:
-            logger.debug(f"    ❌ REJECTED: Not in adjacency map")
+            # logger.debug(f"    ❌ REJECTED: Not in adjacency map")
             return False
         
         adjacent = adjacency[candidate_id]
@@ -420,7 +421,8 @@ class FilletRecognizer:
                 smooth_count += 1
         
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"    Vexity: {convex_count} convex, {concave_count} concave, {smooth_count} smooth")
+            pass
+            # logger.debug(f"    Vexity: {convex_count} convex, {concave_count} concave, {smooth_count} smooth")
         
         # Fillet must blend at least 2 faces
         # CRITICAL FIX: Allow smooth edges (tangent blends)
@@ -439,23 +441,25 @@ class FilletRecognizer:
                     logger.debug(f"  ❌ REJECTED: Radius out of range or missing")
                     return False
 
-            logger.debug(f"    ❌ REJECTED: Only {convex_count} convex + {smooth_count} smooth edges (need 2+)")
+            # logger.debug(f"    ❌ REJECTED: Only {convex_count} convex + {smooth_count} smooth edges (need 2+)")
             return False
         
         # Validate radius
         if candidate.radius:
             if logger.isEnabledFor(logging.DEBUG):
-                radius_mm = candidate.radius * 1000
-                logger.debug(f"    Radius: {radius_mm:.3f}mm (range: {self.min_fillet_radius*1000:.1f}-{self.max_fillet_radius*1000:.1f}mm)")
+                pass
+                # radius_mm = candidate.radius * 1000
+                # logger.debug(f"    Radius: {radius_mm:.3f}mm (range: {self.min_fillet_radius*1000:.1f}-{self.max_fillet_radius*1000:.1f}mm)")
             
             if not (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
-                logger.debug(f"    ❌ REJECTED: Radius out of range")
+                # logger.debug(f"    ❌ REJECTED: Radius out of range")
                 return False
         
         # Cylindrical fillets shouldn't be too large (not a shaft)
         if candidate.surface_type == SurfaceType.CYLINDER:
             if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"    Area: {candidate.area:.2f} mm²")
+                pass
+                # logger.debug(f"    Area: {candidate.area:.2f} mm²")
             
             # Adjusted threshold for mm (was 0.01 which was 100cm^2 in meters? No, 0.01m^2 = 10000mm^2)
             # Let's set a reasonable max area for a fillet face, e.g., 10000 mm^2
