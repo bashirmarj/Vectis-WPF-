@@ -142,22 +142,13 @@ class VolumeDecomposer:
         
         logger.info(f"    Bounding box diagonal (raw OCC): {diagonal:.4f}")
         
-        # Unit detection heuristic
-        if diagonal < 1.0:
-            # Likely meters (0.1m to 1m parts)
-            self.detected_units = "m"
-            scale_to_mm = 1000.0
-            logger.info(f"    Detected METERS (diagonal {diagonal:.4f} < 1.0)")
-        elif diagonal < 100.0:
-            # Likely already mm or cm
-            self.detected_units = "mm"
-            scale_to_mm = 1.0
-            logger.info(f"    Detected MILLIMETERS (diagonal {diagonal:.4f} < 100)")
-        else:
-            # Likely mm (most CAD default)
-            self.detected_units = "mm"
-            scale_to_mm = 1.0
-            logger.info(f"    Assumed MILLIMETERS (diagonal {diagonal:.4f})")
+        # Unit detection: Default to Millimeters (standard for STEP)
+        # REMOVED HEURISTIC: Previously guessed 'm' if diagonal < 1.0
+        # This caused issues for small parts (e.g. 0.5mm diagonal) being scaled up by 1000x
+        
+        self.detected_units = "mm"
+        scale_to_mm = 1.0
+        logger.info(f"    Assumed MILLIMETERS (diagonal {diagonal:.4f})")
         
         # Convert to mm
         return {

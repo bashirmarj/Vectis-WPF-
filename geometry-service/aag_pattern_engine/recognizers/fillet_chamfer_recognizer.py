@@ -203,9 +203,9 @@ class FilletRecognizer:
     
     def __init__(self, tolerance: float = 1e-6):
         self.tolerance = tolerance
-        self.min_fillet_radius = 0.0001  # 0.1mm
-        self.max_fillet_radius = 0.100   # 100mm
-        self.convex_angle_min = 185.0    # degrees
+        self.min_fillet_radius = 0.1     # 0.1mm
+        self.max_fillet_radius = 100.0   # 100mm (FIXED: was 0.100 which meant 0.1mm in current scaling)
+        self.convex_angle_min = 170.0    # degrees (FIXED: was 185.0, lowered to allow tangent/smooth edges)
         self.tangent_tolerance = 5.0     # degrees
         self.curvature_tolerance = 0.1   # 1/m
         
@@ -239,7 +239,8 @@ class FilletRecognizer:
                     area=face_data.get('area', 0.0),
                     normal=tuple(face_data.get('normal', [0, 0, 1])),
                     center=tuple(face_data.get('center', [0, 0, 0])) if face_data.get('center') else None,
-                    radius=face_data.get('radius')
+                    radius=face_data.get('radius'),
+                    axis=tuple(face_data.get('axis', [0, 0, 1])) if face_data.get('axis') else None
                 )
                 nodes.append(node)
         else:
@@ -281,7 +282,11 @@ class FilletRecognizer:
             # Get connected faces
             connected_faces = self._get_blended_faces(candidate, adjacency, nodes)
             
-            if len(connected_faces) < 2:
+            # CRITICAL FIX: Allow isolated fillets (e.g. hole fillets with no connectivity in graph)
+            # If it passed _is_fillet_surface and is isolated, we should keep it.
+            is_isolated = (len(connected_faces) == 0 and len(adjacency.get(candidate.id, [])) == 0)
+            
+            if len(connected_faces) < 2 and not is_isolated:
                 continue
             
             # Classify fillet type
@@ -406,7 +411,7 @@ class FilletRecognizer:
         
         for adj in adjacent:
             vexity = adj.get('vexity', 'smooth')
-            # Fillets create convex edges on PART geometry
+            # Fillets blend faces across convex OR smooth (tangent) edges
             if vexity == 'convex':
                 convex_count += 1
             elif vexity == 'concave':
@@ -418,22 +423,23 @@ class FilletRecognizer:
             logger.debug(f"    Vexity: {convex_count} convex, {concave_count} concave, {smooth_count} smooth")
         
         # Fillet must blend at least 2 faces
-
-                # CRITICAL FIX: Handle isolated cylindrical blends (hole fillets in removal volume)
-        # These may have empty adjacency lists but are still valid fillets based on geometry
-        if len(adjacent) == 0 and candidate.surface_type == SurfaceType.CYLINDER:
-            if candidate.radius and (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
-                if candidate.area <= 0.01:  # Not too large (< 100 cm²)
-                    logger.debug(f"  ✅ PASSED: Isolated cylindrical blend (hole fillet)")
-                    return True
+        # CRITICAL FIX: Allow smooth edges (tangent blends)
+        if (convex_count + smooth_count) < 2:
+             # CRITICAL FIX: Handle isolated cylindrical blends (hole fillets in removal volume)
+            # These may have empty adjacency lists but are still valid fillets based on geometry
+            if len(adjacent) == 0 and candidate.surface_type == SurfaceType.CYLINDER:
+                if candidate.radius and (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
+                    if candidate.area <= 10000.0:  # Not too large (< 100 cm^2)
+                        logger.debug(f"  ✅ PASSED: Isolated cylindrical blend (hole fillet)")
+                        return True
+                    else:
+                        logger.debug(f"  ❌ REJECTED: Isolated cylinder too large (likely shaft, not fillet)")
+                        return False
                 else:
-                    logger.debug(f"  ❌ REJECTED: Isolated cylinder too large (likely shaft, not fillet)")
+                    logger.debug(f"  ❌ REJECTED: Radius out of range or missing")
                     return False
-            else:
-                logger.debug(f"  ❌ REJECTED: Radius out of range or missing")
-                return False
-        if convex_count < 2:
-            logger.debug(f"    ❌ REJECTED: Only {convex_count} convex edges (need 2+)")
+
+            logger.debug(f"    ❌ REJECTED: Only {convex_count} convex + {smooth_count} smooth edges (need 2+)")
             return False
         
         # Validate radius
@@ -449,10 +455,11 @@ class FilletRecognizer:
         # Cylindrical fillets shouldn't be too large (not a shaft)
         if candidate.surface_type == SurfaceType.CYLINDER:
             if logger.isEnabledFor(logging.DEBUG):
-                area_cm2 = candidate.area * 10000
-                logger.debug(f"    Area: {area_cm2:.2f} cm² (max: 100 cm²)")
+                logger.debug(f"    Area: {candidate.area:.2f} mm²")
             
-            if candidate.area > 0.01:  # > 100cm²
+            # Adjusted threshold for mm (was 0.01 which was 100cm^2 in meters? No, 0.01m^2 = 10000mm^2)
+            # Let's set a reasonable max area for a fillet face, e.g., 10000 mm^2
+            if candidate.area > 10000.0: 
                 logger.debug(f"    ❌ REJECTED: Area too large (likely shaft, not fillet)")
                 return False
         
@@ -475,8 +482,8 @@ class FilletRecognizer:
         blended_faces = []
         
         for adj in adjacent:
-            # Fillets blend faces across convex edges
-            if adj.get('vexity') == 'convex':
+            # Fillets blend faces across convex OR smooth edges
+            if adj.get('vexity') in ['convex', 'smooth']:
                 # Extract neighbor face ID (key might be 'face_id' or 'node_id')
                 neighbor_id = adj.get('face_id', adj.get('node_id'))
                 if neighbor_id is not None:
@@ -544,7 +551,7 @@ class FilletRecognizer:
             fillet_type = FilletType.CONSTANT_RADIUS
         
         # Compute centerline
-        centerline = cylinder.centroid
+        centerline = cylinder.center
         centerline_axis = cylinder.axis if cylinder.axis else None
         
         # Surface properties
@@ -624,7 +631,7 @@ class FilletRecognizer:
             continuity_type=continuity,
             is_tangent=is_tangent,
             total_length=arc_length,
-            centerline=surface.centroid,
+            centerline=surface.center,
             surface_area=surface.area,
             confidence=0.88
         )
@@ -670,7 +677,7 @@ class FilletRecognizer:
             continuity_type=ContinuityType.G2,
             is_tangent=is_tangent,
             total_length=2 * np.pi * radius,
-            centerline=sphere.centroid,
+            centerline=sphere.center,
             surface_area=sphere.area,
             curvature=1.0 / radius if radius > 0 else None,
             confidence=0.90

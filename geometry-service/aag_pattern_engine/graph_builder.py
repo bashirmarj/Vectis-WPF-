@@ -66,6 +66,7 @@ class GraphNode:
     normal: Tuple[float, float, float]
     center: Optional[Tuple[float, float, float]] = None
     radius: Optional[float] = None
+    axis: Optional[Tuple[float, float, float]] = None
     id: Optional[int] = None  # Alias for face_id for backward compatibility
     
     def __post_init__(self):

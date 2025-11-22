@@ -1,0 +1,2312 @@
+AAG recognition request received
+2025-11-22 02:23:59,662 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 📁 File hash: 4e7ea20537bf5d74ac887b070bcb4fd79bc588be028f971d4f9135c0265b30ae
+2025-11-22 02:23:59,666 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 📂 Loading STEP file
+2025-11-22 02:23:59,976 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🔺 Tessellating with face mapping
+2025-11-22 02:24:01,476 [INFO] Tessellated: 13776 vertices, 27597 triangles, 116 faces in 1500.3ms
+2025-11-22 02:24:01,477 [INFO] Created vertex_face_ids: 13776 vertices mapped to faces
+2025-11-22 02:24:01,478 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🔍 Initializing AAG Pattern Matcher
+2025-11-22 02:24:03,779 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎯 Running AAG pattern recognition
+2025-11-22 02:24:03,779 [INFO] ======================================================================
+2025-11-22 02:24:03,779 [INFO] AAG PATTERN MATCHER - Starting Recognition
+2025-11-22 02:24:03,779 [INFO] ======================================================================
+2025-11-22 02:24:03,780 [INFO] Part type classified as: prismatic
+2025-11-22 02:24:03,780 [INFO] 
+[STEP 1/8] Decomposing into manufacturing volumes...
+2025-11-22 02:24:03,780 [INFO] VolumeDecomposer initialized (tolerance=1e-06)
+2025-11-22 02:24:03,780 [INFO] Starting volume decomposition (type=prismatic)
+2025-11-22 02:24:03,780 [INFO] Decomposing prismatic part...
+2025-11-22 02:24:03,783 [INFO]     Bounding box diagonal (raw OCC): 524.6806
+2025-11-22 02:24:03,783 [INFO]     Assumed MILLIMETERS (diagonal 524.6806)
+2025-11-22 02:24:03,783 [INFO]   Detected model units: mm
+2025-11-22 02:24:03,783 [INFO]   Stock envelope: 475.0 × 220.0 × 35.0 mm
+2025-11-22 02:24:03,783 [INFO]   Computing boolean difference (stock - part)...
+2025-11-22 02:24:03,783 [INFO]   Creating stock box:
+2025-11-22 02:24:03,783 [INFO]     Origin (OCC units): (-355.013595, -109.513595, -0.013595)
+2025-11-22 02:24:03,784 [INFO]     Size (OCC units):   (475.027189, 220.027189, 35.027189)
+2025-11-22 02:24:03,784 [INFO]     Scale factor:       1.0
+2025-11-22 02:24:03,786 [WARNING]   ⚠️ Method 1: IsDone() returned False but shape is valid - using it anyway
+2025-11-22 02:24:03,908 [INFO]   Removal volume: 2431009.4 mm³
+2025-11-22 02:24:03,908 [INFO] ✓ Decomposition successful
+2025-11-22 02:24:03,908 [INFO]   Volumes found: 1 (Analysis Situs style: no splitting)
+2025-11-22 02:24:03,908 [INFO] ✓ Decomposition complete: 1 volume(s)
+2025-11-22 02:24:03,908 [INFO] 
+[STEP 2/8] Building AAG for volume(s)...
+2025-11-22 02:24:03,908 [INFO]   Building removal volume AAG for volume #1...
+2025-11-22 02:24:03,908 [INFO] ======================================================================
+2025-11-22 02:24:03,908 [INFO] Building Attributed Adjacency Graph (AAG) - PATCHED v1.1.0
+2025-11-22 02:24:03,908 [INFO] ======================================================================
+2025-11-22 02:24:03,908 [INFO] Caching face list...
+2025-11-22 02:24:03,909 [INFO] Cached 122 faces
+2025-11-22 02:24:03,909 [INFO] Building edge-face topology map...
+2025-11-22 02:24:03,918 [INFO] Edge-face map: 317 edges
+2025-11-22 02:24:03,918 [INFO]   Non-manifold: 0
+2025-11-22 02:24:03,918 [INFO]   Boundary: 13
+2025-11-22 02:24:03,919 [INFO] Extracting and validating faces...
+2025-11-22 02:24:03,942 [INFO] Extracted 122 valid faces
+2025-11-22 02:24:03,942 [INFO] Filtered 0 degenerate faces
+2025-11-22 02:24:03,942 [INFO] Building edges with dihedral angles...
+2025-11-22 02:24:04,044 [INFO] Built 118 graph edges
+2025-11-22 02:24:04,044 [INFO] Building adjacency map...
+2025-11-22 02:24:04,044 [INFO] Detecting part orientation...
+2025-11-22 02:24:04,045 [INFO] Orientation detection:
+2025-11-22 02:24:04,045 [INFO]   X: 39.7%, Y: 36.2%, Z: 24.1%
+2025-11-22 02:24:04,046 [WARNING] ⚠ Part appears rotated from axis alignment
+2025-11-22 02:24:04,046 [INFO] Validating graph integrity...
+2025-11-22 02:24:04,046 [INFO] 
+2025-11-22 02:24:04,046 [INFO] ======================================================================
+2025-11-22 02:24:04,046 [INFO] AAG GRAPH STATISTICS
+2025-11-22 02:24:04,046 [INFO] ======================================================================
+2025-11-22 02:24:04,046 [INFO] Total faces processed: 122
+2025-11-22 02:24:04,046 [INFO] Valid nodes: 122
+2025-11-22 02:24:04,046 [INFO] Degenerate faces filtered: 0
+2025-11-22 02:24:04,046 [INFO] Total edges: 118
+2025-11-22 02:24:04,046 [INFO] Non-manifold edges: 0
+2025-11-22 02:24:04,046 [INFO] Boundary edges: 13
+2025-11-22 02:24:04,046 [INFO] 
+2025-11-22 02:24:04,046 [INFO] Vexity Distribution:
+2025-11-22 02:24:04,046 [INFO]   Convex:     60 ( 50.8%)
+2025-11-22 02:24:04,046 [INFO]   Concave:    58 ( 49.2%)
+2025-11-22 02:24:04,046 [INFO]   Smooth:      0 (  0.0%)
+2025-11-22 02:24:04,046 [INFO] ======================================================================
+2025-11-22 02:24:04,046 [INFO]     ✓ Removal AAG built: 122 nodes, 118 edges
+2025-11-22 02:24:04,046 [INFO]   Building part AAG for volume #1...
+2025-11-22 02:24:04,046 [INFO] ======================================================================
+2025-11-22 02:24:04,046 [INFO] Building Attributed Adjacency Graph (AAG) - PATCHED v1.1.0
+2025-11-22 02:24:04,046 [INFO] ======================================================================
+2025-11-22 02:24:04,046 [INFO] Caching face list...
+2025-11-22 02:24:04,047 [INFO] Cached 116 faces
+2025-11-22 02:24:04,047 [INFO] Building edge-face topology map...
+2025-11-22 02:24:04,050 [INFO] Edge-face map: 305 edges
+2025-11-22 02:24:04,050 [INFO]   Non-manifold: 0
+2025-11-22 02:24:04,050 [INFO]   Boundary: 13
+2025-11-22 02:24:04,050 [INFO] Extracting and validating faces...
+2025-11-22 02:24:04,065 [INFO] Extracted 116 valid faces
+2025-11-22 02:24:04,065 [INFO] Filtered 0 degenerate faces
+2025-11-22 02:24:04,065 [INFO] Building edges with dihedral angles...
+2025-11-22 02:24:04,132 [INFO] Built 106 graph edges
+2025-11-22 02:24:04,132 [INFO] Building adjacency map...
+2025-11-22 02:24:04,132 [INFO] Detecting part orientation...
+2025-11-22 02:24:04,132 [INFO] Orientation detection:
+2025-11-22 02:24:04,132 [INFO]   X: 40.4%, Y: 36.5%, Z: 23.1%
+2025-11-22 02:24:04,132 [WARNING] ⚠ Part appears rotated from axis alignment
+2025-11-22 02:24:04,132 [INFO] Validating graph integrity...
+2025-11-22 02:24:04,133 [INFO] 
+2025-11-22 02:24:04,133 [INFO] ======================================================================
+2025-11-22 02:24:04,133 [INFO] AAG GRAPH STATISTICS
+2025-11-22 02:24:04,133 [INFO] ======================================================================
+2025-11-22 02:24:04,133 [INFO] Total faces processed: 116
+2025-11-22 02:24:04,133 [INFO] Valid nodes: 116
+2025-11-22 02:24:04,133 [INFO] Degenerate faces filtered: 0
+2025-11-22 02:24:04,133 [INFO] Total edges: 106
+2025-11-22 02:24:04,133 [INFO] Non-manifold edges: 0
+2025-11-22 02:24:04,133 [INFO] Boundary edges: 13
+2025-11-22 02:24:04,133 [INFO] 
+2025-11-22 02:24:04,133 [INFO] Vexity Distribution:
+2025-11-22 02:24:04,133 [INFO]   Convex:     56 ( 52.8%)
+2025-11-22 02:24:04,133 [INFO]   Concave:    50 ( 47.2%)
+2025-11-22 02:24:04,133 [INFO]   Smooth:      0 (  0.0%)
+2025-11-22 02:24:04,133 [INFO] ======================================================================
+2025-11-22 02:24:04,133 [INFO]     ✓ Part AAG built: 116 nodes, 106 edges
+2025-11-22 02:24:04,133 [INFO] ✓ Built 1 removal volume graph(s) and 1 part graph(s)
+2025-11-22 02:24:04,133 [INFO] 
+[STEP 3/8] Detecting machining configurations...
+2025-11-22 02:24:04,133 [INFO]   Analyzing volume #1...
+2025-11-22 02:24:04,133 [INFO] Detecting machining configurations...
+2025-11-22 02:24:04,137 [INFO] ✓ Found 6 machining configuration(s)
+2025-11-22 02:24:04,137 [INFO]     ✓ Found 6 machining config(s)
+2025-11-22 02:24:04,137 [INFO] ✓ Total configurations: 6
+2025-11-22 02:24:04,137 [INFO] 
+[STEP 4/8] Running feature recognizers...
+2025-11-22 02:24:04,137 [INFO]   Processing configuration #1 (type: 2.5D_milling)...
+2025-11-22 02:24:04,137 [INFO] ======================================================================
+2025-11-22 02:24:04,137 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:24:04,137 [INFO] ======================================================================
+2025-11-22 02:24:04,138 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:24:04,138 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:24:04,138 [INFO]   → Created 51 individual hints
+2025-11-22 02:24:04,138 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:24:04,148 [INFO]   → Merged into 47 final holes
+2025-11-22 02:24:04,148 [INFO] 
+2025-11-22 02:24:04,148 [INFO] ======================================================================
+2025-11-22 02:24:04,148 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:24:04,148 [INFO] ======================================================================
+2025-11-22 02:24:04,148 [INFO] Total candidates analyzed: 57
+2025-11-22 02:24:04,148 [INFO] Successfully recognized: 47
+2025-11-22 02:24:04,148 [INFO] Validation failures: 0
+2025-11-22 02:24:04,148 [INFO] Ambiguous features: 0
+2025-11-22 02:24:04,148 [INFO] 
+2025-11-22 02:24:04,148 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,148 [INFO]   counterbore_hole         :   4
+2025-11-22 02:24:04,148 [INFO]   through_hole             :  43
+2025-11-22 02:24:04,148 [INFO] ======================================================================
+2025-11-22 02:24:04,148 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:24:04,149 [INFO] ======================================================================
+2025-11-22 02:24:04,149 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:24:04,149 [INFO] ======================================================================
+2025-11-22 02:24:04,149 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,149 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:24:04,149 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:24:04,149 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:24:04,149 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:24:04,150 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:24:04,150 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:24:04,150 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:24:04,150 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:24:04,150 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:24:04,150 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:24:04,150 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:24:04,150 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:24:04,150 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:24:04,150 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:24:04,151 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:24:04,152 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:24:04,152 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:24:04,152 [INFO] 
+2025-11-22 02:24:04,152 [INFO] ======================================================================
+2025-11-22 02:24:04,152 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,152 [INFO] ======================================================================
+2025-11-22 02:24:04,152 [INFO] Total candidates: 52
+2025-11-22 02:24:04,152 [INFO] Pockets recognized: 0
+2025-11-22 02:24:04,152 [INFO] Slots recognized: 0
+2025-11-22 02:24:04,152 [INFO] Passages recognized: 0
+2025-11-22 02:24:04,152 [INFO] Validation failures: 0
+2025-11-22 02:24:04,152 [INFO] 
+2025-11-22 02:24:04,152 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,152 [INFO] ======================================================================
+2025-11-22 02:24:04,152 [INFO] Starting slot recognition...
+2025-11-22 02:24:04,153 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:24:04,153 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:24:04,153 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:24:04,153 [INFO] ======================================================================
+2025-11-22 02:24:04,153 [INFO] Starting boss/step/island recognition
+2025-11-22 02:24:04,153 [INFO] ======================================================================
+2025-11-22 02:24:04,153 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,153 [INFO] 
+2025-11-22 02:24:04,153 [INFO] ======================================================================
+2025-11-22 02:24:04,153 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,153 [INFO] ======================================================================
+2025-11-22 02:24:04,153 [INFO] Total candidates: 52
+2025-11-22 02:24:04,153 [INFO] Bosses recognized: 0
+2025-11-22 02:24:04,154 [INFO] Steps recognized: 1
+2025-11-22 02:24:04,154 [INFO] Islands recognized: 0
+2025-11-22 02:24:04,154 [INFO] Validation failures: 0
+2025-11-22 02:24:04,154 [INFO] 
+2025-11-22 02:24:04,154 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,154 [INFO]   step                               :   1
+2025-11-22 02:24:04,154 [INFO] ======================================================================
+2025-11-22 02:24:04,154 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:24:04,154 [INFO] ======================================================================
+2025-11-22 02:24:04,154 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:24:04,154 [INFO] ======================================================================
+2025-11-22 02:24:04,154 [DEBUG] Surface type distribution:
+2025-11-22 02:24:04,154 [DEBUG]   cone: 13
+2025-11-22 02:24:04,154 [DEBUG]   cylinder: 51
+2025-11-22 02:24:04,154 [DEBUG]   plane: 52
+2025-11-22 02:24:04,154 [INFO] Found 51 blend candidates:
+2025-11-22 02:24:04,154 [INFO]   Cylinders: 51
+2025-11-22 02:24:04,155 [INFO]   Tori: 0
+2025-11-22 02:24:04,155 [INFO]   Spheres: 0
+2025-11-22 02:24:04,155 [INFO]   B-splines: 0
+2025-11-22 02:24:04,155 [INFO] Found 51 blend surface candidates
+2025-11-22 02:24:04,155 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:24:04,155 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:24:04,155 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:24:04,155 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:24:04,155 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:24:04,155 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,155 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,155 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:24:04,155 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:24:04,155 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,155 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,155 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:24:04,155 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,155 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,155 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,155 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:24:04,155 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,155 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,155 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,156 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,156 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,156 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,156 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,156 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,156 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,156 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:24:04,156 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:24:04,156 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,157 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:24:04,157 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,157 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,157 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:24:04,157 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:24:04,157 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,157 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:24:04,157 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,157 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,157 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:24:04,157 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:24:04,157 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,157 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:24:04,157 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:24:04,157 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,157 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:24:04,157 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,157 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,157 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,158 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,158 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:24:04,158 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,158 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:24:04,158 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,158 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:24:04,158 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,158 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:24:04,158 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,158 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:24:04,158 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,158 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,158 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:24:04,158 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,159 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:24:04,159 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,159 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:24:04,159 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,159 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:24:04,159 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,159 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:24:04,159 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,159 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:24:04,159 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,159 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:24:04,159 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,159 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,159 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:24:04,160 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,160 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,160 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,160 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:24:04,161 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,161 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,161 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,161 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:24:04,161 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,161 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,161 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,161 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:24:04,161 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,161 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,161 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,161 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:24:04,161 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,161 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,161 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,161 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:24:04,161 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,161 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,161 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,161 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:24:04,162 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,162 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,162 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,162 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:24:04,162 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:24:04,162 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,162 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,162 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:24:04,162 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,162 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,162 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,162 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:24:04,162 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,162 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,162 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,162 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:24:04,162 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,162 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,162 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,162 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:24:04,162 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,163 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,163 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,163 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:24:04,163 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,163 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,163 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,163 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:24:04,163 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,163 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,163 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,163 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:24:04,163 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,163 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,163 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,163 [INFO] 
+======================================================================
+2025-11-22 02:24:04,163 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:24:04,163 [INFO] ======================================================================
+2025-11-22 02:24:04,163 [INFO] Total candidates: 51
+2025-11-22 02:24:04,163 [INFO] Constant radius: 0
+2025-11-22 02:24:04,163 [INFO] Variable radius: 0
+2025-11-22 02:24:04,163 [INFO] Corner blends: 0
+2025-11-22 02:24:04,164 [INFO] Fillet chains: 0
+2025-11-22 02:24:04,164 [INFO] Total recognized: 0
+2025-11-22 02:24:04,164 [INFO] ======================================================================
+2025-11-22 02:24:04,164 [INFO] FilletRecognizer: 0 fillets recognized
+2025-11-22 02:24:04,164 [INFO] ======================================================================
+2025-11-22 02:24:04,164 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:24:04,164 [INFO] ======================================================================
+2025-11-22 02:24:04,164 [INFO] Found 0 chamfer candidates
+2025-11-22 02:24:04,164 [INFO] 
+======================================================================
+2025-11-22 02:24:04,164 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:24:04,164 [INFO] ======================================================================
+2025-11-22 02:24:04,164 [INFO] Total recognized: 0
+2025-11-22 02:24:04,165 [INFO] 45° chamfers: 0
+2025-11-22 02:24:04,165 [INFO] 30° chamfers: 0
+2025-11-22 02:24:04,165 [INFO] Custom angle: 0
+2025-11-22 02:24:04,165 [INFO] ======================================================================
+2025-11-22 02:24:04,165 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:24:04,165 [INFO]   Processing configuration #2 (type: 2.5D_milling)...
+2025-11-22 02:24:04,165 [INFO] ======================================================================
+2025-11-22 02:24:04,165 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:24:04,165 [INFO] ======================================================================
+2025-11-22 02:24:04,165 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:24:04,165 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:24:04,166 [INFO]   → Created 51 individual hints
+2025-11-22 02:24:04,166 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:24:04,176 [INFO]   → Merged into 47 final holes
+2025-11-22 02:24:04,176 [INFO] 
+2025-11-22 02:24:04,176 [INFO] ======================================================================
+2025-11-22 02:24:04,176 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:24:04,176 [INFO] ======================================================================
+2025-11-22 02:24:04,176 [INFO] Total candidates analyzed: 57
+2025-11-22 02:24:04,176 [INFO] Successfully recognized: 47
+2025-11-22 02:24:04,176 [INFO] Validation failures: 0
+2025-11-22 02:24:04,176 [INFO] Ambiguous features: 0
+2025-11-22 02:24:04,176 [INFO] 
+2025-11-22 02:24:04,177 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,177 [INFO]   counterbore_hole         :   4
+2025-11-22 02:24:04,177 [INFO]   through_hole             :  43
+2025-11-22 02:24:04,177 [INFO] ======================================================================
+2025-11-22 02:24:04,177 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:24:04,177 [INFO] ======================================================================
+2025-11-22 02:24:04,177 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:24:04,177 [INFO] ======================================================================
+2025-11-22 02:24:04,177 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,177 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:24:04,177 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:24:04,177 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:24:04,177 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:24:04,177 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:24:04,177 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:24:04,177 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:24:04,177 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:24:04,178 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:24:04,178 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:24:04,178 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:24:04,178 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:24:04,178 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:24:04,178 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:24:04,178 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:24:04,178 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:24:04,179 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:24:04,179 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:24:04,179 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:24:04,180 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:24:04,180 [INFO] 
+2025-11-22 02:24:04,180 [INFO] ======================================================================
+2025-11-22 02:24:04,180 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,180 [INFO] ======================================================================
+2025-11-22 02:24:04,180 [INFO] Total candidates: 52
+2025-11-22 02:24:04,180 [INFO] Pockets recognized: 0
+2025-11-22 02:24:04,180 [INFO] Slots recognized: 0
+2025-11-22 02:24:04,180 [INFO] Passages recognized: 0
+2025-11-22 02:24:04,180 [INFO] Validation failures: 0
+2025-11-22 02:24:04,180 [INFO] 
+2025-11-22 02:24:04,180 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,181 [INFO] ======================================================================
+2025-11-22 02:24:04,181 [INFO] Starting slot recognition...
+2025-11-22 02:24:04,181 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:24:04,181 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:24:04,181 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:24:04,181 [INFO] ======================================================================
+2025-11-22 02:24:04,182 [INFO] Starting boss/step/island recognition
+2025-11-22 02:24:04,182 [INFO] ======================================================================
+2025-11-22 02:24:04,182 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,182 [INFO] 
+2025-11-22 02:24:04,182 [INFO] ======================================================================
+2025-11-22 02:24:04,182 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,182 [INFO] ======================================================================
+2025-11-22 02:24:04,182 [INFO] Total candidates: 52
+2025-11-22 02:24:04,182 [INFO] Bosses recognized: 0
+2025-11-22 02:24:04,182 [INFO] Steps recognized: 1
+2025-11-22 02:24:04,182 [INFO] Islands recognized: 0
+2025-11-22 02:24:04,182 [INFO] Validation failures: 0
+2025-11-22 02:24:04,182 [INFO] 
+2025-11-22 02:24:04,182 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,183 [INFO]   step                               :   1
+2025-11-22 02:24:04,183 [INFO] ======================================================================
+2025-11-22 02:24:04,183 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:24:04,183 [INFO] ======================================================================
+2025-11-22 02:24:04,183 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:24:04,183 [INFO] ======================================================================
+2025-11-22 02:24:04,183 [DEBUG] Surface type distribution:
+2025-11-22 02:24:04,183 [DEBUG]   cone: 13
+2025-11-22 02:24:04,183 [DEBUG]   cylinder: 51
+2025-11-22 02:24:04,183 [DEBUG]   plane: 52
+2025-11-22 02:24:04,183 [INFO] Found 51 blend candidates:
+2025-11-22 02:24:04,184 [INFO]   Cylinders: 51
+2025-11-22 02:24:04,184 [INFO]   Tori: 0
+2025-11-22 02:24:04,184 [INFO]   Spheres: 0
+2025-11-22 02:24:04,184 [INFO]   B-splines: 0
+2025-11-22 02:24:04,184 [INFO] Found 51 blend surface candidates
+2025-11-22 02:24:04,184 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:24:04,184 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:24:04,184 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:24:04,184 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:24:04,184 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:24:04,184 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,184 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,184 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:24:04,184 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:24:04,184 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,184 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,184 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:24:04,184 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,184 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,185 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,185 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:24:04,185 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,185 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,185 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,185 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:24:04,185 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:24:04,185 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,185 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,185 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:24:04,185 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:24:04,185 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,185 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,185 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:24:04,185 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,185 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,185 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,185 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:24:04,185 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,185 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,185 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,186 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:24:04,186 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:24:04,186 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,186 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,186 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:24:04,186 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:24:04,186 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,186 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,186 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:24:04,186 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:24:04,186 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,186 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,186 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:24:04,186 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,186 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,186 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,186 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:24:04,186 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:24:04,186 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,186 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,186 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:24:04,186 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,187 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,187 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,187 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:24:04,187 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:24:04,187 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,187 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,187 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:24:04,187 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:24:04,187 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,187 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,187 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:24:04,187 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,187 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,187 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,187 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:24:04,187 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,187 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,187 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,187 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:24:04,187 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:24:04,187 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,187 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,188 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:24:04,188 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:24:04,188 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,188 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,188 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:24:04,188 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:24:04,188 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,188 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,188 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:24:04,188 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:24:04,188 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,188 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,188 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:24:04,188 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:24:04,188 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,188 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,188 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:24:04,188 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:24:04,188 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,188 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,188 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:24:04,189 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:24:04,189 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,189 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,189 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:24:04,189 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,189 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,189 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,189 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:24:04,189 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,189 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,189 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,189 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:24:04,189 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,189 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,189 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,189 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:24:04,189 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,189 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,189 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,189 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:24:04,189 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,189 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,190 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,190 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:24:04,190 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,190 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,191 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,191 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:24:04,191 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:24:04,191 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,192 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:24:04,192 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,192 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,192 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,193 [INFO] 
+======================================================================
+2025-11-22 02:24:04,193 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:24:04,193 [INFO] ======================================================================
+2025-11-22 02:24:04,193 [INFO] Total candidates: 51
+2025-11-22 02:24:04,193 [INFO] Constant radius: 0
+2025-11-22 02:24:04,193 [INFO] Variable radius: 0
+2025-11-22 02:24:04,193 [INFO] Corner blends: 0
+2025-11-22 02:24:04,193 [INFO] Fillet chains: 0
+2025-11-22 02:24:04,193 [INFO] Total recognized: 0
+2025-11-22 02:24:04,193 [INFO] ======================================================================
+2025-11-22 02:24:04,193 [INFO] FilletRecognizer: 0 fillets recognized
+2025-11-22 02:24:04,193 [INFO] ======================================================================
+2025-11-22 02:24:04,193 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:24:04,193 [INFO] ======================================================================
+2025-11-22 02:24:04,193 [INFO] Found 0 chamfer candidates
+2025-11-22 02:24:04,193 [INFO] 
+======================================================================
+2025-11-22 02:24:04,193 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:24:04,193 [INFO] ======================================================================
+2025-11-22 02:24:04,193 [INFO] Total recognized: 0
+2025-11-22 02:24:04,193 [INFO] 45° chamfers: 0
+2025-11-22 02:24:04,193 [INFO] 30° chamfers: 0
+2025-11-22 02:24:04,193 [INFO] Custom angle: 0
+2025-11-22 02:24:04,194 [INFO] ======================================================================
+2025-11-22 02:24:04,194 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:24:04,194 [INFO]   Processing configuration #3 (type: 2.5D_milling)...
+2025-11-22 02:24:04,194 [INFO] ======================================================================
+2025-11-22 02:24:04,194 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:24:04,194 [INFO] ======================================================================
+2025-11-22 02:24:04,194 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:24:04,194 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:24:04,194 [INFO]   → Created 51 individual hints
+2025-11-22 02:24:04,194 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:24:04,203 [INFO]   → Merged into 47 final holes
+2025-11-22 02:24:04,203 [INFO] 
+2025-11-22 02:24:04,203 [INFO] ======================================================================
+2025-11-22 02:24:04,203 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:24:04,203 [INFO] ======================================================================
+2025-11-22 02:24:04,203 [INFO] Total candidates analyzed: 57
+2025-11-22 02:24:04,203 [INFO] Successfully recognized: 47
+2025-11-22 02:24:04,203 [INFO] Validation failures: 0
+2025-11-22 02:24:04,203 [INFO] Ambiguous features: 0
+2025-11-22 02:24:04,203 [INFO] 
+2025-11-22 02:24:04,203 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,203 [INFO]   counterbore_hole         :   4
+2025-11-22 02:24:04,204 [INFO]   through_hole             :  43
+2025-11-22 02:24:04,204 [INFO] ======================================================================
+2025-11-22 02:24:04,204 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:24:04,204 [INFO] ======================================================================
+2025-11-22 02:24:04,204 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:24:04,204 [INFO] ======================================================================
+2025-11-22 02:24:04,204 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,204 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:24:04,204 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:24:04,204 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:24:04,204 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:24:04,205 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:24:04,205 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:24:04,205 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:24:04,205 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:24:04,205 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:24:04,205 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:24:04,205 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:24:04,205 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:24:04,205 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:24:04,205 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:24:04,206 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:24:04,206 [INFO] 
+2025-11-22 02:24:04,206 [INFO] ======================================================================
+2025-11-22 02:24:04,206 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,206 [INFO] ======================================================================
+2025-11-22 02:24:04,206 [INFO] Total candidates: 52
+2025-11-22 02:24:04,206 [INFO] Pockets recognized: 0
+2025-11-22 02:24:04,206 [INFO] Slots recognized: 0
+2025-11-22 02:24:04,206 [INFO] Passages recognized: 0
+2025-11-22 02:24:04,206 [INFO] Validation failures: 0
+2025-11-22 02:24:04,207 [INFO] 
+2025-11-22 02:24:04,207 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,207 [INFO] ======================================================================
+2025-11-22 02:24:04,207 [INFO] Starting slot recognition...
+2025-11-22 02:24:04,207 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:24:04,207 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:24:04,207 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:24:04,207 [INFO] ======================================================================
+2025-11-22 02:24:04,207 [INFO] Starting boss/step/island recognition
+2025-11-22 02:24:04,207 [INFO] ======================================================================
+2025-11-22 02:24:04,207 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,208 [INFO] 
+2025-11-22 02:24:04,208 [INFO] ======================================================================
+2025-11-22 02:24:04,208 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,208 [INFO] ======================================================================
+2025-11-22 02:24:04,208 [INFO] Total candidates: 52
+2025-11-22 02:24:04,208 [INFO] Bosses recognized: 0
+2025-11-22 02:24:04,208 [INFO] Steps recognized: 1
+2025-11-22 02:24:04,208 [INFO] Islands recognized: 0
+2025-11-22 02:24:04,208 [INFO] Validation failures: 0
+2025-11-22 02:24:04,208 [INFO] 
+2025-11-22 02:24:04,208 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,208 [INFO]   step                               :   1
+2025-11-22 02:24:04,208 [INFO] ======================================================================
+2025-11-22 02:24:04,208 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:24:04,208 [INFO] ======================================================================
+2025-11-22 02:24:04,208 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:24:04,208 [INFO] ======================================================================
+2025-11-22 02:24:04,209 [DEBUG] Surface type distribution:
+2025-11-22 02:24:04,209 [DEBUG]   cone: 13
+2025-11-22 02:24:04,209 [DEBUG]   cylinder: 51
+2025-11-22 02:24:04,209 [DEBUG]   plane: 52
+2025-11-22 02:24:04,209 [INFO] Found 51 blend candidates:
+2025-11-22 02:24:04,209 [INFO]   Cylinders: 51
+2025-11-22 02:24:04,209 [INFO]   Tori: 0
+2025-11-22 02:24:04,209 [INFO]   Spheres: 0
+2025-11-22 02:24:04,209 [INFO]   B-splines: 0
+2025-11-22 02:24:04,209 [INFO] Found 51 blend surface candidates
+2025-11-22 02:24:04,209 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:24:04,209 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:24:04,209 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:24:04,209 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:24:04,209 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:24:04,209 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,209 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,209 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:24:04,209 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:24:04,209 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,209 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,209 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:24:04,209 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,209 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,209 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,209 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:24:04,209 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:24:04,210 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:24:04,210 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,210 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,210 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,211 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,211 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:24:04,211 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:24:04,211 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:24:04,212 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,212 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,212 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,212 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:24:04,213 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,213 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,213 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,213 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,214 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,214 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,214 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,214 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,214 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,214 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,214 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,214 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,214 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,214 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,214 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,214 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:24:04,214 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,214 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,215 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,215 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:24:04,215 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,215 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,215 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,215 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:24:04,215 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,215 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,215 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,215 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:24:04,215 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,215 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,215 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,215 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:24:04,215 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,215 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,215 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,215 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:24:04,215 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,215 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,215 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,215 [INFO] 
+======================================================================
+2025-11-22 02:24:04,215 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:24:04,215 [INFO] ======================================================================
+2025-11-22 02:24:04,215 [INFO] Total candidates: 51
+2025-11-22 02:24:04,215 [INFO] Constant radius: 0
+2025-11-22 02:24:04,215 [INFO] Variable radius: 0
+2025-11-22 02:24:04,215 [INFO] Corner blends: 0
+2025-11-22 02:24:04,215 [INFO] Fillet chains: 0
+2025-11-22 02:24:04,215 [INFO] Total recognized: 0
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,216 [INFO] FilletRecognizer: 0 fillets recognized
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,216 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,216 [INFO] Found 0 chamfer candidates
+2025-11-22 02:24:04,216 [INFO] 
+======================================================================
+2025-11-22 02:24:04,216 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,216 [INFO] Total recognized: 0
+2025-11-22 02:24:04,216 [INFO] 45° chamfers: 0
+2025-11-22 02:24:04,216 [INFO] 30° chamfers: 0
+2025-11-22 02:24:04,216 [INFO] Custom angle: 0
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,216 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:24:04,216 [INFO]   Processing configuration #4 (type: 2.5D_milling)...
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,216 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:24:04,216 [INFO] ======================================================================
+2025-11-22 02:24:04,217 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:24:04,217 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:24:04,217 [INFO]   → Created 51 individual hints
+2025-11-22 02:24:04,217 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:24:04,227 [INFO]   → Merged into 47 final holes
+2025-11-22 02:24:04,227 [INFO] 
+2025-11-22 02:24:04,227 [INFO] ======================================================================
+2025-11-22 02:24:04,227 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:24:04,227 [INFO] ======================================================================
+2025-11-22 02:24:04,227 [INFO] Total candidates analyzed: 57
+2025-11-22 02:24:04,227 [INFO] Successfully recognized: 47
+2025-11-22 02:24:04,227 [INFO] Validation failures: 0
+2025-11-22 02:24:04,227 [INFO] Ambiguous features: 0
+2025-11-22 02:24:04,227 [INFO] 
+2025-11-22 02:24:04,227 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,227 [INFO]   counterbore_hole         :   4
+2025-11-22 02:24:04,227 [INFO]   through_hole             :  43
+2025-11-22 02:24:04,227 [INFO] ======================================================================
+2025-11-22 02:24:04,227 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:24:04,227 [INFO] ======================================================================
+2025-11-22 02:24:04,228 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:24:04,228 [INFO] ======================================================================
+2025-11-22 02:24:04,228 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,228 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:24:04,228 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:24:04,228 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:24:04,228 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:24:04,228 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:24:04,229 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:24:04,229 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:24:04,229 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:24:04,229 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:24:04,229 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:24:04,229 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:24:04,229 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:24:04,229 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:24:04,229 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:24:04,230 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:24:04,230 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:24:04,230 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:24:04,230 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:24:04,230 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:24:04,230 [INFO] 
+2025-11-22 02:24:04,230 [INFO] ======================================================================
+2025-11-22 02:24:04,230 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,230 [INFO] ======================================================================
+2025-11-22 02:24:04,230 [INFO] Total candidates: 52
+2025-11-22 02:24:04,230 [INFO] Pockets recognized: 0
+2025-11-22 02:24:04,230 [INFO] Slots recognized: 0
+2025-11-22 02:24:04,230 [INFO] Passages recognized: 0
+2025-11-22 02:24:04,230 [INFO] Validation failures: 0
+2025-11-22 02:24:04,230 [INFO] 
+2025-11-22 02:24:04,230 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,230 [INFO] ======================================================================
+2025-11-22 02:24:04,231 [INFO] Starting slot recognition...
+2025-11-22 02:24:04,231 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:24:04,231 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:24:04,231 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:24:04,231 [INFO] ======================================================================
+2025-11-22 02:24:04,231 [INFO] Starting boss/step/island recognition
+2025-11-22 02:24:04,231 [INFO] ======================================================================
+2025-11-22 02:24:04,231 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,232 [INFO] 
+2025-11-22 02:24:04,232 [INFO] ======================================================================
+2025-11-22 02:24:04,232 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,232 [INFO] ======================================================================
+2025-11-22 02:24:04,232 [INFO] Total candidates: 52
+2025-11-22 02:24:04,232 [INFO] Bosses recognized: 0
+2025-11-22 02:24:04,232 [INFO] Steps recognized: 1
+2025-11-22 02:24:04,232 [INFO] Islands recognized: 0
+2025-11-22 02:24:04,232 [INFO] Validation failures: 0
+2025-11-22 02:24:04,232 [INFO] 
+2025-11-22 02:24:04,232 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,232 [INFO]   step                               :   1
+2025-11-22 02:24:04,232 [INFO] ======================================================================
+2025-11-22 02:24:04,232 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:24:04,232 [INFO] ======================================================================
+2025-11-22 02:24:04,232 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:24:04,232 [INFO] ======================================================================
+2025-11-22 02:24:04,233 [DEBUG] Surface type distribution:
+2025-11-22 02:24:04,233 [DEBUG]   cone: 13
+2025-11-22 02:24:04,233 [DEBUG]   cylinder: 51
+2025-11-22 02:24:04,233 [DEBUG]   plane: 52
+2025-11-22 02:24:04,233 [INFO] Found 51 blend candidates:
+2025-11-22 02:24:04,233 [INFO]   Cylinders: 51
+2025-11-22 02:24:04,233 [INFO]   Tori: 0
+2025-11-22 02:24:04,233 [INFO]   Spheres: 0
+2025-11-22 02:24:04,233 [INFO]   B-splines: 0
+2025-11-22 02:24:04,233 [INFO] Found 51 blend surface candidates
+2025-11-22 02:24:04,233 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:24:04,233 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:24:04,233 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:24:04,233 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:24:04,233 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:24:04,233 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,233 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,233 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:24:04,233 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:24:04,233 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,233 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,233 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:24:04,234 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:24:04,234 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,234 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,234 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,235 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,235 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:24:04,235 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,235 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,236 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,236 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:24:04,236 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,236 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,236 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,236 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:24:04,236 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:24:04,236 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,236 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,236 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:24:04,236 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:24:04,236 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,236 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,236 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:24:04,236 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:24:04,236 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,236 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,236 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:24:04,236 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:24:04,236 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,236 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,236 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:24:04,236 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:24:04,236 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,237 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,237 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:24:04,237 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:24:04,237 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,237 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,237 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:24:04,237 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:24:04,237 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,237 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,237 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:24:04,237 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,237 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,237 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,237 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:24:04,237 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,237 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,237 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,237 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:24:04,237 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,237 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,237 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,237 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:24:04,237 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,237 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,238 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,238 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:24:04,238 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,238 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:24:04,239 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,239 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:24:04,239 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,239 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:24:04,239 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,239 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:24:04,239 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,239 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:24:04,239 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,239 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:24:04,239 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,239 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,239 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,239 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:24:04,240 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,240 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,240 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,240 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:24:04,240 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:24:04,240 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,240 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,240 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:24:04,240 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,240 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,240 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,240 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:24:04,240 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,240 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,240 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,240 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:24:04,240 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,240 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,240 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,240 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:24:04,240 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,240 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,240 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,240 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:24:04,241 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,241 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,241 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,241 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:24:04,241 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,241 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,241 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,241 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:24:04,241 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,241 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,241 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,241 [INFO] 
+======================================================================
+2025-11-22 02:24:04,241 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:24:04,241 [INFO] ======================================================================
+2025-11-22 02:24:04,241 [INFO] Total candidates: 51
+2025-11-22 02:24:04,241 [INFO] Constant radius: 0
+2025-11-22 02:24:04,241 [INFO] Variable radius: 0
+2025-11-22 02:24:04,241 [INFO] Corner blends: 0
+2025-11-22 02:24:04,241 [INFO] Fillet chains: 0
+2025-11-22 02:24:04,241 [INFO] Total recognized: 0
+2025-11-22 02:24:04,241 [INFO] ======================================================================
+2025-11-22 02:24:04,241 [INFO] FilletRecognizer: 0 fillets recognized
+2025-11-22 02:24:04,242 [INFO] ======================================================================
+2025-11-22 02:24:04,242 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:24:04,242 [INFO] ======================================================================
+2025-11-22 02:24:04,242 [INFO] Found 0 chamfer candidates
+2025-11-22 02:24:04,242 [INFO] 
+======================================================================
+2025-11-22 02:24:04,242 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:24:04,242 [INFO] ======================================================================
+2025-11-22 02:24:04,242 [INFO] Total recognized: 0
+2025-11-22 02:24:04,242 [INFO] 45° chamfers: 0
+2025-11-22 02:24:04,242 [INFO] 30° chamfers: 0
+2025-11-22 02:24:04,242 [INFO] Custom angle: 0
+2025-11-22 02:24:04,242 [INFO] ======================================================================
+2025-11-22 02:24:04,242 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:24:04,242 [INFO]   Processing configuration #5 (type: 2.5D_milling)...
+2025-11-22 02:24:04,242 [INFO] ======================================================================
+2025-11-22 02:24:04,242 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:24:04,242 [INFO] ======================================================================
+2025-11-22 02:24:04,242 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:24:04,242 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:24:04,243 [INFO]   → Created 51 individual hints
+2025-11-22 02:24:04,243 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:24:04,252 [INFO]   → Merged into 47 final holes
+2025-11-22 02:24:04,252 [INFO] 
+2025-11-22 02:24:04,252 [INFO] ======================================================================
+2025-11-22 02:24:04,252 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:24:04,252 [INFO] ======================================================================
+2025-11-22 02:24:04,252 [INFO] Total candidates analyzed: 57
+2025-11-22 02:24:04,252 [INFO] Successfully recognized: 47
+2025-11-22 02:24:04,252 [INFO] Validation failures: 0
+2025-11-22 02:24:04,252 [INFO] Ambiguous features: 0
+2025-11-22 02:24:04,252 [INFO] 
+2025-11-22 02:24:04,252 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,252 [INFO]   counterbore_hole         :   4
+2025-11-22 02:24:04,252 [INFO]   through_hole             :  43
+2025-11-22 02:24:04,252 [INFO] ======================================================================
+2025-11-22 02:24:04,252 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:24:04,253 [INFO] ======================================================================
+2025-11-22 02:24:04,253 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:24:04,253 [INFO] ======================================================================
+2025-11-22 02:24:04,253 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,253 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:24:04,253 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:24:04,253 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:24:04,253 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:24:04,254 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:24:04,254 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:24:04,254 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:24:04,254 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:24:04,254 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:24:04,254 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:24:04,254 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:24:04,254 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:24:04,254 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:24:04,254 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:24:04,255 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:24:04,255 [INFO] 
+2025-11-22 02:24:04,255 [INFO] ======================================================================
+2025-11-22 02:24:04,255 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,255 [INFO] ======================================================================
+2025-11-22 02:24:04,255 [INFO] Total candidates: 52
+2025-11-22 02:24:04,255 [INFO] Pockets recognized: 0
+2025-11-22 02:24:04,255 [INFO] Slots recognized: 0
+2025-11-22 02:24:04,255 [INFO] Passages recognized: 0
+2025-11-22 02:24:04,255 [INFO] Validation failures: 0
+2025-11-22 02:24:04,255 [INFO] 
+2025-11-22 02:24:04,255 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,255 [INFO] ======================================================================
+2025-11-22 02:24:04,256 [INFO] Starting slot recognition...
+2025-11-22 02:24:04,256 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:24:04,256 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:24:04,256 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:24:04,256 [INFO] ======================================================================
+2025-11-22 02:24:04,256 [INFO] Starting boss/step/island recognition
+2025-11-22 02:24:04,256 [INFO] ======================================================================
+2025-11-22 02:24:04,256 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,256 [INFO] 
+2025-11-22 02:24:04,256 [INFO] ======================================================================
+2025-11-22 02:24:04,256 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,256 [INFO] ======================================================================
+2025-11-22 02:24:04,257 [INFO] Total candidates: 52
+2025-11-22 02:24:04,257 [INFO] Bosses recognized: 0
+2025-11-22 02:24:04,257 [INFO] Steps recognized: 1
+2025-11-22 02:24:04,257 [INFO] Islands recognized: 0
+2025-11-22 02:24:04,257 [INFO] Validation failures: 0
+2025-11-22 02:24:04,257 [INFO] 
+2025-11-22 02:24:04,257 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,257 [INFO]   step                               :   1
+2025-11-22 02:24:04,257 [INFO] ======================================================================
+2025-11-22 02:24:04,257 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:24:04,257 [INFO] ======================================================================
+2025-11-22 02:24:04,257 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:24:04,257 [INFO] ======================================================================
+2025-11-22 02:24:04,257 [DEBUG] Surface type distribution:
+2025-11-22 02:24:04,257 [DEBUG]   cone: 13
+2025-11-22 02:24:04,257 [DEBUG]   cylinder: 51
+2025-11-22 02:24:04,257 [DEBUG]   plane: 52
+2025-11-22 02:24:04,257 [INFO] Found 51 blend candidates:
+2025-11-22 02:24:04,258 [INFO]   Cylinders: 51
+2025-11-22 02:24:04,258 [INFO]   Tori: 0
+2025-11-22 02:24:04,258 [INFO]   Spheres: 0
+2025-11-22 02:24:04,258 [INFO]   B-splines: 0
+2025-11-22 02:24:04,258 [INFO] Found 51 blend surface candidates
+2025-11-22 02:24:04,258 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:24:04,258 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:24:04,258 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:24:04,258 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:24:04,258 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:24:04,258 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,258 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,258 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:24:04,258 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:24:04,258 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,258 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,258 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:24:04,258 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,258 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,258 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,258 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:24:04,258 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,258 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,258 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,258 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:24:04,258 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:24:04,258 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,259 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,259 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:24:04,259 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,259 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,260 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:24:04,260 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:24:04,260 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,260 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,261 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:24:04,261 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,261 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,261 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:24:04,262 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,262 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,262 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,262 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,263 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,263 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:24:04,263 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,263 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,264 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:24:04,264 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,264 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,264 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,264 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,264 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,264 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,264 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:24:04,264 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,265 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,265 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,265 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:24:04,265 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,265 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,265 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,265 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:24:04,265 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,265 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,265 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,265 [INFO] 
+======================================================================
+2025-11-22 02:24:04,265 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:24:04,265 [INFO] ======================================================================
+2025-11-22 02:24:04,265 [INFO] Total candidates: 51
+2025-11-22 02:24:04,265 [INFO] Constant radius: 0
+2025-11-22 02:24:04,265 [INFO] Variable radius: 0
+2025-11-22 02:24:04,265 [INFO] Corner blends: 0
+2025-11-22 02:24:04,265 [INFO] Fillet chains: 0
+2025-11-22 02:24:04,265 [INFO] Total recognized: 0
+2025-11-22 02:24:04,265 [INFO] ======================================================================
+2025-11-22 02:24:04,265 [INFO] FilletRecognizer: 0 fillets recognized
+2025-11-22 02:24:04,266 [INFO] ======================================================================
+2025-11-22 02:24:04,266 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:24:04,266 [INFO] ======================================================================
+2025-11-22 02:24:04,266 [INFO] Found 0 chamfer candidates
+2025-11-22 02:24:04,266 [INFO] 
+======================================================================
+2025-11-22 02:24:04,266 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:24:04,266 [INFO] ======================================================================
+2025-11-22 02:24:04,266 [INFO] Total recognized: 0
+2025-11-22 02:24:04,266 [INFO] 45° chamfers: 0
+2025-11-22 02:24:04,266 [INFO] 30° chamfers: 0
+2025-11-22 02:24:04,266 [INFO] Custom angle: 0
+2025-11-22 02:24:04,266 [INFO] ======================================================================
+2025-11-22 02:24:04,266 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:24:04,266 [INFO]   Processing configuration #6 (type: 2.5D_milling)...
+2025-11-22 02:24:04,266 [INFO] ======================================================================
+2025-11-22 02:24:04,266 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:24:04,266 [INFO] ======================================================================
+2025-11-22 02:24:04,266 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:24:04,267 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:24:04,267 [INFO]   → Created 51 individual hints
+2025-11-22 02:24:04,267 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:24:04,276 [INFO]   → Merged into 47 final holes
+2025-11-22 02:24:04,276 [INFO] 
+2025-11-22 02:24:04,276 [INFO] ======================================================================
+2025-11-22 02:24:04,276 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:24:04,276 [INFO] ======================================================================
+2025-11-22 02:24:04,276 [INFO] Total candidates analyzed: 57
+2025-11-22 02:24:04,276 [INFO] Successfully recognized: 47
+2025-11-22 02:24:04,276 [INFO] Validation failures: 0
+2025-11-22 02:24:04,276 [INFO] Ambiguous features: 0
+2025-11-22 02:24:04,276 [INFO] 
+2025-11-22 02:24:04,276 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,277 [INFO]   counterbore_hole         :   4
+2025-11-22 02:24:04,277 [INFO]   through_hole             :  43
+2025-11-22 02:24:04,277 [INFO] ======================================================================
+2025-11-22 02:24:04,277 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:24:04,277 [INFO] ======================================================================
+2025-11-22 02:24:04,277 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:24:04,277 [INFO] ======================================================================
+2025-11-22 02:24:04,277 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,277 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:24:04,277 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:24:04,277 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:24:04,277 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:24:04,278 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:24:04,278 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:24:04,278 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:24:04,278 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:24:04,278 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:24:04,278 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:24:04,278 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:24:04,278 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:24:04,278 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:24:04,278 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:24:04,279 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:24:04,280 [INFO] 
+2025-11-22 02:24:04,280 [INFO] ======================================================================
+2025-11-22 02:24:04,280 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,280 [INFO] ======================================================================
+2025-11-22 02:24:04,280 [INFO] Total candidates: 52
+2025-11-22 02:24:04,280 [INFO] Pockets recognized: 0
+2025-11-22 02:24:04,280 [INFO] Slots recognized: 0
+2025-11-22 02:24:04,280 [INFO] Passages recognized: 0
+2025-11-22 02:24:04,280 [INFO] Validation failures: 0
+2025-11-22 02:24:04,280 [INFO] 
+2025-11-22 02:24:04,280 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,280 [INFO] ======================================================================
+2025-11-22 02:24:04,280 [INFO] Starting slot recognition...
+2025-11-22 02:24:04,281 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:24:04,281 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:24:04,281 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:24:04,281 [INFO] ======================================================================
+2025-11-22 02:24:04,281 [INFO] Starting boss/step/island recognition
+2025-11-22 02:24:04,281 [INFO] ======================================================================
+2025-11-22 02:24:04,281 [INFO] Analyzing 52 planar faces
+2025-11-22 02:24:04,281 [INFO] 
+2025-11-22 02:24:04,281 [INFO] ======================================================================
+2025-11-22 02:24:04,281 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:24:04,281 [INFO] ======================================================================
+2025-11-22 02:24:04,281 [INFO] Total candidates: 52
+2025-11-22 02:24:04,281 [INFO] Bosses recognized: 0
+2025-11-22 02:24:04,282 [INFO] Steps recognized: 1
+2025-11-22 02:24:04,282 [INFO] Islands recognized: 0
+2025-11-22 02:24:04,282 [INFO] Validation failures: 0
+2025-11-22 02:24:04,282 [INFO] 
+2025-11-22 02:24:04,282 [INFO] Feature type breakdown:
+2025-11-22 02:24:04,282 [INFO]   step                               :   1
+2025-11-22 02:24:04,282 [INFO] ======================================================================
+2025-11-22 02:24:04,282 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:24:04,282 [INFO] ======================================================================
+2025-11-22 02:24:04,282 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:24:04,282 [INFO] ======================================================================
+2025-11-22 02:24:04,282 [DEBUG] Surface type distribution:
+2025-11-22 02:24:04,282 [DEBUG]   cone: 13
+2025-11-22 02:24:04,282 [DEBUG]   cylinder: 51
+2025-11-22 02:24:04,282 [DEBUG]   plane: 52
+2025-11-22 02:24:04,282 [INFO] Found 51 blend candidates:
+2025-11-22 02:24:04,282 [INFO]   Cylinders: 51
+2025-11-22 02:24:04,283 [INFO]   Tori: 0
+2025-11-22 02:24:04,283 [INFO]   Spheres: 0
+2025-11-22 02:24:04,283 [INFO]   B-splines: 0
+2025-11-22 02:24:04,283 [INFO] Found 51 blend surface candidates
+2025-11-22 02:24:04,283 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:24:04,283 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:24:04,283 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:24:04,283 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:24:04,283 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:24:04,283 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,283 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,283 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:24:04,283 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:24:04,283 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,283 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,283 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:24:04,283 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,283 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,283 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,283 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:24:04,283 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,283 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,283 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,283 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:24:04,283 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:24:04,284 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,284 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,284 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:24:04,284 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,285 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:24:04,285 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:24:04,285 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,285 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:24:04,286 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,286 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:24:04,286 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,286 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:24:04,286 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,286 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:24:04,286 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,286 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:24:04,286 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,286 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:24:04,286 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,286 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,286 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:24:04,286 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,287 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,287 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,287 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:24:04,287 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:24:04,287 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,287 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,287 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:24:04,287 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,287 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,287 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,287 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:24:04,287 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,287 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,287 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,287 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:24:04,287 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,287 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,287 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,287 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:24:04,287 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,287 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,287 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,287 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:24:04,287 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,288 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,288 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,288 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:24:04,288 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,289 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,289 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:24:04,289 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:24:04,289 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,290 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,290 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:24:04,290 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,290 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,290 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,290 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:24:04,290 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,290 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,290 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,290 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:24:04,290 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,290 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,290 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,290 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:24:04,290 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,290 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,290 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,290 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:24:04,290 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:24:04,290 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:24:04,290 [DEBUG]   ❌ REJECTED: Radius out of range or missing
+2025-11-22 02:24:04,290 [INFO] 
+======================================================================
+2025-11-22 02:24:04,290 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:24:04,290 [INFO] ======================================================================
+2025-11-22 02:24:04,290 [INFO] Total candidates: 51
+2025-11-22 02:24:04,290 [INFO] Constant radius: 0
+2025-11-22 02:24:04,290 [INFO] Variable radius: 0
+2025-11-22 02:24:04,290 [INFO] Corner blends: 0
+2025-11-22 02:24:04,290 [INFO] Fillet chains: 0
+2025-11-22 02:24:04,290 [INFO] Total recognized: 0
+2025-11-22 02:24:04,291 [INFO] ======================================================================
+2025-11-22 02:24:04,291 [INFO] FilletRecognizer: 0 fillets recognized
+2025-11-22 02:24:04,291 [INFO] ======================================================================
+2025-11-22 02:24:04,291 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:24:04,291 [INFO] ======================================================================
+2025-11-22 02:24:04,291 [INFO] Found 0 chamfer candidates
+2025-11-22 02:24:04,291 [INFO] 
+======================================================================
+2025-11-22 02:24:04,291 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:24:04,291 [INFO] ======================================================================
+2025-11-22 02:24:04,291 [INFO] Total recognized: 0
+2025-11-22 02:24:04,291 [INFO] 45° chamfers: 0
+2025-11-22 02:24:04,291 [INFO] 30° chamfers: 0
+2025-11-22 02:24:04,291 [INFO] Custom angle: 0
+2025-11-22 02:24:04,291 [INFO] ======================================================================
+2025-11-22 02:24:04,291 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:24:04,291 [INFO] ✓ Feature detection complete: 288 features
+2025-11-22 02:24:04,291 [INFO] 
+[STEP 5/8] Analyzing tool accessibility...
+2025-11-22 02:24:04,291 [INFO] Analyzing tool accessibility for all faces...
+2025-11-22 02:24:04,295 [INFO]   Accessible faces: 103/116
+2025-11-22 02:24:04,295 [INFO]   Inaccessible faces: 13
+2025-11-22 02:24:04,296 [INFO] ✓ Accessibility analysis complete
+2025-11-22 02:24:04,296 [INFO] 
+[STEP 6/8] Standardizing feature output...
+2025-11-22 02:24:04,299 [INFO]   ✓ Merged 240 duplicate features
+2025-11-22 02:24:04,299 [INFO]   ✓ Standardized 48 features
+2025-11-22 02:24:04,299 [INFO] 
+[STEP 7/8] Running DFM analysis...
+2025-11-22 02:24:04,299 [INFO] 🔍 Running DFM analysis...
+2025-11-22 02:24:04,299 [INFO]   ⚠️  Found 1 DFM warnings
+2025-11-22 02:24:04,299 [INFO]   ⚠️  Found 1 DFM warnings:
+2025-11-22 02:24:04,299 [INFO]     - Code 2201: Tight corners in step (radius < 0.5mm) - consider adding fillets
+2025-11-22 02:24:04,299 [INFO] 
+[STEP 8/8] Compiling statistics...
+2025-11-22 02:24:04,299 [INFO] ✓ Average confidence: 84.8%
+2025-11-22 02:24:04,299 [INFO] ⚠ 48 system warnings, 1 DFM warnings
+2025-11-22 02:24:04,299 [INFO] 
+2025-11-22 02:24:04,299 [INFO] ======================================================================
+2025-11-22 02:24:04,299 [INFO] RECOGNITION COMPLETE
+2025-11-22 02:24:04,299 [INFO] ======================================================================
+2025-11-22 02:24:04,299 [INFO] Status: success
+2025-11-22 02:24:04,299 [INFO] Total time: 0.52s
+2025-11-22 02:24:04,299 [INFO] Features recognized: 48
+2025-11-22 02:24:04,299 [INFO] Warnings: 49
+2025-11-22 02:24:04,299 [INFO] ======================================================================
+2025-11-22 02:24:04,299 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] ✅ AAG found 48 features
+2025-11-22 02:24:04,299 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎨 counterbore_hole: 2 faces
+2025-11-22 02:24:04,300 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎨 counterbore_hole: 2 faces
+2025-11-22 02:24:04,300 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎨 counterbore_hole: 2 faces
+2025-11-22 02:24:04,300 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎨 counterbore_hole: 2 faces
+2025-11-22 02:24:04,300 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎨 step: 5 faces
+2025-11-22 02:24:04,497 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 🎉 AAG analysis complete in 4772ms
+2025-11-22 02:24:04,497 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] 📊 Status: success, Features: 48, Errors: 0, Warnings: 0
+2025-11-22 02:24:04,497 [INFO] [1a7bb35f-d08b-498b-b845-3e7354436c27] ✅ Mesh data available: 13776 vertices
