@@ -126,6 +126,14 @@ class HoleRecognizer:
         # if self._is_pocket_wall_cylinder(face_id):
         #     return None
         
+        # Filter partial cylinders (fillets) - they have angle_deg < 300 degrees
+        # Full holes should have angle_deg close to 360 degrees
+        face_data = self.aag.nodes[face_id]
+        angle_deg = face_data.get('angle_deg', 360.0)
+        if angle_deg < 300.0:
+            # This is likely a fillet, not a hole
+            return None
+        
         # Filter by size
         diameter = radius * 2000.0  # Convert to mm
         

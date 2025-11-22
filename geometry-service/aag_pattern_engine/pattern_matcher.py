@@ -225,7 +225,10 @@ def _convert_graph_to_legacy_format(graph: Dict) -> Dict:
             vexity=Vexity(node_dict.get('vexity', 'unknown')),
             area=node_dict.get('area', 0.0),
             normal=node_dict.get('normal', [0, 0, 1]),
-            center=node_dict.get('center', [0, 0, 0])
+            center=node_dict.get('center', [0, 0, 0]),
+            radius=node_dict.get('radius'),
+            axis=node_dict.get('axis'),
+            angle_deg=node_dict.get('angle_deg')
         )
         converted_nodes.append(node)
     

@@ -30,7 +30,8 @@ from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.BRep import BRep_Tool
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.TopExp import topexp
-from OCC.Core.gp import gp_Dir, gp_Pnt
+from OCC.Core.gp import gp_Dir, gp_Pnt, gp_Vec, gp_Pnt2d
+from OCC.Core.GeomLProp import GeomLProp_SLProps
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ class GraphNode:
     center: Optional[Tuple[float, float, float]] = None
     radius: Optional[float] = None
     axis: Optional[Tuple[float, float, float]] = None
+    angle_deg: Optional[float] = None
     id: Optional[int] = None  # Alias for face_id for backward compatibility
     
     def __post_init__(self):
@@ -299,6 +301,12 @@ class AAGGraphBuilder:
                     face_data['axis'] = [axis.X(), axis.Y(), axis.Z()]
                     face_data['radius'] = cyl.Radius()
                     
+                    # Calculate angular span (crucial for distinguishing holes vs fillets)
+                    u_min = surface.FirstUParameter()
+                    u_max = surface.LastUParameter()
+                    angle_deg = np.degrees(abs(u_max - u_min))
+                    face_data['angle_deg'] = angle_deg
+                    
                 self.nodes[idx] = face_data
                 valid_count += 1
                 
@@ -361,29 +369,46 @@ class AAGGraphBuilder:
             Angle in degrees (0-360), or None if computation fails
         """
         try:
-            # Get edge parameter
+            # Get edge parameter range
             first, last = BRep_Tool.Range(edge)
             mid_param = (first + last) / 2.0
             
-            # Get edge curve
+            # Get edge curve (3D)
             curve = BRepAdaptor_Curve(edge)
             edge_point = curve.Value(mid_param)
             edge_tangent = curve.DN(mid_param, 1)
             
-            # Get normals for both faces at edge point
-            surf1 = BRepAdaptor_Surface(face1)
-            surf2 = BRepAdaptor_Surface(face2)
-            
-            # Find UV parameters on each surface
-            u1, v1 = 0.5, 0.5  # Approximate - would need proper projection
-            u2, v2 = 0.5, 0.5
-            
+            # Helper to get normal at edge parameter
+            def get_normal_at_param(face, param):
+                try:
+                    # Get UV point on face from edge parameter
+                    # Note: BRep_Tool.CurveOnSurface returns (Curve2d, First, Last)
+                    c2d, f, l = BRep_Tool.CurveOnSurface(edge, face)
+                    uv = c2d.Value(param)
+                    
+                    # Get surface properties
+                    surf_handle = BRep_Tool.Surface(face)
+                    props = GeomLProp_SLProps(surf_handle, uv.X(), uv.Y(), 1, 1e-6)
+                    
+                    if props.IsNormalDefined():
+                        n = props.Normal()
+                        return np.array([n.X(), n.Y(), n.Z()])
+                        
+                    return None
+                except Exception:
+                    return None
+
             # Get normals
-            normal1 = self._get_face_normal_at_point(face1, edge_point)
-            normal2 = self._get_face_normal_at_point(face2, edge_point)
+            normal1 = get_normal_at_param(face1, mid_param)
+            normal2 = get_normal_at_param(face2, mid_param)
             
             if normal1 is None or normal2 is None:
-                return None
+                # Fallback for planar faces if UV method fails
+                normal1 = normal1 if normal1 is not None else self._get_face_normal_at_point(face1, edge_point)
+                normal2 = normal2 if normal2 is not None else self._get_face_normal_at_point(face2, edge_point)
+                
+                if normal1 is None or normal2 is None:
+                    return None
                 
             # Compute dihedral angle
             dot = np.dot(normal1, normal2)
@@ -397,6 +422,12 @@ class AAGGraphBuilder:
             cross = np.cross(normal1, normal2)
             edge_dir = np.array([edge_tangent.X(), edge_tangent.Y(), edge_tangent.Z()])
             
+            # Check edge orientation relative to face normals
+            # For a convex edge, the cross product should align with edge direction
+            # (depending on face order and edge orientation)
+            
+            # Standardize edge direction based on face1 traversal?
+            # Simplified check:
             if np.dot(cross, edge_dir) < 0:
                 angle_deg = 360.0 - angle_deg
                 
