@@ -434,7 +434,7 @@ class AAGGraphBuilder:
             if np.dot(cross, edge_dir) < 0:
                 angle_deg = 360.0 - angle_deg
                 
-            # logger.debug(f"  Dihedral: {angle_deg:.2f}°")
+            logger.debug(f"  Dihedral: {angle_deg:.2f}°")
             return angle_deg
             
         except Exception as e:

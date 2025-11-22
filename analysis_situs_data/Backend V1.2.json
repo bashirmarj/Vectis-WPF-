@@ -1,0 +1,1171 @@
+AAG recognition request received
+2025-11-22 03:47:44,554 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 📁 File hash: 4e7ea20537bf5d74ac887b070bcb4fd79bc588be028f971d4f9135c0265b30ae
+2025-11-22 03:47:44,555 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 📂 Loading STEP file
+2025-11-22 03:47:44,621 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🔺 Tessellating with face mapping
+2025-11-22 03:47:46,098 [INFO] Tessellated: 13776 vertices, 27597 triangles, 116 faces in 1476.5ms
+2025-11-22 03:47:46,098 [INFO] Created vertex_face_ids: 13776 vertices mapped to faces
+2025-11-22 03:47:46,099 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🔍 Initializing AAG Pattern Matcher
+2025-11-22 03:47:46,729 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🎯 Running AAG pattern recognition
+2025-11-22 03:47:46,729 [INFO] ======================================================================
+2025-11-22 03:47:46,729 [INFO] AAG PATTERN MATCHER - Starting Recognition
+2025-11-22 03:47:46,729 [INFO] ======================================================================
+2025-11-22 03:47:46,729 [INFO] Part type classified as: prismatic
+2025-11-22 03:47:46,729 [INFO] 
+[STEP 1/8] Decomposing into manufacturing volumes...
+2025-11-22 03:47:46,729 [INFO] VolumeDecomposer initialized (tolerance=1e-06)
+2025-11-22 03:47:46,729 [INFO] Starting volume decomposition (type=prismatic)
+2025-11-22 03:47:46,729 [INFO] Decomposing prismatic part...
+2025-11-22 03:47:46,729 [INFO]     Bounding box diagonal (raw OCC): 524.6806
+2025-11-22 03:47:46,730 [INFO]     Assumed MILLIMETERS (diagonal 524.6806)
+2025-11-22 03:47:46,730 [INFO]   Detected model units: mm
+2025-11-22 03:47:46,730 [INFO]   Stock envelope: 475.0 × 220.0 × 35.0 mm
+2025-11-22 03:47:46,730 [INFO]   Computing boolean difference (stock - part)...
+2025-11-22 03:47:46,730 [INFO]   Creating stock box:
+2025-11-22 03:47:46,730 [INFO]     Origin (OCC units): (-355.013595, -109.513595, -0.013595)
+2025-11-22 03:47:46,730 [INFO]     Size (OCC units):   (475.027189, 220.027189, 35.027189)
+2025-11-22 03:47:46,730 [INFO]     Scale factor:       1.0
+2025-11-22 03:47:46,730 [WARNING]   ⚠️ Method 1: IsDone() returned False but shape is valid - using it anyway
+2025-11-22 03:47:46,794 [INFO]   Removal volume: 2431009.4 mm³
+2025-11-22 03:47:46,795 [INFO] ✓ Decomposition successful
+2025-11-22 03:47:46,795 [INFO]   Volumes found: 1 (Analysis Situs style: no splitting)
+2025-11-22 03:47:46,795 [INFO] ✓ Decomposition complete: 1 volume(s)
+2025-11-22 03:47:46,795 [INFO] 
+[STEP 2/8] Building AAG for volume(s)...
+2025-11-22 03:47:46,795 [INFO]   Building removal volume AAG for volume #1...
+2025-11-22 03:47:46,795 [INFO] ======================================================================
+2025-11-22 03:47:46,795 [INFO] Building Attributed Adjacency Graph (AAG) - PATCHED v1.1.0
+2025-11-22 03:47:46,795 [INFO] ======================================================================
+2025-11-22 03:47:46,795 [INFO] Caching face list...
+2025-11-22 03:47:46,796 [INFO] Cached 122 faces
+2025-11-22 03:47:46,796 [INFO] Building edge-face topology map...
+2025-11-22 03:47:46,798 [INFO] Edge-face map: 317 edges
+2025-11-22 03:47:46,798 [INFO]   Non-manifold: 0
+2025-11-22 03:47:46,798 [INFO]   Boundary: 13
+2025-11-22 03:47:46,798 [INFO] Extracting and validating faces...
+2025-11-22 03:47:46,813 [INFO] Extracted 122 valid faces
+2025-11-22 03:47:46,813 [INFO] Filtered 0 degenerate faces
+2025-11-22 03:47:46,813 [INFO] Building edges with dihedral angles...
+2025-11-22 03:47:46,854 [INFO] Built 304 graph edges
+2025-11-22 03:47:46,854 [INFO] Building adjacency map...
+2025-11-22 03:47:46,854 [INFO] Detecting part orientation...
+2025-11-22 03:47:46,854 [INFO] Orientation detection:
+2025-11-22 03:47:46,854 [INFO]   X: 39.7%, Y: 36.2%, Z: 24.1%
+2025-11-22 03:47:46,854 [WARNING] ⚠ Part appears rotated from axis alignment
+2025-11-22 03:47:46,854 [INFO] Validating graph integrity...
+2025-11-22 03:47:46,855 [INFO] 
+2025-11-22 03:47:46,855 [INFO] ======================================================================
+2025-11-22 03:47:46,855 [INFO] AAG GRAPH STATISTICS
+2025-11-22 03:47:46,855 [INFO] ======================================================================
+2025-11-22 03:47:46,855 [INFO] Total faces processed: 122
+2025-11-22 03:47:46,855 [INFO] Valid nodes: 122
+2025-11-22 03:47:46,855 [INFO] Degenerate faces filtered: 0
+2025-11-22 03:47:46,855 [INFO] Total edges: 304
+2025-11-22 03:47:46,855 [INFO] Non-manifold edges: 0
+2025-11-22 03:47:46,855 [INFO] Boundary edges: 13
+2025-11-22 03:47:46,855 [INFO] 
+2025-11-22 03:47:46,855 [INFO] Vexity Distribution:
+2025-11-22 03:47:46,855 [INFO]   Convex:     97 ( 31.9%)
+2025-11-22 03:47:46,855 [INFO]   Concave:   196 ( 64.5%)
+2025-11-22 03:47:46,855 [INFO]   Smooth:     11 (  3.6%)
+2025-11-22 03:47:46,855 [INFO] ✓ Convex edge detection looks healthy
+2025-11-22 03:47:46,855 [INFO] ======================================================================
+2025-11-22 03:47:46,855 [INFO]     ✓ Removal AAG built: 122 nodes, 304 edges
+2025-11-22 03:47:46,855 [INFO]   Building part AAG for volume #1...
+2025-11-22 03:47:46,855 [INFO] ======================================================================
+2025-11-22 03:47:46,855 [INFO] Building Attributed Adjacency Graph (AAG) - PATCHED v1.1.0
+2025-11-22 03:47:46,856 [INFO] ======================================================================
+2025-11-22 03:47:46,856 [INFO] Caching face list...
+2025-11-22 03:47:46,856 [INFO] Cached 116 faces
+2025-11-22 03:47:46,856 [INFO] Building edge-face topology map...
+2025-11-22 03:47:46,858 [INFO] Edge-face map: 305 edges
+2025-11-22 03:47:46,858 [INFO]   Non-manifold: 0
+2025-11-22 03:47:46,858 [INFO]   Boundary: 13
+2025-11-22 03:47:46,858 [INFO] Extracting and validating faces...
+2025-11-22 03:47:46,871 [INFO] Extracted 116 valid faces
+2025-11-22 03:47:46,871 [INFO] Filtered 0 degenerate faces
+2025-11-22 03:47:46,871 [INFO] Building edges with dihedral angles...
+2025-11-22 03:47:46,909 [INFO] Built 292 graph edges
+2025-11-22 03:47:46,909 [INFO] Building adjacency map...
+2025-11-22 03:47:46,909 [INFO] Detecting part orientation...
+2025-11-22 03:47:46,909 [INFO] Orientation detection:
+2025-11-22 03:47:46,909 [INFO]   X: 40.4%, Y: 36.5%, Z: 23.1%
+2025-11-22 03:47:46,909 [WARNING] ⚠ Part appears rotated from axis alignment
+2025-11-22 03:47:46,909 [INFO] Validating graph integrity...
+2025-11-22 03:47:46,910 [INFO] 
+2025-11-22 03:47:46,910 [INFO] ======================================================================
+2025-11-22 03:47:46,910 [INFO] AAG GRAPH STATISTICS
+2025-11-22 03:47:46,910 [INFO] ======================================================================
+2025-11-22 03:47:46,910 [INFO] Total faces processed: 116
+2025-11-22 03:47:46,910 [INFO] Valid nodes: 116
+2025-11-22 03:47:46,910 [INFO] Degenerate faces filtered: 0
+2025-11-22 03:47:46,910 [INFO] Total edges: 292
+2025-11-22 03:47:46,910 [INFO] Non-manifold edges: 0
+2025-11-22 03:47:46,910 [INFO] Boundary edges: 13
+2025-11-22 03:47:46,910 [INFO] 
+2025-11-22 03:47:46,910 [INFO] Vexity Distribution:
+2025-11-22 03:47:46,910 [INFO]   Convex:    101 ( 34.6%)
+2025-11-22 03:47:46,910 [INFO]   Concave:   180 ( 61.6%)
+2025-11-22 03:47:46,910 [INFO]   Smooth:     11 (  3.8%)
+2025-11-22 03:47:46,910 [INFO] ✓ Convex edge detection looks healthy
+2025-11-22 03:47:46,910 [INFO] ======================================================================
+2025-11-22 03:47:46,910 [INFO]     ✓ Part AAG built: 116 nodes, 292 edges
+2025-11-22 03:47:46,910 [INFO] ✓ Built 1 removal volume graph(s) and 1 part graph(s)
+2025-11-22 03:47:46,910 [INFO] 
+[STEP 3/8] Detecting machining configurations...
+2025-11-22 03:47:46,910 [INFO]   Analyzing volume #1...
+2025-11-22 03:47:46,910 [INFO] Detecting machining configurations...
+2025-11-22 03:47:46,915 [INFO] ✓ Found 6 machining configuration(s)
+2025-11-22 03:47:46,915 [INFO]     ✓ Found 6 machining config(s)
+2025-11-22 03:47:46,915 [INFO] ✓ Total configurations: 6
+2025-11-22 03:47:46,915 [INFO] 
+[STEP 4/8] Running feature recognizers...
+2025-11-22 03:47:46,915 [INFO]   Processing configuration #1 (type: 2.5D_milling)...
+2025-11-22 03:47:46,915 [INFO] ======================================================================
+2025-11-22 03:47:46,915 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 03:47:46,915 [INFO] ======================================================================
+2025-11-22 03:47:46,916 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 03:47:46,916 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 03:47:46,916 [INFO]   → Created 28 individual hints
+2025-11-22 03:47:46,916 [INFO] Phase 2: Merging compound features...
+2025-11-22 03:47:46,919 [INFO]   → Merged into 24 final holes
+2025-11-22 03:47:46,919 [INFO] 
+2025-11-22 03:47:46,919 [INFO] ======================================================================
+2025-11-22 03:47:46,919 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 03:47:46,920 [INFO] ======================================================================
+2025-11-22 03:47:46,920 [INFO] Total candidates analyzed: 34
+2025-11-22 03:47:46,920 [INFO] Successfully recognized: 24
+2025-11-22 03:47:46,920 [INFO] Validation failures: 0
+2025-11-22 03:47:46,920 [INFO] Ambiguous features: 0
+2025-11-22 03:47:46,920 [INFO] 
+2025-11-22 03:47:46,920 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,920 [INFO]   blind_hole               :  20
+2025-11-22 03:47:46,920 [INFO]   counter_drilled_hole     :   4
+2025-11-22 03:47:46,920 [INFO] ======================================================================
+2025-11-22 03:47:46,920 [INFO]     ✓ HoleRecognizer: 24 holes detected
+2025-11-22 03:47:46,920 [INFO] ======================================================================
+2025-11-22 03:47:46,920 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 03:47:46,920 [INFO] ======================================================================
+2025-11-22 03:47:46,920 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,920 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 03:47:46,920 [DEBUG]   Face 1: found 17 vertical walls
+2025-11-22 03:47:46,920 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 03:47:46,920 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 03:47:46,921 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 03:47:46,921 [DEBUG]   Face 27: found 2 vertical walls
+2025-11-22 03:47:46,921 [DEBUG]   Face 28: found 11 vertical walls
+2025-11-22 03:47:46,921 [DEBUG]   Face 29: found 2 vertical walls
+2025-11-22 03:47:46,921 [DEBUG]   Face 30: found 2 vertical walls
+2025-11-22 03:47:46,921 [DEBUG]   Face 31: found 2 vertical walls
+2025-11-22 03:47:46,921 [DEBUG]   Face 32: found 17 vertical walls
+2025-11-22 03:47:46,922 [DEBUG]   Face 33: found 2 vertical walls
+2025-11-22 03:47:46,922 [DEBUG]   Face 34: found 2 vertical walls
+2025-11-22 03:47:46,922 [DEBUG]   Face 35: found 53 vertical walls
+2025-11-22 03:47:46,922 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 03:47:46,922 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 03:47:46,923 [DEBUG]   Face 102: found 47 vertical walls
+2025-11-22 03:47:46,923 [INFO] 
+2025-11-22 03:47:46,923 [INFO] ======================================================================
+2025-11-22 03:47:46,923 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,923 [INFO] ======================================================================
+2025-11-22 03:47:46,923 [INFO] Total candidates: 52
+2025-11-22 03:47:46,923 [INFO] Pockets recognized: 0
+2025-11-22 03:47:46,923 [INFO] Slots recognized: 0
+2025-11-22 03:47:46,923 [INFO] Passages recognized: 0
+2025-11-22 03:47:46,923 [INFO] Validation failures: 0
+2025-11-22 03:47:46,923 [INFO] 
+2025-11-22 03:47:46,924 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,924 [INFO] ======================================================================
+2025-11-22 03:47:46,924 [INFO] Starting slot recognition...
+2025-11-22 03:47:46,924 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 03:47:46,924 [INFO] ✅ Recognized 0 slot features
+2025-11-22 03:47:46,924 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 03:47:46,924 [INFO] ======================================================================
+2025-11-22 03:47:46,924 [INFO] Starting boss/step/island recognition
+2025-11-22 03:47:46,924 [INFO] ======================================================================
+2025-11-22 03:47:46,924 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,925 [INFO] 
+2025-11-22 03:47:46,925 [INFO] ======================================================================
+2025-11-22 03:47:46,925 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,925 [INFO] ======================================================================
+2025-11-22 03:47:46,925 [INFO] Total candidates: 52
+2025-11-22 03:47:46,925 [INFO] Bosses recognized: 0
+2025-11-22 03:47:46,925 [INFO] Steps recognized: 0
+2025-11-22 03:47:46,925 [INFO] Islands recognized: 0
+2025-11-22 03:47:46,925 [INFO] Validation failures: 0
+2025-11-22 03:47:46,925 [INFO] 
+2025-11-22 03:47:46,925 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,925 [INFO] ======================================================================
+2025-11-22 03:47:46,925 [INFO] ======================================================================
+2025-11-22 03:47:46,925 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 03:47:46,926 [INFO] ======================================================================
+2025-11-22 03:47:46,926 [DEBUG] Surface type distribution:
+2025-11-22 03:47:46,926 [DEBUG]   cone: 13
+2025-11-22 03:47:46,926 [DEBUG]   cylinder: 51
+2025-11-22 03:47:46,926 [DEBUG]   plane: 52
+2025-11-22 03:47:46,926 [INFO] Found 51 blend candidates:
+2025-11-22 03:47:46,926 [INFO]   Cylinders: 51
+2025-11-22 03:47:46,926 [INFO]   Tori: 0
+2025-11-22 03:47:46,926 [INFO]   Spheres: 0
+2025-11-22 03:47:46,926 [INFO]   B-splines: 0
+2025-11-22 03:47:46,926 [INFO] Found 51 blend surface candidates
+2025-11-22 03:47:46,926 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 03:47:46,926 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 03:47:46,926 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 03:47:46,926 [DEBUG]   Evaluating candidate 10:
+2025-11-22 03:47:46,926 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 03:47:46,926 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,926 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,926 [DEBUG]   Evaluating candidate 11:
+2025-11-22 03:47:46,926 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 03:47:46,926 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,926 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,926 [DEBUG]   Evaluating candidate 12:
+2025-11-22 03:47:46,926 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,926 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,926 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,926 [DEBUG]   Evaluating candidate 13:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 14:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 15:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 16:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 17:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 18:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 36:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 0 convex, 4 concave, 0 smooth
+2025-11-22 03:47:46,927 [DEBUG]     ❌ REJECTED: Only 0 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,927 [DEBUG]   Evaluating candidate 37:
+2025-11-22 03:47:46,927 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 03:47:46,927 [DEBUG]     Vexity: 1 convex, 2 concave, 1 smooth
+2025-11-22 03:47:46,927 [DEBUG]     Radius: 50000.000mm (range: 100.0-100000.0mm)
+2025-11-22 03:47:46,927 [DEBUG]     Area: 3382.91 mm²
+2025-11-22 03:47:46,927 [DEBUG]     ✅ PASSED: Valid fillet candidate
+2025-11-22 03:47:46,927 [ERROR] Fillet recognition failed: 'angle'
+Traceback (most recent call last):
+  File "/app/aag_pattern_engine/recognizers/recognizer_api_adapters.py", line 112, in recognize
+    fillet_features = self._recognizer.recognize_fillets(graph)
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 293, in recognize_fillets
+    fillet = self._classify_and_recognize_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 504, in _classify_and_recognize_fillet
+    return self._recognize_constant_radius_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 535, in _recognize_constant_radius_fillet
+    is_tangent = self._validate_tangency(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 706, in _validate_tangency
+    angle = adj['angle']
+KeyError: 'angle'
+2025-11-22 03:47:46,928 [INFO] ======================================================================
+2025-11-22 03:47:46,928 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 03:47:46,928 [INFO] ======================================================================
+2025-11-22 03:47:46,928 [INFO] Found 0 chamfer candidates
+2025-11-22 03:47:46,929 [INFO] 
+======================================================================
+2025-11-22 03:47:46,929 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 03:47:46,929 [INFO] ======================================================================
+2025-11-22 03:47:46,929 [INFO] Total recognized: 0
+2025-11-22 03:47:46,929 [INFO] 45° chamfers: 0
+2025-11-22 03:47:46,929 [INFO] 30° chamfers: 0
+2025-11-22 03:47:46,929 [INFO] Custom angle: 0
+2025-11-22 03:47:46,929 [INFO] ======================================================================
+2025-11-22 03:47:46,929 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 03:47:46,929 [INFO]   Processing configuration #2 (type: 2.5D_milling)...
+2025-11-22 03:47:46,929 [INFO] ======================================================================
+2025-11-22 03:47:46,929 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 03:47:46,929 [INFO] ======================================================================
+2025-11-22 03:47:46,929 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 03:47:46,929 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 03:47:46,929 [INFO]   → Created 28 individual hints
+2025-11-22 03:47:46,929 [INFO] Phase 2: Merging compound features...
+2025-11-22 03:47:46,932 [INFO]   → Merged into 24 final holes
+2025-11-22 03:47:46,932 [INFO] 
+2025-11-22 03:47:46,932 [INFO] ======================================================================
+2025-11-22 03:47:46,932 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 03:47:46,932 [INFO] ======================================================================
+2025-11-22 03:47:46,933 [INFO] Total candidates analyzed: 34
+2025-11-22 03:47:46,933 [INFO] Successfully recognized: 24
+2025-11-22 03:47:46,933 [INFO] Validation failures: 0
+2025-11-22 03:47:46,933 [INFO] Ambiguous features: 0
+2025-11-22 03:47:46,933 [INFO] 
+2025-11-22 03:47:46,933 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,933 [INFO]   blind_hole               :  20
+2025-11-22 03:47:46,933 [INFO]   counter_drilled_hole     :   4
+2025-11-22 03:47:46,933 [INFO] ======================================================================
+2025-11-22 03:47:46,933 [INFO]     ✓ HoleRecognizer: 24 holes detected
+2025-11-22 03:47:46,933 [INFO] ======================================================================
+2025-11-22 03:47:46,933 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 03:47:46,933 [INFO] ======================================================================
+2025-11-22 03:47:46,933 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,933 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 1: found 17 vertical walls
+2025-11-22 03:47:46,933 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 03:47:46,933 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 03:47:46,933 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 27: found 2 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 28: found 11 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 29: found 2 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 30: found 2 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 31: found 2 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 32: found 17 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 33: found 2 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 34: found 2 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 35: found 53 vertical walls
+2025-11-22 03:47:46,934 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 03:47:46,934 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 03:47:46,935 [DEBUG]   Face 102: found 47 vertical walls
+2025-11-22 03:47:46,935 [INFO] 
+2025-11-22 03:47:46,935 [INFO] ======================================================================
+2025-11-22 03:47:46,935 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,935 [INFO] ======================================================================
+2025-11-22 03:47:46,935 [INFO] Total candidates: 52
+2025-11-22 03:47:46,935 [INFO] Pockets recognized: 0
+2025-11-22 03:47:46,935 [INFO] Slots recognized: 0
+2025-11-22 03:47:46,935 [INFO] Passages recognized: 0
+2025-11-22 03:47:46,935 [INFO] Validation failures: 0
+2025-11-22 03:47:46,936 [INFO] 
+2025-11-22 03:47:46,936 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,936 [INFO] ======================================================================
+2025-11-22 03:47:46,936 [INFO] Starting slot recognition...
+2025-11-22 03:47:46,936 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 03:47:46,936 [INFO] ✅ Recognized 0 slot features
+2025-11-22 03:47:46,936 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 03:47:46,936 [INFO] ======================================================================
+2025-11-22 03:47:46,936 [INFO] Starting boss/step/island recognition
+2025-11-22 03:47:46,936 [INFO] ======================================================================
+2025-11-22 03:47:46,936 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,937 [INFO] 
+2025-11-22 03:47:46,937 [INFO] ======================================================================
+2025-11-22 03:47:46,937 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,937 [INFO] ======================================================================
+2025-11-22 03:47:46,937 [INFO] Total candidates: 52
+2025-11-22 03:47:46,937 [INFO] Bosses recognized: 0
+2025-11-22 03:47:46,937 [INFO] Steps recognized: 0
+2025-11-22 03:47:46,937 [INFO] Islands recognized: 0
+2025-11-22 03:47:46,937 [INFO] Validation failures: 0
+2025-11-22 03:47:46,937 [INFO] 
+2025-11-22 03:47:46,937 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,937 [INFO] ======================================================================
+2025-11-22 03:47:46,937 [INFO] ======================================================================
+2025-11-22 03:47:46,937 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 03:47:46,937 [INFO] ======================================================================
+2025-11-22 03:47:46,937 [DEBUG] Surface type distribution:
+2025-11-22 03:47:46,937 [DEBUG]   cone: 13
+2025-11-22 03:47:46,937 [DEBUG]   cylinder: 51
+2025-11-22 03:47:46,937 [DEBUG]   plane: 52
+2025-11-22 03:47:46,938 [INFO] Found 51 blend candidates:
+2025-11-22 03:47:46,938 [INFO]   Cylinders: 51
+2025-11-22 03:47:46,938 [INFO]   Tori: 0
+2025-11-22 03:47:46,938 [INFO]   Spheres: 0
+2025-11-22 03:47:46,938 [INFO]   B-splines: 0
+2025-11-22 03:47:46,938 [INFO] Found 51 blend surface candidates
+2025-11-22 03:47:46,938 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 03:47:46,938 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 03:47:46,938 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 03:47:46,938 [DEBUG]   Evaluating candidate 10:
+2025-11-22 03:47:46,938 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 03:47:46,938 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,938 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,938 [DEBUG]   Evaluating candidate 11:
+2025-11-22 03:47:46,938 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 03:47:46,938 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,938 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,938 [DEBUG]   Evaluating candidate 12:
+2025-11-22 03:47:46,938 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,938 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,938 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,938 [DEBUG]   Evaluating candidate 13:
+2025-11-22 03:47:46,938 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,938 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,938 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,938 [DEBUG]   Evaluating candidate 14:
+2025-11-22 03:47:46,938 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 03:47:46,938 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,938 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,939 [DEBUG]   Evaluating candidate 15:
+2025-11-22 03:47:46,939 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 03:47:46,939 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,939 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,939 [DEBUG]   Evaluating candidate 16:
+2025-11-22 03:47:46,939 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,939 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,939 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,939 [DEBUG]   Evaluating candidate 17:
+2025-11-22 03:47:46,939 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,939 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,939 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,939 [DEBUG]   Evaluating candidate 18:
+2025-11-22 03:47:46,939 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 03:47:46,939 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,939 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,939 [DEBUG]   Evaluating candidate 36:
+2025-11-22 03:47:46,939 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 03:47:46,939 [DEBUG]     Vexity: 0 convex, 4 concave, 0 smooth
+2025-11-22 03:47:46,939 [DEBUG]     ❌ REJECTED: Only 0 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,939 [DEBUG]   Evaluating candidate 37:
+2025-11-22 03:47:46,939 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 03:47:46,939 [DEBUG]     Vexity: 1 convex, 2 concave, 1 smooth
+2025-11-22 03:47:46,939 [DEBUG]     Radius: 50000.000mm (range: 100.0-100000.0mm)
+2025-11-22 03:47:46,939 [DEBUG]     Area: 3382.91 mm²
+2025-11-22 03:47:46,939 [DEBUG]     ✅ PASSED: Valid fillet candidate
+2025-11-22 03:47:46,939 [ERROR] Fillet recognition failed: 'angle'
+Traceback (most recent call last):
+  File "/app/aag_pattern_engine/recognizers/recognizer_api_adapters.py", line 112, in recognize
+    fillet_features = self._recognizer.recognize_fillets(graph)
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 293, in recognize_fillets
+    fillet = self._classify_and_recognize_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 504, in _classify_and_recognize_fillet
+    return self._recognize_constant_radius_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 535, in _recognize_constant_radius_fillet
+    is_tangent = self._validate_tangency(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 706, in _validate_tangency
+    angle = adj['angle']
+KeyError: 'angle'
+2025-11-22 03:47:46,940 [INFO] ======================================================================
+2025-11-22 03:47:46,940 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 03:47:46,940 [INFO] ======================================================================
+2025-11-22 03:47:46,940 [INFO] Found 0 chamfer candidates
+2025-11-22 03:47:46,940 [INFO] 
+======================================================================
+2025-11-22 03:47:46,940 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 03:47:46,940 [INFO] ======================================================================
+2025-11-22 03:47:46,940 [INFO] Total recognized: 0
+2025-11-22 03:47:46,940 [INFO] 45° chamfers: 0
+2025-11-22 03:47:46,940 [INFO] 30° chamfers: 0
+2025-11-22 03:47:46,940 [INFO] Custom angle: 0
+2025-11-22 03:47:46,940 [INFO] ======================================================================
+2025-11-22 03:47:46,940 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 03:47:46,940 [INFO]   Processing configuration #3 (type: 2.5D_milling)...
+2025-11-22 03:47:46,940 [INFO] ======================================================================
+2025-11-22 03:47:46,940 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 03:47:46,940 [INFO] ======================================================================
+2025-11-22 03:47:46,941 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 03:47:46,941 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 03:47:46,941 [INFO]   → Created 28 individual hints
+2025-11-22 03:47:46,941 [INFO] Phase 2: Merging compound features...
+2025-11-22 03:47:46,944 [INFO]   → Merged into 24 final holes
+2025-11-22 03:47:46,944 [INFO] 
+2025-11-22 03:47:46,944 [INFO] ======================================================================
+2025-11-22 03:47:46,944 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 03:47:46,944 [INFO] ======================================================================
+2025-11-22 03:47:46,944 [INFO] Total candidates analyzed: 34
+2025-11-22 03:47:46,944 [INFO] Successfully recognized: 24
+2025-11-22 03:47:46,944 [INFO] Validation failures: 0
+2025-11-22 03:47:46,944 [INFO] Ambiguous features: 0
+2025-11-22 03:47:46,944 [INFO] 
+2025-11-22 03:47:46,944 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,944 [INFO]   blind_hole               :  20
+2025-11-22 03:47:46,944 [INFO]   counter_drilled_hole     :   4
+2025-11-22 03:47:46,944 [INFO] ======================================================================
+2025-11-22 03:47:46,944 [INFO]     ✓ HoleRecognizer: 24 holes detected
+2025-11-22 03:47:46,944 [INFO] ======================================================================
+2025-11-22 03:47:46,945 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 03:47:46,945 [INFO] ======================================================================
+2025-11-22 03:47:46,945 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,945 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 1: found 17 vertical walls
+2025-11-22 03:47:46,945 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 03:47:46,945 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 03:47:46,945 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 27: found 2 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 28: found 11 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 29: found 2 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 30: found 2 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 31: found 2 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 32: found 17 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 33: found 2 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 34: found 2 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 35: found 53 vertical walls
+2025-11-22 03:47:46,946 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 03:47:46,946 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 03:47:46,947 [DEBUG]   Face 102: found 47 vertical walls
+2025-11-22 03:47:46,947 [INFO] 
+2025-11-22 03:47:46,947 [INFO] ======================================================================
+2025-11-22 03:47:46,947 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,948 [INFO] ======================================================================
+2025-11-22 03:47:46,948 [INFO] Total candidates: 52
+2025-11-22 03:47:46,948 [INFO] Pockets recognized: 0
+2025-11-22 03:47:46,948 [INFO] Slots recognized: 0
+2025-11-22 03:47:46,948 [INFO] Passages recognized: 0
+2025-11-22 03:47:46,948 [INFO] Validation failures: 0
+2025-11-22 03:47:46,948 [INFO] 
+2025-11-22 03:47:46,948 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,948 [INFO] ======================================================================
+2025-11-22 03:47:46,948 [INFO] Starting slot recognition...
+2025-11-22 03:47:46,948 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 03:47:46,948 [INFO] ✅ Recognized 0 slot features
+2025-11-22 03:47:46,948 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 03:47:46,948 [INFO] ======================================================================
+2025-11-22 03:47:46,949 [INFO] Starting boss/step/island recognition
+2025-11-22 03:47:46,949 [INFO] ======================================================================
+2025-11-22 03:47:46,949 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,949 [INFO] 
+2025-11-22 03:47:46,949 [INFO] ======================================================================
+2025-11-22 03:47:46,949 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,949 [INFO] ======================================================================
+2025-11-22 03:47:46,949 [INFO] Total candidates: 52
+2025-11-22 03:47:46,949 [INFO] Bosses recognized: 0
+2025-11-22 03:47:46,949 [INFO] Steps recognized: 0
+2025-11-22 03:47:46,949 [INFO] Islands recognized: 0
+2025-11-22 03:47:46,949 [INFO] Validation failures: 0
+2025-11-22 03:47:46,949 [INFO] 
+2025-11-22 03:47:46,949 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,949 [INFO] ======================================================================
+2025-11-22 03:47:46,950 [INFO] ======================================================================
+2025-11-22 03:47:46,950 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 03:47:46,950 [INFO] ======================================================================
+2025-11-22 03:47:46,950 [DEBUG] Surface type distribution:
+2025-11-22 03:47:46,950 [DEBUG]   cone: 13
+2025-11-22 03:47:46,950 [DEBUG]   cylinder: 51
+2025-11-22 03:47:46,950 [DEBUG]   plane: 52
+2025-11-22 03:47:46,950 [INFO] Found 51 blend candidates:
+2025-11-22 03:47:46,950 [INFO]   Cylinders: 51
+2025-11-22 03:47:46,950 [INFO]   Tori: 0
+2025-11-22 03:47:46,950 [INFO]   Spheres: 0
+2025-11-22 03:47:46,950 [INFO]   B-splines: 0
+2025-11-22 03:47:46,950 [INFO] Found 51 blend surface candidates
+2025-11-22 03:47:46,950 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 03:47:46,950 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 03:47:46,950 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 03:47:46,950 [DEBUG]   Evaluating candidate 10:
+2025-11-22 03:47:46,951 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 03:47:46,951 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,951 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,951 [DEBUG]   Evaluating candidate 11:
+2025-11-22 03:47:46,951 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 03:47:46,951 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,951 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,951 [DEBUG]   Evaluating candidate 12:
+2025-11-22 03:47:46,951 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,951 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,951 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,951 [DEBUG]   Evaluating candidate 13:
+2025-11-22 03:47:46,951 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,951 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,951 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,951 [DEBUG]   Evaluating candidate 14:
+2025-11-22 03:47:46,951 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 03:47:46,951 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,951 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,951 [DEBUG]   Evaluating candidate 15:
+2025-11-22 03:47:46,951 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 03:47:46,951 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,951 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,951 [DEBUG]   Evaluating candidate 16:
+2025-11-22 03:47:46,952 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,952 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,952 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,952 [DEBUG]   Evaluating candidate 17:
+2025-11-22 03:47:46,952 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,952 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,952 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,952 [DEBUG]   Evaluating candidate 18:
+2025-11-22 03:47:46,952 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 03:47:46,952 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,952 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,952 [DEBUG]   Evaluating candidate 36:
+2025-11-22 03:47:46,952 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 03:47:46,952 [DEBUG]     Vexity: 0 convex, 4 concave, 0 smooth
+2025-11-22 03:47:46,952 [DEBUG]     ❌ REJECTED: Only 0 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,952 [DEBUG]   Evaluating candidate 37:
+2025-11-22 03:47:46,952 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 03:47:46,952 [DEBUG]     Vexity: 1 convex, 2 concave, 1 smooth
+2025-11-22 03:47:46,952 [DEBUG]     Radius: 50000.000mm (range: 100.0-100000.0mm)
+2025-11-22 03:47:46,952 [DEBUG]     Area: 3382.91 mm²
+2025-11-22 03:47:46,952 [DEBUG]     ✅ PASSED: Valid fillet candidate
+2025-11-22 03:47:46,952 [ERROR] Fillet recognition failed: 'angle'
+Traceback (most recent call last):
+  File "/app/aag_pattern_engine/recognizers/recognizer_api_adapters.py", line 112, in recognize
+    fillet_features = self._recognizer.recognize_fillets(graph)
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 293, in recognize_fillets
+    fillet = self._classify_and_recognize_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 504, in _classify_and_recognize_fillet
+    return self._recognize_constant_radius_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 535, in _recognize_constant_radius_fillet
+    is_tangent = self._validate_tangency(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 706, in _validate_tangency
+    angle = adj['angle']
+KeyError: 'angle'
+2025-11-22 03:47:46,953 [INFO] ======================================================================
+2025-11-22 03:47:46,953 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 03:47:46,953 [INFO] ======================================================================
+2025-11-22 03:47:46,953 [INFO] Found 0 chamfer candidates
+2025-11-22 03:47:46,953 [INFO] 
+======================================================================
+2025-11-22 03:47:46,953 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 03:47:46,953 [INFO] ======================================================================
+2025-11-22 03:47:46,953 [INFO] Total recognized: 0
+2025-11-22 03:47:46,953 [INFO] 45° chamfers: 0
+2025-11-22 03:47:46,953 [INFO] 30° chamfers: 0
+2025-11-22 03:47:46,953 [INFO] Custom angle: 0
+2025-11-22 03:47:46,954 [INFO] ======================================================================
+2025-11-22 03:47:46,954 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 03:47:46,954 [INFO]   Processing configuration #4 (type: 2.5D_milling)...
+2025-11-22 03:47:46,954 [INFO] ======================================================================
+2025-11-22 03:47:46,954 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 03:47:46,954 [INFO] ======================================================================
+2025-11-22 03:47:46,954 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 03:47:46,954 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 03:47:46,954 [INFO]   → Created 28 individual hints
+2025-11-22 03:47:46,954 [INFO] Phase 2: Merging compound features...
+2025-11-22 03:47:46,957 [INFO]   → Merged into 24 final holes
+2025-11-22 03:47:46,957 [INFO] 
+2025-11-22 03:47:46,957 [INFO] ======================================================================
+2025-11-22 03:47:46,957 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 03:47:46,957 [INFO] ======================================================================
+2025-11-22 03:47:46,957 [INFO] Total candidates analyzed: 34
+2025-11-22 03:47:46,957 [INFO] Successfully recognized: 24
+2025-11-22 03:47:46,957 [INFO] Validation failures: 0
+2025-11-22 03:47:46,957 [INFO] Ambiguous features: 0
+2025-11-22 03:47:46,957 [INFO] 
+2025-11-22 03:47:46,957 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,957 [INFO]   blind_hole               :  20
+2025-11-22 03:47:46,957 [INFO]   counter_drilled_hole     :   4
+2025-11-22 03:47:46,957 [INFO] ======================================================================
+2025-11-22 03:47:46,957 [INFO]     ✓ HoleRecognizer: 24 holes detected
+2025-11-22 03:47:46,957 [INFO] ======================================================================
+2025-11-22 03:47:46,957 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 03:47:46,958 [INFO] ======================================================================
+2025-11-22 03:47:46,958 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,958 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 1: found 17 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 03:47:46,958 [DEBUG]   Face 27: found 2 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 28: found 11 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 29: found 2 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 30: found 2 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 31: found 2 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 32: found 17 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 33: found 2 vertical walls
+2025-11-22 03:47:46,958 [DEBUG]   Face 34: found 2 vertical walls
+2025-11-22 03:47:46,959 [DEBUG]   Face 35: found 53 vertical walls
+2025-11-22 03:47:46,959 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 03:47:46,959 [DEBUG]   Face 102: found 47 vertical walls
+2025-11-22 03:47:46,960 [INFO] 
+2025-11-22 03:47:46,960 [INFO] ======================================================================
+2025-11-22 03:47:46,960 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,960 [INFO] ======================================================================
+2025-11-22 03:47:46,960 [INFO] Total candidates: 52
+2025-11-22 03:47:46,960 [INFO] Pockets recognized: 0
+2025-11-22 03:47:46,960 [INFO] Slots recognized: 0
+2025-11-22 03:47:46,960 [INFO] Passages recognized: 0
+2025-11-22 03:47:46,960 [INFO] Validation failures: 0
+2025-11-22 03:47:46,960 [INFO] 
+2025-11-22 03:47:46,960 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,960 [INFO] ======================================================================
+2025-11-22 03:47:46,960 [INFO] Starting slot recognition...
+2025-11-22 03:47:46,960 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 03:47:46,960 [INFO] ✅ Recognized 0 slot features
+2025-11-22 03:47:46,960 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 03:47:46,960 [INFO] ======================================================================
+2025-11-22 03:47:46,960 [INFO] Starting boss/step/island recognition
+2025-11-22 03:47:46,961 [INFO] ======================================================================
+2025-11-22 03:47:46,961 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,961 [INFO] 
+2025-11-22 03:47:46,961 [INFO] ======================================================================
+2025-11-22 03:47:46,961 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,961 [INFO] ======================================================================
+2025-11-22 03:47:46,961 [INFO] Total candidates: 52
+2025-11-22 03:47:46,961 [INFO] Bosses recognized: 0
+2025-11-22 03:47:46,961 [INFO] Steps recognized: 0
+2025-11-22 03:47:46,961 [INFO] Islands recognized: 0
+2025-11-22 03:47:46,961 [INFO] Validation failures: 0
+2025-11-22 03:47:46,961 [INFO] 
+2025-11-22 03:47:46,961 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,961 [INFO] ======================================================================
+2025-11-22 03:47:46,961 [INFO] ======================================================================
+2025-11-22 03:47:46,961 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 03:47:46,961 [INFO] ======================================================================
+2025-11-22 03:47:46,962 [DEBUG] Surface type distribution:
+2025-11-22 03:47:46,962 [DEBUG]   cone: 13
+2025-11-22 03:47:46,962 [DEBUG]   cylinder: 51
+2025-11-22 03:47:46,962 [DEBUG]   plane: 52
+2025-11-22 03:47:46,962 [INFO] Found 51 blend candidates:
+2025-11-22 03:47:46,962 [INFO]   Cylinders: 51
+2025-11-22 03:47:46,962 [INFO]   Tori: 0
+2025-11-22 03:47:46,962 [INFO]   Spheres: 0
+2025-11-22 03:47:46,962 [INFO]   B-splines: 0
+2025-11-22 03:47:46,962 [INFO] Found 51 blend surface candidates
+2025-11-22 03:47:46,962 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 03:47:46,962 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 03:47:46,962 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 03:47:46,962 [DEBUG]   Evaluating candidate 10:
+2025-11-22 03:47:46,962 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 03:47:46,962 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,962 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,962 [DEBUG]   Evaluating candidate 11:
+2025-11-22 03:47:46,962 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 03:47:46,962 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,962 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,962 [DEBUG]   Evaluating candidate 12:
+2025-11-22 03:47:46,962 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,962 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,962 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,962 [DEBUG]   Evaluating candidate 13:
+2025-11-22 03:47:46,962 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,962 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,962 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,962 [DEBUG]   Evaluating candidate 14:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,963 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,963 [DEBUG]   Evaluating candidate 15:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,963 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,963 [DEBUG]   Evaluating candidate 16:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,963 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,963 [DEBUG]   Evaluating candidate 17:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,963 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,963 [DEBUG]   Evaluating candidate 18:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,963 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,963 [DEBUG]   Evaluating candidate 36:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 0 convex, 4 concave, 0 smooth
+2025-11-22 03:47:46,963 [DEBUG]     ❌ REJECTED: Only 0 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,963 [DEBUG]   Evaluating candidate 37:
+2025-11-22 03:47:46,963 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 03:47:46,963 [DEBUG]     Vexity: 1 convex, 2 concave, 1 smooth
+2025-11-22 03:47:46,963 [DEBUG]     Radius: 50000.000mm (range: 100.0-100000.0mm)
+2025-11-22 03:47:46,963 [DEBUG]     Area: 3382.91 mm²
+2025-11-22 03:47:46,963 [DEBUG]     ✅ PASSED: Valid fillet candidate
+2025-11-22 03:47:46,963 [ERROR] Fillet recognition failed: 'angle'
+Traceback (most recent call last):
+  File "/app/aag_pattern_engine/recognizers/recognizer_api_adapters.py", line 112, in recognize
+    fillet_features = self._recognizer.recognize_fillets(graph)
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 293, in recognize_fillets
+    fillet = self._classify_and_recognize_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 504, in _classify_and_recognize_fillet
+    return self._recognize_constant_radius_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 535, in _recognize_constant_radius_fillet
+    is_tangent = self._validate_tangency(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 706, in _validate_tangency
+    angle = adj['angle']
+KeyError: 'angle'
+2025-11-22 03:47:46,964 [INFO] ======================================================================
+2025-11-22 03:47:46,964 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 03:47:46,964 [INFO] ======================================================================
+2025-11-22 03:47:46,964 [INFO] Found 0 chamfer candidates
+2025-11-22 03:47:46,964 [INFO] 
+======================================================================
+2025-11-22 03:47:46,964 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 03:47:46,964 [INFO] ======================================================================
+2025-11-22 03:47:46,964 [INFO] Total recognized: 0
+2025-11-22 03:47:46,964 [INFO] 45° chamfers: 0
+2025-11-22 03:47:46,964 [INFO] 30° chamfers: 0
+2025-11-22 03:47:46,964 [INFO] Custom angle: 0
+2025-11-22 03:47:46,964 [INFO] ======================================================================
+2025-11-22 03:47:46,964 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 03:47:46,964 [INFO]   Processing configuration #5 (type: 2.5D_milling)...
+2025-11-22 03:47:46,964 [INFO] ======================================================================
+2025-11-22 03:47:46,964 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 03:47:46,964 [INFO] ======================================================================
+2025-11-22 03:47:46,964 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 03:47:46,964 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 03:47:46,965 [INFO]   → Created 28 individual hints
+2025-11-22 03:47:46,965 [INFO] Phase 2: Merging compound features...
+2025-11-22 03:47:46,967 [INFO]   → Merged into 24 final holes
+2025-11-22 03:47:46,967 [INFO] 
+2025-11-22 03:47:46,967 [INFO] ======================================================================
+2025-11-22 03:47:46,967 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 03:47:46,967 [INFO] ======================================================================
+2025-11-22 03:47:46,967 [INFO] Total candidates analyzed: 34
+2025-11-22 03:47:46,967 [INFO] Successfully recognized: 24
+2025-11-22 03:47:46,967 [INFO] Validation failures: 0
+2025-11-22 03:47:46,967 [INFO] Ambiguous features: 0
+2025-11-22 03:47:46,967 [INFO] 
+2025-11-22 03:47:46,967 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,967 [INFO]   blind_hole               :  20
+2025-11-22 03:47:46,967 [INFO]   counter_drilled_hole     :   4
+2025-11-22 03:47:46,968 [INFO] ======================================================================
+2025-11-22 03:47:46,968 [INFO]     ✓ HoleRecognizer: 24 holes detected
+2025-11-22 03:47:46,968 [INFO] ======================================================================
+2025-11-22 03:47:46,968 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 03:47:46,968 [INFO] ======================================================================
+2025-11-22 03:47:46,968 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,968 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 1: found 17 vertical walls
+2025-11-22 03:47:46,968 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 03:47:46,968 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 03:47:46,968 [DEBUG]   Face 27: found 2 vertical walls
+2025-11-22 03:47:46,968 [DEBUG]   Face 28: found 11 vertical walls
+2025-11-22 03:47:46,968 [DEBUG]   Face 29: found 2 vertical walls
+2025-11-22 03:47:46,968 [DEBUG]   Face 30: found 2 vertical walls
+2025-11-22 03:47:46,968 [DEBUG]   Face 31: found 2 vertical walls
+2025-11-22 03:47:46,969 [DEBUG]   Face 32: found 17 vertical walls
+2025-11-22 03:47:46,969 [DEBUG]   Face 33: found 2 vertical walls
+2025-11-22 03:47:46,969 [DEBUG]   Face 34: found 2 vertical walls
+2025-11-22 03:47:46,969 [DEBUG]   Face 35: found 53 vertical walls
+2025-11-22 03:47:46,969 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 03:47:46,969 [DEBUG]   Face 102: found 47 vertical walls
+2025-11-22 03:47:46,970 [INFO] 
+2025-11-22 03:47:46,970 [INFO] ======================================================================
+2025-11-22 03:47:46,970 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,970 [INFO] ======================================================================
+2025-11-22 03:47:46,970 [INFO] Total candidates: 52
+2025-11-22 03:47:46,970 [INFO] Pockets recognized: 0
+2025-11-22 03:47:46,970 [INFO] Slots recognized: 0
+2025-11-22 03:47:46,970 [INFO] Passages recognized: 0
+2025-11-22 03:47:46,970 [INFO] Validation failures: 0
+2025-11-22 03:47:46,970 [INFO] 
+2025-11-22 03:47:46,970 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,970 [INFO] ======================================================================
+2025-11-22 03:47:46,970 [INFO] Starting slot recognition...
+2025-11-22 03:47:46,970 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 03:47:46,970 [INFO] ✅ Recognized 0 slot features
+2025-11-22 03:47:46,970 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 03:47:46,970 [INFO] ======================================================================
+2025-11-22 03:47:46,970 [INFO] Starting boss/step/island recognition
+2025-11-22 03:47:46,970 [INFO] ======================================================================
+2025-11-22 03:47:46,971 [INFO] Analyzing 52 planar faces
+2025-11-22 03:47:46,971 [INFO] 
+2025-11-22 03:47:46,971 [INFO] ======================================================================
+2025-11-22 03:47:46,971 [INFO] RECOGNITION STATISTICS
+2025-11-22 03:47:46,971 [INFO] ======================================================================
+2025-11-22 03:47:46,971 [INFO] Total candidates: 52
+2025-11-22 03:47:46,971 [INFO] Bosses recognized: 0
+2025-11-22 03:47:46,971 [INFO] Steps recognized: 0
+2025-11-22 03:47:46,971 [INFO] Islands recognized: 0
+2025-11-22 03:47:46,971 [INFO] Validation failures: 0
+2025-11-22 03:47:46,971 [INFO] 
+2025-11-22 03:47:46,971 [INFO] Feature type breakdown:
+2025-11-22 03:47:46,971 [INFO] ======================================================================
+2025-11-22 03:47:46,971 [INFO] ======================================================================
+2025-11-22 03:47:46,971 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 03:47:46,971 [INFO] ======================================================================
+2025-11-22 03:47:46,972 [DEBUG] Surface type distribution:
+2025-11-22 03:47:46,972 [DEBUG]   cone: 13
+2025-11-22 03:47:46,972 [DEBUG]   cylinder: 51
+2025-11-22 03:47:46,972 [DEBUG]   plane: 52
+2025-11-22 03:47:46,972 [INFO] Found 51 blend candidates:
+2025-11-22 03:47:46,972 [INFO]   Cylinders: 51
+2025-11-22 03:47:46,972 [INFO]   Tori: 0
+2025-11-22 03:47:46,972 [INFO]   Spheres: 0
+2025-11-22 03:47:46,972 [INFO]   B-splines: 0
+2025-11-22 03:47:46,972 [INFO] Found 51 blend surface candidates
+2025-11-22 03:47:46,972 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 03:47:46,972 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 03:47:46,972 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 03:47:46,972 [DEBUG]   Evaluating candidate 10:
+2025-11-22 03:47:46,972 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 03:47:46,972 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,972 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,972 [DEBUG]   Evaluating candidate 11:
+2025-11-22 03:47:46,972 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 03:47:46,972 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,972 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,972 [DEBUG]   Evaluating candidate 12:
+2025-11-22 03:47:46,972 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,972 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,972 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,972 [DEBUG]   Evaluating candidate 13:
+2025-11-22 03:47:46,972 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,972 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,972 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,972 [DEBUG]   Evaluating candidate 14:
+2025-11-22 03:47:46,972 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 03:47:46,972 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,972 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,972 [DEBUG]   Evaluating candidate 15:
+2025-11-22 03:47:46,973 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 03:47:46,973 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,973 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,973 [DEBUG]   Evaluating candidate 16:
+2025-11-22 03:47:46,973 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,973 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,973 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,973 [DEBUG]   Evaluating candidate 17:
+2025-11-22 03:47:46,973 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 03:47:46,973 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,973 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,973 [DEBUG]   Evaluating candidate 18:
+2025-11-22 03:47:46,973 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 03:47:46,973 [DEBUG]     Vexity: 1 convex, 3 concave, 0 smooth
+2025-11-22 03:47:46,973 [DEBUG]     ❌ REJECTED: Only 1 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,973 [DEBUG]   Evaluating candidate 36:
+2025-11-22 03:47:46,973 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 03:47:46,973 [DEBUG]     Vexity: 0 convex, 4 concave, 0 smooth
+2025-11-22 03:47:46,973 [DEBUG]     ❌ REJECTED: Only 0 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,973 [DEBUG]   Evaluating candidate 37:
+2025-11-22 03:47:46,973 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 03:47:46,973 [DEBUG]     Vexity: 1 convex, 2 concave, 1 smooth
+2025-11-22 03:47:46,973 [DEBUG]     Radius: 50000.000mm (range: 100.0-100000.0mm)
+2025-11-22 03:47:46,973 [DEBUG]     Area: 3382.91 mm²
+2025-11-22 03:47:46,973 [DEBUG]     ✅ PASSED: Valid fillet candidate
+2025-11-22 03:47:46,973 [ERROR] Fillet recognition failed: 'angle'
+Traceback (most recent call last):
+  File "/app/aag_pattern_engine/recognizers/recognizer_api_adapters.py", line 112, in recognize
+    fillet_features = self._recognizer.recognize_fillets(graph)
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 293, in recognize_fillets
+    fillet = self._classify_and_recognize_fillet(
+2025-11-22 03:47:46,983 [DEBUG]     ❌ REJECTED: Only 0 convex + 0 smooth edges (need 2+)
+2025-11-22 03:47:46,983 [DEBUG]   Evaluating candidate 37:
+2025-11-22 03:47:46,983 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 03:47:46,983 [DEBUG]     Vexity: 1 convex, 2 concave, 1 smooth
+2025-11-22 03:47:46,983 [DEBUG]     Radius: 50000.000mm (range: 100.0-100000.0mm)
+2025-11-22 03:47:46,983 [DEBUG]     Area: 3382.91 mm²
+2025-11-22 03:47:46,983 [DEBUG]     ✅ PASSED: Valid fillet candidate
+2025-11-22 03:47:46,983 [ERROR] Fillet recognition failed: 'angle'
+Traceback (most recent call last):
+  File "/app/aag_pattern_engine/recognizers/recognizer_api_adapters.py", line 112, in recognize
+    fillet_features = self._recognizer.recognize_fillets(graph)
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 293, in recognize_fillets
+    fillet = self._classify_and_recognize_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 504, in _classify_and_recognize_fillet
+    return self._recognize_constant_radius_fillet(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 535, in _recognize_constant_radius_fillet
+    is_tangent = self._validate_tangency(
+  File "/app/aag_pattern_engine/recognizers/fillet_chamfer_recognizer.py", line 706, in _validate_tangency
+    angle = adj['angle']
+KeyError: 'angle'
+2025-11-22 03:47:46,983 [INFO] ======================================================================
+2025-11-22 03:47:46,983 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 03:47:46,983 [INFO] ======================================================================
+2025-11-22 03:47:46,984 [INFO] Found 0 chamfer candidates
+2025-11-22 03:47:46,984 [INFO] 
+======================================================================
+2025-11-22 03:47:46,984 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 03:47:46,984 [INFO] ======================================================================
+2025-11-22 03:47:46,984 [INFO] Total recognized: 0
+2025-11-22 03:47:46,984 [INFO] 45° chamfers: 0
+2025-11-22 03:47:46,984 [INFO] 30° chamfers: 0
+2025-11-22 03:47:46,984 [INFO] Custom angle: 0
+2025-11-22 03:47:46,984 [INFO] ======================================================================
+2025-11-22 03:47:46,984 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 03:47:46,984 [INFO] ✓ Feature detection complete: 144 features
+2025-11-22 03:47:46,984 [INFO] 
+[STEP 5/8] Analyzing tool accessibility...
+2025-11-22 03:47:46,984 [INFO] Analyzing tool accessibility for all faces...
+2025-11-22 03:47:46,987 [INFO]   Accessible faces: 103/116
+2025-11-22 03:47:46,987 [INFO]   Inaccessible faces: 13
+2025-11-22 03:47:46,988 [INFO] ✓ Accessibility analysis complete
+2025-11-22 03:47:46,988 [INFO] 
+[STEP 6/8] Standardizing feature output...
+2025-11-22 03:47:46,988 [INFO]   ✓ Merged 120 duplicate features
+2025-11-22 03:47:46,988 [INFO]   ✓ Standardized 24 features
+2025-11-22 03:47:46,988 [INFO] 
+[STEP 7/8] Running DFM analysis...
+2025-11-22 03:47:46,988 [INFO] 🔍 Running DFM analysis...
+2025-11-22 03:47:46,989 [INFO]   ⚠️  Found 0 DFM warnings
+2025-11-22 03:47:46,989 [INFO]   ✓ No DFM warnings
+2025-11-22 03:47:46,989 [INFO] 
+[STEP 8/8] Compiling statistics...
+2025-11-22 03:47:46,989 [INFO] ✓ Average confidence: 84.7%
+2025-11-22 03:47:46,989 [INFO] ⚠ 24 system warnings, 0 DFM warnings
+2025-11-22 03:47:46,989 [INFO] 
+2025-11-22 03:47:46,989 [INFO] ======================================================================
+2025-11-22 03:47:46,989 [INFO] RECOGNITION COMPLETE
+2025-11-22 03:47:46,989 [INFO] ======================================================================
+2025-11-22 03:47:46,989 [INFO] Status: success
+2025-11-22 03:47:46,989 [INFO] Total time: 0.26s
+2025-11-22 03:47:46,989 [INFO] Features recognized: 24
+2025-11-22 03:47:46,989 [INFO] Warnings: 24
+2025-11-22 03:47:46,989 [INFO] ======================================================================
+2025-11-22 03:47:46,989 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] ✅ AAG found 24 features
+2025-11-22 03:47:46,989 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 03:47:46,989 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 03:47:46,989 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 03:47:46,989 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 03:47:47,176 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 🎉 AAG analysis complete in 2579ms
+2025-11-22 03:47:47,176 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] 📊 Status: success, Features: 24, Errors: 0, Warnings: 0
+2025-11-22 03:47:47,176 [INFO] [1349261e-dc85-43c9-b45d-4d5d82c2d679] ✅ Mesh data available: 13776 vertices

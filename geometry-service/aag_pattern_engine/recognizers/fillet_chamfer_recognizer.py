@@ -703,7 +703,7 @@ class FilletRecognizer:
             # Fix: Use 'face_id' as per graph_builder structure
             neighbor_id = adj.get('face_id', adj.get('node_id'))
             if neighbor_id in connected_faces:
-                angle = adj['angle']
+                angle = adj.get('dihedral_deg', adj.get('angle', 180.0))
                 
                 # Tangent transition: angle ≈ 180° for convex fillet
                 if angle < self.convex_angle_min:
