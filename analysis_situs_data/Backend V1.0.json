@@ -1,0 +1,2624 @@
+AAG recognition request received
+2025-11-22 02:47:43,299 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 📁 File hash: 4e7ea20537bf5d74ac887b070bcb4fd79bc588be028f971d4f9135c0265b30ae
+2025-11-22 02:47:43,300 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 📂 Loading STEP file
+2025-11-22 02:47:43,368 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🔺 Tessellating with face mapping
+2025-11-22 02:47:44,885 [INFO] Tessellated: 13776 vertices, 27597 triangles, 116 faces in 1517.0ms
+2025-11-22 02:47:44,885 [INFO] Created vertex_face_ids: 13776 vertices mapped to faces
+2025-11-22 02:47:44,886 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🔍 Initializing AAG Pattern Matcher
+2025-11-22 02:47:45,480 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎯 Running AAG pattern recognition
+2025-11-22 02:47:45,480 [INFO] ======================================================================
+2025-11-22 02:47:45,480 [INFO] AAG PATTERN MATCHER - Starting Recognition
+2025-11-22 02:47:45,480 [INFO] ======================================================================
+2025-11-22 02:47:45,480 [INFO] Part type classified as: prismatic
+2025-11-22 02:47:45,480 [INFO] 
+[STEP 1/8] Decomposing into manufacturing volumes...
+2025-11-22 02:47:45,480 [INFO] VolumeDecomposer initialized (tolerance=1e-06)
+2025-11-22 02:47:45,480 [INFO] Starting volume decomposition (type=prismatic)
+2025-11-22 02:47:45,481 [INFO] Decomposing prismatic part...
+2025-11-22 02:47:45,481 [INFO]     Bounding box diagonal (raw OCC): 524.6806
+2025-11-22 02:47:45,481 [INFO]     Assumed MILLIMETERS (diagonal 524.6806)
+2025-11-22 02:47:45,481 [INFO]   Detected model units: mm
+2025-11-22 02:47:45,481 [INFO]   Stock envelope: 475.0 × 220.0 × 35.0 mm
+2025-11-22 02:47:45,481 [INFO]   Computing boolean difference (stock - part)...
+2025-11-22 02:47:45,481 [INFO]   Creating stock box:
+2025-11-22 02:47:45,481 [INFO]     Origin (OCC units): (-355.013595, -109.513595, -0.013595)
+2025-11-22 02:47:45,481 [INFO]     Size (OCC units):   (475.027189, 220.027189, 35.027189)
+2025-11-22 02:47:45,481 [INFO]     Scale factor:       1.0
+2025-11-22 02:47:45,481 [WARNING]   ⚠️ Method 1: IsDone() returned False but shape is valid - using it anyway
+2025-11-22 02:47:45,550 [INFO]   Removal volume: 2431009.4 mm³
+2025-11-22 02:47:45,550 [INFO] ✓ Decomposition successful
+2025-11-22 02:47:45,550 [INFO]   Volumes found: 1 (Analysis Situs style: no splitting)
+2025-11-22 02:47:45,550 [INFO] ✓ Decomposition complete: 1 volume(s)
+2025-11-22 02:47:45,550 [INFO] 
+[STEP 2/8] Building AAG for volume(s)...
+2025-11-22 02:47:45,550 [INFO]   Building removal volume AAG for volume #1...
+2025-11-22 02:47:45,550 [INFO] ======================================================================
+2025-11-22 02:47:45,550 [INFO] Building Attributed Adjacency Graph (AAG) - PATCHED v1.1.0
+2025-11-22 02:47:45,550 [INFO] ======================================================================
+2025-11-22 02:47:45,550 [INFO] Caching face list...
+2025-11-22 02:47:45,552 [INFO] Cached 122 faces
+2025-11-22 02:47:45,552 [INFO] Building edge-face topology map...
+2025-11-22 02:47:45,557 [INFO] Edge-face map: 317 edges
+2025-11-22 02:47:45,557 [INFO]   Non-manifold: 0
+2025-11-22 02:47:45,557 [INFO]   Boundary: 13
+2025-11-22 02:47:45,557 [INFO] Extracting and validating faces...
+2025-11-22 02:47:45,577 [INFO] Extracted 122 valid faces
+2025-11-22 02:47:45,577 [INFO] Filtered 0 degenerate faces
+2025-11-22 02:47:45,577 [INFO] Building edges with dihedral angles...
+2025-11-22 02:47:45,648 [INFO] Built 118 graph edges
+2025-11-22 02:47:45,648 [INFO] Building adjacency map...
+2025-11-22 02:47:45,648 [INFO] Detecting part orientation...
+2025-11-22 02:47:45,648 [INFO] Orientation detection:
+2025-11-22 02:47:45,648 [INFO]   X: 39.7%, Y: 36.2%, Z: 24.1%
+2025-11-22 02:47:45,648 [WARNING] ⚠ Part appears rotated from axis alignment
+2025-11-22 02:47:45,649 [INFO] Validating graph integrity...
+2025-11-22 02:47:45,649 [INFO] 
+2025-11-22 02:47:45,649 [INFO] ======================================================================
+2025-11-22 02:47:45,649 [INFO] AAG GRAPH STATISTICS
+2025-11-22 02:47:45,649 [INFO] ======================================================================
+2025-11-22 02:47:45,649 [INFO] Total faces processed: 122
+2025-11-22 02:47:45,649 [INFO] Valid nodes: 122
+2025-11-22 02:47:45,649 [INFO] Degenerate faces filtered: 0
+2025-11-22 02:47:45,649 [INFO] Total edges: 118
+2025-11-22 02:47:45,649 [INFO] Non-manifold edges: 0
+2025-11-22 02:47:45,649 [INFO] Boundary edges: 13
+2025-11-22 02:47:45,649 [INFO] 
+2025-11-22 02:47:45,649 [INFO] Vexity Distribution:
+2025-11-22 02:47:45,649 [INFO]   Convex:     60 ( 50.8%)
+2025-11-22 02:47:45,649 [INFO]   Concave:    58 ( 49.2%)
+2025-11-22 02:47:45,649 [INFO]   Smooth:      0 (  0.0%)
+2025-11-22 02:47:45,649 [INFO] ======================================================================
+2025-11-22 02:47:45,649 [INFO]     ✓ Removal AAG built: 122 nodes, 118 edges
+2025-11-22 02:47:45,649 [INFO]   Building part AAG for volume #1...
+2025-11-22 02:47:45,649 [INFO] ======================================================================
+2025-11-22 02:47:45,649 [INFO] Building Attributed Adjacency Graph (AAG) - PATCHED v1.1.0
+2025-11-22 02:47:45,649 [INFO] ======================================================================
+2025-11-22 02:47:45,649 [INFO] Caching face list...
+2025-11-22 02:47:45,649 [INFO] Cached 116 faces
+2025-11-22 02:47:45,649 [INFO] Building edge-face topology map...
+2025-11-22 02:47:45,652 [INFO] Edge-face map: 305 edges
+2025-11-22 02:47:45,652 [INFO]   Non-manifold: 0
+2025-11-22 02:47:45,652 [INFO]   Boundary: 13
+2025-11-22 02:47:45,652 [INFO] Extracting and validating faces...
+2025-11-22 02:47:45,665 [INFO] Extracted 116 valid faces
+2025-11-22 02:47:45,665 [INFO] Filtered 0 degenerate faces
+2025-11-22 02:47:45,665 [INFO] Building edges with dihedral angles...
+2025-11-22 02:47:45,727 [INFO] Built 106 graph edges
+2025-11-22 02:47:45,727 [INFO] Building adjacency map...
+2025-11-22 02:47:45,727 [INFO] Detecting part orientation...
+2025-11-22 02:47:45,728 [INFO] Orientation detection:
+2025-11-22 02:47:45,728 [INFO]   X: 40.4%, Y: 36.5%, Z: 23.1%
+2025-11-22 02:47:45,728 [WARNING] ⚠ Part appears rotated from axis alignment
+2025-11-22 02:47:45,728 [INFO] Validating graph integrity...
+2025-11-22 02:47:45,728 [INFO] 
+2025-11-22 02:47:45,728 [INFO] ======================================================================
+2025-11-22 02:47:45,728 [INFO] AAG GRAPH STATISTICS
+2025-11-22 02:47:45,728 [INFO] ======================================================================
+2025-11-22 02:47:45,728 [INFO] Total faces processed: 116
+2025-11-22 02:47:45,728 [INFO] Valid nodes: 116
+2025-11-22 02:47:45,728 [INFO] Degenerate faces filtered: 0
+2025-11-22 02:47:45,728 [INFO] Total edges: 106
+2025-11-22 02:47:45,728 [INFO] Non-manifold edges: 0
+2025-11-22 02:47:45,728 [INFO] Boundary edges: 13
+2025-11-22 02:47:45,728 [INFO] 
+2025-11-22 02:47:45,728 [INFO] Vexity Distribution:
+2025-11-22 02:47:45,728 [INFO]   Convex:     56 ( 52.8%)
+2025-11-22 02:47:45,728 [INFO]   Concave:    50 ( 47.2%)
+2025-11-22 02:47:45,728 [INFO]   Smooth:      0 (  0.0%)
+2025-11-22 02:47:45,728 [INFO] ======================================================================
+2025-11-22 02:47:45,728 [INFO]     ✓ Part AAG built: 116 nodes, 106 edges
+2025-11-22 02:47:45,728 [INFO] ✓ Built 1 removal volume graph(s) and 1 part graph(s)
+2025-11-22 02:47:45,728 [INFO] 
+[STEP 3/8] Detecting machining configurations...
+2025-11-22 02:47:45,728 [INFO]   Analyzing volume #1...
+2025-11-22 02:47:45,728 [INFO] Detecting machining configurations...
+2025-11-22 02:47:45,732 [INFO] ✓ Found 6 machining configuration(s)
+2025-11-22 02:47:45,732 [INFO]     ✓ Found 6 machining config(s)
+2025-11-22 02:47:45,732 [INFO] ✓ Total configurations: 6
+2025-11-22 02:47:45,732 [INFO] 
+[STEP 4/8] Running feature recognizers...
+2025-11-22 02:47:45,732 [INFO]   Processing configuration #1 (type: 2.5D_milling)...
+2025-11-22 02:47:45,732 [INFO] ======================================================================
+2025-11-22 02:47:45,732 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:47:45,732 [INFO] ======================================================================
+2025-11-22 02:47:45,732 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:47:45,732 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:47:45,732 [INFO]   → Created 51 individual hints
+2025-11-22 02:47:45,732 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:47:45,742 [INFO]   → Merged into 47 final holes
+2025-11-22 02:47:45,742 [INFO] 
+2025-11-22 02:47:45,742 [INFO] ======================================================================
+2025-11-22 02:47:45,742 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:47:45,742 [INFO] ======================================================================
+2025-11-22 02:47:45,742 [INFO] Total candidates analyzed: 57
+2025-11-22 02:47:45,742 [INFO] Successfully recognized: 47
+2025-11-22 02:47:45,742 [INFO] Validation failures: 0
+2025-11-22 02:47:45,742 [INFO] Ambiguous features: 0
+2025-11-22 02:47:45,742 [INFO] 
+2025-11-22 02:47:45,742 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,742 [INFO]   counter_drilled_hole     :   4
+2025-11-22 02:47:45,742 [INFO]   through_hole             :  43
+2025-11-22 02:47:45,742 [INFO] ======================================================================
+2025-11-22 02:47:45,742 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:47:45,742 [INFO] ======================================================================
+2025-11-22 02:47:45,742 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:47:45,742 [INFO] ======================================================================
+2025-11-22 02:47:45,743 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,743 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:47:45,743 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:47:45,743 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:47:45,743 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:47:45,743 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:47:45,743 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:47:45,743 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:47:45,743 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:47:45,743 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:47:45,743 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:47:45,743 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:47:45,743 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:47:45,743 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:47:45,744 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:47:45,744 [INFO] 
+2025-11-22 02:47:45,744 [INFO] ======================================================================
+2025-11-22 02:47:45,744 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,744 [INFO] ======================================================================
+2025-11-22 02:47:45,744 [INFO] Total candidates: 52
+2025-11-22 02:47:45,744 [INFO] Pockets recognized: 0
+2025-11-22 02:47:45,744 [INFO] Slots recognized: 0
+2025-11-22 02:47:45,744 [INFO] Passages recognized: 0
+2025-11-22 02:47:45,744 [INFO] Validation failures: 0
+2025-11-22 02:47:45,744 [INFO] 
+2025-11-22 02:47:45,745 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,745 [INFO] ======================================================================
+2025-11-22 02:47:45,745 [INFO] Starting slot recognition...
+2025-11-22 02:47:45,745 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:47:45,745 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:47:45,745 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:47:45,745 [INFO] ======================================================================
+2025-11-22 02:47:45,745 [INFO] Starting boss/step/island recognition
+2025-11-22 02:47:45,745 [INFO] ======================================================================
+2025-11-22 02:47:45,745 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,745 [INFO] 
+2025-11-22 02:47:45,746 [INFO] ======================================================================
+2025-11-22 02:47:45,746 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,746 [INFO] ======================================================================
+2025-11-22 02:47:45,746 [INFO] Total candidates: 52
+2025-11-22 02:47:45,746 [INFO] Bosses recognized: 0
+2025-11-22 02:47:45,746 [INFO] Steps recognized: 1
+2025-11-22 02:47:45,746 [INFO] Islands recognized: 0
+2025-11-22 02:47:45,746 [INFO] Validation failures: 0
+2025-11-22 02:47:45,746 [INFO] 
+2025-11-22 02:47:45,746 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,746 [INFO]   step                               :   1
+2025-11-22 02:47:45,746 [INFO] ======================================================================
+2025-11-22 02:47:45,746 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:47:45,746 [INFO] ======================================================================
+2025-11-22 02:47:45,746 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:47:45,746 [INFO] ======================================================================
+2025-11-22 02:47:45,746 [DEBUG] Surface type distribution:
+2025-11-22 02:47:45,746 [DEBUG]   cone: 13
+2025-11-22 02:47:45,746 [DEBUG]   cylinder: 51
+2025-11-22 02:47:45,746 [DEBUG]   plane: 52
+2025-11-22 02:47:45,746 [INFO] Found 51 blend candidates:
+2025-11-22 02:47:45,746 [INFO]   Cylinders: 51
+2025-11-22 02:47:45,747 [INFO]   Tori: 0
+2025-11-22 02:47:45,747 [INFO]   Spheres: 0
+2025-11-22 02:47:45,747 [INFO]   B-splines: 0
+2025-11-22 02:47:45,747 [INFO] Found 51 blend surface candidates
+2025-11-22 02:47:45,747 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:47:45,747 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:47:45,747 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:47:45,747 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:47:45,747 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:47:45,747 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,747 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,747 [DEBUG] ✓ Constant radius fillet: R22500.00mm, L=6000.0mm
+2025-11-22 02:47:45,747 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:47:45,747 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:47:45,747 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,747 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,747 [DEBUG] ✓ Constant radius fillet: R37500.00mm, L=28000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:47:45,748 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,748 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,748 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,748 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:47:45,748 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,748 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,748 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,748 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:47:45,748 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:47:45,748 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,748 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,748 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=6000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:47:45,748 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:47:45,748 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,748 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,748 [DEBUG] ✓ Constant radius fillet: R15000.00mm, L=28000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:47:45,748 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,748 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,748 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,748 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:47:45,748 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,748 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,748 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,748 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,748 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:47:45,749 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,749 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,749 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=28000.0mm
+2025-11-22 02:47:45,749 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:47:45,749 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,749 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,749 [DEBUG] ✓ Constant radius fillet: R26500.00mm, L=22000.0mm
+2025-11-22 02:47:45,749 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:47:45,749 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,749 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,749 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=10768.1mm
+2025-11-22 02:47:45,749 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,749 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,749 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,749 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,749 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:47:45,749 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,749 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,749 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=17193.2mm
+2025-11-22 02:47:45,749 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,749 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,749 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,749 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,749 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:47:45,749 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,750 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,750 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=6401.4mm
+2025-11-22 02:47:45,750 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:47:45,750 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,750 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,750 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=7456.9mm
+2025-11-22 02:47:45,750 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:47:45,750 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,750 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,750 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,750 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:47:45,750 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,750 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,750 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,750 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:47:45,750 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,750 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,750 [DEBUG] ✓ Constant radius fillet: R40000.00mm, L=22000.0mm
+2025-11-22 02:47:45,750 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:47:45,750 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,750 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,750 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4998.1mm
+2025-11-22 02:47:45,750 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:47:45,750 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:47:45,750 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,751 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,751 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=14688.2mm
+2025-11-22 02:47:45,751 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:47:45,751 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:47:45,751 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,751 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,751 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4190.1mm
+2025-11-22 02:47:45,751 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:47:45,751 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:47:45,751 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,751 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,751 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=12557.4mm
+2025-11-22 02:47:45,751 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:47:45,751 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:47:45,751 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,751 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,751 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=13009.2mm
+2025-11-22 02:47:45,751 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:47:45,751 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:47:45,751 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,751 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,751 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=7509.2mm
+2025-11-22 02:47:45,751 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:47:45,751 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,751 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,751 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,751 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,751 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:47:45,752 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,752 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,752 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,752 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,752 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:47:45,752 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,752 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,752 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,752 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,752 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:47:45,752 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,752 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,752 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,752 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,752 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:47:45,752 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,752 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,752 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,752 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,752 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:47:45,752 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,752 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,752 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,752 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,752 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:47:45,752 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,752 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,752 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,752 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,752 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:47:45,753 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,753 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,753 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,753 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,753 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:47:45,753 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,753 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,753 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,753 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,753 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:47:45,753 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,753 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,753 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,753 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,753 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:47:45,753 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,753 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,753 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,753 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,753 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:47:45,753 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,753 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,753 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,753 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,753 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:47:45,753 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,753 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,753 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,753 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,753 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:47:45,754 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,754 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,754 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,754 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,754 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:47:45,754 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,754 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,754 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,754 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,754 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:47:45,754 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,754 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,754 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,754 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,754 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:47:45,754 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,754 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,754 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,754 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,754 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:47:45,754 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,754 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,754 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,754 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,754 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:47:45,754 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:47:45,754 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,754 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,755 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=7250.0mm
+2025-11-22 02:47:45,755 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:47:45,755 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,755 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,755 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,755 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,755 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:47:45,755 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,755 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,755 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,755 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,755 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:47:45,755 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,755 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,755 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,755 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,755 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:47:45,756 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,756 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,756 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,756 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,756 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:47:45,756 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,756 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,756 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,756 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,756 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:47:45,756 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,756 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,756 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,756 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,756 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:47:45,756 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,756 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,756 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,756 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,756 [INFO] 
+======================================================================
+2025-11-22 02:47:45,756 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:47:45,756 [INFO] ======================================================================
+2025-11-22 02:47:45,756 [INFO] Total candidates: 51
+2025-11-22 02:47:45,756 [INFO] Constant radius: 51
+2025-11-22 02:47:45,756 [INFO] Variable radius: 0
+2025-11-22 02:47:45,756 [INFO] Corner blends: 0
+2025-11-22 02:47:45,756 [INFO] Fillet chains: 0
+2025-11-22 02:47:45,756 [INFO] Total recognized: 51
+2025-11-22 02:47:45,757 [INFO] ======================================================================
+2025-11-22 02:47:45,757 [INFO] FilletRecognizer: 51 fillets recognized
+2025-11-22 02:47:45,757 [INFO]     ✓ FilletRecognizer: 51 fillets detected
+2025-11-22 02:47:45,757 [INFO] ======================================================================
+2025-11-22 02:47:45,757 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:47:45,757 [INFO] ======================================================================
+2025-11-22 02:47:45,757 [INFO] Found 0 chamfer candidates
+2025-11-22 02:47:45,757 [INFO] 
+======================================================================
+2025-11-22 02:47:45,757 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:47:45,757 [INFO] ======================================================================
+2025-11-22 02:47:45,757 [INFO] Total recognized: 0
+2025-11-22 02:47:45,757 [INFO] 45° chamfers: 0
+2025-11-22 02:47:45,757 [INFO] 30° chamfers: 0
+2025-11-22 02:47:45,757 [INFO] Custom angle: 0
+2025-11-22 02:47:45,757 [INFO] ======================================================================
+2025-11-22 02:47:45,758 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:47:45,758 [INFO]   Processing configuration #2 (type: 2.5D_milling)...
+2025-11-22 02:47:45,758 [INFO] ======================================================================
+2025-11-22 02:47:45,758 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:47:45,758 [INFO] ======================================================================
+2025-11-22 02:47:45,758 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:47:45,758 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:47:45,758 [INFO]   → Created 51 individual hints
+2025-11-22 02:47:45,758 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:47:45,768 [INFO]   → Merged into 47 final holes
+2025-11-22 02:47:45,768 [INFO] 
+2025-11-22 02:47:45,768 [INFO] ======================================================================
+2025-11-22 02:47:45,769 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:47:45,769 [INFO] ======================================================================
+2025-11-22 02:47:45,769 [INFO] Total candidates analyzed: 57
+2025-11-22 02:47:45,769 [INFO] Successfully recognized: 47
+2025-11-22 02:47:45,769 [INFO] Validation failures: 0
+2025-11-22 02:47:45,769 [INFO] Ambiguous features: 0
+2025-11-22 02:47:45,769 [INFO] 
+2025-11-22 02:47:45,769 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,769 [INFO]   counter_drilled_hole     :   4
+2025-11-22 02:47:45,769 [INFO]   through_hole             :  43
+2025-11-22 02:47:45,769 [INFO] ======================================================================
+2025-11-22 02:47:45,769 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:47:45,769 [INFO] ======================================================================
+2025-11-22 02:47:45,769 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:47:45,769 [INFO] ======================================================================
+2025-11-22 02:47:45,769 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,769 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:47:45,769 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:47:45,769 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:47:45,769 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:47:45,770 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:47:45,770 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:47:45,770 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:47:45,770 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:47:45,770 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:47:45,770 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:47:45,770 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:47:45,770 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:47:45,770 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:47:45,770 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:47:45,771 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:47:45,771 [INFO] 
+2025-11-22 02:47:45,771 [INFO] ======================================================================
+2025-11-22 02:47:45,771 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,771 [INFO] ======================================================================
+2025-11-22 02:47:45,771 [INFO] Total candidates: 52
+2025-11-22 02:47:45,771 [INFO] Pockets recognized: 0
+2025-11-22 02:47:45,771 [INFO] Slots recognized: 0
+2025-11-22 02:47:45,771 [INFO] Passages recognized: 0
+2025-11-22 02:47:45,771 [INFO] Validation failures: 0
+2025-11-22 02:47:45,771 [INFO] 
+2025-11-22 02:47:45,771 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,771 [INFO] ======================================================================
+2025-11-22 02:47:45,772 [INFO] Starting slot recognition...
+2025-11-22 02:47:45,772 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:47:45,772 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:47:45,772 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:47:45,772 [INFO] ======================================================================
+2025-11-22 02:47:45,772 [INFO] Starting boss/step/island recognition
+2025-11-22 02:47:45,772 [INFO] ======================================================================
+2025-11-22 02:47:45,772 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,772 [INFO] 
+2025-11-22 02:47:45,772 [INFO] ======================================================================
+2025-11-22 02:47:45,772 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,773 [INFO] ======================================================================
+2025-11-22 02:47:45,773 [INFO] Total candidates: 52
+2025-11-22 02:47:45,773 [INFO] Bosses recognized: 0
+2025-11-22 02:47:45,773 [INFO] Steps recognized: 1
+2025-11-22 02:47:45,773 [INFO] Islands recognized: 0
+2025-11-22 02:47:45,773 [INFO] Validation failures: 0
+2025-11-22 02:47:45,773 [INFO] 
+2025-11-22 02:47:45,773 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,773 [INFO]   step                               :   1
+2025-11-22 02:47:45,773 [INFO] ======================================================================
+2025-11-22 02:47:45,773 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:47:45,773 [INFO] ======================================================================
+2025-11-22 02:47:45,773 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:47:45,773 [INFO] ======================================================================
+2025-11-22 02:47:45,773 [DEBUG] Surface type distribution:
+2025-11-22 02:47:45,774 [DEBUG]   cone: 13
+2025-11-22 02:47:45,774 [DEBUG]   cylinder: 51
+2025-11-22 02:47:45,774 [DEBUG]   plane: 52
+2025-11-22 02:47:45,774 [INFO] Found 51 blend candidates:
+2025-11-22 02:47:45,774 [INFO]   Cylinders: 51
+2025-11-22 02:47:45,774 [INFO]   Tori: 0
+2025-11-22 02:47:45,774 [INFO]   Spheres: 0
+2025-11-22 02:47:45,774 [INFO]   B-splines: 0
+2025-11-22 02:47:45,774 [INFO] Found 51 blend surface candidates
+2025-11-22 02:47:45,774 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:47:45,774 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:47:45,774 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:47:45,774 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:47:45,774 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:47:45,774 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,774 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,774 [DEBUG] ✓ Constant radius fillet: R22500.00mm, L=6000.0mm
+2025-11-22 02:47:45,774 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:47:45,775 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:47:45,775 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,775 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,775 [DEBUG] ✓ Constant radius fillet: R37500.00mm, L=28000.0mm
+2025-11-22 02:47:45,775 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:47:45,775 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,775 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,775 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,775 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,775 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:47:45,775 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,775 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,775 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,775 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,775 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:47:45,775 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:47:45,775 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,775 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,775 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=6000.0mm
+2025-11-22 02:47:45,775 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:47:45,776 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,776 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,776 [DEBUG] ✓ Constant radius fillet: R15000.00mm, L=28000.0mm
+2025-11-22 02:47:45,776 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,776 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,776 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,776 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,776 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,776 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,776 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,776 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,776 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:47:45,776 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,776 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,776 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=28000.0mm
+2025-11-22 02:47:45,776 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:47:45,776 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,776 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,776 [DEBUG] ✓ Constant radius fillet: R26500.00mm, L=22000.0mm
+2025-11-22 02:47:45,776 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:47:45,776 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,776 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,776 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=10768.1mm
+2025-11-22 02:47:45,776 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:47:45,776 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,777 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,777 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:47:45,777 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,777 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=17193.2mm
+2025-11-22 02:47:45,777 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:47:45,777 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,777 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,777 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:47:45,777 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,777 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=6401.4mm
+2025-11-22 02:47:45,777 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:47:45,777 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,777 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=7456.9mm
+2025-11-22 02:47:45,777 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:47:45,777 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,777 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,777 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:47:45,777 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,777 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,777 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,778 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,778 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:47:45,778 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:47:45,778 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,778 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,778 [DEBUG] ✓ Constant radius fillet: R40000.00mm, L=22000.0mm
+2025-11-22 02:47:45,778 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:47:45,778 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:47:45,778 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,778 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,778 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4998.1mm
+2025-11-22 02:47:45,778 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:47:45,778 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:47:45,778 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,778 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,778 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=14688.2mm
+2025-11-22 02:47:45,778 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:47:45,778 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:47:45,778 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,778 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,778 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4190.1mm
+2025-11-22 02:47:45,779 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:47:45,779 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:47:45,779 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,779 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,779 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=12557.4mm
+2025-11-22 02:47:45,779 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:47:45,779 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:47:45,779 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,779 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,779 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=13009.2mm
+2025-11-22 02:47:45,779 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:47:45,779 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:47:45,779 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,779 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,779 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=7509.2mm
+2025-11-22 02:47:45,779 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:47:45,779 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,779 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,779 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,779 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,779 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:47:45,779 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,779 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,779 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,779 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,779 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:47:45,779 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,779 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,779 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,780 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,780 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:47:45,780 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,780 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,780 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,780 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,780 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:47:45,780 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,780 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,780 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,780 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,780 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:47:45,780 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,780 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,780 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,780 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,780 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:47:45,780 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,780 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,780 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,780 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,780 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:47:45,780 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,780 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,780 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,780 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,780 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:47:45,780 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,781 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,781 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:47:45,781 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,781 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,781 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:47:45,781 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,781 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,781 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:47:45,781 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,781 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,781 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:47:45,781 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,781 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,781 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:47:45,781 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,781 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,781 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:47:45,781 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,781 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,781 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,782 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:47:45,782 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,782 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,782 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,782 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:47:45,782 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,782 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,782 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,782 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:47:45,782 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,782 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,782 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,782 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:47:45,782 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:47:45,782 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,782 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=7250.0mm
+2025-11-22 02:47:45,782 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:47:45,782 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,782 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,782 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,782 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:47:45,782 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,782 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,782 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,782 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,783 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:47:45,783 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,783 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,783 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,783 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,783 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:47:45,783 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,783 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,783 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,783 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,783 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:47:45,783 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,783 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,783 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,783 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,783 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:47:45,783 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,783 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,783 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,783 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,783 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:47:45,783 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,783 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,783 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,783 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,783 [INFO] 
+======================================================================
+2025-11-22 02:47:45,783 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:47:45,783 [INFO] ======================================================================
+2025-11-22 02:47:45,783 [INFO] Total candidates: 51
+2025-11-22 02:47:45,783 [INFO] Constant radius: 51
+2025-11-22 02:47:45,783 [INFO] Variable radius: 0
+2025-11-22 02:47:45,784 [INFO] Corner blends: 0
+2025-11-22 02:47:45,784 [INFO] Fillet chains: 0
+2025-11-22 02:47:45,784 [INFO] Total recognized: 51
+2025-11-22 02:47:45,784 [INFO] ======================================================================
+2025-11-22 02:47:45,784 [INFO] FilletRecognizer: 51 fillets recognized
+2025-11-22 02:47:45,784 [INFO]     ✓ FilletRecognizer: 51 fillets detected
+2025-11-22 02:47:45,784 [INFO] ======================================================================
+2025-11-22 02:47:45,784 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:47:45,784 [INFO] ======================================================================
+2025-11-22 02:47:45,784 [INFO] Found 0 chamfer candidates
+2025-11-22 02:47:45,784 [INFO] 
+======================================================================
+2025-11-22 02:47:45,784 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:47:45,784 [INFO] ======================================================================
+2025-11-22 02:47:45,784 [INFO] Total recognized: 0
+2025-11-22 02:47:45,784 [INFO] 45° chamfers: 0
+2025-11-22 02:47:45,784 [INFO] 30° chamfers: 0
+2025-11-22 02:47:45,784 [INFO] Custom angle: 0
+2025-11-22 02:47:45,784 [INFO] ======================================================================
+2025-11-22 02:47:45,784 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:47:45,784 [INFO]   Processing configuration #3 (type: 2.5D_milling)...
+2025-11-22 02:47:45,784 [INFO] ======================================================================
+2025-11-22 02:47:45,784 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:47:45,785 [INFO] ======================================================================
+2025-11-22 02:47:45,785 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:47:45,785 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:47:45,785 [INFO]   → Created 51 individual hints
+2025-11-22 02:47:45,785 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:47:45,794 [INFO]   → Merged into 47 final holes
+2025-11-22 02:47:45,794 [INFO] 
+2025-11-22 02:47:45,794 [INFO] ======================================================================
+2025-11-22 02:47:45,794 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:47:45,794 [INFO] ======================================================================
+2025-11-22 02:47:45,794 [INFO] Total candidates analyzed: 57
+2025-11-22 02:47:45,794 [INFO] Successfully recognized: 47
+2025-11-22 02:47:45,794 [INFO] Validation failures: 0
+2025-11-22 02:47:45,794 [INFO] Ambiguous features: 0
+2025-11-22 02:47:45,794 [INFO] 
+2025-11-22 02:47:45,794 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,794 [INFO]   counter_drilled_hole     :   4
+2025-11-22 02:47:45,794 [INFO]   through_hole             :  43
+2025-11-22 02:47:45,794 [INFO] ======================================================================
+2025-11-22 02:47:45,794 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:47:45,794 [INFO] ======================================================================
+2025-11-22 02:47:45,794 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:47:45,795 [INFO] ======================================================================
+2025-11-22 02:47:45,795 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,795 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:47:45,795 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:47:45,795 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:47:45,795 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:47:45,795 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:47:45,795 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:47:45,795 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:47:45,795 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:47:45,795 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:47:45,795 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:47:45,795 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:47:45,795 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:47:45,795 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:47:45,796 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:47:45,796 [INFO] 
+2025-11-22 02:47:45,796 [INFO] ======================================================================
+2025-11-22 02:47:45,796 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,796 [INFO] ======================================================================
+2025-11-22 02:47:45,796 [INFO] Total candidates: 52
+2025-11-22 02:47:45,796 [INFO] Pockets recognized: 0
+2025-11-22 02:47:45,796 [INFO] Slots recognized: 0
+2025-11-22 02:47:45,796 [INFO] Passages recognized: 0
+2025-11-22 02:47:45,796 [INFO] Validation failures: 0
+2025-11-22 02:47:45,796 [INFO] 
+2025-11-22 02:47:45,796 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,797 [INFO] ======================================================================
+2025-11-22 02:47:45,797 [INFO] Starting slot recognition...
+2025-11-22 02:47:45,797 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:47:45,797 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:47:45,797 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:47:45,797 [INFO] ======================================================================
+2025-11-22 02:47:45,797 [INFO] Starting boss/step/island recognition
+2025-11-22 02:47:45,797 [INFO] ======================================================================
+2025-11-22 02:47:45,797 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,797 [INFO] 
+2025-11-22 02:47:45,797 [INFO] ======================================================================
+2025-11-22 02:47:45,797 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,797 [INFO] ======================================================================
+2025-11-22 02:47:45,797 [INFO] Total candidates: 52
+2025-11-22 02:47:45,797 [INFO] Bosses recognized: 0
+2025-11-22 02:47:45,798 [INFO] Steps recognized: 1
+2025-11-22 02:47:45,798 [INFO] Islands recognized: 0
+2025-11-22 02:47:45,798 [INFO] Validation failures: 0
+2025-11-22 02:47:45,798 [INFO] 
+2025-11-22 02:47:45,798 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,798 [INFO]   step                               :   1
+2025-11-22 02:47:45,798 [INFO] ======================================================================
+2025-11-22 02:47:45,798 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:47:45,798 [INFO] ======================================================================
+2025-11-22 02:47:45,798 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:47:45,798 [INFO] ======================================================================
+2025-11-22 02:47:45,798 [DEBUG] Surface type distribution:
+2025-11-22 02:47:45,798 [DEBUG]   cone: 13
+2025-11-22 02:47:45,798 [DEBUG]   cylinder: 51
+2025-11-22 02:47:45,798 [DEBUG]   plane: 52
+2025-11-22 02:47:45,798 [INFO] Found 51 blend candidates:
+2025-11-22 02:47:45,798 [INFO]   Cylinders: 51
+2025-11-22 02:47:45,798 [INFO]   Tori: 0
+2025-11-22 02:47:45,798 [INFO]   Spheres: 0
+2025-11-22 02:47:45,798 [INFO]   B-splines: 0
+2025-11-22 02:47:45,798 [INFO] Found 51 blend surface candidates
+2025-11-22 02:47:45,798 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:47:45,798 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:47:45,798 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:47:45,798 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:47:45,799 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:47:45,799 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,799 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,799 [DEBUG] ✓ Constant radius fillet: R22500.00mm, L=6000.0mm
+2025-11-22 02:47:45,799 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:47:45,799 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:47:45,799 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,799 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,799 [DEBUG] ✓ Constant radius fillet: R37500.00mm, L=28000.0mm
+2025-11-22 02:47:45,799 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:47:45,799 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,799 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,799 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,799 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,799 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:47:45,799 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,799 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,799 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,799 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,799 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:47:45,799 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:47:45,799 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,799 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,799 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=6000.0mm
+2025-11-22 02:47:45,799 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:47:45,799 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:47:45,799 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,799 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,799 [DEBUG] ✓ Constant radius fillet: R15000.00mm, L=28000.0mm
+2025-11-22 02:47:45,799 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,800 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,800 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,800 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,800 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,800 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,800 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,800 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,800 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=28000.0mm
+2025-11-22 02:47:45,800 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,800 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,800 [DEBUG] ✓ Constant radius fillet: R26500.00mm, L=22000.0mm
+2025-11-22 02:47:45,800 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,800 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,800 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=10768.1mm
+2025-11-22 02:47:45,800 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,800 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,800 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,800 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:47:45,800 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:47:45,800 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,801 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=17193.2mm
+2025-11-22 02:47:45,801 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:47:45,801 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,801 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,801 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,801 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:47:45,801 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:47:45,801 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,801 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=6401.4mm
+2025-11-22 02:47:45,801 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:47:45,801 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:47:45,801 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,801 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=7456.9mm
+2025-11-22 02:47:45,801 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:47:45,801 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,801 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,801 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,801 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:47:45,801 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,801 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,801 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,801 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:47:45,801 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:47:45,801 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,801 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,802 [DEBUG] ✓ Constant radius fillet: R40000.00mm, L=22000.0mm
+2025-11-22 02:47:45,802 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:47:45,802 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:47:45,802 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,802 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,802 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4998.1mm
+2025-11-22 02:47:45,802 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:47:45,802 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:47:45,802 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,802 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,802 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=14688.2mm
+2025-11-22 02:47:45,802 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:47:45,802 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:47:45,802 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,802 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,802 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4190.1mm
+2025-11-22 02:47:45,802 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:47:45,802 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:47:45,802 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,802 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,802 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=12557.4mm
+2025-11-22 02:47:45,802 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:47:45,802 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:47:45,802 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,802 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,802 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=13009.2mm
+2025-11-22 02:47:45,802 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:47:45,803 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:47:45,803 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,803 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,803 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=7509.2mm
+2025-11-22 02:47:45,803 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:47:45,803 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,803 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,803 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,803 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,803 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:47:45,803 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,803 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,803 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,803 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,803 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:47:45,803 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,803 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,803 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,803 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,803 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:47:45,803 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,803 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,803 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,803 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,803 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:47:45,803 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,803 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,803 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,804 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,804 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:47:45,804 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,804 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,804 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,804 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,804 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:47:45,804 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,804 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,804 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,804 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,804 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:47:45,804 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,804 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,804 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,804 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,804 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:47:45,804 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,804 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,804 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,804 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,804 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:47:45,804 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,804 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,804 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,804 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,804 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:47:45,804 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,805 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,805 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,805 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,805 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:47:45,805 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,805 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,805 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,805 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,805 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:47:45,805 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,805 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,805 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,805 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,805 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:47:45,805 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,805 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,805 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,805 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,805 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:47:45,805 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,805 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,805 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,805 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,805 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:47:45,805 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,805 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,805 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,805 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,805 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:47:45,805 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,806 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,806 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,806 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,806 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:47:45,806 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,806 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,806 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,806 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,806 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:47:45,806 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:47:45,806 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,806 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,806 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=7250.0mm
+2025-11-22 02:47:45,806 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:47:45,806 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,806 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,806 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,806 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,806 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:47:45,806 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,806 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,806 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,806 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,806 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:47:45,806 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,806 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,806 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,806 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,806 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:47:45,806 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,807 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,807 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,807 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,807 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:47:45,807 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,807 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,807 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,807 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,807 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:47:45,807 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,807 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,807 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,807 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,807 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:47:45,807 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,807 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,807 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,807 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,807 [INFO] 
+======================================================================
+2025-11-22 02:47:45,807 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:47:45,807 [INFO] ======================================================================
+2025-11-22 02:47:45,807 [INFO] Total candidates: 51
+2025-11-22 02:47:45,807 [INFO] Constant radius: 51
+2025-11-22 02:47:45,807 [INFO] Variable radius: 0
+2025-11-22 02:47:45,807 [INFO] Corner blends: 0
+2025-11-22 02:47:45,807 [INFO] Fillet chains: 0
+2025-11-22 02:47:45,807 [INFO] Total recognized: 51
+2025-11-22 02:47:45,807 [INFO] ======================================================================
+2025-11-22 02:47:45,808 [INFO] FilletRecognizer: 51 fillets recognized
+2025-11-22 02:47:45,808 [INFO]     ✓ FilletRecognizer: 51 fillets detected
+2025-11-22 02:47:45,808 [INFO] ======================================================================
+2025-11-22 02:47:45,808 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:47:45,808 [INFO] ======================================================================
+2025-11-22 02:47:45,808 [INFO] Found 0 chamfer candidates
+2025-11-22 02:47:45,808 [INFO] 
+======================================================================
+2025-11-22 02:47:45,808 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:47:45,808 [INFO] ======================================================================
+2025-11-22 02:47:45,808 [INFO] Total recognized: 0
+2025-11-22 02:47:45,808 [INFO] 45° chamfers: 0
+2025-11-22 02:47:45,808 [INFO] 30° chamfers: 0
+2025-11-22 02:47:45,808 [INFO] Custom angle: 0
+2025-11-22 02:47:45,808 [INFO] ======================================================================
+2025-11-22 02:47:45,808 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:47:45,808 [INFO]   Processing configuration #4 (type: 2.5D_milling)...
+2025-11-22 02:47:45,808 [INFO] ======================================================================
+2025-11-22 02:47:45,808 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:47:45,808 [INFO] ======================================================================
+2025-11-22 02:47:45,809 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:47:45,809 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:47:45,809 [INFO]   → Created 51 individual hints
+2025-11-22 02:47:45,809 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:47:45,818 [INFO]   → Merged into 47 final holes
+2025-11-22 02:47:45,819 [INFO] 
+2025-11-22 02:47:45,819 [INFO] ======================================================================
+2025-11-22 02:47:45,819 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:47:45,819 [INFO] ======================================================================
+2025-11-22 02:47:45,819 [INFO] Total candidates analyzed: 57
+2025-11-22 02:47:45,819 [INFO] Successfully recognized: 47
+2025-11-22 02:47:45,819 [INFO] Validation failures: 0
+2025-11-22 02:47:45,819 [INFO] Ambiguous features: 0
+2025-11-22 02:47:45,819 [INFO] 
+2025-11-22 02:47:45,819 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,819 [INFO]   counter_drilled_hole     :   4
+2025-11-22 02:47:45,819 [INFO]   through_hole             :  43
+2025-11-22 02:47:45,819 [INFO] ======================================================================
+2025-11-22 02:47:45,819 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:47:45,819 [INFO] ======================================================================
+2025-11-22 02:47:45,819 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:47:45,819 [INFO] ======================================================================
+2025-11-22 02:47:45,819 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,819 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:47:45,819 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:47:45,819 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:47:45,819 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:47:45,820 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:47:45,820 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:47:45,820 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:47:45,820 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:47:45,820 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:47:45,820 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:47:45,820 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:47:45,820 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:47:45,820 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:47:45,820 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:47:45,821 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:47:45,821 [INFO] 
+2025-11-22 02:47:45,821 [INFO] ======================================================================
+2025-11-22 02:47:45,821 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,821 [INFO] ======================================================================
+2025-11-22 02:47:45,821 [INFO] Total candidates: 52
+2025-11-22 02:47:45,821 [INFO] Pockets recognized: 0
+2025-11-22 02:47:45,821 [INFO] Slots recognized: 0
+2025-11-22 02:47:45,821 [INFO] Passages recognized: 0
+2025-11-22 02:47:45,821 [INFO] Validation failures: 0
+2025-11-22 02:47:45,821 [INFO] 
+2025-11-22 02:47:45,821 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,821 [INFO] ======================================================================
+2025-11-22 02:47:45,821 [INFO] Starting slot recognition...
+2025-11-22 02:47:45,821 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:47:45,822 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:47:45,822 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:47:45,822 [INFO] ======================================================================
+2025-11-22 02:47:45,822 [INFO] Starting boss/step/island recognition
+2025-11-22 02:47:45,822 [INFO] ======================================================================
+2025-11-22 02:47:45,822 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,822 [INFO] 
+2025-11-22 02:47:45,822 [INFO] ======================================================================
+2025-11-22 02:47:45,822 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,822 [INFO] ======================================================================
+2025-11-22 02:47:45,822 [INFO] Total candidates: 52
+2025-11-22 02:47:45,822 [INFO] Bosses recognized: 0
+2025-11-22 02:47:45,822 [INFO] Steps recognized: 1
+2025-11-22 02:47:45,822 [INFO] Islands recognized: 0
+2025-11-22 02:47:45,822 [INFO] Validation failures: 0
+2025-11-22 02:47:45,822 [INFO] 
+2025-11-22 02:47:45,822 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,822 [INFO]   step                               :   1
+2025-11-22 02:47:45,822 [INFO] ======================================================================
+2025-11-22 02:47:45,822 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:47:45,823 [INFO] ======================================================================
+2025-11-22 02:47:45,823 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:47:45,823 [INFO] ======================================================================
+2025-11-22 02:47:45,823 [DEBUG] Surface type distribution:
+2025-11-22 02:47:45,823 [DEBUG]   cone: 13
+2025-11-22 02:47:45,823 [DEBUG]   cylinder: 51
+2025-11-22 02:47:45,823 [DEBUG]   plane: 52
+2025-11-22 02:47:45,823 [INFO] Found 51 blend candidates:
+2025-11-22 02:47:45,823 [INFO]   Cylinders: 51
+2025-11-22 02:47:45,823 [INFO]   Tori: 0
+2025-11-22 02:47:45,823 [INFO]   Spheres: 0
+2025-11-22 02:47:45,823 [INFO]   B-splines: 0
+2025-11-22 02:47:45,823 [INFO] Found 51 blend surface candidates
+2025-11-22 02:47:45,823 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:47:45,823 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:47:45,823 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:47:45,823 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:47:45,823 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:47:45,823 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,823 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,823 [DEBUG] ✓ Constant radius fillet: R22500.00mm, L=6000.0mm
+2025-11-22 02:47:45,823 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:47:45,823 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:47:45,823 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,823 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,823 [DEBUG] ✓ Constant radius fillet: R37500.00mm, L=28000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:47:45,824 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,824 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,824 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,824 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:47:45,824 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,824 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,824 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,824 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:47:45,824 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:47:45,824 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,824 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,824 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=6000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:47:45,824 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:47:45,824 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,824 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,824 [DEBUG] ✓ Constant radius fillet: R15000.00mm, L=28000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:47:45,824 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,824 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,824 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,824 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:47:45,824 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,824 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,824 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,824 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,824 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,825 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,825 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=28000.0mm
+2025-11-22 02:47:45,825 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,825 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,825 [DEBUG] ✓ Constant radius fillet: R26500.00mm, L=22000.0mm
+2025-11-22 02:47:45,825 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,825 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,825 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=10768.1mm
+2025-11-22 02:47:45,825 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,825 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,825 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,825 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,825 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,825 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=17193.2mm
+2025-11-22 02:47:45,825 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,825 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,825 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,825 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:47:45,825 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:47:45,825 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,826 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=6401.4mm
+2025-11-22 02:47:45,826 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:47:45,826 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:47:45,826 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,826 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=7456.9mm
+2025-11-22 02:47:45,826 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:47:45,826 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,826 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,826 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,826 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:47:45,826 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,826 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,826 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,826 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:47:45,826 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:47:45,826 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,826 [DEBUG] ✓ Constant radius fillet: R40000.00mm, L=22000.0mm
+2025-11-22 02:47:45,826 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:47:45,826 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:47:45,826 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,826 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4998.1mm
+2025-11-22 02:47:45,826 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:47:45,826 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:47:45,826 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,826 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,827 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=14688.2mm
+2025-11-22 02:47:45,827 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:47:45,827 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:47:45,827 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,827 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,827 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4190.1mm
+2025-11-22 02:47:45,827 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:47:45,827 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:47:45,827 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,827 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,827 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=12557.4mm
+2025-11-22 02:47:45,827 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:47:45,827 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:47:45,827 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,827 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,827 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=13009.2mm
+2025-11-22 02:47:45,827 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:47:45,827 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:47:45,827 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,827 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,827 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=7509.2mm
+2025-11-22 02:47:45,827 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:47:45,827 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,827 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,827 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,827 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,827 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:47:45,827 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,828 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,828 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,828 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:47:45,828 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,828 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,828 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,828 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:47:45,828 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,828 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,828 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,828 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:47:45,828 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,828 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,828 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,828 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:47:45,828 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,828 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,828 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,828 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:47:45,828 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,828 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,828 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,828 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:47:45,828 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,828 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,829 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:47:45,829 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,829 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,829 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:47:45,829 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,829 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,829 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:47:45,829 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,829 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,829 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:47:45,829 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,829 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,829 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:47:45,829 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,829 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,829 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:47:45,829 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,829 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,829 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,829 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:47:45,830 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,830 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,830 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,830 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:47:45,830 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,830 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,830 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,830 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:47:45,830 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,830 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,830 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,830 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:47:45,830 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,830 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,830 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,830 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:47:45,830 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:47:45,830 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,830 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,830 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=7250.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:47:45,830 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,830 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,830 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,830 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,830 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:47:45,831 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,831 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,831 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,831 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,831 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:47:45,831 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,831 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,831 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,831 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,831 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:47:45,831 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,831 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,831 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,831 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,831 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:47:45,831 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,831 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,831 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,831 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,831 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:47:45,831 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,831 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,831 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,831 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,831 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:47:45,831 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,831 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,831 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,831 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,831 [INFO] 
+======================================================================
+2025-11-22 02:47:45,831 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:47:45,831 [INFO] ======================================================================
+2025-11-22 02:47:45,831 [INFO] Total candidates: 51
+2025-11-22 02:47:45,832 [INFO] Constant radius: 51
+2025-11-22 02:47:45,832 [INFO] Variable radius: 0
+2025-11-22 02:47:45,832 [INFO] Corner blends: 0
+2025-11-22 02:47:45,832 [INFO] Fillet chains: 0
+2025-11-22 02:47:45,832 [INFO] Total recognized: 51
+2025-11-22 02:47:45,832 [INFO] ======================================================================
+2025-11-22 02:47:45,832 [INFO] FilletRecognizer: 51 fillets recognized
+2025-11-22 02:47:45,832 [INFO]     ✓ FilletRecognizer: 51 fillets detected
+2025-11-22 02:47:45,832 [INFO] ======================================================================
+2025-11-22 02:47:45,832 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:47:45,832 [INFO] ======================================================================
+2025-11-22 02:47:45,832 [INFO] Found 0 chamfer candidates
+2025-11-22 02:47:45,832 [INFO] 
+======================================================================
+2025-11-22 02:47:45,832 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:47:45,832 [INFO] ======================================================================
+2025-11-22 02:47:45,832 [INFO] Total recognized: 0
+2025-11-22 02:47:45,832 [INFO] 45° chamfers: 0
+2025-11-22 02:47:45,832 [INFO] 30° chamfers: 0
+2025-11-22 02:47:45,832 [INFO] Custom angle: 0
+2025-11-22 02:47:45,832 [INFO] ======================================================================
+2025-11-22 02:47:45,832 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:47:45,832 [INFO]   Processing configuration #5 (type: 2.5D_milling)...
+2025-11-22 02:47:45,832 [INFO] ======================================================================
+2025-11-22 02:47:45,833 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:47:45,833 [INFO] ======================================================================
+2025-11-22 02:47:45,833 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:47:45,833 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:47:45,833 [INFO]   → Created 51 individual hints
+2025-11-22 02:47:45,833 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:47:45,842 [INFO]   → Merged into 47 final holes
+2025-11-22 02:47:45,842 [INFO] 
+2025-11-22 02:47:45,842 [INFO] ======================================================================
+2025-11-22 02:47:45,842 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:47:45,842 [INFO] ======================================================================
+2025-11-22 02:47:45,842 [INFO] Total candidates analyzed: 57
+2025-11-22 02:47:45,842 [INFO] Successfully recognized: 47
+2025-11-22 02:47:45,842 [INFO] Validation failures: 0
+2025-11-22 02:47:45,842 [INFO] Ambiguous features: 0
+2025-11-22 02:47:45,842 [INFO] 
+2025-11-22 02:47:45,842 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,842 [INFO]   counter_drilled_hole     :   4
+2025-11-22 02:47:45,842 [INFO]   through_hole             :  43
+2025-11-22 02:47:45,842 [INFO] ======================================================================
+2025-11-22 02:47:45,842 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:47:45,842 [INFO] ======================================================================
+2025-11-22 02:47:45,842 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:47:45,842 [INFO] ======================================================================
+2025-11-22 02:47:45,843 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,843 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:47:45,843 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:47:45,843 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:47:45,843 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:47:45,843 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:47:45,843 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:47:45,843 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:47:45,843 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:47:45,843 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:47:45,843 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:47:45,844 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:47:45,844 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:47:45,844 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:47:45,844 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:47:45,844 [INFO] 
+2025-11-22 02:47:45,844 [INFO] ======================================================================
+2025-11-22 02:47:45,844 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,844 [INFO] ======================================================================
+2025-11-22 02:47:45,844 [INFO] Total candidates: 52
+2025-11-22 02:47:45,845 [INFO] Pockets recognized: 0
+2025-11-22 02:47:45,845 [INFO] Slots recognized: 0
+2025-11-22 02:47:45,845 [INFO] Passages recognized: 0
+2025-11-22 02:47:45,845 [INFO] Validation failures: 0
+2025-11-22 02:47:45,845 [INFO] 
+2025-11-22 02:47:45,845 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,845 [INFO] ======================================================================
+2025-11-22 02:47:45,845 [INFO] Starting slot recognition...
+2025-11-22 02:47:45,845 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:47:45,845 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:47:45,845 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:47:45,845 [INFO] ======================================================================
+2025-11-22 02:47:45,845 [INFO] Starting boss/step/island recognition
+2025-11-22 02:47:45,845 [INFO] ======================================================================
+2025-11-22 02:47:45,845 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,846 [INFO] 
+2025-11-22 02:47:45,846 [INFO] ======================================================================
+2025-11-22 02:47:45,846 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,846 [INFO] ======================================================================
+2025-11-22 02:47:45,846 [INFO] Total candidates: 52
+2025-11-22 02:47:45,846 [INFO] Bosses recognized: 0
+2025-11-22 02:47:45,846 [INFO] Steps recognized: 1
+2025-11-22 02:47:45,846 [INFO] Islands recognized: 0
+2025-11-22 02:47:45,846 [INFO] Validation failures: 0
+2025-11-22 02:47:45,846 [INFO] 
+2025-11-22 02:47:45,846 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,846 [INFO]   step                               :   1
+2025-11-22 02:47:45,846 [INFO] ======================================================================
+2025-11-22 02:47:45,846 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:47:45,846 [INFO] ======================================================================
+2025-11-22 02:47:45,846 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:47:45,846 [INFO] ======================================================================
+2025-11-22 02:47:45,846 [DEBUG] Surface type distribution:
+2025-11-22 02:47:45,846 [DEBUG]   cone: 13
+2025-11-22 02:47:45,846 [DEBUG]   cylinder: 51
+2025-11-22 02:47:45,846 [DEBUG]   plane: 52
+2025-11-22 02:47:45,846 [INFO] Found 51 blend candidates:
+2025-11-22 02:47:45,846 [INFO]   Cylinders: 51
+2025-11-22 02:47:45,847 [INFO]   Tori: 0
+2025-11-22 02:47:45,847 [INFO]   Spheres: 0
+2025-11-22 02:47:45,847 [INFO]   B-splines: 0
+2025-11-22 02:47:45,847 [INFO] Found 51 blend surface candidates
+2025-11-22 02:47:45,847 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:47:45,847 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:47:45,847 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:47:45,847 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:47:45,847 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:47:45,847 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,847 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,847 [DEBUG] ✓ Constant radius fillet: R22500.00mm, L=6000.0mm
+2025-11-22 02:47:45,847 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:47:45,847 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:47:45,847 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,847 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,847 [DEBUG] ✓ Constant radius fillet: R37500.00mm, L=28000.0mm
+2025-11-22 02:47:45,847 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:47:45,847 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,847 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,847 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,847 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,847 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:47:45,847 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,847 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,847 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,847 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,847 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:47:45,847 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:47:45,847 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,847 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=6000.0mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:47:45,848 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:47:45,848 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,848 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R15000.00mm, L=28000.0mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:47:45,848 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,848 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,848 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:47:45,848 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,848 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,848 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:47:45,848 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:47:45,848 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,848 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=28000.0mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:47:45,848 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:47:45,848 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,848 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R26500.00mm, L=22000.0mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:47:45,848 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:47:45,848 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,848 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,848 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=10768.1mm
+2025-11-22 02:47:45,848 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,849 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,849 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,849 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,849 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:47:45,849 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,849 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,849 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=17193.2mm
+2025-11-22 02:47:45,849 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,849 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,849 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,849 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,849 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:47:45,849 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,849 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,849 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=6401.4mm
+2025-11-22 02:47:45,849 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:47:45,849 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,849 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,849 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=7456.9mm
+2025-11-22 02:47:45,849 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,849 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,849 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,849 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,849 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:47:45,849 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,850 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,850 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,850 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,850 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:47:45,850 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:47:45,850 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,850 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,850 [DEBUG] ✓ Constant radius fillet: R40000.00mm, L=22000.0mm
+2025-11-22 02:47:45,850 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:47:45,850 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:47:45,850 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,850 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,850 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4998.1mm
+2025-11-22 02:47:45,850 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:47:45,850 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:47:45,850 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,850 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,850 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=14688.2mm
+2025-11-22 02:47:45,850 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:47:45,850 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:47:45,850 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,850 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,850 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4190.1mm
+2025-11-22 02:47:45,850 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:47:45,850 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:47:45,850 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,850 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,850 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=12557.4mm
+2025-11-22 02:47:45,850 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,851 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=13009.2mm
+2025-11-22 02:47:45,851 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,851 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=7509.2mm
+2025-11-22 02:47:45,851 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,851 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,851 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,851 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,851 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,851 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,851 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,851 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,851 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:47:45,851 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,851 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,851 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,852 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,852 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:47:45,852 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,852 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,852 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,852 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,852 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:47:45,852 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,852 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,852 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,852 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,852 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:47:45,852 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,852 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,852 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,852 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,852 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:47:45,852 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,852 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,852 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,852 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,852 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:47:45,852 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,852 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,852 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,852 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,852 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:47:45,852 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,852 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,852 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,853 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,853 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:47:45,853 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,853 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,853 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,853 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,853 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:47:45,853 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,853 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,853 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,853 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,853 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:47:45,853 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,853 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,853 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,853 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,853 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:47:45,853 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,853 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,853 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,853 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,853 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:47:45,853 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,853 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,853 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,853 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,853 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:47:45,853 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,853 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,854 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,854 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,854 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:47:45,854 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,854 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,854 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,854 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,854 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:47:45,854 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:47:45,854 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,854 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,854 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=7250.0mm
+2025-11-22 02:47:45,854 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:47:45,854 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,854 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,854 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,854 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,854 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:47:45,854 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,854 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,854 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,854 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,854 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:47:45,854 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,854 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,854 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,854 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,854 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:47:45,854 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,855 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,855 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,855 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,855 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:47:45,855 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,855 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,855 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,855 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,855 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:47:45,855 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,855 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,855 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,855 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,855 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:47:45,855 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,855 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,855 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,855 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,855 [INFO] 
+======================================================================
+2025-11-22 02:47:45,855 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:47:45,855 [INFO] ======================================================================
+2025-11-22 02:47:45,855 [INFO] Total candidates: 51
+2025-11-22 02:47:45,855 [INFO] Constant radius: 51
+2025-11-22 02:47:45,855 [INFO] Variable radius: 0
+2025-11-22 02:47:45,856 [INFO] Corner blends: 0
+2025-11-22 02:47:45,856 [INFO] Fillet chains: 0
+2025-11-22 02:47:45,856 [INFO] Total recognized: 51
+2025-11-22 02:47:45,856 [INFO] ======================================================================
+2025-11-22 02:47:45,856 [INFO] FilletRecognizer: 51 fillets recognized
+2025-11-22 02:47:45,856 [INFO]     ✓ FilletRecognizer: 51 fillets detected
+2025-11-22 02:47:45,856 [INFO] ======================================================================
+2025-11-22 02:47:45,856 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:47:45,856 [INFO] ======================================================================
+2025-11-22 02:47:45,856 [INFO] Found 0 chamfer candidates
+2025-11-22 02:47:45,856 [INFO] 
+======================================================================
+2025-11-22 02:47:45,856 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:47:45,856 [INFO] ======================================================================
+2025-11-22 02:47:45,856 [INFO] Total recognized: 0
+2025-11-22 02:47:45,856 [INFO] 45° chamfers: 0
+2025-11-22 02:47:45,856 [INFO] 30° chamfers: 0
+2025-11-22 02:47:45,856 [INFO] Custom angle: 0
+2025-11-22 02:47:45,857 [INFO] ======================================================================
+2025-11-22 02:47:45,857 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:47:45,857 [INFO]   Processing configuration #6 (type: 2.5D_milling)...
+2025-11-22 02:47:45,857 [INFO] ======================================================================
+2025-11-22 02:47:45,857 [INFO] Starting comprehensive hole recognition with validation
+2025-11-22 02:47:45,857 [INFO] ======================================================================
+2025-11-22 02:47:45,857 [INFO] Candidates: 51 cylinders, 13 cones
+2025-11-22 02:47:45,857 [INFO] Phase 1: Recognizing individual cylinder hints...
+2025-11-22 02:47:45,857 [INFO]   → Created 51 individual hints
+2025-11-22 02:47:45,857 [INFO] Phase 2: Merging compound features...
+2025-11-22 02:47:45,867 [INFO]   → Merged into 47 final holes
+2025-11-22 02:47:45,867 [INFO] 
+2025-11-22 02:47:45,867 [INFO] ======================================================================
+2025-11-22 02:47:45,867 [INFO] HOLE RECOGNITION STATISTICS
+2025-11-22 02:47:45,867 [INFO] ======================================================================
+2025-11-22 02:47:45,867 [INFO] Total candidates analyzed: 57
+2025-11-22 02:47:45,867 [INFO] Successfully recognized: 47
+2025-11-22 02:47:45,867 [INFO] Validation failures: 0
+2025-11-22 02:47:45,867 [INFO] Ambiguous features: 0
+2025-11-22 02:47:45,867 [INFO] 
+2025-11-22 02:47:45,867 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,867 [INFO]   counter_drilled_hole     :   4
+2025-11-22 02:47:45,867 [INFO]   through_hole             :  43
+2025-11-22 02:47:45,867 [INFO] ======================================================================
+2025-11-22 02:47:45,867 [INFO]     ✓ HoleRecognizer: 47 holes detected
+2025-11-22 02:47:45,867 [INFO] ======================================================================
+2025-11-22 02:47:45,867 [INFO] Starting unified pocket/slot/passage recognition
+2025-11-22 02:47:45,867 [INFO] ======================================================================
+2025-11-22 02:47:45,867 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,867 [DEBUG]   Face 0: rejected (not horizontal)
+2025-11-22 02:47:45,867 [DEBUG]   Face 1: found 8 vertical walls
+2025-11-22 02:47:45,867 [DEBUG]   Face 2: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 3: found 16 vertical walls
+2025-11-22 02:47:45,868 [DEBUG]   Face 4: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 5: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 6: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 7: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 8: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 9: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 19: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 20: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 21: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 22: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 23: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 24: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 25: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 26: rejected (not horizontal)
+2025-11-22 02:47:45,868 [DEBUG]   Face 27: rejected (no adjacent faces)
+2025-11-22 02:47:45,868 [DEBUG]   Face 28: found 3 vertical walls
+2025-11-22 02:47:45,868 [DEBUG]   Face 29: rejected (no adjacent faces)
+2025-11-22 02:47:45,868 [DEBUG]   Face 30: rejected (no adjacent faces)
+2025-11-22 02:47:45,868 [DEBUG]   Face 31: rejected (no adjacent faces)
+2025-11-22 02:47:45,868 [DEBUG]   Face 32: found 4 vertical walls
+2025-11-22 02:47:45,868 [DEBUG]   Face 33: rejected (no adjacent faces)
+2025-11-22 02:47:45,868 [DEBUG]   Face 34: rejected (no adjacent faces)
+2025-11-22 02:47:45,868 [DEBUG]   Face 35: found 27 vertical walls
+2025-11-22 02:47:45,869 [DEBUG]   Face 39: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 41: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 45: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 51: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 53: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 54: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 57: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 69: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 70: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 71: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 74: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 75: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 77: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 78: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 79: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 82: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 83: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 84: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 86: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 89: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 90: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 92: rejected (not horizontal)
+2025-11-22 02:47:45,869 [DEBUG]   Face 93: rejected (not horizontal)
+2025-11-22 02:47:45,870 [DEBUG]   Face 96: rejected (not horizontal)
+2025-11-22 02:47:45,870 [DEBUG]   Face 102: found 24 vertical walls
+2025-11-22 02:47:45,870 [INFO] 
+2025-11-22 02:47:45,870 [INFO] ======================================================================
+2025-11-22 02:47:45,870 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,870 [INFO] ======================================================================
+2025-11-22 02:47:45,870 [INFO] Total candidates: 52
+2025-11-22 02:47:45,870 [INFO] Pockets recognized: 0
+2025-11-22 02:47:45,870 [INFO] Slots recognized: 0
+2025-11-22 02:47:45,870 [INFO] Passages recognized: 0
+2025-11-22 02:47:45,870 [INFO] Validation failures: 0
+2025-11-22 02:47:45,870 [INFO] 
+2025-11-22 02:47:45,870 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,870 [INFO] ======================================================================
+2025-11-22 02:47:45,870 [INFO] Starting slot recognition...
+2025-11-22 02:47:45,871 [INFO] Analyzing 52 planar faces for slots
+2025-11-22 02:47:45,871 [INFO] ✅ Recognized 0 slot features
+2025-11-22 02:47:45,871 [INFO] SlotRecognizer: 0 slots recognized
+2025-11-22 02:47:45,871 [INFO] ======================================================================
+2025-11-22 02:47:45,871 [INFO] Starting boss/step/island recognition
+2025-11-22 02:47:45,871 [INFO] ======================================================================
+2025-11-22 02:47:45,871 [INFO] Analyzing 52 planar faces
+2025-11-22 02:47:45,871 [INFO] 
+2025-11-22 02:47:45,871 [INFO] ======================================================================
+2025-11-22 02:47:45,871 [INFO] RECOGNITION STATISTICS
+2025-11-22 02:47:45,871 [INFO] ======================================================================
+2025-11-22 02:47:45,871 [INFO] Total candidates: 52
+2025-11-22 02:47:45,871 [INFO] Bosses recognized: 0
+2025-11-22 02:47:45,872 [INFO] Steps recognized: 1
+2025-11-22 02:47:45,872 [INFO] Islands recognized: 0
+2025-11-22 02:47:45,872 [INFO] Validation failures: 0
+2025-11-22 02:47:45,872 [INFO] 
+2025-11-22 02:47:45,872 [INFO] Feature type breakdown:
+2025-11-22 02:47:45,872 [INFO]   step                               :   1
+2025-11-22 02:47:45,872 [INFO] ======================================================================
+2025-11-22 02:47:45,872 [INFO]     ✓ BossRecognizer: 1 bosses detected
+2025-11-22 02:47:45,872 [INFO] ======================================================================
+2025-11-22 02:47:45,872 [INFO] Starting comprehensive fillet recognition (MFCAD++ Round)
+2025-11-22 02:47:45,872 [INFO] ======================================================================
+2025-11-22 02:47:45,872 [DEBUG] Surface type distribution:
+2025-11-22 02:47:45,872 [DEBUG]   cone: 13
+2025-11-22 02:47:45,872 [DEBUG]   cylinder: 51
+2025-11-22 02:47:45,872 [DEBUG]   plane: 52
+2025-11-22 02:47:45,872 [INFO] Found 51 blend candidates:
+2025-11-22 02:47:45,872 [INFO]   Cylinders: 51
+2025-11-22 02:47:45,872 [INFO]   Tori: 0
+2025-11-22 02:47:45,873 [INFO]   Spheres: 0
+2025-11-22 02:47:45,873 [INFO]   B-splines: 0
+2025-11-22 02:47:45,873 [INFO] Found 51 blend surface candidates
+2025-11-22 02:47:45,873 [ERROR] DIAGNOSTIC - First 5 candidate IDs: [10, 11, 12, 13, 14]
+2025-11-22 02:47:45,873 [ERROR] DIAGNOSTIC - First 10 adjacency keys: [0, 1, 4, 3, 2, 5, 7, 9, 8, 6]
+2025-11-22 02:47:45,873 [ERROR] DIAGNOSTIC - IDs in adjacency?: [True, True, True, True, True]
+2025-11-22 02:47:45,873 [DEBUG]   Evaluating candidate 10:
+2025-11-22 02:47:45,873 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 22.5, Area: 848.230016
+2025-11-22 02:47:45,873 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,873 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,873 [DEBUG] ✓ Constant radius fillet: R22500.00mm, L=6000.0mm
+2025-11-22 02:47:45,873 [DEBUG]   Evaluating candidate 11:
+2025-11-22 02:47:45,873 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 37.5, Area: 6597.344573
+2025-11-22 02:47:45,873 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,873 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,873 [DEBUG] ✓ Constant radius fillet: R37500.00mm, L=28000.0mm
+2025-11-22 02:47:45,873 [DEBUG]   Evaluating candidate 12:
+2025-11-22 02:47:45,873 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,873 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,873 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,874 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,874 [DEBUG]   Evaluating candidate 13:
+2025-11-22 02:47:45,874 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,874 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,874 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,874 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,874 [DEBUG]   Evaluating candidate 14:
+2025-11-22 02:47:45,874 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 1319.468915
+2025-11-22 02:47:45,874 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,874 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,874 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=6000.0mm
+2025-11-22 02:47:45,874 [DEBUG]   Evaluating candidate 15:
+2025-11-22 02:47:45,874 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 15.0, Area: 2638.937829
+2025-11-22 02:47:45,874 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,874 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,874 [DEBUG] ✓ Constant radius fillet: R15000.00mm, L=28000.0mm
+2025-11-22 02:47:45,874 [DEBUG]   Evaluating candidate 16:
+2025-11-22 02:47:45,874 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,874 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,874 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,874 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,875 [DEBUG]   Evaluating candidate 17:
+2025-11-22 02:47:45,875 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 6.0, Area: 678.584013
+2025-11-22 02:47:45,875 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,875 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,875 [DEBUG] ✓ Constant radius fillet: R6000.00mm, L=18000.0mm
+2025-11-22 02:47:45,875 [DEBUG]   Evaluating candidate 18:
+2025-11-22 02:47:45,875 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 2199.114858
+2025-11-22 02:47:45,875 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,875 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,875 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=28000.0mm
+2025-11-22 02:47:45,875 [DEBUG]   Evaluating candidate 36:
+2025-11-22 02:47:45,875 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 26.5, Area: 3663.097034
+2025-11-22 02:47:45,875 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,875 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,875 [DEBUG] ✓ Constant radius fillet: R26500.00mm, L=22000.0mm
+2025-11-22 02:47:45,875 [DEBUG]   Evaluating candidate 37:
+2025-11-22 02:47:45,875 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 3382.909282
+2025-11-22 02:47:45,875 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,875 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,875 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=10768.1mm
+2025-11-22 02:47:45,876 [DEBUG]   Evaluating candidate 38:
+2025-11-22 02:47:45,876 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,876 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,876 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,876 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,876 [DEBUG]   Evaluating candidate 40:
+2025-11-22 02:47:45,876 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 35.0, Area: 3780.986691
+2025-11-22 02:47:45,876 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,876 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,876 [DEBUG] ✓ Constant radius fillet: R35000.00mm, L=17193.2mm
+2025-11-22 02:47:45,876 [DEBUG]   Evaluating candidate 42:
+2025-11-22 02:47:45,876 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 217.377308
+2025-11-22 02:47:45,876 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,876 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,876 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=6919.3mm
+2025-11-22 02:47:45,876 [DEBUG]   Evaluating candidate 43:
+2025-11-22 02:47:45,876 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 502.763059
+2025-11-22 02:47:45,876 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,876 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,876 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=6401.4mm
+2025-11-22 02:47:45,876 [DEBUG]   Evaluating candidate 44:
+2025-11-22 02:47:45,877 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 50.0, Area: 2342.651824
+2025-11-22 02:47:45,877 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,877 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,877 [DEBUG] ✓ Constant radius fillet: R50000.00mm, L=7456.9mm
+2025-11-22 02:47:45,877 [DEBUG]   Evaluating candidate 46:
+2025-11-22 02:47:45,877 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,877 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,877 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,877 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,877 [DEBUG]   Evaluating candidate 47:
+2025-11-22 02:47:45,877 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 628.318531
+2025-11-22 02:47:45,877 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,877 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,877 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=10000.0mm
+2025-11-22 02:47:45,877 [DEBUG]   Evaluating candidate 48:
+2025-11-22 02:47:45,877 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 40.0, Area: 5529.203070
+2025-11-22 02:47:45,877 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,877 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,877 [DEBUG] ✓ Constant radius fillet: R40000.00mm, L=22000.0mm
+2025-11-22 02:47:45,877 [DEBUG]   Evaluating candidate 49:
+2025-11-22 02:47:45,878 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 157.019363
+2025-11-22 02:47:45,878 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,878 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,878 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4998.1mm
+2025-11-22 02:47:45,878 [DEBUG]   Evaluating candidate 50:
+2025-11-22 02:47:45,878 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2768.665836
+2025-11-22 02:47:45,878 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,878 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,878 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=14688.2mm
+2025-11-22 02:47:45,878 [DEBUG]   Evaluating candidate 52:
+2025-11-22 02:47:45,878 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 131.637347
+2025-11-22 02:47:45,878 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,878 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,878 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=4190.1mm
+2025-11-22 02:47:45,878 [DEBUG]   Evaluating candidate 55:
+2025-11-22 02:47:45,878 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 789.003442
+2025-11-22 02:47:45,878 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,878 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,878 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=12557.4mm
+2025-11-22 02:47:45,878 [DEBUG]   Evaluating candidate 56:
+2025-11-22 02:47:45,878 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 30.0, Area: 2452.182550
+2025-11-22 02:47:45,879 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,879 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,879 [DEBUG] ✓ Constant radius fillet: R30000.00mm, L=13009.2mm
+2025-11-22 02:47:45,879 [DEBUG]   Evaluating candidate 58:
+2025-11-22 02:47:45,879 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 5.0, Area: 235.909496
+2025-11-22 02:47:45,879 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,879 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,879 [DEBUG] ✓ Constant radius fillet: R5000.00mm, L=7509.2mm
+2025-11-22 02:47:45,879 [DEBUG]   Evaluating candidate 59:
+2025-11-22 02:47:45,879 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,879 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,879 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,879 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,879 [DEBUG]   Evaluating candidate 60:
+2025-11-22 02:47:45,879 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.0, Area: 753.982237
+2025-11-22 02:47:45,879 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,879 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,879 [DEBUG] ✓ Constant radius fillet: R12000.00mm, L=10000.0mm
+2025-11-22 02:47:45,879 [DEBUG]   Evaluating candidate 61:
+2025-11-22 02:47:45,879 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,879 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,880 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,880 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,880 [DEBUG]   Evaluating candidate 62:
+2025-11-22 02:47:45,880 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,880 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,880 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,880 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,880 [DEBUG]   Evaluating candidate 63:
+2025-11-22 02:47:45,880 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,880 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,880 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,880 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,880 [DEBUG]   Evaluating candidate 64:
+2025-11-22 02:47:45,880 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,880 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,880 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,880 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,880 [DEBUG]   Evaluating candidate 65:
+2025-11-22 02:47:45,880 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,880 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,880 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,880 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,881 [DEBUG]   Evaluating candidate 66:
+2025-11-22 02:47:45,881 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,881 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,881 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,881 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,881 [DEBUG]   Evaluating candidate 67:
+2025-11-22 02:47:45,881 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,881 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,881 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,881 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,881 [DEBUG]   Evaluating candidate 68:
+2025-11-22 02:47:45,881 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 188.495559
+2025-11-22 02:47:45,881 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,881 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,881 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=12000.0mm
+2025-11-22 02:47:45,881 [DEBUG]   Evaluating candidate 72:
+2025-11-22 02:47:45,881 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,881 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,881 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,881 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,881 [DEBUG]   Evaluating candidate 73:
+2025-11-22 02:47:45,881 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,881 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,881 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,881 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,881 [DEBUG]   Evaluating candidate 76:
+2025-11-22 02:47:45,881 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,881 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,881 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,882 [DEBUG]   Evaluating candidate 80:
+2025-11-22 02:47:45,882 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,882 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,882 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,882 [DEBUG]   Evaluating candidate 81:
+2025-11-22 02:47:45,882 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,882 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,882 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,882 [DEBUG]   Evaluating candidate 85:
+2025-11-22 02:47:45,882 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,882 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,882 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,882 [DEBUG]   Evaluating candidate 87:
+2025-11-22 02:47:45,882 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,882 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,882 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,882 [DEBUG]   Evaluating candidate 88:
+2025-11-22 02:47:45,882 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 911.061870
+2025-11-22 02:47:45,882 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,882 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=14500.0mm
+2025-11-22 02:47:45,882 [DEBUG]   Evaluating candidate 91:
+2025-11-22 02:47:45,882 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 10.0, Area: 455.530935
+2025-11-22 02:47:45,882 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,882 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,882 [DEBUG] ✓ Constant radius fillet: R10000.00mm, L=7250.0mm
+2025-11-22 02:47:45,883 [DEBUG]   Evaluating candidate 94:
+2025-11-22 02:47:45,883 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,883 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,883 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,883 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,883 [DEBUG]   Evaluating candidate 95:
+2025-11-22 02:47:45,883 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 12.5, Area: 569.413668
+2025-11-22 02:47:45,883 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,883 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,883 [DEBUG] ✓ Constant radius fillet: R12500.00mm, L=7250.0mm
+2025-11-22 02:47:45,883 [DEBUG]   Evaluating candidate 97:
+2025-11-22 02:47:45,883 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,883 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,883 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,883 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,883 [DEBUG]   Evaluating candidate 98:
+2025-11-22 02:47:45,883 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,883 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,883 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,883 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,883 [DEBUG]   Evaluating candidate 99:
+2025-11-22 02:47:45,884 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,884 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,884 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,884 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,884 [DEBUG]   Evaluating candidate 100:
+2025-11-22 02:47:45,884 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,884 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,884 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,884 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,884 [DEBUG]   Evaluating candidate 101:
+2025-11-22 02:47:45,884 [DEBUG]     Type: SurfaceType.CYLINDER, Radius: 2.5, Area: 157.079633
+2025-11-22 02:47:45,884 [DEBUG]     Vexity: 0 convex, 0 concave, 0 smooth
+2025-11-22 02:47:45,884 [DEBUG]   ✅ PASSED: Isolated cylindrical blend (hole fillet)
+2025-11-22 02:47:45,884 [DEBUG] ✓ Constant radius fillet: R2500.00mm, L=10000.0mm
+2025-11-22 02:47:45,884 [INFO] 
+======================================================================
+2025-11-22 02:47:45,884 [INFO] FILLET RECOGNITION STATISTICS
+2025-11-22 02:47:45,884 [INFO] ======================================================================
+2025-11-22 02:47:45,884 [INFO] Total candidates: 51
+2025-11-22 02:47:45,884 [INFO] Constant radius: 51
+2025-11-22 02:47:45,884 [INFO] Variable radius: 0
+2025-11-22 02:47:45,884 [INFO] Corner blends: 0
+2025-11-22 02:47:45,885 [INFO] Fillet chains: 0
+2025-11-22 02:47:45,885 [INFO] Total recognized: 51
+2025-11-22 02:47:45,885 [INFO] ======================================================================
+2025-11-22 02:47:45,885 [INFO] FilletRecognizer: 51 fillets recognized
+2025-11-22 02:47:45,885 [INFO]     ✓ FilletRecognizer: 51 fillets detected
+2025-11-22 02:47:45,885 [INFO] ======================================================================
+2025-11-22 02:47:45,885 [INFO] Starting comprehensive chamfer recognition (MFCAD++ Chamfer)
+2025-11-22 02:47:45,885 [INFO] ======================================================================
+2025-11-22 02:47:45,885 [INFO] Found 0 chamfer candidates
+2025-11-22 02:47:45,885 [INFO] 
+======================================================================
+2025-11-22 02:47:45,885 [INFO] CHAMFER RECOGNITION STATISTICS
+2025-11-22 02:47:45,885 [INFO] ======================================================================
+2025-11-22 02:47:45,885 [INFO] Total recognized: 0
+2025-11-22 02:47:45,885 [INFO] 45° chamfers: 0
+2025-11-22 02:47:45,885 [INFO] 30° chamfers: 0
+2025-11-22 02:47:45,885 [INFO] Custom angle: 0
+2025-11-22 02:47:45,885 [INFO] ======================================================================
+2025-11-22 02:47:45,886 [INFO] ChamferRecognizer: 0 chamfers recognized
+2025-11-22 02:47:45,886 [INFO] ✓ Feature detection complete: 594 features
+2025-11-22 02:47:45,886 [INFO] 
+[STEP 5/8] Analyzing tool accessibility...
+2025-11-22 02:47:45,886 [INFO] Analyzing tool accessibility for all faces...
+2025-11-22 02:47:45,889 [INFO]   Accessible faces: 103/116
+2025-11-22 02:47:45,889 [INFO]   Inaccessible faces: 13
+2025-11-22 02:47:45,890 [INFO] ✓ Accessibility analysis complete
+2025-11-22 02:47:45,890 [INFO] 
+[STEP 6/8] Standardizing feature output...
+2025-11-22 02:47:45,897 [INFO]   ✓ Merged 517 duplicate features
+2025-11-22 02:47:45,897 [INFO]   ✓ Standardized 77 features
+2025-11-22 02:47:45,897 [INFO] 
+[STEP 7/8] Running DFM analysis...
+2025-11-22 02:47:45,897 [INFO] 🔍 Running DFM analysis...
+2025-11-22 02:47:45,897 [INFO]   ⚠️  Found 1 DFM warnings
+2025-11-22 02:47:45,897 [INFO]   ⚠️  Found 1 DFM warnings:
+2025-11-22 02:47:45,897 [INFO]     - Code 2201: Tight corners in step (radius < 0.5mm) - consider adding fillets
+2025-11-22 02:47:45,897 [INFO] 
+[STEP 8/8] Compiling statistics...
+2025-11-22 02:47:45,897 [INFO] ✓ Average confidence: 84.1%
+2025-11-22 02:47:45,897 [INFO] ⚠ 77 system warnings, 1 DFM warnings
+2025-11-22 02:47:45,898 [INFO] 
+2025-11-22 02:47:45,898 [INFO] ======================================================================
+2025-11-22 02:47:45,898 [INFO] RECOGNITION COMPLETE
+2025-11-22 02:47:45,898 [INFO] ======================================================================
+2025-11-22 02:47:45,898 [INFO] Status: success
+2025-11-22 02:47:45,898 [INFO] Total time: 0.42s
+2025-11-22 02:47:45,898 [INFO] Features recognized: 77
+2025-11-22 02:47:45,898 [INFO] Warnings: 78
+2025-11-22 02:47:45,898 [INFO] ======================================================================
+2025-11-22 02:47:45,898 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] ✅ AAG found 77 features
+2025-11-22 02:47:45,898 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 02:47:45,898 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 02:47:45,898 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 02:47:45,898 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎨 counter_drilled_hole: 2 faces
+2025-11-22 02:47:45,898 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎨 step: 5 faces
+2025-11-22 02:47:46,110 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 🎉 AAG analysis complete in 2748ms
+2025-11-22 02:47:46,110 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] 📊 Status: success, Features: 77, Errors: 0, Warnings: 0
+2025-11-22 02:47:46,111 [INFO] [a8c5a831-e8bc-4a7a-aa29-3595db76d3d6] ✅ Mesh data available: 13776 vertices
