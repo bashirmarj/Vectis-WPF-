@@ -774,8 +774,9 @@ class FilletRecognizer:
             adjacent_to_fillet = adjacency[fillet_id]
             
             for adj in adjacent_to_fillet:
-                if adj['node_id'] in fillet_map:
-                    fillet_graph[fillet_id].append(adj['node_id'])
+                neighbor_id = adj.get('face_id', adj.get('node_id'))
+                if neighbor_id in fillet_map:
+                    fillet_graph[fillet_id].append(neighbor_id)
         
         # Find connected components (chains)
         visited = set()

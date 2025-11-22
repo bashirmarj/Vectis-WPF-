@@ -489,7 +489,10 @@ class AAGGraphBuilder:
         Returns:
             'convex', 'concave', or 'smooth'
         """
-        if dihedral_deg > CONVEX_THRESHOLD:
+        # Universal Fix: Seam edges (near 0°) are smooth, not concave
+        if dihedral_deg < SMOOTH_ANGLE_THRESHOLD:
+            return "smooth"
+        elif dihedral_deg > CONVEX_THRESHOLD:
             return "convex"
         elif dihedral_deg < CONCAVE_THRESHOLD:
             return "concave"
