@@ -12,7 +12,7 @@ Key improvements:
 import logging
 import numpy as np
 from typing import List, Dict, Optional, Tuple
-from .recognizer_utils import standardize_feature_output
+from .recognizer_utils import standardize_feature_output, merge_split_faces
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,9 @@ class HoleRecognizer:
         
         # Statistics
         self._print_statistics(merged_holes)
+        
+        # CRITICAL FIX: Merge split faces (e.g. half-cylinders)
+        merged_holes = merge_split_faces(merged_holes, self.aag)
         
         return merged_holes
         
@@ -333,7 +336,7 @@ class HoleRecognizer:
             # Check for counterbore pattern
             dia_ratio = group[0]['diameter'] / group[1]['diameter']
             
-            if dia_ratio > 1.2:  # Counterbore (20% larger)
+            if dia_ratio > 1.05:  # Counterbore (5% larger)
                 hole_type = 'counterbore_hole'
             else:
                 hole_type = 'through_hole'  # Just deep hole

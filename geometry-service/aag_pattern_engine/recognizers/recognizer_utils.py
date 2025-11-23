@@ -286,3 +286,134 @@ def _merge_two_features(f1: Dict, f2: Dict) -> Dict:
         primary['confidence'] *= 0.95
         
     return primary
+
+
+def merge_split_faces(features: List[Dict[str, Any]], aag_graph) -> List[Dict[str, Any]]:
+    """
+    Merge split B-Rep faces (e.g. half-cylinders) into single features.
+    
+    This solves the "partial highlighting" issue where only one half of a 
+    feature is highlighted because the recognizer only picked one face ID.
+    
+    Args:
+        features: List of feature dicts
+        aag_graph: The AAG graph containing adjacency info
+        
+    Returns:
+        Features with expanded face_ids lists
+    """
+    if not features or not aag_graph:
+        return features
+        
+    for feature in features:
+        original_faces = set(feature.get('face_ids', []) or feature.get('faceIds', []))
+        if not original_faces:
+            continue
+            
+        # Find all topologically connected faces that share the same geometry
+        expanded_faces = set(original_faces)
+        
+        # Queue for BFS
+        queue = list(original_faces)
+        visited = set(original_faces)
+        
+        while queue:
+            current_id = queue.pop(0)
+            
+            # Get neighbors
+            if hasattr(aag_graph, 'get_adjacent_faces'):
+                neighbors = aag_graph.get_adjacent_faces(current_id)
+            elif isinstance(aag_graph, dict) and 'adjacency' in aag_graph:
+                # Adjacency dict: {face_id: [{'face_id': n, ...}]}
+                adj_list = aag_graph['adjacency'].get(current_id, [])
+                neighbors = [n.get('face_id', n.get('node_id')) for n in adj_list]
+            else:
+                neighbors = []
+            
+            for neighbor_id in neighbors:
+                if neighbor_id in visited:
+                    continue
+                    
+                # Check if neighbor shares same surface type and parameters
+                if _are_faces_geometrically_continuous(current_id, neighbor_id, aag_graph):
+                    visited.add(neighbor_id)
+                    expanded_faces.add(neighbor_id)
+                    queue.append(neighbor_id)
+        
+        # Update feature
+        feature['face_ids'] = sorted(list(expanded_faces))
+        feature['faceIds'] = sorted(list(expanded_faces))
+        
+    return features
+
+
+def _are_faces_geometrically_continuous(face1_id: int, face2_id: int, aag_graph) -> bool:
+    """
+    Check if two faces are part of the same continuous geometry 
+    (e.g. split cylinder halves).
+    """
+    # Handle both object and dict
+    if hasattr(aag_graph, 'nodes'):
+        nodes = aag_graph.nodes
+    elif isinstance(aag_graph, dict) and 'nodes' in aag_graph:
+        nodes = aag_graph['nodes']
+    else:
+        return False
+        
+    node1 = nodes.get(face1_id)
+    node2 = nodes.get(face2_id)
+    
+    if not node1 or not node2:
+        return False
+        
+    # Must have same surface type
+    type1 = node1.get('surface_type')
+    type2 = node2.get('surface_type')
+    
+    if type1 != type2:
+        return False
+        
+    # For cylinders: check radius and axis alignment
+    if type1 == 'cylinder':
+        # Check radius
+        r1 = node1.get('radius', 0)
+        r2 = node2.get('radius', 0)
+        if abs(r1 - r2) > 1e-4:
+            return False
+            
+        # Check axis alignment
+        axis1 = node1.get('axis', [0,0,1])
+        axis2 = node2.get('axis', [0,0,1])
+        
+        # Dot product should be close to 1 (parallel) or -1 (anti-parallel)
+        dot = abs(sum(a*b for a,b in zip(axis1, axis2)))
+        if dot < 0.99:
+            return False
+            
+        return True
+        
+    # For planes: check normal alignment and coplanarity
+    if type1 == 'plane':
+        normal1 = node1.get('normal', [0,0,1])
+        normal2 = node2.get('normal', [0,0,1])
+        
+        dot = abs(sum(a*b for a,b in zip(normal1, normal2)))
+        if dot < 0.99:
+            return False
+            
+        # Check coplanarity (distance from plane 1 to center of 2)
+        center2 = node2.get('center', [0,0,0])
+        center1 = node1.get('center', [0,0,0])
+        
+        # Vector from 1 to 2
+        diff = [c2 - c1 for c1, c2 in zip(center1, center2)]
+        
+        # Project onto normal
+        dist = abs(sum(d*n for d,n in zip(diff, normal1)))
+        
+        if dist > 1e-3: # 0.001mm tolerance
+            return False
+            
+        return True
+        
+    return False

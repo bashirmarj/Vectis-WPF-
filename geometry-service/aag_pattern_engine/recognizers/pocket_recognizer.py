@@ -20,7 +20,7 @@ NEW APPROACH (Analysis Situs):
 import logging
 import numpy as np
 from typing import List, Dict, Optional, Set
-from .recognizer_utils import standardize_feature_output
+from .recognizer_utils import standardize_feature_output, merge_split_faces
 
 logger = logging.getLogger(__name__)
 
@@ -55,17 +55,23 @@ class PocketRecognizer:
         # Find planar faces (potential bottoms)
         planar_faces = self._find_planar_faces()
         
-        logger.info(f"Analyzing {len(planar_faces)} planar faces")
+        # Group coplanar connected faces (logical bottoms)
+        logical_bottoms = self._group_coplanar_faces(planar_faces)
         
-        # Analyze each as potential pocket bottom
-        for face_id in planar_faces:
-            pocket = self._analyze_pocket_from_bottom(face_id)
+        logger.info(f"Analyzing {len(logical_bottoms)} logical bottoms (from {len(planar_faces)} faces)")
+        
+        # Analyze each logical bottom
+        for bottom_group in logical_bottoms:
+            pocket = self._analyze_pocket_from_bottom(bottom_group)
             
             if pocket is not None:
                 self.detected_pockets.append(pocket)
                 
         # Statistics
         self._print_statistics()
+        
+        # CRITICAL FIX: Merge split faces
+        self.detected_pockets = merge_split_faces(self.detected_pockets, self.aag)
         
         return self.detected_pockets
         
@@ -79,80 +85,132 @@ class PocketRecognizer:
                 
         return planar
         
-    def _analyze_pocket_from_bottom(self, bottom_id: int) -> Optional[Dict]:
+    def _group_coplanar_faces(self, face_ids: List[int]) -> List[List[int]]:
         """
-        Analyze pocket starting from bottom face.
+        Group connected coplanar faces into logical bottoms.
+        """
+        groups = []
+        visited = set()
+        face_set = set(face_ids)
         
-        Process:
-        1. Check if bottom is horizontal
-        2. Find vertical walls around bottom
-        3. Validate walls are concave (inward)
-        4. Compute depth
-        5. Classify pocket type
-        
-        Args:
-            bottom_id: Face ID of potential pocket bottom
+        for fid in face_ids:
+            if fid in visited:
+                continue
+                
+            # Start new group
+            group = []
+            queue = [fid]
+            visited.add(fid)
             
-        Returns:
-            Pocket feature dict or None
+            # Get normal of first face
+            base_node = self.aag.nodes[fid]
+            base_normal = np.array(base_node.get('normal', [0,0,1]))
+            base_z = base_node.get('center', [0,0,0])[2]
+            
+            while queue:
+                current = queue.pop(0)
+                group.append(current)
+                
+                # Check neighbors
+                neighbors = self.aag.get_adjacent_faces(current)
+                for nid in neighbors:
+                    if nid in visited or nid not in face_set:
+                        continue
+                        
+                    # Check if coplanar
+                    node = self.aag.nodes[nid]
+                    normal = np.array(node.get('normal', [0,0,1]))
+                    center = node.get('center', [0,0,0])
+                    
+                    # Check normal alignment
+                    if abs(np.dot(base_normal, normal)) < 0.99:
+                        continue
+                        
+                    # Check Z-height (coplanarity)
+                    if abs(center[2] - base_z) > 0.001: # 1 micron
+                        continue
+                        
+                    visited.add(nid)
+                    queue.append(nid)
+            
+            groups.append(group)
+            
+        return groups
+        
+    def _analyze_pocket_from_bottom(self, bottom_ids: List[int]) -> Optional[Dict]:
         """
-        bottom_face = self.aag.nodes[bottom_id]
+        Analyze pocket starting from logical bottom (list of faces).
+        """
+        if not bottom_ids:
+            return None
+            
+        # Use first face for orientation checks
+        first_id = bottom_ids[0]
+        bottom_face = self.aag.nodes[first_id]
         
         # Must be horizontal
         if not self._is_horizontal(bottom_face):
-            logger.debug(f"  Face {bottom_id}: rejected (not horizontal)")
+            # logger.debug(f"  Group {bottom_ids}: rejected (not horizontal)")
             return None
             
         # Get adjacent faces (wall candidates)
-        adjacent = self.aag.get_adjacent_faces(bottom_id)
+        # Must be adjacent to ANY face in the bottom group, but NOT in the group itself
+        adjacent = set()
+        for bid in bottom_ids:
+            neighbors = self.aag.get_adjacent_faces(bid)
+            for nid in neighbors:
+                if nid not in bottom_ids:
+                    adjacent.add(nid)
         
         if not adjacent:
-            logger.debug(f"  Face {bottom_id}: rejected (no adjacent faces)")
+            # logger.debug(f"  Group {bottom_ids}: rejected (no adjacent faces)")
             return None
             
         # Filter for vertical walls
         walls = []
         
         for adj_id in adjacent:
-            if self._is_vertical_wall(bottom_id, adj_id):
+            # Check against ANY bottom face (should be consistent)
+            if self._is_vertical_wall(first_id, adj_id):
                 walls.append(adj_id)
                 
         if not walls:
-            logger.debug(f"  Face {bottom_id}: rejected (no vertical walls)")
+            # logger.debug(f"  Group {bottom_ids}: rejected (no vertical walls)")
             return None
         
-        logger.debug(f"  Face {bottom_id}: found {len(walls)} vertical walls")
+        logger.debug(f"  Group {bottom_ids}: found {len(walls)} vertical walls")
             
         # Validate as removal feature (walls must be concave)
-        if not self._validate_concave_walls(bottom_id, walls):
+        if not self._validate_concave_walls(bottom_ids, walls):
             return None
             
         # Compute depth
-        depth = self._compute_depth(bottom_id, walls)
+        depth = self._compute_depth(bottom_ids, walls)
         
         if depth < MIN_POCKET_DEPTH:
-            logger.debug(f"  Face {bottom_id}: rejected (depth {depth:.1f}mm < {MIN_POCKET_DEPTH}mm)")
+            # logger.debug(f"  Group {bottom_ids}: rejected (depth {depth:.1f}mm < {MIN_POCKET_DEPTH}mm)")
             return None
             
         # Validate minimum area
-        bottom_area = bottom_face.get('area', 0) * (1000**2)  # Convert to mm²
+        # Sum area of all bottom faces
+        bottom_area = sum(self.aag.nodes[bid].get('area', 0) for bid in bottom_ids) * (1000**2)
         
         if bottom_area < MIN_POCKET_AREA:
-            logger.debug(f"  Face {bottom_id}: rejected (area {bottom_area:.1f}mm² < {MIN_POCKET_AREA}mm²)")
+            # logger.debug(f"  Group {bottom_ids}: rejected (area {bottom_area:.1f}mm² < {MIN_POCKET_AREA}mm²)")
             return None
         
-        logger.debug(f"  Face {bottom_id}: ✓ RECOGNIZED as pocket (area={bottom_area:.0f}mm², depth={depth:.1f}mm, walls={len(walls)})")
+        logger.debug(f"  Group {bottom_ids}: ✓ RECOGNIZED as pocket (area={bottom_area:.0f}mm², depth={depth:.1f}mm, walls={len(walls)})")
             
         # Classify pocket type
-        pocket_type = self._classify_pocket_type(bottom_id, walls, depth)
+        pocket_type = self._classify_pocket_type(bottom_ids, walls, depth)
         
         # Collect all face IDs
-        all_faces = [bottom_id] + walls
+        all_faces = bottom_ids + walls
         
         pocket_dict = {
             'type': pocket_type,
             'face_ids': all_faces,
-            'bottom_faces': [bottom_id],
+            'bottom_faces': bottom_ids,
             'wall_faces': walls,
             'depth': depth,
             'area': bottom_area,
@@ -206,7 +264,7 @@ class PocketRecognizer:
         # Cylindrical walls always valid
         return True
         
-    def _validate_concave_walls(self, bottom_id: int, wall_ids: List[int]) -> bool:
+    def _validate_concave_walls(self, bottom_ids: List[int], wall_ids: List[int]) -> bool:
         """
         Validate walls form a pocket structure.
         
@@ -216,7 +274,7 @@ class PocketRecognizer:
         - Reject if MAJORITY are convex (indicates boss, not pocket)
         
         Args:
-            bottom_id: Bottom face ID
+            bottom_ids: List of Bottom face IDs
             wall_ids: Wall face IDs
             
         Returns:
@@ -228,7 +286,12 @@ class PocketRecognizer:
         total_edges = 0
         
         for wall_id in wall_ids:
-            edge_data = self._get_edge_between(bottom_id, wall_id)
+            # Check edge against ANY bottom face
+            edge_data = None
+            for bid in bottom_ids:
+                edge_data = self._get_edge_between(bid, wall_id)
+                if edge_data:
+                    break
             
             if edge_data is None:
                 continue
@@ -272,19 +335,19 @@ class PocketRecognizer:
                 
         return None
         
-    def _compute_depth(self, bottom_id: int, wall_ids: List[int]) -> float:
+    def _compute_depth(self, bottom_ids: List[int], wall_ids: List[int]) -> float:
         """
         Compute pocket depth (Z-extent from bottom to top).
         
         Args:
-            bottom_id: Bottom face ID
+            bottom_ids: List of Bottom face IDs
             wall_ids: Wall face IDs
             
         Returns:
             Depth in mm
         """
         # Get Z-coordinates of all faces
-        all_face_ids = [bottom_id] + wall_ids
+        all_face_ids = bottom_ids + wall_ids
         
         z_coords = []
         
@@ -305,7 +368,7 @@ class PocketRecognizer:
             
         return depth
         
-    def _classify_pocket_type(self, bottom_id: int, wall_ids: List[int], depth: float) -> str:
+    def _classify_pocket_type(self, bottom_ids: List[int], wall_ids: List[int], depth: float) -> str:
         """
         Classify pocket type based on geometry.
         
@@ -316,7 +379,7 @@ class PocketRecognizer:
         - slot: Long thin pocket (length > 3*width)
         
         Args:
-            bottom_id: Bottom face ID
+            bottom_ids: List of Bottom face IDs
             wall_ids: Wall face IDs
             depth: Pocket depth
             
@@ -342,8 +405,8 @@ class PocketRecognizer:
             
         if planar_walls == 4:
             # Check aspect ratio
-            bottom = self.aag.nodes[bottom_id]
-            area = bottom.get('area', 0) * (1000**2)
+            # Sum area of all bottom faces
+            area = sum(self.aag.nodes[bid].get('area', 0) for bid in bottom_ids) * (1000**2)
             
             # Estimate dimensions (crude)
             estimated_length = np.sqrt(area)

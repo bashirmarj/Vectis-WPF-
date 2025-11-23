@@ -34,7 +34,7 @@ from collections import defaultdict
 
 from ..graph_builder import GraphNode, GraphEdge, SurfaceType, Vexity
 from ..utils.vexity_helpers import is_protrusion_edge
-from .recognizer_utils import standardize_feature_output
+from .recognizer_utils import standardize_feature_output, merge_split_faces
 
 logger = logging.getLogger(__name__)
 
@@ -335,6 +335,11 @@ class FilletRecognizer:
         
         # Convert FilletFeature objects to standardized dicts
         fillet_dicts = [self._fillet_to_dict(f) for f in fillets]
+        
+        # CRITICAL FIX: Merge split faces (e.g. half-cylinders)
+        # The 'graph' passed here is a dict. We need to ensure merge_split_faces handles it.
+        fillet_dicts = merge_split_faces(fillet_dicts, graph) 
+        
         return [standardize_feature_output(f) for f in fillet_dicts]
     
     def _fillet_to_dict(self, fillet: 'FilletFeature') -> Dict:
@@ -806,42 +811,64 @@ class FilletRecognizer:
                 current = queue.pop(0)
                 if current in visited:
                     continue
-                
+                    
                 visited.add(current)
                 chain.append(current)
                 
+                # Add neighbors
                 for neighbor in fillet_graph[current]:
                     if neighbor not in visited:
                         queue.append(neighbor)
+                        
+            chains.append(chain)
             
-            if len(chain) > 1:
-                # Multiple fillets connected - create chain
-                total_length = sum(
-                    fillet_map[fid].total_length for fid in chain
-                )
+        # Create new features for chains
+        chained_fillets = []
+        
+        for chain_ids in chains:
+            if not chain_ids:
+                continue
                 
-                # Average radius
-                radii = [fillet_map[fid].radius for fid in chain if fillet_map[fid].radius]
-                avg_radius = np.mean(radii) if radii else 0.0
+            # Get first fillet as template
+            template = fillet_map[chain_ids[0]]
+            
+            # Collect all faces
+            all_faces = []
+            total_length = 0.0
+            total_area = 0.0
+            
+            for fid in chain_ids:
+                f = fillet_map[fid]
+                all_faces.extend(f.face_ids)
+                total_length += f.total_length
+                total_area += f.surface_area
                 
-                # Consistency score (how uniform)
-                if radii:
-                    std_dev = np.std(radii)
-                    consistency = 1.0 - min(1.0, std_dev / avg_radius)
-                else:
-                    consistency = 0.0
+            # Create merged feature
+            merged = FilletFeature(
+                type=template.type,
+                face_ids=sorted(list(set(all_faces))),
+                radius=template.radius,
+                min_radius=template.min_radius,
+                max_radius=template.max_radius,
+                connected_faces=template.connected_faces, # Simplified
+                blend_count=len(chain_ids),
+                is_continuous=True,
+                continuity_type=template.continuity_type,
+                is_tangent=template.is_tangent,
+                total_length=total_length,
+                surface_area=total_area,
+                confidence=template.confidence,
+                is_part_of_chain=len(chain_ids) > 1
+            )
+            
+            if len(chain_ids) > 1:
+                merged.warnings.append(f"Chained {len(chain_ids)} fillet segments")
                 
-                is_closed = self._is_closed_loop(chain, fillet_graph)
-                
-                chain_obj = FilletChain(
-                    fillet_ids=chain,
-                    total_length=total_length,
-                    is_closed_loop=is_closed,
-                    average_radius=avg_radius,
-                    consistency_score=consistency
-                )
-                
-                chains.append(chain_obj)
+            chained_fillets.append(merged)
+            
+            
+        return chained_fillets
+
                 self.stats['fillet_chains'] += 1
                 
                 # Update fillets with chain info

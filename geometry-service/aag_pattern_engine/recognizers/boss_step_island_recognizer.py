@@ -13,7 +13,7 @@ Bosses are OPPOSITE of pockets:
 
 import logging
 import numpy as np
-from typing import List, Dict, Optional
+from .recognizer_utils import standardize_feature_output, merge_split_faces
 
 logger = logging.getLogger(__name__)
 
@@ -60,26 +60,17 @@ class BossRecognizer:
         # Statistics
         self._print_statistics()
         
+        # CRITICAL FIX: Merge split faces
+        self.detected_bosses = merge_split_faces(self.detected_bosses, self.aag)
+        
         return self.detected_bosses
         
     def _find_planar_faces(self) -> List[int]:
         """Find all planar faces (potential boss tops)."""
         planar = []
         
-        for face_id, face_data in self.aag.nodes.items():
-            if face_data.get('surface_type') == 'plane':
-                planar.append(face_id)
-                
-        return planar
-        
-    def _analyze_boss_from_top(self, top_id: int) -> Optional[Dict]:
-        """
-        Analyze boss starting from top face.
-        
-        Process (INVERSE of pocket):
-        1. Check if top is horizontal
         2. Find vertical walls around top
-        3. Validate walls are CONVEX (outward) ← KEY DIFFERENCE
+        3. Validate walls are CONVEX (outward) - KEY DIFFERENCE
         4. Compute height
         5. Classify boss type
         
@@ -111,8 +102,9 @@ class BossRecognizer:
         if not walls:
             return None
             
-        # Validate as POSITIVE feature (walls must be CONVEX)
-        if not self._validate_convex_walls(top_id, walls):
+        # Validate as POSITIVE feature (walls must be CONVEX) or STEP (Mixed)
+        is_valid, topology_type = self._validate_feature_topology(top_id, walls)
+        if not is_valid:
             return None
             
         # Compute height
@@ -128,7 +120,10 @@ class BossRecognizer:
             return None
             
         # Classify boss type
-        boss_type = self._classify_boss_type(top_id, walls, height)
+        if topology_type == 'step':
+            boss_type = 'step'
+        else:
+            boss_type = self._classify_boss_type(top_id, walls, height)
         
         # Collect all face IDs
         all_faces = [top_id] + walls
@@ -164,18 +159,17 @@ class BossRecognizer:
             
         return True
         
-    def _validate_convex_walls(self, top_id: int, wall_ids: List[int]) -> bool:
+    def _validate_feature_topology(self, top_id: int, wall_ids: List[int]) -> Tuple[bool, str]:
         """
-        Validate walls are CONVEX (outward corners) indicating positive feature.
-        
-        CRITICAL: This is opposite of pocket validation!
+        Validate walls and determine feature category (boss or step).
         
         Args:
             top_id: Top face ID
             wall_ids: Wall face IDs
             
         Returns:
-            True if walls form convex (boss) structure
+            Tuple (is_valid, category)
+            category: 'boss', 'step', or 'unknown'
         """
         # Check edges between top and each wall
         convex_count = 0
@@ -194,12 +188,28 @@ class BossRecognizer:
             elif vexity == 'concave':
                 concave_count += 1
                 
-        # Boss should have majority CONVEX edges
-        # (Concave would indicate pocket, not boss)
-        if concave_count > 0:
-            return False  # Has concave edges - likely pocket
+        # Boss: Mostly CONVEX edges
+        if convex_count > 0 and concave_count == 0:
+            return True, 'boss'
             
-        return convex_count >= len(wall_ids) / 2
+        # Step: Mixed CONVEX and CONCAVE edges
+        # (Has walls going down and walls going up)
+        if convex_count > 0 and concave_count > 0:
+            return True, 'step'
+            
+        # Island: Similar to boss but might be inside a pocket?
+        # For now, treat as boss if valid
+        
+        # If only concave, it's a pocket bottom (reject)
+        if concave_count > 0 and convex_count == 0:
+            return False, 'pocket'
+            
+        # If mostly smooth (tangent), might be a boss with fillets
+        # Accept if we have at least some convex edges
+        if convex_count > 0:
+            return True, 'boss'
+            
+        return False, 'unknown'
         
     def _get_edge_between(self, face1_id: int, face2_id: int) -> Optional[Dict]:
         """Get edge data between two faces."""
