@@ -41,6 +41,10 @@ from OCC.Core.BRepGProp import brepgprop
 # Local modules
 from brepnet_wrapper import BRepNetRecognizer, FeatureType
 from geometric_fallback import TurningFeatureDetector
+from volume_decomposer import VolumeDecomposer
+from lump_classifier import LumpClassifier
+from feature_mapper import FeatureMapper
+from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletChamferRecognizer
 
 # === Configuration ===
 app = Flask(__name__)
