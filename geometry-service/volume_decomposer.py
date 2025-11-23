@@ -106,17 +106,23 @@ class VolumeDecomposer:
         volume_mm3 = self._compute_volume(removal_volume)
         logger.info(f"  Removal volume: {volume_mm3:.1f} mm³")
         
-        # 5. Return as SINGLE volume (key difference from old approach)
-        logger.info("✓ Decomposition successful")
-        logger.info(f"  Volumes found: 1 (Analysis Situs style: no splitting)")
+        # 5. Split into lumps (features)
+        lumps = self._decompose_lumps(removal_volume)
+        logger.info(f"✓ Decomposition successful: Found {len(lumps)} features (lumps)")
         
-        return [{
-            'shape': removal_volume,
-            'hint': 'prismatic',
-            'stock_bbox': stock_bbox,
-            'volume_mm3': volume_mm3,
-            'units': self.detected_units
-        }]
+        results = []
+        for i, lump in enumerate(lumps):
+            vol = self._compute_volume(lump)
+            results.append({
+                'id': f"lump_{i}",
+                'shape': lump,
+                'hint': 'unknown_feature', # To be classified later
+                'stock_bbox': stock_bbox,
+                'volume_mm3': vol,
+                'units': self.detected_units
+            })
+            
+        return results
         
     def _compute_stock_envelope(self, part_shape):
         """
@@ -429,6 +435,17 @@ class VolumeDecomposer:
         except Exception as e:
             logger.error(f"Boolean operation exception: {e}")
             return None
+
+    def _decompose_lumps(self, shape) -> list:
+        """
+        Split a shape into its constituent solids (lumps).
+        """
+        lumps = []
+        exp = TopExp_Explorer(shape, TopAbs_SOLID)
+        while exp.More():
+            lumps.append(topods.Solid(exp.Current()))
+            exp.Next()
+        return lumps
             
     def _compute_volume(self, shape):
         """

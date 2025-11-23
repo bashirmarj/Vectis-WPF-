@@ -394,8 +394,6 @@ def analyze_cad():
         logger.info(f"[{correlation_id}] File hash: {file_hash}, size: {len(file_content)} bytes")
         
         # Check cache (optional - implement Redis/Supabase caching)
-        # cached_result = check_cache(file_hash)
-        # if cached_result:
         #     logger.info(f"[{correlation_id}] Cache hit")
         #     return jsonify(cached_result)
         
@@ -453,8 +451,48 @@ def analyze_cad():
                     logger.error(f"[{correlation_id}] ❌ BRepNet failed: {e}", exc_info=True)
                     recognition_methods.append("BRepNet (failed)")
             elif part_type in ["prismatic", "mixed"]:
-                logger.warning(f"[{correlation_id}] ⚠️ BRepNet not available, skipping ML recognition")
-                recognition_methods.append("BRepNet (unavailable)")
+                logger.info(f"[{correlation_id}] ⚠️ BRepNet not available, using Hybrid Geometric Recognition")
+                recognition_methods.append("Hybrid (Volume + AAG)")
+                
+                # === Hybrid Feature Recognition ===
+                
+                # 1. Build AAG
+                from aag_pattern_engine.graph_builder import AAGGraphBuilder
+                builder = AAGGraphBuilder(shape)
+                aag = builder.build()
+                
+                # 2. Surface Features (Fillets/Chamfers)
+                try:
+                    fillet_recognizer = FilletChamferRecognizer(aag)
+                    fillet_features = fillet_recognizer.recognize()
+                    features.extend(fillet_features)
+                except Exception as e:
+                    logger.error(f"[{correlation_id}] Surface recognition failed: {e}")
+
+                # 3. Volumetric Features (Holes, Pockets, Steps)
+                try:
+                    decomposer = VolumeDecomposer()
+                    decomposition_results = decomposer.decompose(shape, part_type="prismatic")
+                    
+                    if decomposition_results:
+                        classifier = LumpClassifier()
+                        mapper = FeatureMapper(shape, aag)
+                        
+                        classified_lumps = []
+                        for lump in decomposition_results:
+                            classification = classifier.classify(lump['shape'], lump['stock_bbox'])
+                            lump_data = lump.copy()
+                            lump_data.update(classification)
+                            classified_lumps.append(lump_data)
+                            
+                        volumetric_features = mapper.map_features(classified_lumps)
+                        features.extend(volumetric_features)
+                except Exception as e:
+                    logger.error(f"[{correlation_id}] Volume decomposition failed: {e}")
+                    
+                # Standardize
+                from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
+                features = [standardize_feature_output(f) for f in features]
             
             if part_type in ["turning", "mixed"] and turning_detector:
                 logger.info(f"[{correlation_id}] Running geometric turning feature detection")
@@ -589,65 +627,65 @@ def analyze_aag():
             # === STEP 2: Tessellate with face mapping ===
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
+            # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
+            logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
+            from aag_pattern_engine.graph_builder import AAGGraphBuilder
+            builder = AAGGraphBuilder(shape)
+            aag = builder.build()
             
-            # === STEP 3 & 4: Feature Recognition (NON-CRITICAL) ===
+            # === STEP 4: Feature Recognition (Hybrid) ===
+            features = []
+            
+            # A. Surface Features (Fillets/Chamfers) using AAG
+            # We keep AAG for these because they are surface modifications
             try:
-                logger.info(f"[{correlation_id}] 🔍 Initializing AAG Pattern Matcher")
-                from aag_pattern_engine.pattern_matcher import AAGPatternMatcher
-                
-                pattern_matcher = AAGPatternMatcher(tolerance=1e-6)
-                
-                logger.info(f"[{correlation_id}] 🎯 Running AAG pattern recognition")
-                recognition_result = pattern_matcher.recognize_all_features(
-                    shape=shape,
-                    validate=True,
-                    compute_manufacturing=True,
-                    use_volume_decomposition=True  # NEW: Enable volume decomposition
-                )
-                
-                logger.info(f"[{correlation_id}] ✅ AAG found {recognition_result.metrics.total_features} features")
-                
-                # Convert AAG features to standard format
-                all_features = (
-                    recognition_result.holes +
-                    recognition_result.pockets +
-                    recognition_result.slots +
-                    recognition_result.bosses +
-                    recognition_result.steps +
-                    recognition_result.fillets +
-                    recognition_result.chamfers +
-                    recognition_result.turning_features
-                )
-                
-                for aag_feat in all_features:
-                    try:
-                        # AAG features are already dictionaries from recognizers
-                        feature_dict = {
-                            'type': aag_feat.get('type', 'unknown'),
-                            'subtype': aag_feat.get('subtype'),
-                            'face_ids': aag_feat.get('face_ids', []),
-                            'face_indices': aag_feat.get('face_ids', []),
-                            'confidence': aag_feat.get('confidence', 0.0),
-                            'parameters': aag_feat.get('parameters', {}),
-                            'ml_detected': False,
-                            'method': 'aag'
-                        }
-                        features.append(feature_dict)
-                        
-                        face_ids = aag_feat.get('face_ids', [])
-                        if len(face_ids) > 1:
-                            feat_type = aag_feat.get('type', 'unknown')
-                            logger.info(f"[{correlation_id}] 🎨 {feat_type}: {len(face_ids)} faces")
-                    except Exception as feat_err:
-                        logger.warning(f"[{correlation_id}] ⚠️ Failed to serialize feature: {feat_err}")
-                        warnings.append(f"Feature serialization error: {str(feat_err)}")
-            
+                logger.info(f"[{correlation_id}] 🔍 Running Surface Recognition (Fillets/Chamfers)")
+                fillet_recognizer = FilletChamferRecognizer(aag)
+                fillet_features = fillet_recognizer.recognize()
+                features.extend(fillet_features)
+                logger.info(f"[{correlation_id}] ✅ Found {len(fillet_features)} surface features")
             except Exception as e:
-                logger.error(f"[{correlation_id}] ❌ Feature recognition failed: {e}", exc_info=True)
-                errors.append(f"Feature recognition failed: {str(e)}")
-                warnings.append("Mesh will be returned without features")
+                logger.error(f"[{correlation_id}] ❌ Surface recognition failed: {e}")
+                errors.append(f"Surface recognition failed: {str(e)}")
+
+            # B. Volumetric Features (Holes, Pockets, Steps) using Volume Decomposition
+            try:
+                logger.info(f"[{correlation_id}] 🧊 Running Volume Decomposition")
+                decomposer = VolumeDecomposer()
+                decomposition_results = decomposer.decompose(shape, part_type="prismatic")
+                
+                if decomposition_results:
+                    # 1. Classify Lumps
+                    classifier = LumpClassifier()
+                    mapper = FeatureMapper(shape, aag)
+                    
+                    classified_lumps = []
+                    for lump in decomposition_results:
+                        # Pass stock_bbox to classifier for boundary analysis
+                        classification = classifier.classify(lump['shape'], lump['stock_bbox'])
+                        
+                        # Merge classification into lump data
+                        lump_data = lump.copy()
+                        lump_data.update(classification)
+                        classified_lumps.append(lump_data)
+                        
+                    # 2. Map back to Face IDs
+                    volumetric_features = mapper.map_features(classified_lumps)
+                    features.extend(volumetric_features)
+                    
+                    logger.info(f"[{correlation_id}] ✅ Found {len(volumetric_features)} volumetric features")
+                else:
+                    logger.warning(f"[{correlation_id}] Volume decomposition returned no features")
+                    
+            except Exception as e:
+                logger.error(f"[{correlation_id}] ❌ Volume decomposition failed: {e}", exc_info=True)
+                errors.append(f"Volume decomposition failed: {str(e)}")
+
+            # Standardize output
+            from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
+            features = [standardize_feature_output(f) for f in features]
             
-            # === STEP 5: Extract metadata (NON-CRITICAL) ===
+            # === STEP 5: Extract metadata ===
             try:
                 bbox = extract_bounding_box(shape)
                 volume, surface_area = extract_volume_and_surface_area(shape)
@@ -656,7 +694,7 @@ def analyze_aag():
                 metadata = {
                     "file_hash": file_hash,
                     "filename": file.filename,
-                    "part_type": recognition_result.part_type.value if 'recognition_result' in locals() else part_type,
+                    "part_type": part_type,
                     "volume_mm3": volume * 1000,
                     "surface_area_mm2": surface_area * 1000000,
                     "bounding_box_mm": {
@@ -664,10 +702,8 @@ def analyze_aag():
                         "y": bbox["dimensions"][1] * 1000,
                         "z": bbox["dimensions"][2] * 1000
                     },
-                    "recognition_method": "AAG Pattern Matching",
+                    "recognition_method": "Hybrid (Volume + AAG)",
                     "total_features": len(features),
-                    "recognition_time_s": recognition_result.metrics.recognition_time if 'recognition_result' in locals() else 0,
-                    "average_confidence": recognition_result.metrics.average_confidence if 'recognition_result' in locals() else 0,
                     "multi_face_features": sum(1 for f in features if len(f.get('face_ids', [])) > 1)
                 }
             except Exception as e:
@@ -676,7 +712,7 @@ def analyze_aag():
                 metadata = {
                     "file_hash": file_hash,
                     "filename": file.filename,
-                    "recognition_method": "AAG Pattern Matching",
+                    "recognition_method": "Hybrid (Volume + AAG)",
                     "total_features": len(features)
                 }
             
