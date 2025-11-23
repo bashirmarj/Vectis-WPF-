@@ -1,15 +1,13 @@
-"""
-Boss/Step/Island Recognizer - Analysis Situs Aligned
-====================================================
-
-Key Difference: Convex (Outward) Detection
--------------------------------------------
-
-Bosses are OPPOSITE of pockets:
-- Top face (up-facing)
-- Convex walls (outward corners)
-- Positive features (additive)
-"""
+# Boss/Step/Island Recognizer - Analysis Situs Aligned
+# ====================================================
+# 
+# Key Difference: Convex (Outward) Detection
+# -------------------------------------------
+# 
+# Bosses are OPPOSITE of pockets:
+# - Top face (up-facing)
+# - Convex walls (outward corners)
+# - Positive features (additive)
 
 import logging
 import numpy as np
@@ -24,16 +22,14 @@ MIN_BOSS_AREA = 5.0  # mm²
 
 
 class BossRecognizer:
-    """
-    Recognizes bosses, steps, and islands (positive features).
-    
-    Process (inverse of pocket detection):
-    1. Find horizontal planar faces (potential boss tops)
-    2. For each top, grow wall ring
-    3. Validate walls are CONVEX (outward) - opposite of pocket!
-    4. Compute height
-    5. Classify type
-    """
+    # Recognizes bosses, steps, and islands (positive features).
+    # 
+    # Process (inverse of pocket detection):
+    # 1. Find horizontal planar faces (potential boss tops)
+    # 2. For each top, grow wall ring
+    # 3. Validate walls are CONVEX (outward) - opposite of pocket!
+    # 4. Compute height
+    # 5. Classify type
     
     def __init__(self, aag_graph):
         self.aag = aag_graph
@@ -66,20 +62,27 @@ class BossRecognizer:
         return self.detected_bosses
         
     def _find_planar_faces(self) -> List[int]:
-        """Find all planar faces (potential boss tops)."""
+        # Find all planar faces (potential boss tops).
         planar = []
+        for node_id, data in self.aag.nodes.items():
+            if data.get('surface_type') == 'plane':
+                planar.append(node_id)
+        return planar
+
+    def _analyze_boss_from_top(self, top_id: int) -> Optional[Dict]:
+        # Analyze a potential boss starting from its top face.
+        #
+        # 2. Find vertical walls around top
+        # 3. Validate walls are CONVEX (outward) - KEY DIFFERENCE
+        # 4. Compute height
+        # 5. Classify boss type
+        #
+        # Args:
+        #     top_id: Face ID of potential boss top
+        #     
+        # Returns:
+        #     Boss feature dict or None
         
-        2. Find vertical walls around top
-        3. Validate walls are CONVEX (outward) - KEY DIFFERENCE
-        4. Compute height
-        5. Classify boss type
-        
-        Args:
-            top_id: Face ID of potential boss top
-            
-        Returns:
-            Boss feature dict or None
-        """
         top_face = self.aag.nodes[top_id]
         
         # Must be horizontal
@@ -160,17 +163,15 @@ class BossRecognizer:
         return True
         
     def _validate_feature_topology(self, top_id: int, wall_ids: List[int]) -> Tuple[bool, str]:
-        """
-        Validate walls and determine feature category (boss or step).
-        
-        Args:
-            top_id: Top face ID
-            wall_ids: Wall face IDs
-            
-        Returns:
-            Tuple (is_valid, category)
-            category: 'boss', 'step', or 'unknown'
-        """
+        # Validate walls and determine feature category (boss or step).
+        # 
+        # Args:
+        #     top_id: Top face ID
+        #     wall_ids: Wall face IDs
+        #     
+        # Returns:
+        #     Tuple (is_valid, category)
+        #     category: 'boss', 'step', or 'unknown'
         # Check edges between top and each wall
         convex_count = 0
         concave_count = 0
@@ -220,16 +221,14 @@ class BossRecognizer:
         return None
         
     def _compute_height(self, top_id: int, wall_ids: List[int]) -> float:
-        """
-        Compute boss height (Z-extent from base to top).
-        
-        Args:
-            top_id: Top face ID
-            wall_ids: Wall face IDs
-            
-        Returns:
-            Height in mm
-        """
+        # Compute boss height (Z-extent from base to top).
+        # 
+        # Args:
+        #     top_id: Top face ID
+        #     wall_ids: Wall face IDs
+        #     
+        # Returns:
+        #     Height in mm
         all_face_ids = [top_id] + wall_ids
         
         z_coords = []
@@ -246,34 +245,6 @@ class BossRecognizer:
         
         # Convert to mm if needed
         if height < 1.0:
-            height *= 1000.0
-            
-        return height
-        
-    def _classify_boss_type(self, top_id: int, wall_ids: List[int], height: float) -> str:
-        """
-        Classify boss type based on geometry.
-        
-        Types:
-        - rectangular_boss: 4 planar walls
-        - circular_boss: Cylindrical walls
-        - irregular_boss: Mixed geometry
-        - step: Wide, shallow boss
-        
-        Args:
-            top_id: Top face ID
-            wall_ids: Wall face IDs
-            height: Boss height
-            
-        Returns:
-            Boss type string
-        """
-        # Count wall types
-        planar_walls = 0
-        cylindrical_walls = 0
-        
-        for wall_id in wall_ids:
-            wall = self.aag.nodes[wall_id]
             surf_type = wall.get('surface_type')
             
             if surf_type == 'plane':
@@ -300,7 +271,7 @@ class BossRecognizer:
         return 'irregular_boss'
         
     def _print_statistics(self):
-        """Print recognition statistics."""
+        # Print recognition statistics.
         logger.info("")
         logger.info("=" * 70)
         logger.info("RECOGNITION STATISTICS")
@@ -331,6 +302,6 @@ class BossRecognizer:
 
 
 def recognize_bosses(aag_graph):
-    """Convenience function for boss recognition."""
+    # Convenience function for boss recognition.
     recognizer = BossRecognizer(aag_graph)
     return recognizer.recognize()
