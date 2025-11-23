@@ -868,16 +868,6 @@ class FilletRecognizer:
             
             
         return chained_fillets
-
-                self.stats['fillet_chains'] += 1
-                
-                # Update fillets with chain info
-                for fid in chain:
-                    fillet_map[fid].chain = chain_obj
-                    fillet_map[fid].is_part_of_chain = True
-                
-                logger.debug(f"✓ Fillet chain: {len(chain)} fillets, R_avg={avg_radius*1000:.2f}mm, {'closed' if is_closed else 'open'}")
-        
         return fillets
     
     def _is_closed_loop(self, chain: List[int], graph: Dict[int, List[int]]) -> bool:
