@@ -11,6 +11,7 @@
 
 import logging
 import numpy as np
+from typing import List, Dict, Optional, Tuple
 from .recognizer_utils import standardize_feature_output, merge_split_faces
 
 logger = logging.getLogger(__name__)
