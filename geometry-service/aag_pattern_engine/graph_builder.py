@@ -22,7 +22,7 @@ from enum import Enum
 from dataclasses import dataclass
 from OCC.Core.TopoDS import topods
 from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
+from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_REVERSED
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus, GeomAbs_BSplineSurface
 from OCC.Core.GProp import GProp_GProps
@@ -293,6 +293,11 @@ class AAGGraphBuilder:
                 if surf_type == GeomAbs_Plane:
                     plane = surface.Plane()
                     normal = plane.Axis().Direction()
+                    
+                    # CRITICAL FIX: Respect face orientation
+                    if face.Orientation() == TopAbs_REVERSED:
+                        normal.Reverse()
+                        
                     face_data['normal'] = [normal.X(), normal.Y(), normal.Z()]
                     
                 # Extract axis for cylindrical faces
@@ -393,7 +398,13 @@ class AAGGraphBuilder:
                     
                     if props.IsNormalDefined():
                         n = props.Normal()
-                        return np.array([n.X(), n.Y(), n.Z()])
+                        normal = np.array([n.X(), n.Y(), n.Z()])
+                        
+                        # CRITICAL FIX: Respect face orientation
+                        if face.Orientation() == TopAbs_REVERSED:
+                            normal = -normal
+                            
+                        return normal
                         
                     return None
                     return None
@@ -456,8 +467,14 @@ class AAGGraphBuilder:
             # For planar faces, use plane normal
             if surface.GetType() == GeomAbs_Plane:
                 plane = surface.Plane()
-                normal = plane.Axis().Direction()
-                return np.array([normal.X(), normal.Y(), normal.Z()])
+                normal_dir = plane.Axis().Direction()
+                normal = np.array([normal_dir.X(), normal_dir.Y(), normal_dir.Z()])
+                
+                # CRITICAL FIX: Respect face orientation
+                if face.Orientation() == TopAbs_REVERSED:
+                    normal = -normal
+                    
+                return normal
                 
             # For other surfaces, approximate with face orientation
             # (More sophisticated UV projection would be better)
@@ -465,8 +482,9 @@ class AAGGraphBuilder:
             if face_idx in self.nodes:
                 normal = self.nodes[face_idx].get('normal')
                 if normal:
+                    # Note: stored normal should already be corrected if we fix extraction
                     return np.array(normal)
-                    
+            
             return None
             
         except Exception:

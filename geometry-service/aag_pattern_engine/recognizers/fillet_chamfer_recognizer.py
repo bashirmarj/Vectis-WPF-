@@ -412,11 +412,18 @@ class FilletRecognizer:
         
         for adj in adjacent:
             vexity = adj.get('vexity', 'smooth')
+            angle = adj.get('dihedral_deg', adj.get('angle', 180.0))
+            
             # Fillets blend faces across convex OR smooth (tangent) edges
+            # CRITICAL FIX: Also accept slightly concave edges if they are close to tangent (noise)
             if vexity == 'convex':
                 convex_count += 1
             elif vexity == 'concave':
-                concave_count += 1
+                if angle > self.convex_angle_min:
+                    # Treat as smooth/tangent for recognition purposes
+                    smooth_count += 1
+                else:
+                    concave_count += 1
             else:
                 smooth_count += 1
         
