@@ -44,7 +44,7 @@ from geometric_fallback import TurningFeatureDetector
 from volume_decomposer import VolumeDecomposer
 from lump_classifier import LumpClassifier
 from feature_mapper import FeatureMapper
-from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletChamferRecognizer
+from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletRecognizer
 
 # === Configuration ===
 app = Flask(__name__)
@@ -644,8 +644,8 @@ def analyze_aag():
             # We keep AAG for these because they are surface modifications
             try:
                 logger.info(f"[{correlation_id}] 🔍 Running Surface Recognition (Fillets/Chamfers)")
-                fillet_recognizer = FilletChamferRecognizer(aag)
-                fillet_features = fillet_recognizer.recognize()
+                fillet_recognizer = FilletRecognizer()
+                fillet_features = fillet_recognizer.recognize_fillets(aag)
                 features.extend(fillet_features)
                 logger.info(f"[{correlation_id}] ✅ Found {len(fillet_features)} surface features")
             except Exception as e:
