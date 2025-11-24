@@ -452,7 +452,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           <meshStandardMaterial
             {...materialProps}
             vertexColors={true}
-            flatShading={true}
+            flatShading={false}
             toneMapped={false}
             metalness={0.1}
             roughness={0.6}
