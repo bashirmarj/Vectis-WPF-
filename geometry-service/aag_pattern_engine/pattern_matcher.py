@@ -489,8 +489,9 @@ class AAGPatternMatcher:
                     
                     # === REMOVAL VOLUME RECOGNIZERS ===
                     
-                    # Hole recognizer (uses removal volume)
-                    hole_rec = HoleRecognizer(removal_aag['builder'])
+                    # CRITICAL FIX: Hole recognizer uses PART AAG (not removal volume)
+                    # This fixes holes/fillets inversion by analyzing part topology
+                    hole_rec = HoleRecognizer(part_aag['builder'])
                     holes = hole_rec.recognize()
                     self.features.extend(holes)
                     if holes:
