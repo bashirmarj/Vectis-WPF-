@@ -408,7 +408,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     const materialProps = (() => {
       const base = {
-        color: SOLID_COLOR,
+        color: "#ffffff", // WHITE when using vertex colors - prevents color multiplication
         side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
         clipIntersection: true,
