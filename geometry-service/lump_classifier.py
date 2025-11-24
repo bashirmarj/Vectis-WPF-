@@ -157,6 +157,61 @@ class LumpClassifier:
             return True
         return False
 
+    def _is_hole(self, surfaces) -> bool:
+        """
+        Check if surfaces look like a hole.
+        
+        NEW LOGIC (Surface Decomposition):
+        - We might NOT have caps (Top/Bottom) because they were Stock Faces and removed.
+        - So a Hole is defined primarily by having Cylindrical/Conical walls.
+        """
+        # Must have at least one cylinder or cone
+        if surfaces['cylinder'] == 0 and surfaces['cone'] == 0:
+            return False
+            
+        # If we have MANY planes, it might be a pocket with fillets.
+        # A hole should be mostly cylindrical.
+        if surfaces['plane'] > surfaces['cylinder'] + surfaces['cone']:
+            return False
+            
+        return True
+
+    def _classify_hole(self, surfaces, boundary_info) -> dict:
+        """Detailed hole classification."""
+        # Get radius from first cylinder
+        radius = 0.0
+        axis = [0,0,1]
+        
+        if surfaces['cylinders']:
+            radius = surfaces['cylinders'][0]['radius']
+            a = surfaces['cylinders'][0]['axis']
+            axis = [a.X(), a.Y(), a.Z()]
+            
+        # Determine subtype
+        radii = set(round(c['radius'], 3) for c in surfaces['cylinders'])
+        
+        subtype = 'simple_hole'
+        if len(radii) > 1:
+            subtype = 'counterbore_hole'
+        elif surfaces['cone'] > 0:
+            subtype = 'countersink_hole'
+            
+        # Check if blind or through (based on presence of bottom plane)
+        is_blind = surfaces['plane'] > 0
+        if is_blind:
+            subtype += "_blind"
+        else:
+            subtype += "_through"
+            
+        return {
+            'type': 'hole',
+            'subtype': subtype,
+            'diameter': radius * 2.0,
+            'radius': radius,
+            'axis': axis,
+            'confidence': 0.95
+        }
+
     def _is_pocket(self, surfaces) -> bool:
         """
         Is this lump a pocket?
