@@ -243,20 +243,43 @@ class VolumeDecomposer:
                 # Dot product should be close to 1 or -1
                 dot = abs(dir1.X() * dir2.X() + dir1.Y() * dir2.Y() + dir1.Z() * dir2.Z())
                 
-                if dot > 0.95:  # Parallel axes
-                    # Check if axes are close in space (same hole)
-                    # Distance between two parallel lines
+                if dot > 0.98:  # Very parallel axes
+                    # For counterbored holes: cylinders share the EXACT same axis
+                    # For separate holes: axes are offset (even if close together)
+                    
+                    # Calculate perpendicular distance between two parallel axes
+                    # Given: Point P1, Direction D1 (line 1)
+                    #        Point P2, Direction D2 (line 2)
+                    # Perpendicular distance = ||(P2-P1) - ((P2-P1)·D1)*D1||
+                    
                     p1 = cyl1['axis_origin']
                     p2 = cyl2['axis_origin']
+                    d1 = cyl1['axis_direction']
                     
                     # Vector from p1 to p2
-                    dx = p2.X() - p1.X()
-                    dy = p2.Y() - p1.Y()
-                    dz = p2.Z() - p1.Z()
-                    dist_vec_mag = (dx**2 + dy**2 + dz**2)**0.5
+                    p1p2_x = p2.X() - p1.X()
+                    p1p2_y = p2.Y() - p1.Y()
+                    p1p2_z = p2.Z() - p1.Z()
                     
-                    # If origins are very close, they're the same hole
-                    if dist_vec_mag < (max(cyl1['radius'], cyl2['radius']) * 3):
+                    # Dot product: (P2-P1)·D1
+                    dot_p1p2_d1 = p1p2_x * d1.X() + p1p2_y * d1.Y() + p1p2_z * d1.Z()
+                    
+                    # Component of (P2-P1) along D1: ((P2-P1)·D1)*D1
+                    proj_x = dot_p1p2_d1 * d1.X()
+                    proj_y = dot_p1p2_d1 * d1.Y()
+                    proj_z = dot_p1p2_d1 * d1.Z()
+                    
+                    # Perpendicular component: (P2-P1) - projection
+                    perp_x = p1p2_x - proj_x
+                    perp_y = p1p2_y - proj_y
+                    perp_z = p1p2_z - proj_z
+                    
+                    # Perpendicular distance
+                    perp_dist = (perp_x**2 + perp_y**2 + perp_z**2)**0.5
+                    
+                    # ROBUST CRITERION: Axes must be within 0.1mm of each other
+                    # This works for ANY hole size, spacing, or configuration
+                    if perp_dist < 0.1:  # 0.1mm tolerance (universal)
                         hole_group.append(cyl2)
                         used_cylinders.add(j)
                         
