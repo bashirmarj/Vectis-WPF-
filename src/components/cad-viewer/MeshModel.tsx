@@ -206,7 +206,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             totalVertices: vertexCount,
             matchedVertices,
             matchPercentage: ((matchedVertices / vertexCount) * 100).toFixed(2) + "%",
-            success: matchedVertices > 0
+            success: matchedVertices > 0,
+            highlightColor: highlightColor,
+            baseColorRGB: `rgb(${Math.round(baseColor.r * 255)}, ${Math.round(baseColor.g * 255)}, ${Math.round(baseColor.b * 255)})`,
+            highlightColorRGB: `rgb(${Math.round(highlightColorObj.r * 255)}, ${Math.round(highlightColorObj.g * 255)}, ${Math.round(highlightColorObj.b * 255)})`,
+            sampleHighlightedVertex: Array.from(highlightSet)[0],
+            colorBufferSet: true
           });
         }
         
@@ -403,7 +408,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
     const materialProps = (() => {
       const base = {
-        color: SOLID_COLOR,
+        color: "#ffffff", // WHITE when using vertex colors - prevents color multiplication
         side: THREE.DoubleSide,
         clippingPlanes: clippingPlane,
         clipIntersection: true,
@@ -446,8 +451,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         <mesh ref={meshRef} geometry={geometry} castShadow={false} receiveShadow>
           <meshStandardMaterial
             {...materialProps}
-            color={topologyColors ? "#ffffff" : SOLID_COLOR}
-            vertexColors={topologyColors || highlightedFaceIds.length > 0}
+            vertexColors={true}
             flatShading={true}
             toneMapped={false}
             metalness={0.1}
