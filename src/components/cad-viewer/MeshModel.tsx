@@ -182,28 +182,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
-      } else if (highlightSet.size > 0) {
-        // When highlighting is active, base mesh gets SOLID color only (no vertex color variation)
-        // The separate highlight layer handles the blue highlighting
-        // This prevents visible triangulation from color bleeding
-        for (let i = 0; i < vertexCount; i++) {
-          colors[i * 3 + 0] = baseColor.r;
-          colors[i * 3 + 1] = baseColor.g;
-          colors[i * 3 + 2] = baseColor.b;
-        }
-
-        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-        geometry.attributes.color.needsUpdate = true;
       } else {
-        // No highlighting - solid color mode
-        for (let i = 0; i < vertexCount; i++) {
-          colors[i * 3 + 0] = baseColor.r;
-          colors[i * 3 + 1] = baseColor.g;
-          colors[i * 3 + 2] = baseColor.b;
-        }
-
-        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-        geometry.attributes.color.needsUpdate = true;
+        // Delete vertex colors - use pure material color instead
+        // This prevents visible triangulation from vertex color interpolation
+        geometry.deleteAttribute("color");
       }
     }, [geometry, topologyColors, meshData.vertex_colors, meshData.face_mapping, highlightedFaceIds, highlightColor]);
 
@@ -483,7 +465,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         <mesh ref={meshRef} geometry={geometry} castShadow={false} receiveShadow>
           <meshStandardMaterial
             {...materialProps}
-            vertexColors={true}
+            color={SOLID_COLOR}
+            vertexColors={topologyColors && highlightedFaceIds.length === 0}
             flatShading={true}
             toneMapped={false}
             metalness={0.1}
