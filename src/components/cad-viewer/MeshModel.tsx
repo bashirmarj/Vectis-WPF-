@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef } from "react";
+import { useEffect, useRef, forwardRef, useMemo } from "react";
 import * as React from "react";
 import * as THREE from "three";
 import { useThree } from "@react-three/fiber";
@@ -102,72 +102,16 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     })();
 
-    // Apply vertex colors to indexed geometry with highlighting support
+    // Apply vertex colors ONLY for topology mode (not for highlighting)
     useEffect(() => {
       if (!geometry) return;
 
       const vertexCount = meshData.vertices.length / 3;
       const colors = new Float32Array(vertexCount * 3);
       const baseColor = new THREE.Color(SOLID_COLOR);
-      const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
-      
-      // 🗺️ Translate BREP face IDs to vertex indices using face_mapping
-      const highlightSet = new Set<number>();
-      
-      if (meshData.face_mapping && highlightedFaceIds.length > 0) {
-        highlightedFaceIds.forEach(brepFaceId => {
-          const mapping = meshData.face_mapping![brepFaceId];
-          
-          console.log(`🗺️ Mapping for face ${brepFaceId}:`, {
-            hasMapping: !!mapping,
-            triangle_indices_length: mapping?.triangle_indices?.length,
-            triangle_range: mapping?.triangle_range,
-            sample_indices: mapping?.triangle_indices?.slice(0, 5)
-          });
-          
-          if (mapping) {
-            // Prioritize triangle_range if it exists
-            if (mapping.triangle_range) {
-              const [start, end] = mapping.triangle_range;
-              for (let triIdx = start; triIdx <= end; triIdx++) {
-                if (meshData.indices) {
-                  const v0 = meshData.indices[triIdx * 3 + 0];
-                  const v1 = meshData.indices[triIdx * 3 + 1];
-                  const v2 = meshData.indices[triIdx * 3 + 2];
-                  highlightSet.add(v0);
-                  highlightSet.add(v1);
-                  highlightSet.add(v2);
-                }
-              }
-            }
-            // Fallback to triangle_indices if no range
-            else if (mapping.triangle_indices) {
-              mapping.triangle_indices.forEach(triIdx => {
-                if (meshData.indices) {
-                  const v0 = meshData.indices[triIdx * 3 + 0];
-                  const v1 = meshData.indices[triIdx * 3 + 1];
-                  const v2 = meshData.indices[triIdx * 3 + 2];
-                  highlightSet.add(v0);
-                  highlightSet.add(v1);
-                  highlightSet.add(v2);
-                }
-              });
-            }
-          }
-        });
-        
-        console.log("🗺️ Face mapping translation:", {
-          brepFaceIds: highlightedFaceIds,
-          vertexIndicesCount: highlightSet.size,
-          triangleCount: Math.floor(highlightSet.size / 3),
-          percentageOfMesh: ((highlightSet.size / (meshData.vertices.length / 3)) * 100).toFixed(2) + '%',
-          hasFaceMapping: !!meshData.face_mapping,
-          mappedFaces: highlightedFaceIds.filter(id => meshData.face_mapping![id])
-        });
-      }
 
-      if (topologyColors && !highlightSet.size) {
-        // Topology color mode (only when no highlighting)
+      if (topologyColors) {
+        // Topology color mode - use vertex_colors from backend
         if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
           for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
             const faceType = meshData.vertex_colors[vertexIdx] || "default";
@@ -183,37 +127,119 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else {
-        // Solid color mode with optional highlighting
-        let matchedVertices = 0;
-        
+        // Solid color mode - use base color only (highlighting handled by separate mesh)
         for (let i = 0; i < vertexCount; i++) {
-          let finalColor = baseColor;
-          
-          // Check if this vertex index is in the highlight set
-          if (highlightSet.size > 0 && highlightSet.has(i)) {
-            finalColor = highlightColorObj;
-            matchedVertices++;
-          }
-          
-          colors[i * 3 + 0] = finalColor.r;
-          colors[i * 3 + 1] = finalColor.g;
-          colors[i * 3 + 2] = finalColor.b;
-        }
-        
-        // ✅ Log matching results (only if highlighting requested)
-        if (highlightSet.size > 0) {
-          console.log("🎯 VERTEX MATCHING:", {
-            totalVertices: vertexCount,
-            matchedVertices,
-            matchPercentage: ((matchedVertices / vertexCount) * 100).toFixed(2) + "%",
-            success: matchedVertices > 0
-          });
+          colors[i * 3 + 0] = baseColor.r;
+          colors[i * 3 + 1] = baseColor.g;
+          colors[i * 3 + 2] = baseColor.b;
         }
         
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
-    }, [geometry, topologyColors, meshData.vertex_colors, meshData.face_mapping, highlightedFaceIds, highlightColor]);
+    }, [geometry, topologyColors, meshData.vertex_colors]);
+
+    // 🔥 DUAL-MESH HIGHLIGHT: Build separate non-indexed geometry for highlighted faces
+    const highlightGeometry = useMemo(() => {
+      // Safety check: Only build if we have highlights
+      if (!highlightedFaceIds || highlightedFaceIds.length === 0) {
+        console.log("🔥 No highlighted faces - skipping highlight geometry");
+        return null;
+      }
+
+      // Safety check: Required data
+      if (!meshData.face_mapping || !meshData.indices || !meshData.vertices || !meshData.normals) {
+        console.warn("⚠️ Missing data for highlight geometry:", {
+          hasFaceMapping: !!meshData.face_mapping,
+          hasIndices: !!meshData.indices,
+          hasVertices: !!meshData.vertices,
+          hasNormals: !!meshData.normals,
+        });
+        return null;
+      }
+
+      console.log("🔥 Building highlight geometry for faces:", highlightedFaceIds);
+
+      // Collect triangle indices for highlighted faces
+      const highlightTriIndices = new Set<number>();
+      
+      highlightedFaceIds.forEach(brepFaceId => {
+        const mapping = meshData.face_mapping![brepFaceId];
+        
+        if (!mapping) {
+          console.warn(`⚠️ No mapping for BREP face ${brepFaceId}`);
+          return;
+        }
+        
+        // Prioritize triangle_range for efficiency
+        if (mapping.triangle_range) {
+          const [start, end] = mapping.triangle_range;
+          for (let i = start; i <= end; i++) {
+            highlightTriIndices.add(i);
+          }
+        } 
+        // Fallback to triangle_indices
+        else if (mapping.triangle_indices) {
+          mapping.triangle_indices.forEach(idx => highlightTriIndices.add(idx));
+        }
+      });
+
+      console.log("🔥 Collected triangles:", {
+        triangleCount: highlightTriIndices.size,
+        percentageOfMesh: ((highlightTriIndices.size / (meshData.indices!.length / 3)) * 100).toFixed(2) + '%'
+      });
+
+      // Safety check: Did we find any triangles?
+      if (highlightTriIndices.size === 0) {
+        console.warn("⚠️ No triangles found for highlighted faces");
+        return null;
+      }
+
+      // Build non-indexed geometry from highlighted triangles
+      const positions: number[] = [];
+      const normals: number[] = [];
+      
+      highlightTriIndices.forEach(triIdx => {
+        for (let i = 0; i < 3; i++) {
+          const vIdx = meshData.indices![triIdx * 3 + i];
+          
+          // Safety check: Vertex index in bounds
+          if (vIdx * 3 + 2 >= meshData.vertices!.length) {
+            console.warn(`⚠️ Vertex index out of bounds: ${vIdx}`);
+            return;
+          }
+          
+          positions.push(
+            meshData.vertices![vIdx * 3 + 0],
+            meshData.vertices![vIdx * 3 + 1],
+            meshData.vertices![vIdx * 3 + 2]
+          );
+          normals.push(
+            meshData.normals![vIdx * 3 + 0],
+            meshData.normals![vIdx * 3 + 1],
+            meshData.normals![vIdx * 3 + 2]
+          );
+        }
+      });
+
+      // Safety check: Did we build any geometry?
+      if (positions.length === 0) {
+        console.warn("⚠️ No geometry built for highlight");
+        return null;
+      }
+
+      console.log("✅ Highlight geometry built:", {
+        vertices: positions.length / 3,
+        triangles: positions.length / 9
+      });
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geo.computeBoundingSphere();
+      
+      return geo;
+    }, [highlightedFaceIds, meshData.face_mapping, meshData.indices, meshData.vertices, meshData.normals]);
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
@@ -427,8 +453,9 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.dispose();
         if (featureEdgesGeometry) featureEdgesGeometry.dispose();
         cleanEdgesGeometry.dispose();
+        if (highlightGeometry) highlightGeometry.dispose();
       };
-    }, []);
+    }, [highlightGeometry]);
 
     // Expose mesh and feature edges for external access
     React.useImperativeHandle(
@@ -454,6 +481,28 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             roughness={0.6}
           />
         </mesh>
+
+        {/* 🔥 HIGHLIGHT OVERLAY - Separate non-indexed mesh for precise feature highlighting */}
+        {highlightGeometry && (
+          <mesh 
+            geometry={highlightGeometry}
+            renderOrder={1}
+            castShadow={false}
+          >
+            <meshStandardMaterial
+              color={highlightColor || "#3B82F6"}
+              side={THREE.DoubleSide}
+              toneMapped={false}
+              metalness={0.1}
+              roughness={0.6}
+              emissive={highlightColor || "#3B82F6"}
+              emissiveIntensity={highlightIntensity || 0.3}
+              polygonOffset={true}
+              polygonOffsetFactor={-2}
+              polygonOffsetUnits={-2}
+            />
+          </mesh>
+        )}
 
         {/* Invisible depth-writing mesh for wireframe occlusion */}
         {displayStyle === "wireframe" && !showHiddenEdges && (
