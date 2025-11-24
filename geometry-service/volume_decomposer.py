@@ -14,10 +14,12 @@ from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Cut
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.Bnd import Bnd_Box
-from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Ax2, gp_Dir, gp_Trsf, gp_Ax3
+from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Ax2, gp_Dir, gp_Trsf, gp_Ax3, gp_Ax1
+from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+from OCC.Core.GeomAbs import GeomAbs_Plane
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_SOLID
+from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.TopoDS import topods
@@ -128,125 +130,89 @@ class VolumeDecomposer:
                 # 'transform': transform  <-- This caused the JSON error
                 # We don't need to send the full OCC transform object to the frontend/JSON
                 # If we need it for mapping, we should use it inside the service before serialization
-                # For now, let's just omit it from the JSON output or convert to matrix
             })
             
         return results
 
     def _align_part(self, shape):
         """
-        Align part's principal axes to global X/Y/Z.
-        Minimizes bounding box volume.
+        Align part based on largest planar face (Geometry-based).
+        Better for prismatic parts than Inertia-based alignment.
         """
-        props = GProp_GProps()
-        brepgprop.VolumeProperties(shape, props)
+        # 1. Find largest planar face
+        max_area = 0.0
+        best_face = None
+        best_surf = None
         
-        # Get principal axes
-        axes = props.PrincipalProperties() # Returns gp_Ax2
-        
-        # Create transformation from Principal Frame -> Global Frame
-        # The Principal Frame is at the center of mass, aligned with inertia axes
-        
-        # We want to transform the part so its Principal Frame becomes the Global Frame (or parallel to it)
-        # Actually, simpler: We want to rotate it so Principal Axes match Global Axes.
-        
-        # GProp_PrincipalProps returns vectors, not gp_Ax2 directly in some versions
-        # Or it has different methods. Let's check the docs or standard usage.
-        # Actually PrincipalProperties() returns GProp_PrincipalProps.
-        # We need to get the vectors from it.
-        
-        if hasattr(axes, 'FirstAxisOfInertia'):
-            x_dir = axes.FirstAxisOfInertia()
-            y_dir = axes.SecondAxisOfInertia()
-            z_dir = axes.ThirdAxisOfInertia()
-        else:
-            # Fallback or alternative API
-            # Some bindings return a tuple or have different names
-            # Let's try to infer from typical OCC usage
-            # If it returns gp_Ax2 (which has XDirection), then the previous code was right but the type is wrong.
-            # But error says 'GProp_PrincipalProps' object.
+        exp = TopExp_Explorer(shape, TopAbs_FACE)
+        while exp.More():
+            face = exp.Current()
+            surf = BRepAdaptor_Surface(face)
+            if surf.GetType() == GeomAbs_Plane:
+                props = GProp_GProps()
+                brepgprop.SurfaceProperties(face, props)
+                area = props.Mass()
+                if area > max_area:
+                    max_area = area
+                    best_face = face
+                    best_surf = surf
+            exp.Next()
             
-            # Correct usage for GProp_PrincipalProps:
-            # It has methods to get the moments and axes.
-            x_dir = axes.FirstAxisOfInertia()
-            y_dir = axes.SecondAxisOfInertia()
-            z_dir = axes.ThirdAxisOfInertia()
+        if not best_face:
+            logger.warning("  No planar faces found for alignment. Using original orientation.")
+            return shape, gp_Trsf()
+            
+        # 2. Get Normal of largest face
+        # We want this normal to align with Global Z (or -Z)
+        pln = best_surf.Plane()
+        axis = pln.Axis() # gp_Ax1
+        normal = axis.Direction()
         
-        # Construct transformation
-        # We transform the coordinate system defined by axes to the global system
+        # Check if already aligned to Z
+        if abs(normal.Z()) > 0.999:
+            logger.info("  Part is already aligned (Largest face is Z-planar).")
+            return shape, gp_Trsf()
+            
+        logger.info("  Aligning largest planar face to Global Z...")
         
-        # 1. Get Center of Mass
-        center = props.CentreOfMass()
-        
-        # 2. Construct gp_Ax2 (Frame) from Principal Axes
-        # We use the Center of Mass as the origin, and the First/Third axes as Z/X (or similar)
-        # gp_Ax2(P, N, Vx) -> P: Origin, N: Main Direction (Z), Vx: X Direction
-        
-        # We'll align the First Axis (X_dir) to Global X, Second to Y, Third to Z.
-        # So we want the Local System to be defined by these axes.
-        
-        # Note: gp_Ax3 is required for SetDisplacement
-        from_system = gp_Ax3(center, gp_Dir(z_dir), gp_Dir(x_dir))
-        to_system = gp_Ax3(gp_Ax2()) # Global system at (0,0,0) with Z=Z, X=X
+        # 3. Construct Transform
+        # We want to rotate such that 'normal' becomes (0,0,1)
         
         trsf = gp_Trsf()
-        trsf.SetDisplacement(from_system, to_system)
+        # Create an axis at origin with the face's normal direction
+        from_axis = gp_Ax1(gp_Pnt(0,0,0), normal)
+        to_axis = gp_Ax1(gp_Pnt(0,0,0), gp_Dir(0,0,1))
         
-        transformer = BRepBuilderAPI_Transform(shape, trsf, True) # Copy=True
-        aligned_shape = transformer.Shape()
+        # This rotation aligns the normal to Z. 
+        trsf.SetRotation(from_axis, to_axis) 
         
-        return aligned_shape, trsf
+        # Wait, SetRotation(Ax1, Ax1) isn't standard. 
+        # Standard is SetDisplacement(Ax3, Ax3) or SetRotation(Ax1, Angle).
+        # To align vector A to vector B:
+        # Axis of rotation = A cross B
+        # Angle = acos(A dot B)
         
-    def _compute_stock_envelope(self, part_shape):
-        """
-        Compute minimal bounding box for stock material.
+        # Easier: SetDisplacement from a coordinate system defined by the face
+        # to the global coordinate system.
         
-        Returns:
-            dict: {
-                'dx', 'dy', 'dz': dimensions in mm
-                'xmin', 'ymin', 'zmin': origin in mm
-                'center': (x, y, z) in mm
-            }
-        """
-        # Get raw bounding box from OCC
-        bbox = Bnd_Box()
-        brepbndlib.Add(part_shape, bbox)
-        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+        # Let's define a system on the face:
+        # Origin: Face Center? No, we just want rotation.
+        # Z: Face Normal
+        # X: Arbitrary (or X direction of plane)
         
-        # Detect units from diagonal length
-        dx = xmax - xmin
-        dy = ymax - ymin
-        dz = zmax - zmin
-        diagonal = np.sqrt(dx**2 + dy**2 + dz**2)
+        face_cs = pln.Position() # gp_Ax3
+        # We want to map this system to one where Z is Global Z.
+        # But we want to keep the origin at (0,0,0) to avoid shifting the part far away?
+        # Actually, shifting to origin is GOOD for numerical stability.
         
-        logger.info(f"    Bounding box diagonal (raw OCC): {diagonal:.4f}")
+        # Target System: Global (0,0,0) with Z up
+        global_cs = gp_Ax3(gp_Ax2())
         
-        # Unit detection: Default to Millimeters (standard for STEP)
-        # REMOVED HEURISTIC: Previously guessed 'm' if diagonal < 1.0
-        # This caused issues for small parts (e.g. 0.5mm diagonal) being scaled up by 1000x
+        trsf.SetDisplacement(face_cs, global_cs)
         
-        self.detected_units = "mm"
-        scale_to_mm = 1.0
-        logger.info(f"    Assumed MILLIMETERS (diagonal {diagonal:.4f})")
-        
-        # Convert to mm
-        return {
-            'dx': dx * scale_to_mm,
-            'dy': dy * scale_to_mm,
-            'dz': dz * scale_to_mm,
-            'xmin': xmin * scale_to_mm,
-            'ymin': ymin * scale_to_mm,
-            'zmin': zmin * scale_to_mm,
-            'xmax': xmax * scale_to_mm,
-            'ymax': ymax * scale_to_mm,
-            'zmax': zmax * scale_to_mm,
-            'center': (
-                (xmin + xmax) / 2 * scale_to_mm,
-                (ymin + ymax) / 2 * scale_to_mm,
-                (zmin + zmax) / 2 * scale_to_mm
-            ),
-            'scale_to_mm': scale_to_mm
-        }
+        transformer = BRepBuilderAPI_Transform(shape, trsf, True)
+        return transformer.Shape(), trsf
+
         
     def _create_stock_box(self, bbox_dict):
         """
@@ -266,6 +232,20 @@ class VolumeDecomposer:
         if dx <= 0 or dy <= 0 or dz <= 0:
             logger.error(f"Invalid bbox dimensions: dx={dx:.6f}, dy={dy:.6f}, dz={dz:.6f}")
             raise ValueError(f"Stock box dimensions must be positive: ({dx:.2f}, {dy:.2f}, {dz:.2f}) mm")
+
+        # Z-SHRINK HACK:
+        # Shrink Z-dimensions slightly to prevent "Air Lids" (thin layers of air connecting features).
+        # This ensures the stock box intersects the part's top/bottom faces, physically separating
+        # features like holes from step volumes.
+        z_shrink = 0.01 # 10 microns
+        
+        # Only shrink if we have enough thickness
+        if dz / scale > (z_shrink * 3):
+            logger.info(f"  🔧 Applying Z-Shrink of {z_shrink}mm to break 'Air Lids'...")
+            zmin += z_shrink * scale
+            dz -= (z_shrink * 2) * scale
+        else:
+            logger.warning("  ⚠️ Part too thin for Z-Shrink, skipping.")
 
         # METHOD 1: Create box from origin point + dimensions
         logger.info(f"  Creating stock box:")
