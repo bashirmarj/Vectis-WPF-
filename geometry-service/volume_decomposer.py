@@ -72,57 +72,103 @@ class VolumeDecomposer:
             
     def _decompose_prismatic(self, part_shape):
         """
-        Prismatic decomposition - Analysis Situs style.
+        Prismatic decomposition with Auto-Alignment.
         
         Process:
-        1. Compute oriented bounding box (stock envelope)
-        2. Create stock solid
-        3. Boolean cut: stock - part = removal_volume
-        4. Return single removal volume (no splitting!)
-        
-        Returns:
-            [{'shape': removal_volume, 'hint': 'prismatic', 'stock_bbox': {...}}]
+        1. Auto-align part to principal axes (fixes "rotated part" issue).
+        2. Compute tight bounding box (Stock).
+        3. Boolean Cut: Stock - Part.
+        4. Split result into lumps.
         """
         logger.info("Decomposing prismatic part...")
         
-        # 1. Detect units and get bounding box
-        stock_bbox = self._compute_stock_envelope(part_shape)
+        # 1. Auto-Align Part
+        aligned_shape, transform = self._align_part(part_shape)
+        
+        # 2. Detect units and get bounding box (on ALIGNED shape)
+        stock_bbox = self._compute_stock_envelope(aligned_shape)
         
         logger.info(f"  Detected model units: {self.detected_units}")
         logger.info(f"  Stock envelope: {stock_bbox['dx']:.1f} × {stock_bbox['dy']:.1f} × {stock_bbox['dz']:.1f} {self.detected_units}")
         
-        # 2. Create stock block
+        # 3. Create stock block
         logger.info("  Computing boolean difference (stock - part)...")
         stock_solid = self._create_stock_box(stock_bbox)
         
-        # 3. Boolean cut
-        removal_volume = self._boolean_cut(stock_solid, part_shape)
+        # 4. Boolean cut
+        removal_volume = self._boolean_cut(stock_solid, aligned_shape)
         
         if removal_volume is None:
             logger.error("  Boolean operation failed!")
             return []
         
-        # 4. Validate removal volume
+        # 5. Validate removal volume
         volume_mm3 = self._compute_volume(removal_volume)
         logger.info(f"  Removal volume: {volume_mm3:.1f} mm³")
         
-        # 5. Split into lumps (features)
+        # 6. Split into lumps (features)
         lumps = self._decompose_lumps(removal_volume)
         logger.info(f"✓ Decomposition successful: Found {len(lumps)} features (lumps)")
         
         results = []
         for i, lump in enumerate(lumps):
             vol = self._compute_volume(lump)
+            
+            # Transform lump back to original coordinates?
+            # For now, we keep it aligned as it's better for classification.
+            # We just need to note that the features are in aligned space.
+            
             results.append({
                 'id': f"lump_{i}",
                 'shape': lump,
-                'hint': 'unknown_feature', # To be classified later
+                'hint': 'unknown_feature',
                 'stock_bbox': stock_bbox,
                 'volume_mm3': vol,
-                'units': self.detected_units
+                'units': self.detected_units,
+                'transform': transform # Store transform if we need to map back
             })
             
         return results
+
+    def _align_part(self, shape):
+        """
+        Align part's principal axes to global X/Y/Z.
+        Minimizes bounding box volume.
+        """
+        props = GProp_GProps()
+        brepgprop.VolumeProperties(shape, props)
+        
+        # Get principal axes
+        axes = props.PrincipalProperties() # Returns gp_Ax2
+        
+        # Create transformation from Principal Frame -> Global Frame
+        # The Principal Frame is at the center of mass, aligned with inertia axes
+        
+        # We want to transform the part so its Principal Frame becomes the Global Frame (or parallel to it)
+        # Actually, simpler: We want to rotate it so Principal Axes match Global Axes.
+        
+        x_dir = axes.XDirection()
+        y_dir = axes.YDirection()
+        z_dir = axes.Direction() # Z direction
+        
+        # Check if already aligned (dot product close to 1 or -1)
+        is_aligned = (abs(x_dir.X()) > 0.99 or abs(x_dir.Y()) > 0.99 or abs(x_dir.Z()) > 0.99)
+        
+        if is_aligned:
+            logger.info("  Part is already aligned with global axes.")
+            return shape, gp_Trsf()
+            
+        logger.info("  Part is rotated. Aligning to principal axes...")
+        
+        # Construct transformation
+        # We transform the coordinate system defined by axes to the global system
+        trsf = gp_Trsf()
+        trsf.SetDisplacement(axes, gp_Ax2()) # Transform FROM axes TO Global
+        
+        transformer = BRepBuilderAPI_Transform(shape, trsf, True) # Copy=True
+        aligned_shape = transformer.Shape()
+        
+        return aligned_shape, trsf
         
     def _compute_stock_envelope(self, part_shape):
         """
