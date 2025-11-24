@@ -206,8 +206,19 @@ class VolumeDecomposer:
                 
             exp.Next()
             
-        logger.info(f"  Face Classification: {len(stock_faces)} Stock, {len(cylindrical_faces)} Cylindrical, {len(planar_faces)} Planar, {len(other_faces)} Other")
+        logger.info(f"  📊 Face Classification:")
+        logger.info(f"     Stock: {len(stock_faces)}")
+        logger.info(f"     Cylindrical: {len(cylindrical_faces)}")
+        logger.info(f"     Planar: {len(planar_faces)}")
+        logger.info(f"     Conical: {len(conical_faces)}")
+        logger.info(f"     Other: {len(other_faces)}")
         
+        # DEBUG: Log first few cylinders
+        if len(cylindrical_faces) > 0:
+            logger.info(f"  First 3 cylinders:")
+            for i, cyl in enumerate(cylindrical_faces[:3]):
+                logger.info(f"    Cyl {i}: r={cyl['radius']:.2f}, axis=({cyl['axis_direction'].X():.2f}, {cyl['axis_direction'].Y():.2f}, {cyl['axis_direction'].Z():.2f})")
+                
         # 2. Group cylindrical faces into holes (by co-axiality)
         hole_groups = []
         used_cylinders = set()
