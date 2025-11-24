@@ -16,7 +16,7 @@ from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.gp import gp_Pnt, gp_Vec, gp_Ax2, gp_Dir, gp_Trsf, gp_Ax3, gp_Ax1
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.GeomAbs import GeomAbs_Plane
+from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.TopExp import TopExp_Explorer
 from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE, TopAbs_EDGE
