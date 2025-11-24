@@ -157,55 +157,6 @@ class LumpClassifier:
             return True
         return False
 
-    def _is_hole(self, surfaces) -> bool:
-        """
-        Is this lump a hole?
-        Criteria:
-        - Has at least one cylinder.
-        - No complex/freeform surfaces.
-        """
-        if surfaces['cylinder'] == 0 and surfaces['cone'] == 0:
-            return False
-            
-        if surfaces['other'] > 0:
-            return False
-            
-        return True
-
-    def _classify_hole(self, surfaces, boundary_info) -> dict:
-        """Extract hole parameters."""
-        # Get max radius (main bore)
-        max_r = 0
-        axis = [0,0,1]
-        
-        for cyl in surfaces['cylinders']:
-            if cyl['radius'] > max_r:
-                max_r = cyl['radius']
-                a = cyl['axis']
-                axis = [a.X(), a.Y(), a.Z()]
-                
-        # Determine type
-        radii = set(round(c['radius'], 3) for c in surfaces['cylinders'])
-        
-        subtype = 'simple_hole'
-        if len(radii) > 1:
-            subtype = 'counterbore_hole'
-            
-        # Check through vs blind
-        is_through = boundary_info['top'] and boundary_info['bottom']
-        if is_through:
-            subtype += "_through"
-        else:
-            subtype += "_blind"
-            
-        return {
-            'type': 'hole',
-            'subtype': subtype,
-            'diameter': max_r * 2.0,
-            'axis': axis,
-            'confidence': 0.95
-        }
-
     def _is_pocket(self, surfaces) -> bool:
         """
         Is this lump a pocket?

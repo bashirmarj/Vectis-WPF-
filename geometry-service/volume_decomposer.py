@@ -19,10 +19,11 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
 from OCC.Core.GeomAbs import GeomAbs_Plane
 from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
 from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE
+from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE, TopAbs_EDGE
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
-from OCC.Core.TopoDS import topods
+from OCC.Core.TopoDS import topods, TopoDS_Compound
+from OCC.Core.BRep import BRep_Builder
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -109,30 +110,170 @@ class VolumeDecomposer:
         logger.info(f"  Removal volume: {volume_mm3:.1f} mm³")
         
         # 6. Split into lumps (features)
-        lumps = self._decompose_lumps(removal_volume)
-        logger.info(f"✓ Decomposition successful: Found {len(lumps)} features (lumps)")
+        # 6. Split into lumps (features)
+        # NEW STRATEGY: Surface-Based Decomposition
+        # The removal volume might be a single fused solid (due to "Air Lids").
+        # We split it by analyzing the connectivity of its faces, ignoring "Stock Faces".
+        feature_compounds = self._decompose_by_surfaces(removal_volume, stock_bbox)
+        logger.info(f"✓ Decomposition successful: Found {len(feature_compounds)} features (surface groups)")
         
         results = []
-        for i, lump in enumerate(lumps):
-            vol = self._compute_volume(lump)
+        for i, compound in enumerate(feature_compounds):
+            # We don't have a closed solid anymore, just a shell/compound of faces.
+            # We can try to close it, or just pass the shell to the classifier.
+            # For volume calculation, we might need to close it or estimate.
             
-            # Transform lump back to original coordinates?
-            # For now, we keep it aligned as it's better for classification.
-            # We just need to note that the features are in aligned space.
+            # Estimate volume (if closed) or area
+            props = GProp_GProps()
+            brepgprop.SurfaceProperties(compound, props)
+            area = props.Mass()
             
             results.append({
-                'id': f"lump_{i}",
-                'shape': lump,
+                'id': f"feature_{i}",
+                'shape': compound, # This is a TopoDS_Compound of faces
                 'hint': 'unknown_feature',
                 'stock_bbox': stock_bbox,
-                'volume_mm3': vol,
+                'volume_mm3': 0.0, # Volume is undefined for open shells
+                'surface_area': area,
                 'units': self.detected_units,
-                # 'transform': transform  <-- This caused the JSON error
-                # We don't need to send the full OCC transform object to the frontend/JSON
-                # If we need it for mapping, we should use it inside the service before serialization
             })
             
         return results
+
+    def _decompose_by_surfaces(self, removal_volume, stock_bbox):
+        """
+        Decompose a fused removal volume into features by analyzing surface connectivity.
+        1. Identify "Stock Faces" (faces on the BBox boundary).
+        2. Remove Stock Faces.
+        3. Group remaining "Feature Faces" into connected components.
+        """
+        # 1. Map faces to Stock Boundary
+        stock_faces = []
+        feature_faces = []
+        
+        # Tolerances
+        tol = 1e-3
+        xmin, ymin, zmin = stock_bbox['xmin'], stock_bbox['ymin'], stock_bbox['zmin']
+        xmax, ymax, zmax = stock_bbox['xmax'], stock_bbox['ymax'], stock_bbox['zmax']
+        
+        exp = TopExp_Explorer(removal_volume, TopAbs_FACE)
+        while exp.More():
+            face = exp.Current()
+            surf = BRepAdaptor_Surface(face)
+            is_stock = False
+            
+            if surf.GetType() == GeomAbs_Plane:
+                pln = surf.Plane()
+                loc = pln.Location()
+                # Check if plane is on the boundary
+                # We check the distance of the plane to the bbox limits
+                # Note: This is a heuristic. A robust way is to check all vertices.
+                
+                # Check if all vertices are on boundary?
+                # Simpler: Check if the underlying surface is coincident with BBox planes.
+                
+                # We can check the plane equation Ax+By+Cz+D=0
+                # But BRepAdaptor gives us the surface.
+                
+                # Let's check if the face is ON the boundary.
+                # We can sample a point on the face.
+                pnt = BRepAdaptor_Surface(face).Value(0,0) # UV origin
+                x, y, z = pnt.X(), pnt.Y(), pnt.Z()
+                
+                on_xmin = abs(x - xmin) < tol
+                on_xmax = abs(x - xmax) < tol
+                on_ymin = abs(y - ymin) < tol
+                on_ymax = abs(y - ymax) < tol
+                on_zmin = abs(z - zmin) < tol
+                on_zmax = abs(z - zmax) < tol
+                
+                if on_xmin or on_xmax or on_ymin or on_ymax or on_zmin or on_zmax:
+                    is_stock = True
+            
+            if is_stock:
+                stock_faces.append(face)
+            else:
+                feature_faces.append(face)
+                
+            exp.Next()
+            
+        logger.info(f"  Surface Analysis: {len(stock_faces)} Stock Faces, {len(feature_faces)} Feature Faces")
+        
+        # 2. Build Connectivity Graph of Feature Faces
+        # We use a map: Edge -> [Faces]
+        edge_map = {}
+        
+        for face in feature_faces:
+            exp_e = TopExp_Explorer(face, TopAbs_EDGE)
+            while exp_e.More():
+                edge = topods.Edge(exp_e.Current())
+                # We need a hashable key for the edge. 
+                # TopoDS_Shape doesn't hash by geometry identity.
+                # We can use the hash code or map via TColStd_MapOfShape if available.
+                # Or just use the pointer/hash if Python wrapper supports it.
+                # OCC.Core.TopoDS.TopoDS_Shape.__hash__ works?
+                
+                # Better: Use a spatial map or just brute force for now (N is small).
+                # Actually, we can use the 'IsSame' method.
+                
+                # Optimization: Map Edge Hash -> List of (Edge, Face)
+                h = edge.HashCode(1000000)
+                if h not in edge_map:
+                    edge_map[h] = []
+                edge_map[h].append((edge, face))
+                
+                exp_e.Next()
+                
+        # Build Adjacency: Face -> [Neighbor Faces]
+        adjacency = {f: [] for f in feature_faces}
+        
+        # Iterate over potential shared edges
+        for h, items in edge_map.items():
+            # Check for actual identity (IsSame)
+            for i in range(len(items)):
+                e1, f1 = items[i]
+                for j in range(i+1, len(items)):
+                    e2, f2 = items[j]
+                    if e1.IsSame(e2):
+                        # Found shared edge
+                        if f2 not in adjacency[f1]: adjacency[f1].append(f2)
+                        if f1 not in adjacency[f2]: adjacency[f2].append(f1)
+        
+        # 3. Find Connected Components
+        visited = set()
+        compounds = []
+        
+        from OCC.Core.BRep import BRep_Builder
+        from OCC.Core.TopoDS import TopoDS_Compound
+        
+        for face in feature_faces:
+            if face in visited:
+                continue
+            
+            # BFS
+            component = []
+            queue = [face]
+            visited.add(face)
+            
+            while queue:
+                curr = queue.pop(0)
+                component.append(curr)
+                
+                for neighbor in adjacency.get(curr, []):
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
+            
+            # Build Compound
+            builder = BRep_Builder()
+            comp = TopoDS_Compound()
+            builder.MakeCompound(comp)
+            for f in component:
+                builder.Add(comp, f)
+                
+            compounds.append(comp)
+            
+        return compounds
 
     def _align_part(self, shape):
         """
