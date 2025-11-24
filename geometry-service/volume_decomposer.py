@@ -186,7 +186,7 @@ class VolumeDecomposer:
         # So we want the Local System to be defined by these axes.
         
         # Note: gp_Ax3 is required for SetDisplacement
-        from_system = gp_Ax3(center, z_dir, x_dir)
+        from_system = gp_Ax3(center, gp_Dir(z_dir), gp_Dir(x_dir))
         to_system = gp_Ax3(gp_Ax2()) # Global system at (0,0,0) with Z=Z, X=X
         
         trsf = gp_Trsf()
