@@ -110,21 +110,21 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       const colors = new Float32Array(vertexCount * 3);
       const baseColor = new THREE.Color(SOLID_COLOR);
       const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
-      
+
       // 🗺️ Translate BREP face IDs to vertex indices using face_mapping
       const highlightSet = new Set<number>();
-      
+
       if (meshData.face_mapping && highlightedFaceIds.length > 0) {
-        highlightedFaceIds.forEach(brepFaceId => {
+        highlightedFaceIds.forEach((brepFaceId) => {
           const mapping = meshData.face_mapping![brepFaceId];
-          
+
           console.log(`🗺️ Mapping for face ${brepFaceId}:`, {
             hasMapping: !!mapping,
             triangle_indices_length: mapping?.triangle_indices?.length,
             triangle_range: mapping?.triangle_range,
-            sample_indices: mapping?.triangle_indices?.slice(0, 5)
+            sample_indices: mapping?.triangle_indices?.slice(0, 5),
           });
-          
+
           if (mapping) {
             // Prioritize triangle_range if it exists
             if (mapping.triangle_range) {
@@ -142,7 +142,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             }
             // Fallback to triangle_indices if no range
             else if (mapping.triangle_indices) {
-              mapping.triangle_indices.forEach(triIdx => {
+              mapping.triangle_indices.forEach((triIdx) => {
                 if (meshData.indices) {
                   const v0 = meshData.indices[triIdx * 3 + 0];
                   const v1 = meshData.indices[triIdx * 3 + 1];
@@ -155,14 +155,14 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             }
           }
         });
-        
+
         console.log("🗺️ Face mapping translation:", {
           brepFaceIds: highlightedFaceIds,
           vertexIndicesCount: highlightSet.size,
           triangleCount: Math.floor(highlightSet.size / 3),
-          percentageOfMesh: ((highlightSet.size / (meshData.vertices.length / 3)) * 100).toFixed(2) + '%',
+          percentageOfMesh: ((highlightSet.size / (meshData.vertices.length / 3)) * 100).toFixed(2) + "%",
           hasFaceMapping: !!meshData.face_mapping,
-          mappedFaces: highlightedFaceIds.filter(id => meshData.face_mapping![id])
+          mappedFaces: highlightedFaceIds.filter((id) => meshData.face_mapping![id]),
         });
       }
 
@@ -179,7 +179,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             colors[vertexIdx * 3 + 2] = color.b;
           }
         }
-        
+
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else if (highlightSet.size > 0) {
@@ -191,7 +191,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           colors[i * 3 + 1] = baseColor.g;
           colors[i * 3 + 2] = baseColor.b;
         }
-        
+
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else {
@@ -201,7 +201,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           colors[i * 3 + 1] = baseColor.g;
           colors[i * 3 + 2] = baseColor.b;
         }
-        
+
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
@@ -439,8 +439,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       }
 
       const highlightedTriangleIndices = new Set<number>();
-      
-      highlightedFaceIds.forEach(brepFaceId => {
+
+      highlightedFaceIds.forEach((brepFaceId) => {
         const mapping = meshData.face_mapping![brepFaceId];
         if (mapping) {
           if (mapping.triangle_range) {
@@ -449,7 +449,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               highlightedTriangleIndices.add(triIdx);
             }
           } else if (mapping.triangle_indices) {
-            mapping.triangle_indices.forEach(triIdx => {
+            mapping.triangle_indices.forEach((triIdx) => {
               highlightedTriangleIndices.add(triIdx);
             });
           }
@@ -460,11 +460,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
       // Extract only highlighted triangles
       const indices: number[] = [];
-      highlightedTriangleIndices.forEach(triIdx => {
+      highlightedTriangleIndices.forEach((triIdx) => {
         indices.push(
           meshData.indices![triIdx * 3 + 0],
           meshData.indices![triIdx * 3 + 1],
-          meshData.indices![triIdx * 3 + 2]
+          meshData.indices![triIdx * 3 + 2],
         );
       });
 
@@ -473,7 +473,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       geo.setAttribute("normal", geometry.attributes.normal);
       geo.setIndex(indices);
       geo.computeBoundingSphere();
-      
+
       return geo;
     })();
 
@@ -484,7 +484,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           <meshStandardMaterial
             {...materialProps}
             vertexColors={true}
-            flatShading={false}
+            flatShading={true}
             toneMapped={false}
             metalness={0.1}
             roughness={0.6}
