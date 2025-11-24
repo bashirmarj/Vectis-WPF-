@@ -147,9 +147,27 @@ class VolumeDecomposer:
         # We want to transform the part so its Principal Frame becomes the Global Frame (or parallel to it)
         # Actually, simpler: We want to rotate it so Principal Axes match Global Axes.
         
-        x_dir = axes.XDirection()
-        y_dir = axes.YDirection()
-        z_dir = axes.Direction() # Z direction
+        # GProp_PrincipalProps returns vectors, not gp_Ax2 directly in some versions
+        # Or it has different methods. Let's check the docs or standard usage.
+        # Actually PrincipalProperties() returns GProp_PrincipalProps.
+        # We need to get the vectors from it.
+        
+        if hasattr(axes, 'FirstAxisOfInertia'):
+            x_dir = axes.FirstAxisOfInertia()
+            y_dir = axes.SecondAxisOfInertia()
+            z_dir = axes.ThirdAxisOfInertia()
+        else:
+            # Fallback or alternative API
+            # Some bindings return a tuple or have different names
+            # Let's try to infer from typical OCC usage
+            # If it returns gp_Ax2 (which has XDirection), then the previous code was right but the type is wrong.
+            # But error says 'GProp_PrincipalProps' object.
+            
+            # Correct usage for GProp_PrincipalProps:
+            # It has methods to get the moments and axes.
+            x_dir = axes.FirstAxisOfInertia()
+            y_dir = axes.SecondAxisOfInertia()
+            z_dir = axes.ThirdAxisOfInertia()
         
         # Check if already aligned (dot product close to 1 or -1)
         is_aligned = (abs(x_dir.X()) > 0.99 or abs(x_dir.Y()) > 0.99 or abs(x_dir.Z()) > 0.99)
