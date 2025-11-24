@@ -182,37 +182,24 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
-      } else {
-        // Solid color mode with optional highlighting
-        let matchedVertices = 0;
-        
+      } else if (highlightSet.size > 0) {
+        // When highlighting is active, base mesh gets SOLID color only (no vertex color variation)
+        // The separate highlight layer handles the blue highlighting
+        // This prevents visible triangulation from color bleeding
         for (let i = 0; i < vertexCount; i++) {
-          let finalColor = baseColor;
-          
-          // Check if this vertex index is in the highlight set
-          if (highlightSet.size > 0 && highlightSet.has(i)) {
-            finalColor = highlightColorObj;
-            matchedVertices++;
-          }
-          
-          colors[i * 3 + 0] = finalColor.r;
-          colors[i * 3 + 1] = finalColor.g;
-          colors[i * 3 + 2] = finalColor.b;
+          colors[i * 3 + 0] = baseColor.r;
+          colors[i * 3 + 1] = baseColor.g;
+          colors[i * 3 + 2] = baseColor.b;
         }
         
-        // ✅ Log matching results (only if highlighting requested)
-        if (highlightSet.size > 0) {
-          console.log("🎯 VERTEX MATCHING:", {
-            totalVertices: vertexCount,
-            matchedVertices,
-            matchPercentage: ((matchedVertices / vertexCount) * 100).toFixed(2) + "%",
-            success: matchedVertices > 0,
-            highlightColor: highlightColor,
-            baseColorRGB: `rgb(${Math.round(baseColor.r * 255)}, ${Math.round(baseColor.g * 255)}, ${Math.round(baseColor.b * 255)})`,
-            highlightColorRGB: `rgb(${Math.round(highlightColorObj.r * 255)}, ${Math.round(highlightColorObj.g * 255)}, ${Math.round(highlightColorObj.b * 255)})`,
-            sampleHighlightedVertex: Array.from(highlightSet)[0],
-            colorBufferSet: true
-          });
+        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        geometry.attributes.color.needsUpdate = true;
+      } else {
+        // No highlighting - solid color mode
+        for (let i = 0; i < vertexCount; i++) {
+          colors[i * 3 + 0] = baseColor.r;
+          colors[i * 3 + 1] = baseColor.g;
+          colors[i * 3 + 2] = baseColor.b;
         }
         
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
