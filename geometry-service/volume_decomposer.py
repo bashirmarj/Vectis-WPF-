@@ -125,7 +125,10 @@ class VolumeDecomposer:
                 'stock_bbox': stock_bbox,
                 'volume_mm3': vol,
                 'units': self.detected_units,
-                'transform': transform # Store transform if we need to map back
+                # 'transform': transform  <-- This caused the JSON error
+                # We don't need to send the full OCC transform object to the frontend/JSON
+                # If we need it for mapping, we should use it inside the service before serialization
+                # For now, let's just omit it from the JSON output or convert to matrix
             })
             
         return results
