@@ -214,6 +214,54 @@ class VolumeDecomposer:
         return transformer.Shape(), trsf
 
         
+    def _compute_stock_envelope(self, part_shape):
+        """
+        Compute minimal bounding box for stock material.
+        
+        Returns:
+            dict: {
+                'dx', 'dy', 'dz': dimensions in mm
+                'xmin', 'ymin', 'zmin': origin in mm
+                'center': (x, y, z) in mm
+            }
+        """
+        # Get raw bounding box from OCC
+        bbox = Bnd_Box()
+        brepbndlib.Add(part_shape, bbox)
+        xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+        
+        # Detect units from diagonal length
+        dx = xmax - xmin
+        dy = ymax - ymin
+        dz = zmax - zmin
+        diagonal = np.sqrt(dx**2 + dy**2 + dz**2)
+        
+        logger.info(f"    Bounding box diagonal (raw OCC): {diagonal:.4f}")
+        
+        # Unit detection: Default to Millimeters (standard for STEP)
+        self.detected_units = "mm"
+        scale_to_mm = 1.0
+        logger.info(f"    Assumed MILLIMETERS (diagonal {diagonal:.4f})")
+        
+        # Convert to mm
+        return {
+            'dx': dx * scale_to_mm,
+            'dy': dy * scale_to_mm,
+            'dz': dz * scale_to_mm,
+            'xmin': xmin * scale_to_mm,
+            'ymin': ymin * scale_to_mm,
+            'zmin': zmin * scale_to_mm,
+            'xmax': xmax * scale_to_mm,
+            'ymax': ymax * scale_to_mm,
+            'zmax': zmax * scale_to_mm,
+            'center': (
+                (xmin + xmax) / 2 * scale_to_mm,
+                (ymin + ymax) / 2 * scale_to_mm,
+                (zmin + zmax) / 2 * scale_to_mm
+            ),
+            'scale_to_mm': scale_to_mm
+        }
+
     def _create_stock_box(self, bbox_dict):
         """
         Create stock block solid from bounding box.
