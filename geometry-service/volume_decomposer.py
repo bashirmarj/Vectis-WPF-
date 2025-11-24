@@ -172,15 +172,6 @@ class VolumeDecomposer:
             y_dir = axes.SecondAxisOfInertia()
             z_dir = axes.ThirdAxisOfInertia()
         
-        # Check if already aligned (dot product close to 1 or -1)
-        is_aligned = (abs(x_dir.X()) > 0.99 or abs(x_dir.Y()) > 0.99 or abs(x_dir.Z()) > 0.99)
-        
-        if is_aligned:
-            logger.info("  Part is already aligned with global axes.")
-            return shape, gp_Trsf()
-            
-        logger.info("  Part is rotated. Aligning to principal axes...")
-        
         # Construct transformation
         # We transform the coordinate system defined by axes to the global system
         trsf = gp_Trsf()
