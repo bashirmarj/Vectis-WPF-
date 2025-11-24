@@ -204,7 +204,7 @@ class FilletRecognizer:
     def __init__(self, tolerance: float = 1e-6):
         self.tolerance = tolerance
         self.min_fillet_radius = 0.1     # 0.1mm
-        self.max_fillet_radius = 100.0   # 100mm (FIXED: was 0.100 which meant 0.1mm in current scaling)
+        self.max_fillet_radius = 3.0     # 3mm (realistic max fillet radius - anything larger is likely a hole/shaft)
         self.convex_angle_min = 170.0    # degrees (FIXED: was 185.0, lowered to allow tangent/smooth edges)
         self.tangent_tolerance = 5.0     # degrees
         self.curvature_tolerance = 0.1   # 1/m
