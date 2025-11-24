@@ -472,7 +472,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         <mesh ref={meshRef} geometry={geometry} castShadow={false} receiveShadow>
           <meshStandardMaterial
             {...materialProps}
-            vertexColors={true}
+            color={SOLID_COLOR}
+            vertexColors={topologyColors}
             flatShading={false}
             toneMapped={false}
             metalness={0.1}
