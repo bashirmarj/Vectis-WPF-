@@ -445,6 +445,51 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       [featureEdgesGeometry],
     );
 
+    // Create highlighted geometry (only highlighted triangles)
+    const highlightedGeometry = (() => {
+      if (!meshData?.indices || highlightedFaceIds.length === 0 || !meshData.face_mapping) {
+        return null;
+      }
+
+      const highlightedTriangleIndices = new Set<number>();
+      
+      highlightedFaceIds.forEach(brepFaceId => {
+        const mapping = meshData.face_mapping![brepFaceId];
+        if (mapping) {
+          if (mapping.triangle_range) {
+            const [start, end] = mapping.triangle_range;
+            for (let triIdx = start; triIdx <= end; triIdx++) {
+              highlightedTriangleIndices.add(triIdx);
+            }
+          } else if (mapping.triangle_indices) {
+            mapping.triangle_indices.forEach(triIdx => {
+              highlightedTriangleIndices.add(triIdx);
+            });
+          }
+        }
+      });
+
+      if (highlightedTriangleIndices.size === 0) return null;
+
+      // Extract only highlighted triangles
+      const indices: number[] = [];
+      highlightedTriangleIndices.forEach(triIdx => {
+        indices.push(
+          meshData.indices![triIdx * 3 + 0],
+          meshData.indices![triIdx * 3 + 1],
+          meshData.indices![triIdx * 3 + 2]
+        );
+      });
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", geometry.attributes.position);
+      geo.setAttribute("normal", geometry.attributes.normal);
+      geo.setIndex(indices);
+      geo.computeBoundingSphere();
+      
+      return geo;
+    })();
+
     return (
       <group>
         {/* Mesh surface - DISABLED castShadow to prevent self-shadowing artifacts */}
@@ -458,6 +503,27 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             roughness={0.6}
           />
         </mesh>
+
+        {/* Highlighted faces overlay - emissive for guaranteed visibility */}
+        {highlightedGeometry && displayStyle === "solid" && (
+          <mesh geometry={highlightedGeometry}>
+            <meshStandardMaterial
+              color={highlightColor}
+              emissive={highlightColor}
+              emissiveIntensity={highlightIntensity}
+              metalness={0.3}
+              roughness={0.4}
+              toneMapped={false}
+              transparent={true}
+              opacity={0.9}
+              depthTest={true}
+              depthWrite={false}
+              polygonOffset={true}
+              polygonOffsetFactor={-20}
+              polygonOffsetUnits={-10}
+            />
+          </mesh>
+        )}
 
         {/* Invisible depth-writing mesh for wireframe occlusion */}
         {displayStyle === "wireframe" && !showHiddenEdges && (
