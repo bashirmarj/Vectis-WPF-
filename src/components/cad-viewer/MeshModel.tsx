@@ -447,7 +447,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           <meshStandardMaterial
             {...materialProps}
             color={topologyColors ? "#ffffff" : SOLID_COLOR}
-            vertexColors={topologyColors || highlightedFaceIds.length > 0}
+            vertexColors={true}
             flatShading={true}
             toneMapped={false}
             metalness={0.1}
