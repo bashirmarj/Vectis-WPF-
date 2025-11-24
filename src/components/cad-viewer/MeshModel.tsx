@@ -102,72 +102,15 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     })();
 
-    // Apply vertex colors to indexed geometry with highlighting support
+    // Only apply vertex colors when topology mode is active, otherwise remove for smooth shading
     useEffect(() => {
       if (!geometry) return;
 
-      const vertexCount = meshData.vertices.length / 3;
-      const colors = new Float32Array(vertexCount * 3);
-      const baseColor = new THREE.Color(SOLID_COLOR);
-      const highlightColorObj = new THREE.Color(highlightColor || "#3B82F6");
-      
-      // 🗺️ Translate BREP face IDs to vertex indices using face_mapping
-      const highlightSet = new Set<number>();
-      
-      if (meshData.face_mapping && highlightedFaceIds.length > 0) {
-        highlightedFaceIds.forEach(brepFaceId => {
-          const mapping = meshData.face_mapping![brepFaceId];
-          
-          console.log(`🗺️ Mapping for face ${brepFaceId}:`, {
-            hasMapping: !!mapping,
-            triangle_indices_length: mapping?.triangle_indices?.length,
-            triangle_range: mapping?.triangle_range,
-            sample_indices: mapping?.triangle_indices?.slice(0, 5)
-          });
-          
-          if (mapping) {
-            // Prioritize triangle_range if it exists
-            if (mapping.triangle_range) {
-              const [start, end] = mapping.triangle_range;
-              for (let triIdx = start; triIdx <= end; triIdx++) {
-                if (meshData.indices) {
-                  const v0 = meshData.indices[triIdx * 3 + 0];
-                  const v1 = meshData.indices[triIdx * 3 + 1];
-                  const v2 = meshData.indices[triIdx * 3 + 2];
-                  highlightSet.add(v0);
-                  highlightSet.add(v1);
-                  highlightSet.add(v2);
-                }
-              }
-            }
-            // Fallback to triangle_indices if no range
-            else if (mapping.triangle_indices) {
-              mapping.triangle_indices.forEach(triIdx => {
-                if (meshData.indices) {
-                  const v0 = meshData.indices[triIdx * 3 + 0];
-                  const v1 = meshData.indices[triIdx * 3 + 1];
-                  const v2 = meshData.indices[triIdx * 3 + 2];
-                  highlightSet.add(v0);
-                  highlightSet.add(v1);
-                  highlightSet.add(v2);
-                }
-              });
-            }
-          }
-        });
+      if (topologyColors) {
+        // Topology color mode - apply vertex colors
+        const vertexCount = meshData.vertices.length / 3;
+        const colors = new Float32Array(vertexCount * 3);
         
-        console.log("🗺️ Face mapping translation:", {
-          brepFaceIds: highlightedFaceIds,
-          vertexIndicesCount: highlightSet.size,
-          triangleCount: Math.floor(highlightSet.size / 3),
-          percentageOfMesh: ((highlightSet.size / (meshData.vertices.length / 3)) * 100).toFixed(2) + '%',
-          hasFaceMapping: !!meshData.face_mapping,
-          mappedFaces: highlightedFaceIds.filter(id => meshData.face_mapping![id])
-        });
-      }
-
-      if (topologyColors && !highlightSet.size) {
-        // Topology color mode (only when no highlighting)
         if (meshData.vertex_colors && meshData.vertex_colors.length > 0) {
           for (let vertexIdx = 0; vertexIdx < vertexCount; vertexIdx++) {
             const faceType = meshData.vertex_colors[vertexIdx] || "default";
@@ -183,18 +126,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else {
-        // Solid red base color for all vertices (no variation)
-        // Highlight layer handles blue overlay separately
-        for (let i = 0; i < vertexCount; i++) {
-          colors[i * 3 + 0] = baseColor.r;
-          colors[i * 3 + 1] = baseColor.g;
-          colors[i * 3 + 2] = baseColor.b;
-        }
-        
-        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-        geometry.attributes.color.needsUpdate = true;
+        // Remove vertex colors entirely for smooth material-based shading
+        geometry.deleteAttribute("color");
       }
-    }, [geometry, topologyColors, meshData.vertex_colors, meshData.face_mapping, highlightedFaceIds, highlightColor]);
+    }, [geometry, topologyColors, meshData.vertex_colors]);
 
     // Pre-compute feature edges (for solid mode) - NO CACHING
     const featureEdgesGeometry = (() => {
