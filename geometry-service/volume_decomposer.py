@@ -142,14 +142,19 @@ class VolumeDecomposer:
 
     def _decompose_by_surfaces(self, removal_volume, stock_bbox):
         """
-        Decompose a fused removal volume into features by analyzing surface connectivity.
-        1. Identify "Stock Faces" (faces on the BBox boundary).
-        2. Remove Stock Faces.
-        3. Group remaining "Feature Faces" into connected components.
+        Decompose removal volume using SEMANTIC DECOMPOSITION.
+        
+        Strategy:
+        1. Identify cylindrical/conical faces (potential holes)
+        2. Group co-axial cylinders into hole features
+        3. Remaining faces form the border recess/step
         """
-        # 1. Map faces to Stock Boundary
+        # 1. Classify all faces
         stock_faces = []
-        feature_faces = []
+        cylindrical_faces = []
+        conical_faces = []
+        planar_faces = []
+        other_faces = []
         
         # Tolerances
         tol = 1e-3
@@ -158,122 +163,142 @@ class VolumeDecomposer:
         
         exp = TopExp_Explorer(removal_volume, TopAbs_FACE)
         while exp.More():
-            face = exp.Current()
+            face = topods.Face(exp.Current())
             surf = BRepAdaptor_Surface(face)
-            is_stock = False
+            stype = surf.GetType()
             
-            if surf.GetType() == GeomAbs_Plane:
-                pln = surf.Plane()
-                loc = pln.Location()
-                # Check if plane is on the boundary
-                # We check the distance of the plane to the bbox limits
-                # Note: This is a heuristic. A robust way is to check all vertices.
-                
-                # Check if all vertices are on boundary?
-                # Simpler: Check if the underlying surface is coincident with BBox planes.
-                
-                # We can check the plane equation Ax+By+Cz+D=0
-                # But BRepAdaptor gives us the surface.
-                
-                # Let's check if the face is ON the boundary.
-                # We can sample a point on the face.
-                pnt = BRepAdaptor_Surface(face).Value(0,0) # UV origin
-                x, y, z = pnt.X(), pnt.Y(), pnt.Z()
-                
-                on_xmin = abs(x - xmin) < tol
-                on_xmax = abs(x - xmax) < tol
-                on_ymin = abs(y - ymin) < tol
-                on_ymax = abs(y - ymax) < tol
-                on_zmin = abs(z - zmin) < tol
-                on_zmax = abs(z - zmax) < tol
-                
-                if on_xmin or on_xmax or on_ymin or on_ymax or on_zmin or on_zmax:
-                    is_stock = True
+            # Check if stock face (on boundary)
+            is_stock = False
+            if stype == GeomAbs_Plane:
+                # Sample a point to check if on boundary
+                try:
+                    pnt = surf.Value(0, 0)
+                    x, y, z = pnt.X(), pnt.Y(), pnt.Z()
+                    
+                    on_xmin = abs(x - xmin) < tol
+                    on_xmax = abs(x - xmax) < tol
+                    on_ymin = abs(y - ymin) < tol
+                    on_ymax = abs(y - ymax) < tol
+                    on_zmin = abs(z - zmin) < tol
+                    on_zmax = abs(z - zmax) < tol
+                    
+                    if on_xmin or on_xmax or on_ymin or on_ymax or on_zmin or on_zmax:
+                        is_stock = True
+                except:
+                    pass
             
             if is_stock:
                 stock_faces.append(face)
+            elif stype == GeomAbs_Cylinder:
+                cyl = surf.Cylinder()
+                cylindrical_faces.append({
+                    'face': face,
+                    'radius': cyl.Radius(),
+                    'axis_origin': cyl.Location(),
+                    'axis_direction': cyl.Axis().Direction()
+                })
+            elif stype == GeomAbs_Cone:
+                conical_faces.append({'face': face, 'surf': surf})
+            elif stype == GeomAbs_Plane:
+                planar_faces.append(face)
             else:
-                feature_faces.append(face)
+                other_faces.append(face)
                 
             exp.Next()
             
-        logger.info(f"  Surface Analysis: {len(stock_faces)} Stock Faces, {len(feature_faces)} Feature Faces")
+        logger.info(f"  Face Classification: {len(stock_faces)} Stock, {len(cylindrical_faces)} Cylindrical, {len(planar_faces)} Planar, {len(other_faces)} Other")
         
-        # 2. Build Connectivity Graph of Feature Faces
-        # We use a map: Edge -> [Faces]
-        edge_map = {}
+        # 2. Group cylindrical faces into holes (by co-axiality)
+        hole_groups = []
+        used_cylinders = set()
         
-        for face in feature_faces:
-            exp_e = TopExp_Explorer(face, TopAbs_EDGE)
-            while exp_e.More():
-                edge = topods.Edge(exp_e.Current())
-                # We need a hashable key for the edge. 
-                # TopoDS_Shape doesn't hash by geometry identity.
-                # We can use the hash code or map via TColStd_MapOfShape if available.
-                # Or just use the pointer/hash if Python wrapper supports it.
-                # OCC.Core.TopoDS.TopoDS_Shape.__hash__ works?
+        for i, cyl1 in enumerate(cylindrical_faces):
+            if i in used_cylinders:
+                continue
                 
-                # Better: Use a spatial map or just brute force for now (N is small).
-                # Actually, we can use the 'IsSame' method.
+            # Start a new hole group
+            hole_group = [cyl1]
+            used_cylinders.add(i)
+            
+            # Find co-axial cylinders
+            for j, cyl2 in enumerate(cylindrical_faces):
+                if j in used_cylinders or j == i:
+                    continue
+                    
+                # Check if axes are parallel and close
+                dir1 = cyl1['axis_direction']
+                dir2 = cyl2['axis_direction']
                 
-                # Optimization: Map Edge Hash -> List of (Edge, Face)
-                h = edge.HashCode(1000000)
-                if h not in edge_map:
-                    edge_map[h] = []
-                edge_map[h].append((edge, face))
+                # Dot product should be close to 1 or -1
+                dot = abs(dir1.X() * dir2.X() + dir1.Y() * dir2.Y() + dir1.Z() * dir2.Z())
                 
-                exp_e.Next()
-                
-        # Build Adjacency: Face -> [Neighbor Faces]
-        adjacency = {f: [] for f in feature_faces}
+                if dot > 0.95:  # Parallel axes
+                    # Check if axes are close in space (same hole)
+                    # Distance between two parallel lines
+                    p1 = cyl1['axis_origin']
+                    p2 = cyl2['axis_origin']
+                    
+                    # Vector from p1 to p2
+                    dx = p2.X() - p1.X()
+                    dy = p2.Y() - p1.Y()
+                    dz = p2.Z() - p1.Z()
+                    dist_vec_mag = (dx**2 + dy**2 + dz**2)**0.5
+                    
+                    # If origins are very close, they're the same hole
+                    if dist_vec_mag < (max(cyl1['radius'], cyl2['radius']) * 3):
+                        hole_group.append(cyl2)
+                        used_cylinders.add(j)
+                        
+            hole_groups.append(hole_group)
+            
+        logger.info(f"  Identified {len(hole_groups)} hole groups from cylindrical faces")
         
-        # Iterate over potential shared edges
-        for h, items in edge_map.items():
-            # Check for actual identity (IsSame)
-            for i in range(len(items)):
-                e1, f1 = items[i]
-                for j in range(i+1, len(items)):
-                    e2, f2 = items[j]
-                    if e1.IsSame(e2):
-                        # Found shared edge
-                        if f2 not in adjacency[f1]: adjacency[f1].append(f2)
-                        if f1 not in adjacency[f2]: adjacency[f2].append(f1)
-        
-        # 3. Find Connected Components
-        visited = set()
-        compounds = []
-        
+        # 3. Build hole compounds
         from OCC.Core.BRep import BRep_Builder
         from OCC.Core.TopoDS import TopoDS_Compound
         
-        for face in feature_faces:
-            if face in visited:
-                continue
-            
-            # BFS
-            component = []
-            queue = [face]
-            visited.add(face)
-            
-            while queue:
-                curr = queue.pop(0)
-                component.append(curr)
-                
-                for neighbor in adjacency.get(curr, []):
-                    if neighbor not in visited:
-                        visited.add(neighbor)
-                        queue.append(neighbor)
-            
-            # Build Compound
+        hole_compounds = []
+        hole_cylinder_faces = set()
+        
+        for hole_group in hole_groups:
             builder = BRep_Builder()
             comp = TopoDS_Compound()
             builder.MakeCompound(comp)
-            for f in component:
-                builder.Add(comp, f)
-                
-            compounds.append(comp)
             
-        return compounds
+            for cyl_info in hole_group:
+                builder.Add(comp, cyl_info['face'])
+                hole_cylinder_faces.add(id(cyl_info['face']))
+                
+            # Add adjacent planar faces (caps/annular faces) if they're near the hole
+            # For now, skip this - just use cylinders
+            
+            hole_compounds.append(comp)
+            
+        # 4. Build a "recess" compound from remaining faces
+        builder = BRep_Builder()
+        recess_comp = TopoDS_Compound()
+        builder.MakeCompound(recess_comp)
+        
+        recess_face_count = 0
+        for face in planar_faces:
+            if id(face) not in hole_cylinder_faces:
+                builder.Add(recess_comp, face)
+                recess_face_count += 1
+                
+        for info in conical_faces:
+            builder.Add(recess_comp, info['face'])
+            recess_face_count += 1
+            
+        for face in other_faces:
+            builder.Add(recess_comp, face)
+            recess_face_count += 1
+            
+        # Only add recess if it has faces
+        if recess_face_count > 0:
+            hole_compounds.append(recess_comp)
+            logger.info(f"  Border Recess: {recess_face_count} faces")
+            
+        return hole_compounds
 
     def _align_part(self, shape):
         """
