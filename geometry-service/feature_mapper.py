@@ -74,7 +74,10 @@ class FeatureMapper:
             lump_area = lump_props.Mass()
             
             # Search in AAG nodes (which are the part faces)
-            for face_id, node in self.aag.nodes.items():
+            # Handle both dict and object AAG representations
+            nodes = self.aag.nodes if hasattr(self.aag, 'nodes') else self.aag['nodes']
+            
+            for face_id, node in nodes.items():
                 # Fast check: Area
                 if abs(node['area'] - lump_area) > 1e-3: # Tolerance
                     continue
