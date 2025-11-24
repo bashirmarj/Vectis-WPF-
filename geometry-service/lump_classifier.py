@@ -68,6 +68,42 @@ class LumpClassifier:
             
         return {'type': 'unknown', 'confidence': 0.0}
 
+    def _analyze_surfaces(self, shape) -> dict:
+        """Count and classify surfaces in the shape."""
+        stats = {
+            'plane': 0,
+            'cylinder': 0,
+            'cone': 0,
+            'other': 0,
+            'cylinders': [], # Store details
+            'planes': []
+        }
+        
+        exp = TopExp_Explorer(shape, TopAbs_FACE)
+        while exp.More():
+            face = exp.Current()
+            surf = BRepAdaptor_Surface(face)
+            stype = surf.GetType()
+            
+            if stype == GeomAbs_Plane:
+                stats['plane'] += 1
+                stats['planes'].append(face)
+            elif stype == GeomAbs_Cylinder:
+                stats['cylinder'] += 1
+                cyl = surf.Cylinder()
+                stats['cylinders'].append({
+                    'radius': cyl.Radius(),
+                    'axis': cyl.Axis().Direction()
+                })
+            elif stype == GeomAbs_Cone:
+                stats['cone'] += 1
+            else:
+                stats['other'] += 1
+                
+            exp.Next()
+            
+        return stats
+
     def _analyze_boundaries(self, shape, bbox) -> dict:
         """
         Check which faces of the lump align with the stock bounding box.
