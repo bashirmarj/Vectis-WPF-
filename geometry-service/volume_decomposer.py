@@ -174,8 +174,23 @@ class VolumeDecomposer:
         
         # Construct transformation
         # We transform the coordinate system defined by axes to the global system
+        
+        # 1. Get Center of Mass
+        center = props.CentreOfMass()
+        
+        # 2. Construct gp_Ax2 (Frame) from Principal Axes
+        # We use the Center of Mass as the origin, and the First/Third axes as Z/X (or similar)
+        # gp_Ax2(P, N, Vx) -> P: Origin, N: Main Direction (Z), Vx: X Direction
+        
+        # We'll align the First Axis (X_dir) to Global X, Second to Y, Third to Z.
+        # So we want the Local System to be defined by these axes.
+        
+        # Note: gp_Ax3 is required for SetDisplacement
+        from_system = gp_Ax3(center, z_dir, x_dir)
+        to_system = gp_Ax3(gp_Ax2()) # Global system at (0,0,0) with Z=Z, X=X
+        
         trsf = gp_Trsf()
-        trsf.SetDisplacement(axes, gp_Ax2()) # Transform FROM axes TO Global
+        trsf.SetDisplacement(from_system, to_system)
         
         transformer = BRepBuilderAPI_Transform(shape, trsf, True) # Copy=True
         aligned_shape = transformer.Shape()
