@@ -393,8 +393,116 @@ class FilletRecognizer:
     def _is_hole_not_fillet(
         self,
         candidate: GraphNode,
-        adjacency: Dict
+        adjacency: Dict,
+        nodes: List[GraphNode]
     ) -> bool:
+        """
+        Distinguish hole cylinder from fillet cylinder using PURE TOPOLOGY.
+        
+        Universal rules (no magic numbers, works on any part size):
+        - Holes have planar caps (blind) or openings (through)
+        - Fillets blend exactly 2 faces at convex/smooth edges
+        - Counterbores have multiple co-axial cylinders
+        
+        Returns True if this is a HOLE (reject as fillet), False otherwise.
+        """
+        candidate_id = candidate.id
+        
+        #  DIAGNOSTIC: Always log for first few candidates
+        is_first_ten = candidate_id < 20
+        
+        if candidate_id not in adjacency:
+            if is_first_ten:
+                logger.error(f"DIAGNOSTIC [{candidate_id}]: Not in adjacency map!")
+            return False  # Uncertain, let other checks decide
+        
+        adjacent_list = adjacency[candidate_id]
+        
+        # DIAGNOSTIC: Log adjacency structure for first candidate
+        if is_first_ten:
+            logger.error(f"DIAGNOSTIC [{candidate_id}]: Found {len(adjacent_list)} adjacent edges")
+            if len(adjacent_list) > 0:
+                sample = adjacent_list[0]
+                logger.error(f"DIAGNOSTIC [{candidate_id}]: Sample edge keys: {list(sample.keys())}")
+        
+        # Build node lookup by ID for fast access
+        node_by_id = {n.id: n for n in nodes}
+        
+        # Analyze adjacent face types
+        planar_count = 0
+        cylindrical_count = 0
+        other_count = 0
+        
+        for adj_edge in adjacent_list:
+            # FIX: Get neighbor face ID, then look up its surface type in nodes
+            neighbor_face_id = adj_edge.get('face_id')
+            if neighbor_face_id is None:
+                continue
+            
+            neighbor_node = node_by_id.get(neighbor_face_id)
+            if neighbor_node is None:
+                continue
+            
+            neighbor_type = str(neighbor_node.surface_type).lower()
+            
+            # DIAGNOSTIC: Log what we're seeing
+            if is_first_ten and planar_count == 0 and 'plane' in neighbor_type:
+                logger.error(f"DIAGNOSTIC [{candidate_id}]: Found planar neighbor face_{neighbor_face_id}! Type='{neighbor_type}'")
+            
+            if 'plane' in neighbor_type:
+                planar_count += 1
+            elif 'cylinder' in neighbor_type:
+                cylindrical_count += 1
+            else:
+                other_count += 1
+        
+        # DIAGNOSTIC: Log final counts
+        if is_first_ten:
+            logger.error(f"DIAGNOSTIC [{candidate_id}]: Neighbors - planar:{planar_count}, cylindrical:{cylindrical_count}, other:{other_count}")
+        
+        # =====================================================================
+        # TOPOLOGY RULE 1: Holes have planar caps
+        # =====================================================================
+        # Blind holes: cylinder + 1 planar cap (bottom)
+        # Through holes: cylinder + 2 planar caps (top + bottom) OR 0 if open
+        # Fillets: NEVER have planar neighbors (blend curves/edges, not caps)
+        if planar_count >= 1:
+            logger.error(f"HOLE DETECTED [{candidate_id}]: Has {planar_count} planar caps → REJECTING as fillet")
+            return True  # It's a hole
+        
+        # =====================================================================
+        # TOPOLOGY RULE 2: Counterbore holes have multiple co-axial cylinders
+        # =====================================================================
+        # Counterbore: Large diameter cylinder + smaller diameter cylinder(s)
+        # Fillets: Typically blend 2 non-cylindrical faces
+        if cylindrical_count >= 2:
+            logger.error(f"COUNTERBORE DETECTED [{candidate_id}]: Has {cylindrical_count} cylindrical neighbors → REJECTING as fillet")
+            return True  # Likely counterbore/stepped hole
+        
+        # =====================================================================
+        # TOPOLOGY RULE 3: Fillets blend exactly 2 faces
+        # =====================================================================
+        # True fillet pattern: cylinder blends 2 faces at convex edge
+        # Holes: Connect to 1 face (blind) or open to exterior (through)
+        total_neighbors = len(adjacent_list)
+        
+        if total_neighbors == 2 and planar_count == 0 and cylindrical_count == 0:
+            if is_first_ten:
+                logger.error(f"FILLET PATTERN [{candidate_id}]: Blends 2 non-cylindrical faces → ACCEPTING as fillet")
+            return False  # Likely a fillet (blends 2 non-cylindrical faces)
+        
+        # If it has many neighbors but no planar caps, uncertain
+        # Could be a complex blend or unusual geometry
+        if total_neighbors > 3:
+            if is_first_ten:
+                logger.error(f"COMPLEX GEOMETRY [{candidate_id}]: {total_neighbors} neighbors → Uncertain, defaulting to NOT a hole")
+            return False  # Too complex, likely not a simple hole
+        
+        # Default: uncertain (let other validation decide)
+        if is_first_ten:
+            logger.error(f"UNCERTAIN [{candidate_id}]: Defaulting to NOT a hole")
+        return False
+    
         """
         Distinguish hole cylinder from fillet cylinder using PURE TOPOLOGY.
         
@@ -548,7 +656,7 @@ class FilletRecognizer:
             return False
         
         # PRODUCTION FIX: Check if this is a hole cylinder (not a fillet)
-        if self._is_hole_not_fillet(candidate, adjacency):
+        if self._is_hole_not_fillet(candidate, adjacency, nodes):
             return False
         
         # Validate radius
