@@ -407,10 +407,22 @@ class FilletRecognizer:
         """
         candidate_id = candidate.id
         
+        #  DIAGNOSTIC: Always log for first few candidates
+        is_first_ten = candidate_id < 20
+        
         if candidate_id not in adjacency:
+            if is_first_ten:
+                logger.error(f"DIAGNOSTIC [{candidate_id}]: Not in adjacency map!")
             return False  # Uncertain, let other checks decide
         
         adjacent_list = adjacency[candidate_id]
+        
+        # DIAGNOSTIC: Log adjacency structure for first candidate
+        if is_first_ten:
+            logger.error(f"DIAGNOSTIC [{candidate_id}]: Found {len(adjacent_list)} adjacent edges")
+            if len(adjacent_list) > 0:
+                sample = adjacent_list[0]
+                logger.error(f"DIAGNOSTIC [{candidate_id}]: Sample edge keys: {list(sample.keys())}")
         
         # Analyze adjacent face types
         planar_count = 0
@@ -420,12 +432,20 @@ class FilletRecognizer:
         for adj_edge in adjacent_list:
             neighbor_type = str(adj_edge.get('surface_type', '')).lower()
             
+            # DIAGNOSTIC: Log what we're seeing
+            if is_first_ten and planar_count == 0 and 'plane' in neighbor_type:
+                logger.error(f"DIAGNOSTIC [{candidate_id}]: Found planar neighbor! Type='{neighbor_type}'")
+            
             if 'plane' in neighbor_type:
                 planar_count += 1
             elif 'cylinder' in neighbor_type:
                 cylindrical_count += 1
             else:
                 other_count += 1
+        
+        # DIAGNOSTIC: Log final counts
+        if is_first_ten:
+            logger.error(f"DIAGNOSTIC [{candidate_id}]: Neighbors - planar:{planar_count}, cylindrical:{cylindrical_count}, other:{other_count}")
         
         # =====================================================================
         # TOPOLOGY RULE 1: Holes have planar caps
@@ -434,6 +454,7 @@ class FilletRecognizer:
         # Through holes: cylinder + 2 planar caps (top + bottom) OR 0 if open
         # Fillets: NEVER have planar neighbors (blend curves/edges, not caps)
         if planar_count >= 1:
+            logger.error(f"HOLE DETECTED [{candidate_id}]: Has {planar_count} planar caps → REJECTING as fillet")
             return True  # It's a hole
         
         # =====================================================================
@@ -442,6 +463,7 @@ class FilletRecognizer:
         # Counterbore: Large diameter cylinder + smaller diameter cylinder(s)
         # Fillets: Typically blend 2 non-cylindrical faces
         if cylindrical_count >= 2:
+            logger.error(f"COUNTERBORE DETECTED [{candidate_id}]: Has {cylindrical_count} cylindrical neighbors → REJECTING as fillet")
             return True  # Likely counterbore/stepped hole
         
         # =====================================================================
@@ -452,14 +474,20 @@ class FilletRecognizer:
         total_neighbors = len(adjacent_list)
         
         if total_neighbors == 2 and planar_count == 0 and cylindrical_count == 0:
+            if is_first_ten:
+                logger.error(f"FILLET PATTERN [{candidate_id}]: Blends 2 non-cylindrical faces → ACCEPTING as fillet")
             return False  # Likely a fillet (blends 2 non-cylindrical faces)
         
         # If it has many neighbors but no planar caps, uncertain
         # Could be a complex blend or unusual geometry
         if total_neighbors > 3:
+            if is_first_ten:
+                logger.error(f"COMPLEX GEOMETRY [{candidate_id}]: {total_neighbors} neighbors → Uncertain, defaulting to NOT a hole")
             return False  # Too complex, likely not a simple hole
         
         # Default: uncertain (let other validation decide)
+        if is_first_ten:
+            logger.error(f"UNCERTAIN [{candidate_id}]: Defaulting to NOT a hole")
         return False
     
     def _is_fillet_surface(
