@@ -637,17 +637,54 @@ def analyze_aag():
             builder = AAGGraphBuilder(shape)
             aag = builder.build()
             
-            # === STEP 4: Feature Recognition (Hybrid) ===
+            # === STEP 4: Feature Recognition (Modular Hybrid) ===
             features = []
             
-            # A. Surface Features (Fillets/Chamfers) using AAG
-            # We keep AAG for these because they are surface modifications
+            # BLOCK 1: Geometric Recognition (Holes & Fillets)
+            # Simple edge closure analysis - no AAG needed, 100% confidence
             try:
-                logger.info(f"[{correlation_id}] 🔍 Running Surface Recognition (Fillets/Chamfers)")
-                fillet_recognizer = FilletRecognizer()
-                fillet_features = fillet_recognizer.recognize_fillets(aag)
-                features.extend(fillet_features)
-                logger.info(f"[{correlation_id}] ✅ Found {len(fillet_features)} surface features")
+                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes/Fillets)")
+                from aag_pattern_engine.geometric_recognizer import recognize_simple_features
+                
+                holes_geo, fillets_geo = recognize_simple_features(shape)
+                
+                # Convert to feature format (simple dict for now)
+                for hole_info in holes_geo:
+                    features.append({
+                        'type': 'hole',
+                        'method': 'geometric',  # Not fillet recognizer
+                        'face_ids': [hole_info['face_id']],
+                        'radius': hole_info['radius'],
+                        'confidence': 1.0
+                    })
+                
+                for fillet_info in fillets_geo:
+                    features.append({
+                        'type': 'fillet',
+                        'method': 'geometric',  # Geometric, not AAG
+                        'face_ids': [fillet_info['face_id']],
+                        'radius': fillet_info['radius'],
+                        'confidence': 1.0
+                    })
+                
+                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets")
+                
+            except Exception as e:
+                logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
+                errors.append(f"Geometric recognition error: {str(e)}")
+            
+            # BLOCK 2: Surface Features (Complex fillets using AAG)
+            # Skip old FilletRecognizer for now - geometric recognizer handles it
+            # TODO: Use AAG for complex/variable radius fillets later
+            
+            # A. Surface Features (Fillets/Chamfers) using AAG
+            # DISABLED - Now handled by geometric recognizer
+            # try:
+            #     logger.info(f"[{correlation_id}] 🔍 Running Surface Recognition (Fillets/Chamfers)")
+            #     fillet_recognizer = FilletRecognizer()
+            #     fillet_features = fillet_recognizer.recognize_fillets(aag)
+            #     features.extend(fillet_features)
+            #     logger.info(f"[{correlation_id}] ✅ Found {len(fillet_features)} surface features")
             except Exception as e:
                 logger.error(f"[{correlation_id}] ❌ Surface recognition failed: {e}")
                 errors.append(f"Surface recognition failed: {str(e)}")
