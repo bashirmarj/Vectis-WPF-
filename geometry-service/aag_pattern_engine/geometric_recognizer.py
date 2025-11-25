@@ -129,15 +129,59 @@ def classify_cylinder(cyl_info: Dict) -> str:
         'hole', 'fillet', or 'unknown'
     """
     face = cyl_info['face']
+    face_id = cyl_info['face_id']
     
-    has_closed = has_closed_circular_edge(face)
-    has_arc = has_arc_edge(face)
+    # DIAGNOSTIC: Log edge details for first few and specific candidates
+    is_target = face_id == 66 or face_id < 5
     
-    if has_closed and not has_arc:
+    explorer = TopExp_Explorer(face, TopAbs_EDGE)
+    edge_count = 0
+    full_circles = 0
+    arcs = 0
+    
+    if is_target:
+        logger.info(f"--- Analyzing Cylinder {face_id} ---")
+    
+    while explorer.More():
+        edge_shape = topods.Edge(explorer.Current())
+        edge = Edge(edge_shape)
+        edge_count += 1
+        
+        curve_adaptor = BRepAdaptor_Curve(edge_shape)
+        curve_type = curve_adaptor.GetType()
+        
+        if curve_type == GeomAbs_Circle:
+            is_closed_edge = edge.closed_edge()
+            is_closed_curve = edge.closed_curve()
+            
+            first = curve_adaptor.FirstParameter()
+            last = curve_adaptor.LastParameter()
+            angle = abs(last - first)
+            is_full_period = angle > 6.28  # > 2*PI - epsilon
+            
+            if is_target:
+                logger.info(f"  Edge {edge_count}: Circle, Angle={angle:.2f}, ClosedEdge={is_closed_edge}, ClosedCurve={is_closed_curve}")
+            
+            # CRITICAL FIX: closed_curve() checks underlying geometry (always True for circle)
+            # We must use closed_edge() (topology) or angle check
+            if is_closed_edge or is_full_period:
+                full_circles += 1
+            else:
+                arcs += 1
+        else:
+            if is_target:
+                logger.info(f"  Edge {edge_count}: Type {curve_type} (Not Circle)")
+        
+        explorer.Next()
+    
+    if full_circles > 0:
+        if is_target: logger.info(f"  -> HOLE (Found {full_circles} full circles)")
         return 'hole'
-    elif has_arc and not has_closed:
+    elif arcs > 0:
+        if is_target: logger.info(f"  -> FILLET (Found {arcs} arcs, 0 full circles)")
         return 'fillet'
     else:
+        if is_target: logger.info(f"  -> UNKNOWN (No circular edges)")
         return 'unknown'
 
 
