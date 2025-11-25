@@ -1,16 +1,23 @@
 """
 Geometric Feature Recognizer - Block 1
 
-Simple, modular recognition of holes and fillets using edge closure analysis.
-Each function does ONE thing only.
+Simple, modular recognition of holes, fillets, and bosses using geometric and topological analysis.
+Distinguishes features based on:
+1. Geometry: Cylinder parameters.
+2. Topology: Edge closure (360° vs Arc).
+3. Orientation: Normal direction (Hole vs Boss/Fillet).
+4. Continuity: Edge smoothness (Fillet vs Boss).
 """
 import logging
 from typing import List, Tuple, Dict
-from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
+
+from OCC.Core.TopExp import TopExp_Explorer, topexp
+from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_REVERSED
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
-from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Circle
+from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Circle, GeomAbs_Line, GeomAbs_C0
 from OCC.Core.TopoDS import topods
+from OCC.Core.BRep import BRep_Tool
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
 from occwl.edge import Edge
 
 logger = logging.getLogger(__name__)
@@ -19,17 +26,8 @@ logger = logging.getLogger(__name__)
 def extract_cylinders(shape) -> List[Dict]:
     """
     Extract all cylindrical faces from a shape.
-    
-    Simple function - ONLY extracts, doesn't analyze.
-    
-    Args:
-        shape: TopoDS_Shape from OCC
-        
-    Returns:
-        List of dicts with cylinder info
     """
     cylinders = []
-    
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
     face_id = 0
     
@@ -39,7 +37,6 @@ def extract_cylinders(shape) -> List[Dict]:
         
         if surf.GetType() == GeomAbs_Cylinder:
             cylinder = surf.Cylinder()
-            
             cyl_info = {
                 'face': face,
                 'face_id': face_id,
@@ -56,173 +53,175 @@ def extract_cylinders(shape) -> List[Dict]:
     return cylinders
 
 
-def has_closed_circular_edge(face) -> bool:
+def build_edge_face_map(shape):
     """
-    Check if a face has a closed circular edge (360° circle).
-    
-    Simple geometric check - no topology.
-    
-    Args:
-        face: TopoDS_Face
-        
-    Returns:
-        True if has closed circle, False otherwise
+    Build a map of Edge -> List[Face] to query adjacency.
     """
-    explorer = TopExp_Explorer(face, TopAbs_EDGE)
-    
-    while explorer.More():
-        edge_shape = topods.Edge(explorer.Current())
-        edge = Edge(edge_shape)
-        
-        # Check if edge is circular
-        curve = BRepAdaptor_Curve(edge_shape)
-        if curve.GetType() == GeomAbs_Circle:
-            # Check if it's closed (360°)
-            if edge.closed_curve() or edge.closed_edge():
-                return True
-        
-        explorer.Next()
-    
-    return False
+    ef_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, ef_map)
+    return ef_map
 
 
-def has_arc_edge(face) -> bool:
+def get_edge_continuity(edge_shape, f1, f2) -> bool:
     """
-    Check if a face has arc edges (< 360°).
-    
-    Simple geometric check - no topology.
-    
-    Args:
-        face: TopoDS_Face
-        
-    Returns:
-        True if has arc edges, False otherwise
+    Check if the edge connection between two faces is smooth (G1/C1 or higher).
+    Returns True if smooth, False if sharp (C0).
     """
-    explorer = TopExp_Explorer(face, TopAbs_EDGE)
-    
-    while explorer.More():
-        edge_shape = topods.Edge(explorer.Current())
-        edge = Edge(edge_shape)
-        
-        # Check if edge is circular
-        curve = BRepAdaptor_Curve(edge_shape)
-        if curve.GetType() == GeomAbs_Circle:
-            # Check if it's an arc (NOT closed)
-            if not (edge.closed_curve() or edge.closed_edge()):
-                return True
-        
-        explorer.Next()
-    
-    return False
+    # BRep_Tool.Continuity returns a GeomAbs_Shape enum
+    # GeomAbs_C0 = 0 (Sharp)
+    # GeomAbs_G1 = 1, GeomAbs_C1 = 2, etc. (Smooth)
+    try:
+        continuity = BRep_Tool.Continuity(edge_shape, f1, f2)
+        return continuity > GeomAbs_C0
+    except Exception:
+        return False
 
 
-def classify_cylinder(cyl_info: Dict) -> str:
+def classify_cylinder(cyl_info: Dict, ef_map) -> str:
     """
-    Classify a cylinder as hole or fillet based on edge closure.
+    Classify a cylinder as hole, fillet, or boss based on robust geometric rules.
     
-    Simple decision: closed circle = hole, arc = fillet.
-    
-    Args:
-        cyl_info: Dict with 'face' key
-        
-    Returns:
-        'hole', 'fillet', or 'unknown'
+    Definitions:
+    - HOLE: Cylinder with Normal pointing IN (Material Outside).
+    - BOSS: Cylinder with Normal pointing OUT (Material Inside) AND:
+            - Is a closed 360° cylinder, OR
+            - Has SHARP linear edges (distinct feature boundary).
+    - FILLET: Cylinder with Normal pointing OUT (Material Inside) AND:
+            - Is an open arc (< 360°), AND
+            - Has SMOOTH linear edges (tangent blend).
     """
     face = cyl_info['face']
     face_id = cyl_info['face_id']
     
-    # DIAGNOSTIC: Log edge details for first few and specific candidates
-    is_target = face_id == 66 or face_id < 5
-    
-    explorer = TopExp_Explorer(face, TopAbs_EDGE)
-    edge_count = 0
-    full_circles = 0
-    arcs = 0
+    # DIAGNOSTIC: Log details for specific candidates
+    is_target = face_id == 66 or face_id == 52 or face_id < 5
     
     if is_target:
         logger.info(f"--- Analyzing Cylinder {face_id} ---")
+
+    # 1. Check Orientation (Hole vs Material)
+    # Cylinder natural normal points AWAY from axis.
+    # REVERSED: Normal points IN -> Material Outside -> HOLE
+    # FORWARD: Normal points OUT -> Material Inside -> BOSS or FILLET
+    orientation = face.Orientation()
+    is_reversed = (orientation == TopAbs_REVERSED)
+    
+    if is_reversed:
+        if is_target: logger.info(f"  -> HOLE (Reversed orientation, normal points IN)")
+        return 'hole'
+    
+    # 2. Material OUT (Boss or Fillet)
+    # We need to distinguish based on topology and continuity.
+    explorer = TopExp_Explorer(face, TopAbs_EDGE)
+    has_sharp_linear_edge = False
+    has_smooth_linear_edge = False
+    is_closed_cylinder = False
     
     while explorer.More():
         edge_shape = topods.Edge(explorer.Current())
         edge = Edge(edge_shape)
-        edge_count += 1
         
         curve_adaptor = BRepAdaptor_Curve(edge_shape)
         curve_type = curve_adaptor.GetType()
         
         if curve_type == GeomAbs_Circle:
-            is_closed_edge = edge.closed_edge()
-            is_closed_curve = edge.closed_curve()
+            # Check for 360° closure (Seam edge of a full cylinder)
+            if edge.closed_edge():
+                is_closed_cylinder = True
+            # Note: We ignore continuity of circular edges (top/bottom rims)
+            # because a Boss can have a filleted base (Smooth) or sharp base (Sharp).
             
-            first = curve_adaptor.FirstParameter()
-            last = curve_adaptor.LastParameter()
-            angle = abs(last - first)
-            is_full_period = angle > 6.28  # > 2*PI - epsilon
+        elif curve_type == GeomAbs_Line:
+            # Linear edge (side boundary of a partial cylinder)
+            # This is the KEY discriminator.
+            # Fillets MUST be tangent (Smooth) along their rails.
+            # Bosses (partial) will have a sharp break where they protrude.
             
-            if is_target:
-                logger.info(f"  Edge {edge_count}: Circle, Angle={angle:.2f}, ClosedEdge={is_closed_edge}, ClosedCurve={is_closed_curve}")
-            
-            # CRITICAL FIX: closed_curve() checks underlying geometry (always True for circle)
-            # We must use closed_edge() (topology) or angle check
-            if is_closed_edge or is_full_period:
-                full_circles += 1
-            else:
-                arcs += 1
-        else:
-            if is_target:
-                logger.info(f"  Edge {edge_count}: Type {curve_type} (Not Circle)")
+            if ef_map.Contains(edge_shape):
+                faces = ef_map.FindFromKey(edge_shape)
+                if faces.Size() == 2:
+                    f1 = topods.Face(faces.Value(1))
+                    f2 = topods.Face(faces.Value(2))
+                    
+                    is_smooth = get_edge_continuity(edge_shape, f1, f2)
+                    
+                    if is_smooth:
+                        has_smooth_linear_edge = True
+                        if is_target: logger.info(f"  Linear Edge: SMOOTH (Fillet-like)")
+                    else:
+                        has_sharp_linear_edge = True
+                        if is_target: logger.info(f"  Linear Edge: SHARP (Boss-like)")
         
         explorer.Next()
     
-    if full_circles > 0:
-        if is_target: logger.info(f"  -> HOLE (Found {full_circles} full circles)")
-        return 'hole'
-    elif arcs > 0:
-        if is_target: logger.info(f"  -> FILLET (Found {arcs} arcs, 0 full circles)")
-        return 'fillet'
-    else:
-        if is_target: logger.info(f"  -> UNKNOWN (No circular edges)")
-        return 'unknown'
-
-
-def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict]]:
-    """
-    Main entry point - recognize holes and fillets.
+    # Decision Logic - Hierarchy is Critical
     
-    Simple orchestration of focused functions.
+    # A. 360° Cylinder -> Always Boss (or Pin)
+    if is_closed_cylinder:
+        if is_target: logger.info(f"  -> BOSS (360° Closed Cylinder)")
+        return 'boss'
+    
+    # B. Partial Cylinder with ANY SHARP Linear Edges -> Boss (Ear/Protrusion)
+    # Even if it has a fillet at the base, if the side seams are sharp, it's a distinct feature.
+    if has_sharp_linear_edge:
+        if is_target: logger.info(f"  -> BOSS (Has sharp linear edge/seam)")
+        return 'boss'
+    
+    # C. Partial Cylinder with ONLY Smooth Linear Edges -> Fillet (Blend/Round)
+    # A fillet is defined by tangent continuity along its rails.
+    if has_smooth_linear_edge and not has_sharp_linear_edge:
+        if is_target: logger.info(f"  -> FILLET (Has smooth linear edges)")
+        return 'fillet'
+        
+    # D. Fallback (e.g. floating face, bad topology)
+    if is_target: logger.info(f"  -> UNKNOWN (Ambiguous topology)")
+    return 'unknown'
+
+
+def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]]:
+    """
+    Main entry point - recognize holes, fillets, and bosses.
     
     Args:
         shape: TopoDS_Shape
         
     Returns:
-        (holes, fillets) - two separate lists
+        (holes, fillets, bosses)
     """
     logger.info("=" * 70)
-    logger.info("GEOMETRIC RECOGNIZER - Simple Holes & Fillets")
+    logger.info("GEOMETRIC RECOGNIZER - Robust Topology Analysis")
     logger.info("=" * 70)
     
-    # Step 1: Extract all cylinders (simple function)
+    # Step 0: Build Edge-Face Map (Global for shape)
+    # Needed for continuity checks
+    ef_map = build_edge_face_map(shape)
+    
+    # Step 1: Extract all cylinders
     cylinders = extract_cylinders(shape)
     
-    # Step 2: Classify each cylinder (simple function)
+    # Step 2: Classify each cylinder
     holes = []
     fillets = []
+    bosses = []
     unknown = []
     
     for cyl in cylinders:
-        classification = classify_cylinder(cyl)
+        classification = classify_cylinder(cyl, ef_map)
         
         if classification == 'hole':
             holes.append(cyl)
         elif classification == 'fillet':
             fillets.append(cyl)
+        elif classification == 'boss':
+            bosses.append(cyl)
         else:
             unknown.append(cyl)
     
     # Log results
     logger.info(f"Recognized {len(holes)} holes")
     logger.info(f"Recognized {len(fillets)} fillets")
+    logger.info(f"Recognized {len(bosses)} bosses")
     if unknown:
         logger.warning(f"Unclassified: {len(unknown)} cylinders")
     
-    return holes, fillets
+    return holes, fillets, bosses

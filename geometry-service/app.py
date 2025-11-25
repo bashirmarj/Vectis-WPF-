@@ -643,10 +643,10 @@ def analyze_aag():
             # BLOCK 1: Geometric Recognition (Holes & Fillets)
             # Simple edge closure analysis - no AAG needed, 100% confidence
             try:
-                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes/Fillets)")
+                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes/Fillets/Bosses)")
                 from aag_pattern_engine.geometric_recognizer import recognize_simple_features
                 
-                holes_geo, fillets_geo = recognize_simple_features(shape)
+                holes_geo, fillets_geo, bosses_geo = recognize_simple_features(shape)
                 
                 # Convert to feature format (simple dict for now)
                 for hole_info in holes_geo:
@@ -666,34 +666,22 @@ def analyze_aag():
                         'radius': fillet_info['radius'],
                         'confidence': 1.0
                     })
+                    
+                for boss_info in bosses_geo:
+                    features.append({
+                        'type': 'boss',
+                        'method': 'geometric',
+                        'face_ids': [boss_info['face_id']],
+                        'radius': boss_info['radius'],
+                        'confidence': 1.0
+                    })
                 
-                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets")
+                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(bosses_geo)} bosses")
                 
             except Exception as e:
                 logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
                 errors.append(f"Geometric recognition error: {str(e)}")
             
-            # BLOCK 2: Surface Features (Complex fillets using AAG)
-            # Skip old FilletRecognizer for now - geometric recognizer handles it
-            # TODO: Use AAG for complex/variable radius fillets later
-            
-            # A. Surface Features (Fillets/Chamfers) using AAG
-            # DISABLED - Now handled by geometric recognizer
-            # try:
-            #     logger.info(f"[{correlation_id}] 🔍 Running Surface Recognition (Fillets/Chamfers)")
-            #     fillet_recognizer = FilletRecognizer()
-            #     fillet_features = fillet_recognizer.recognize_fillets(aag)
-            #     features.extend(fillet_features)
-            #     logger.info(f"[{correlation_id}] ✅ Found {len(fillet_features)} surface features")
-            except Exception as e:
-                logger.error(f"[{correlation_id}] ❌ Surface recognition failed: {e}")
-                errors.append(f"Surface recognition failed: {str(e)}")
-
-            # B. Volumetric Features (Holes, Pockets, Steps) using Volume Decomposition
-            try:
-                logger.info(f"[{correlation_id}] 🧊 Running Volume Decomposition")
-                decomposer = VolumeDecomposer()
-                decomposition_results = decomposer.decompose(shape, part_type="prismatic")
                 
                 if decomposition_results:
                     # 1. Classify Lumps
