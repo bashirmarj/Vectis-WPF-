@@ -204,7 +204,8 @@ class FilletRecognizer:
     def __init__(self, tolerance: float = 1e-6):
         self.tolerance = tolerance
         self.min_fillet_radius = 0.1     # 0.1mm
-        self.max_fillet_radius = 100.0   # 100mm (FIXED: was 0.100 which meant 0.1mm in current scaling)
+        self.max_fillet_radius = 3.0     # 3mm (PRODUCTION: Strict limit to exclude hole cylinders)
+
         self.convex_angle_min = 170.0    # degrees (FIXED: was 185.0, lowered to allow tangent/smooth edges)
         self.tangent_tolerance = 5.0     # degrees
         self.curvature_tolerance = 0.1   # 1/m
@@ -389,6 +390,78 @@ class FilletRecognizer:
         
         return candidates
     
+    def _is_hole_not_fillet(
+        self,
+        candidate: GraphNode,
+        adjacency: Dict
+    ) -> bool:
+        """
+        Distinguish hole cylinder from fillet cylinder using PURE TOPOLOGY.
+        
+        Universal rules (no magic numbers, works on any part size):
+        - Holes have planar caps (blind) or openings (through)
+        - Fillets blend exactly 2 faces at convex/smooth edges
+        - Counterbores have multiple co-axial cylinders
+        
+        Returns True if this is a HOLE (reject as fillet), False otherwise.
+        """
+        candidate_id = candidate.id
+        
+        if candidate_id not in adjacency:
+            return False  # Uncertain, let other checks decide
+        
+        adjacent_list = adjacency[candidate_id]
+        
+        # Analyze adjacent face types
+        planar_count = 0
+        cylindrical_count = 0
+        other_count = 0
+        
+        for adj_edge in adjacent_list:
+            neighbor_type = str(adj_edge.get('surface_type', '')).lower()
+            
+            if 'plane' in neighbor_type:
+                planar_count += 1
+            elif 'cylinder' in neighbor_type:
+                cylindrical_count += 1
+            else:
+                other_count += 1
+        
+        # =====================================================================
+        # TOPOLOGY RULE 1: Holes have planar caps
+        # =====================================================================
+        # Blind holes: cylinder + 1 planar cap (bottom)
+        # Through holes: cylinder + 2 planar caps (top + bottom) OR 0 if open
+        # Fillets: NEVER have planar neighbors (blend curves/edges, not caps)
+        if planar_count >= 1:
+            return True  # It's a hole
+        
+        # =====================================================================
+        # TOPOLOGY RULE 2: Counterbore holes have multiple co-axial cylinders
+        # =====================================================================
+        # Counterbore: Large diameter cylinder + smaller diameter cylinder(s)
+        # Fillets: Typically blend 2 non-cylindrical faces
+        if cylindrical_count >= 2:
+            return True  # Likely counterbore/stepped hole
+        
+        # =====================================================================
+        # TOPOLOGY RULE 3: Fillets blend exactly 2 faces
+        # =====================================================================
+        # True fillet pattern: cylinder blends 2 faces at convex edge
+        # Holes: Connect to 1 face (blind) or open to exterior (through)
+        total_neighbors = len(adjacent_list)
+        
+        if total_neighbors == 2 and planar_count == 0 and cylindrical_count == 0:
+            return False  # Likely a fillet (blends 2 non-cylindrical faces)
+        
+        # If it has many neighbors but no planar caps, uncertain
+        # Could be a complex blend or unusual geometry
+        if total_neighbors > 3:
+            return False  # Too complex, likely not a simple hole
+        
+        # Default: uncertain (let other validation decide)
+        return False
+    
     def _is_fillet_surface(
         self,
         candidate: GraphNode,
@@ -439,45 +512,25 @@ class FilletRecognizer:
         # Fillet must blend at least 2 faces
         # CRITICAL FIX: Allow smooth edges (tangent blends)
         if (convex_count + smooth_count) < 2:
-             # CRITICAL FIX: Handle isolated cylindrical blends (hole fillets in removal volume)
-            # These may have empty adjacency lists but are still valid fillets based on geometry
-            if len(adjacent) == 0 and candidate.surface_type == SurfaceType.CYLINDER:
-                if candidate.radius and (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
-                    if candidate.area <= 10000.0:  # Not too large (< 100 cm^2)
-                        logger.debug(f"  ✅ PASSED: Isolated cylindrical blend (hole fillet)")
-                        return True
-                    else:
-                        logger.debug(f"  ❌ REJECTED: Isolated cylinder too large (likely shaft, not fillet)")
-                        return False
-                else:
-                    logger.debug(f"  ❌ REJECTED: Radius out of range or missing")
-                    return False
+             # PRODUCTION FIX: Removed "isolated cylindrical blend" fallback
+            # Reason: Isolated cylinders are typically holes, not fillets
+            # True fillets MUST blend at least 2 faces
 
             # logger.debug(f"    ❌ REJECTED: Only {convex_count} convex + {smooth_count} smooth edges (need 2+)")
             return False
         
+        # PRODUCTION FIX: Check if this is a hole cylinder (not a fillet)
+        if self._is_hole_not_fillet(candidate, adjacency):
+            return False
+        
         # Validate radius
         if candidate.radius:
-            if logger.isEnabledFor(logging.DEBUG):
-                pass
-                # radius_mm = candidate.radius * 1000
-                # logger.debug(f"    Radius: {radius_mm:.3f}mm (range: {self.min_fillet_radius*1000:.1f}-{self.max_fillet_radius*1000:.1f}mm)")
-            
-            if not (self.min_fillet_radius <= candidate.radius <= self.max_fillet_radius):
-                # logger.debug(f"    ❌ REJECTED: Radius out of range")
-                return False
+            # REMOVED: Hardcoded radius check (magic number, not universal)
+            # Topology checks are sufficient to distinguish holes from fillets
+            pass
         
-        # Cylindrical fillets shouldn't be too large (not a shaft)
-        if candidate.surface_type == SurfaceType.CYLINDER:
-            if logger.isEnabledFor(logging.DEBUG):
-                pass
-                # logger.debug(f"    Area: {candidate.area:.2f} mm²")
-            
-            # Adjusted threshold for mm (was 0.01 which was 100cm^2 in meters? No, 0.01m^2 = 10000mm^2)
-            # Let's set a reasonable max area for a fillet face, e.g., 10000 mm^2
-            if candidate.area > 10000.0: 
-                logger.debug(f"    ❌ REJECTED: Area too large (likely shaft, not fillet)")
-                return False
+        # REMOVED: Hardcoded area threshold (10000mm² magic number, not universal)
+        # Large parts can have large fillets. Topology (neighbor count, blend pattern) is sufficient.
         
         logger.debug(f"    ✅ PASSED: Valid fillet candidate")
         return True
