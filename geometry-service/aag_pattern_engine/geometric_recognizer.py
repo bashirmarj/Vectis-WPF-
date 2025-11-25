@@ -140,8 +140,11 @@ def classify_cylinder(cyl_info: Dict, ef_map) -> str:
             if ef_map.Contains(edge_shape):
                 faces = ef_map.FindFromKey(edge_shape)
                 if faces.Size() == 2:
-                    f1 = topods.Face(faces.Value(1))
-                    f2 = topods.Face(faces.Value(2))
+                    # Iterate to get the two faces
+                    face_iter = faces.cbegin()
+                    f1 = topods.Face(face_iter.Value())
+                    face_iter.Next()
+                    f2 = topods.Face(face_iter.Value())
                     
                     is_smooth = get_edge_continuity(edge_shape, f1, f2)
                     

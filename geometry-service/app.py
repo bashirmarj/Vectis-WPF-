@@ -634,19 +634,6 @@ def analyze_aag():
             # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
             logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
             from aag_pattern_engine.graph_builder import AAGGraphBuilder
-            builder = AAGGraphBuilder(shape)
-            aag = builder.build()
-            
-            # === STEP 4: Feature Recognition (Modular Hybrid) ===
-            features = []
-            
-            # BLOCK 1: Geometric Recognition (Holes & Fillets)
-            # Simple edge closure analysis - no AAG needed, 100% confidence
-            try:
-                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes/Fillets/Bosses)")
-                from aag_pattern_engine.geometric_recognizer import recognize_simple_features
-                
-                holes_geo, fillets_geo, bosses_geo = recognize_simple_features(shape)
                 
                 # Convert to feature format (simple dict for now)
                 for hole_info in holes_geo:
