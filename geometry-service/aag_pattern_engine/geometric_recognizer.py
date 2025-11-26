@@ -17,7 +17,7 @@ from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
 from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Circle, GeomAbs_Line, GeomAbs_C0
 from OCC.Core.TopoDS import topods
 from OCC.Core.BRep import BRep_Tool
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from occwl.edge import Edge
 
 logger = logging.getLogger(__name__)
@@ -140,8 +140,8 @@ def classify_cylinder(cyl_info: Dict, ef_map) -> str:
             if ef_map.Contains(edge_shape):
                 faces = ef_map.FindFromKey(edge_shape)
                 if faces.Size() == 2:
-                    # Iterate to get the two faces
-                    face_iter = faces.cbegin()
+                    # Use proper iterator for TopTools_ListOfShape
+                    face_iter = TopTools_ListIteratorOfListOfShape(faces)
                     f1 = topods.Face(face_iter.Value())
                     face_iter.Next()
                     f2 = topods.Face(face_iter.Value())
