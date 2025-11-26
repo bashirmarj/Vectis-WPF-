@@ -106,18 +106,13 @@ def has_arc_edge(face) -> bool:
     return False
 
 
-def count_end_caps(face, shape) -> int:
+def count_circular_edges(face) -> int:
     """
-    Count planar/conical end caps on a cylindrical face.
-    - 0 caps = through hole
-    - 1+ caps = blind hole (flat or conical bottom)
+    Count circular edges on a cylindrical face.
+    - 2 circular edges = through hole (top + bottom openings)
+    - 1 circular edge = blind hole (top opening only)
     """
-    from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
-    
-    ef_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, ef_map)
-    
-    caps = 0
+    circular_count = 0
     explorer = TopExp_Explorer(face, TopAbs_EDGE)
     
     while explorer.More():
@@ -125,24 +120,11 @@ def count_end_caps(face, shape) -> int:
         curve = BRepAdaptor_Curve(edge_shape)
         
         if curve.GetType() == GeomAbs_Circle:
-            if ef_map.Contains(edge_shape):
-                faces = ef_map.FindFromKey(edge_shape)
-                face_iter = TopTools_ListIteratorOfListOfShape(faces)
-                
-                while face_iter.More():
-                    adj_face = topods.Face(face_iter.Value())
-                    adj_surf = BRepAdaptor_Surface(adj_face)
-                    
-                    # Planar or conical bottom
-                    if adj_surf.GetType() in (GeomAbs_Plane, GeomAbs_Cone):
-                        caps += 1
-                        break
-                    
-                    face_iter.Next()
+            circular_count += 1
         
         explorer.Next()
     
-    return caps
+    return circular_count
 
 
 def axes_are_coaxial(axis1: gp_Ax1, axis2: gp_Ax1, tolerance=1e-3) -> bool:
@@ -291,10 +273,14 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
         sorted_group = sorted(group, key=lambda c: c['radius'])
         primary = sorted_group[0]
         
-        cap_count = count_end_caps(primary['face'], shape)
-        is_blind = cap_count > 0
+        # Count circular edges to distinguish blind vs through
+        circular_edge_count = count_circular_edges(primary['face'])
         
-        hole_type = 'counterbore' if len(group) > 1 else ('blind_hole' if is_blind else 'through_hole')
+        # 2 circular edges = through (top + bottom openings)
+        # 1 circular edge = blind (top opening only, sealed bottom)
+        is_through = circular_edge_count >= 2
+        
+        hole_type = 'counterbore' if len(group) > 1 else ('through_hole' if is_through else 'blind_hole')
         
         holes.append({
             'type': hole_type,
