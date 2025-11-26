@@ -643,17 +643,17 @@ def analyze_aag():
             # Initialize results
             decomposition_results = {}
             
-            # BLOCK 1: Geometric Recognition (Holes & Fillets)
+            # BLOCK 1: Geometric Recognition (Holes & Fillets & Countersinks & Tapered Holes)
             try:
-                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes & Fillets)")
+                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition")
                 from aag_pattern_engine.geometric_recognizer import recognize_simple_features
                 
-                holes_geo, fillets_geo = recognize_simple_features(shape)
+                holes_geo, fillets_geo, countersinks_geo, tapered_geo = recognize_simple_features(shape)
                 
                 # Convert holes to feature format
                 for hole_info in holes_geo:
                     features.append({
-                        'type': hole_info['type'],  # 'through_hole' or 'counterbore'
+                        'type': hole_info['type'],  # 'through_hole', 'blind_hole', or 'counterbore'
                         'method': 'geometric',
                         'face_ids': hole_info['face_ids'],
                         'radius': hole_info['radius'],
@@ -670,7 +670,28 @@ def analyze_aag():
                         'confidence': 1.0
                     })
                 
-                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets")
+                # Convert countersinks to feature format
+                for csink_info in countersinks_geo:
+                    features.append({
+                        'type': 'countersink',
+                        'method': 'geometric',
+                        'face_ids': csink_info['face_ids'],
+                        'cone_angle': csink_info['cone_angle'],
+                        'hole_radius': csink_info['hole_radius'],
+                        'confidence': 1.0
+                    })
+                
+                # Convert tapered holes to feature format
+                for tapered_info in tapered_geo:
+                    features.append({
+                        'type': 'tapered_hole',
+                        'method': 'geometric',
+                        'face_ids': tapered_info['face_ids'],
+                        'angle': tapered_info['angle'],
+                        'confidence': 1.0
+                    })
+                
+                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(countersinks_geo)} countersinks, {len(tapered_geo)} tapered")
                 
             except Exception as e:
                 logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
@@ -682,6 +703,10 @@ def analyze_aag():
                 consumed_face_ids.update(hole_info['face_ids'])
             for fillet_info in fillets_geo:
                 consumed_face_ids.add(fillet_info['face_id'])
+            for csink_info in countersinks_geo:
+                consumed_face_ids.update(csink_info['face_ids'])
+            for tapered_info in tapered_geo:
+                consumed_face_ids.update(tapered_info['face_ids'])
             
             logger.info(f"[{correlation_id}] 🔒 Consumed {len(consumed_face_ids)} face IDs from geometric recognizer")
             

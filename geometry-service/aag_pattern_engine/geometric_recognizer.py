@@ -2,18 +2,19 @@
 Geometric Feature Recognizer - Block 1
 
 Simple, focused recognition using edge closure analysis:
-1. Holes: Cylindrical faces with closed circular edges (360°)
+1. Holes: Cylindrical faces with closed circular edges (360°) + reversed orientation
 2. Fillets: Cylindrical faces with arc edges (< 360°)
 3. Counterbores: Co-axial hole cylinders grouped by radius
+4. Countersinks: Conical faces with reversed orientation
 """
 import logging
 import math
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
-from OCC.Core.TopExp import TopExp_Explorer
-from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
+from OCC.Core.TopExp import TopExp_Explorer, topexp
+from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE, TopAbs_REVERSED
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
-from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Circle
+from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Circle, GeomAbs_Cone, GeomAbs_Plane
 from OCC.Core.TopoDS import topods
 from OCC.Core.gp import gp_Ax1
 from occwl.edge import Edge
@@ -21,9 +22,10 @@ from occwl.edge import Edge
 logger = logging.getLogger(__name__)
 
 
-def extract_cylinders(shape) -> List[Dict]:
-    """Extract all cylindrical faces with their geometric properties."""
+def extract_cylinders_and_cones(shape) -> Tuple[List[Dict], List[Dict]]:
+    """Extract cylindrical and conical faces from a shape."""
     cylinders = []
+    cones = []
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
     face_id = 0
     
@@ -41,15 +43,31 @@ def extract_cylinders(shape) -> List[Dict]:
                 'radius': cylinder.Radius(),
                 'axis': axis,
                 'axis_location': axis.Location(),
-                'axis_direction': axis.Direction()
+                'axis_direction': axis.Direction(),
+                'orientation': face.Orientation()
             }
             cylinders.append(cyl_info)
+        
+        elif surf.GetType() == GeomAbs_Cone:
+            cone = surf.Cone()
+            axis = cone.Axis()
+            
+            cone_info = {
+                'face': face,
+                'face_id': face_id,
+                'semi_angle': cone.SemiAngle(),
+                'axis': axis,
+                'axis_location': axis.Location(),
+                'axis_direction': axis.Direction(),
+                'orientation': face.Orientation()
+            }
+            cones.append(cone_info)
         
         explorer.Next()
         face_id += 1
     
-    logger.info(f"Extracted {len(cylinders)} cylindrical faces")
-    return cylinders
+    logger.info(f" Extracted {len(cylinders)} cylindrical faces, {len(cones)} conical faces")
+    return cylinders, cones
 
 
 def has_closed_circular_edge(face) -> bool:
@@ -88,74 +106,64 @@ def has_arc_edge(face) -> bool:
     return False
 
 
-def has_planar_cap(face, shape) -> bool:
+def count_end_caps(face, shape) -> int:
     """
-    Check if a cylindrical face has a planar end cap (indicating blind hole).
-    Through holes have no planar caps (both ends open to exterior).
+    Count planar/conical end caps on a cylindrical face.
+    - 0 caps = through hole
+    - 1+ caps = blind hole (flat or conical bottom)
     """
-    from OCC.Core.GeomAbs import GeomAbs_Plane
-    from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+    from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
     
-    # Build edge-face map to find adjacent faces
     ef_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    from OCC.Core.TopExp import topexp
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, ef_map)
     
-    # Check circular edges of the cylinder for adjacent planar faces
+    caps = 0
     explorer = TopExp_Explorer(face, TopAbs_EDGE)
     
     while explorer.More():
         edge_shape = topods.Edge(explorer.Current())
-        
-        # Check if this is a circular edge (top/bottom rim of cylinder)
         curve = BRepAdaptor_Curve(edge_shape)
+        
         if curve.GetType() == GeomAbs_Circle:
-            # Find faces adjacent to this circular edge
             if ef_map.Contains(edge_shape):
                 faces = ef_map.FindFromKey(edge_shape)
-                
-                # Iterate through adjacent faces
-                from OCC.Core.TopTools import TopTools_ListIteratorOfListOfShape
                 face_iter = TopTools_ListIteratorOfListOfShape(faces)
+                
                 while face_iter.More():
                     adj_face = topods.Face(face_iter.Value())
-                    
-                    # Check if adjacent face is planar
                     adj_surf = BRepAdaptor_Surface(adj_face)
-                    if adj_surf.GetType() == GeomAbs_Plane:
-                        # Found a planar cap!
-                        return True
+                    
+                    # Planar or conical bottom
+                    if adj_surf.GetType() in (GeomAbs_Plane, GeomAbs_Cone):
+                        caps += 1
+                        break
                     
                     face_iter.Next()
         
         explorer.Next()
     
-    return False
+    return caps
 
 
 def axes_are_coaxial(axis1: gp_Ax1, axis2: gp_Ax1, tolerance=1e-3) -> bool:
     """Check if two axes are co-axial."""
-    # Check parallel directions
     dir1 = axis1.Direction()
     dir2 = axis2.Direction()
-    dot = abs(dir1.Dot(dir2))
-    if dot < 0.999:
+    
+    if abs(dir1.Dot(dir2)) < 0.999:
         return False
     
-    # Check if on same line
     loc1 = axis1.Location()
     loc2 = axis2.Location()
     
-    dx = loc2.X() - loc1.X()
-    dy = loc2.Y() - loc1.Y()
-    dz = loc2.Z() - loc1.Z()
+    dx, dy, dz = loc2.X() - loc1.X(), loc2.Y() - loc1.Y(), loc2.Z() - loc1.Z()
+    proj = dx * dir1.X() + dy * dir1.Y() + dz * dir1.Z()
     
-    proj_length = dx * dir1.X() + dy * dir1.Y() + dz * dir1.Z()
-    
-    perp_x = dx - proj_length * dir1.X()
-    perp_y = dy - proj_length * dir1.Y()
-    perp_z = dz - proj_length * dir1.Z()
-    perp_dist = math.sqrt(perp_x**2 + perp_y**2 + perp_z**2)
+    perp_dist = math.sqrt(
+        (dx - proj * dir1.X())**2 +
+        (dy - proj * dir1.Y())**2 +
+        (dz - proj * dir1.Z())**2
+    )
     
     return perp_dist < tolerance
 
@@ -173,10 +181,7 @@ def group_coaxial_cylinders(cylinders: List[Dict]) -> List[List[Dict]]:
         used.add(i)
         
         for j, cyl2 in enumerate(cylinders):
-            if j in used:
-                continue
-            
-            if axes_are_coaxial(cyl1['axis'], cyl2['axis']):
+            if j not in used and axes_are_coaxial(cyl1['axis'], cyl2['axis']):
                 group.append(cyl2)
                 used.add(j)
         
@@ -185,67 +190,135 @@ def group_coaxial_cylinders(cylinders: List[Dict]) -> List[List[Dict]]:
     return groups
 
 
-def recognize_simple_features(shape):
+def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict], List[Dict]]:
     """
-    Recognize holes and fillets using simple edge closure analysis.
+    Recognize holes, fillets, countersinks, and tapered holes.
     
     Returns:
-        (holes, fillets)
+        (holes, fillets, countersinks, tapered_holes)
+        
+    Hole Types:
+        - Through hole: Cylinder with 0 end caps
+        - Blind hole: Cylinder with 1+ end caps (planar or conical bottom)
+        - Counterbore: Multiple coaxial cylinders
+        - Countersink: Cone + coaxial cylinder below
+        - Tapered hole: Cone only (no cylinder below)
     """
     logger.info("=" * 70)
     logger.info("GEOMETRIC RECOGNIZER - Edge Closure Analysis")
     logger.info("=" * 70)
     
-    # Extract all cylinders
-    all_cylinders = extract_cylinders(shape)
+    cylinders, cones = extract_cylinders_and_cones(shape)
     
-    # Classify by edge type
+    # Step 1: Identify countersink holes (cone + coaxial cylinder pairs)
+    countersinks = []
+    consumed_cylinder_ids = set()
+    consumed_cone_ids = set()
+    
+    for cone in cones:
+        if cone['orientation'] != TopAbs_REVERSED:
+            continue  # Only reversed cones (normal IN) are holes
+        
+        # Find coaxial cylinder below this cone
+        matched_cylinder = None
+        for cyl in cylinders:
+            if cyl['face_id'] in consumed_cylinder_ids:
+                continue
+            if cyl['orientation'] != TopAbs_REVERSED:
+                continue  # Only reversed cylinders
+            
+            # Check if coaxial
+            if axes_are_coaxial(cone['axis'], cyl['axis']):
+                matched_cylinder = cyl
+                break
+        
+        if matched_cylinder:
+            # This is a countersink hole (cone + cylinder)
+            angle_deg = math.degrees(cone['semi_angle']) * 2
+            
+            countersinks.append({
+                'type': 'countersink',
+                'face_ids': [cone['face_id'], matched_cylinder['face_id']],
+                'cone_angle': angle_deg,
+                'hole_radius': matched_cylinder['radius']
+            })
+            
+            consumed_cone_ids.add(cone['face_id'])
+            consumed_cylinder_ids.add(matched_cylinder['face_id'])
+    
+    logger.info(f"Found {len(countersinks)} countersink holes (cone + cylinder pairs)")
+    
+    # Step 2: Identify tapered holes (cones without coaxial cylinders)
+    tapered_holes = []
+    for cone in cones:
+        if cone['face_id'] in consumed_cone_ids:
+            continue
+        if cone['orientation'] != TopAbs_REVERSED:
+            continue
+        
+        angle_deg = math.degrees(cone['semi_angle']) * 2
+        tapered_holes.append({
+            'type': 'tapered_hole',
+            'face_ids': [cone['face_id']],
+            'angle': angle_deg
+        })
+    
+    logger.info(f"Found {len(tapered_holes)} tapered holes (cone only)")
+    
+    # Step 3: Classify remaining cylinders (excluding those in countersinks)
     hole_cylinders = []
     fillet_cylinders = []
     
-    for cyl in all_cylinders:
+    for cyl in cylinders:
+        if cyl['face_id'] in consumed_cylinder_ids:
+            continue  # Skip cylinders that are part of countersinks
+        
         if has_closed_circular_edge(cyl['face']):
-            hole_cylinders.append(cyl)
+            # Closed 360° - hole or boss
+            if cyl['orientation'] == TopAbs_REVERSED:
+                hole_cylinders.append(cyl)
         elif has_arc_edge(cyl['face']):
             fillet_cylinders.append(cyl)
     
-    logger.info(f"Found {len(hole_cylinders)} hole cylinders (closed circles)")
-    logger.info(f"Found {len(fillet_cylinders)} fillet cylinders (arcs)")
+    logger.info(f"Found {len(hole_cylinders)} hole cylinders")
+    logger.info(f"Found {len(fillet_cylinders)} fillet cylinders")
     
-    # Group co-axial holes for counterbores
+    # Step 4: Group and classify cylindrical holes
     hole_groups = group_coaxial_cylinders(hole_cylinders)
     
-    # Create hole features
     holes = []
     for group in hole_groups:
         sorted_group = sorted(group, key=lambda c: c['radius'])
+        primary = sorted_group[0]
         
-        # Check if blind or through hole by checking for planar cap
-        primary_cyl = sorted_group[0]
-        is_blind = has_planar_cap(primary_cyl['face'], shape)
+        cap_count = count_end_caps(primary['face'], shape)
+        is_blind = cap_count > 0
         
-        hole_info = {
-            'type': 'counterbore' if len(group) > 1 else ('blind_hole' if is_blind else 'through_hole'),
+        hole_type = 'counterbore' if len(group) > 1 else ('blind_hole' if is_blind else 'through_hole')
+        
+        holes.append({
+            'type': hole_type,
             'face_ids': [c['face_id'] for c in sorted_group],
-            'radius': sorted_group[0]['radius'],  # Smallest radius
+            'radius': primary['radius'],
             'cylinders': sorted_group
-        }
-        holes.append(hole_info)
+        })
     
-    # Create fillet features
+    # Step 5: Create fillets
     fillets = []
     for cyl in fillet_cylinders:
-        fillet_info = {
+        fillets.append({
             'face_id': cyl['face_id'],
             'radius': cyl['radius']
-        }
-        fillets.append(fillet_info)
+        })
     
     # Log results
-    through_holes = sum(1 for h in holes if h['type'] == 'through_hole')
-    counterbores = sum(1 for h in holes if h['type'] == 'counterbore')
+    through = sum(1 for h in holes if h['type'] == 'through_hole')
+    blind = sum(1 for h in holes if h['type'] == 'blind_hole')
+    counterbore = sum(1 for h in holes if h['type'] == 'counterbore')
     
-    logger.info(f"Recognized {len(holes)} holes ({through_holes} through, {counterbores} counterbored)")
+    logger.info(f"Recognized {len(holes)} cylindrical holes ({through} through, {blind} blind, {counterbore} counterbored)")
     logger.info(f"Recognized {len(fillets)} fillets")
+    logger.info(f"Recognized {len(countersinks)} countersink holes")
+    logger.info(f"Recognized {len(tapered_holes)} tapered holes")
     
-    return holes, fillets
+    return holes, fillets, countersinks, tapered_holes
