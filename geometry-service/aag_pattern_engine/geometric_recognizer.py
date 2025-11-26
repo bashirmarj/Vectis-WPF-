@@ -192,60 +192,79 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
     
     cylinders, cones = extract_cylinders_and_cones(shape)
     
-    # Step 1: Identify countersink holes (cone + coaxial cylinder pairs)
-    # Must distinguish from blind holes with conical bottoms
+    # Step 1: Match cones with coaxial cylinders
+    # This handles: Countersinks AND Blind holes with conical bottoms
     countersinks = []
+    blind_holes_with_cone = []
     consumed_cylinder_ids = set()
     consumed_cone_ids = set()
     
     for cone in cones:
         if cone['orientation'] != TopAbs_REVERSED:
-            continue  # Only reversed cones (normal IN) are holes
+            continue  # Only reversed cones (normal IN)
         
-        # Find coaxial cylinder below this cone
+        # Find coaxial cylinder
         matched_cylinder = None
         for cyl in cylinders:
             if cyl['face_id'] in consumed_cylinder_ids:
                 continue
             if cyl['orientation'] != TopAbs_REVERSED:
-                continue  # Only reversed cylinders
+                continue
             
-            # Check if coaxial
             if axes_are_coaxial(cone['axis'], cyl['axis']):
-                # CRITICAL: Distinguish countersink from blind hole with conical bottom
-                # Countersink: Cone base radius > Cylinder radius (cone is wider)
-                # Blind hole: Cone base radius ≈ Cylinder radius (cone is drill point inside)
-                
-                # Get cone base radius (larger end)
-                cone_surf = BRepAdaptor_Surface(cone['face'])
-                cone_geom = cone_surf.Cone()
-                cone_ref_radius = cone_geom.RefRadius()  # Cone radius at reference location
-                
-                # Compare: if cone is significantly wider than cylinder → countersink
-                radius_ratio = cone_ref_radius / cyl['radius']
-                
-                if radius_ratio > 1.1:  # Cone is >10% wider → Countersink
-                    matched_cylinder = cyl
-                    break
-                # else: Cone fits inside cylinder → Blind hole with conical bottom, skip
+                matched_cylinder = cyl
+                break
         
         if matched_cylinder:
-            # This is a countersink hole (cone + cylinder)
-            angle_deg = math.degrees(cone['semi_angle']) * 2
+            # Distinguish countersink from blind hole using topology
+            # Countersink: Cone and cylinder SHARE a circular edge (at chamfer transition)
+            # Blind hole: Cone is INSIDE cylinder (no shared edge, it's the drill point)
             
-            countersinks.append({
-                'type': 'countersink',
-                'face_ids': [cone['face_id'], matched_cylinder['face_id']],
-                'cone_angle': angle_deg,
-                'hole_radius': matched_cylinder['radius']
-            })
+            shares_edge = False
+            
+            # Get edges from cone
+            cone_explorer = TopExp_Explorer(cone['face'], TopAbs_EDGE)
+            cone_edges = set()
+            while cone_explorer.More():
+                edge = cone_explorer.Current()
+                cone_edges.add(edge)
+                cone_explorer.Next()
+            
+            # Check if cylinder shares any edge with cone
+            cyl_explorer = TopExp_Explorer(matched_cylinder['face'], TopAbs_EDGE)
+            while cyl_explorer.More():
+                edge = cyl_explorer.Current()
+                if edge in cone_edges:
+                    shares_edge = True
+                    break
+                cyl_explorer.Next()
+            
+            if shares_edge:
+                # Cone and cylinder share edge → Countersink
+                angle_deg = math.degrees(cone['semi_angle']) * 2
+                countersinks.append({
+                    'type': 'countersink',
+                    'face_ids': [cone['face_id'], matched_cylinder['face_id']],
+                    'cone_angle': angle_deg,
+                    'hole_radius': matched_cylinder['radius']
+                })
+            else:
+                # No shared edge → Cone is inside → Blind hole with conical bottom
+                blind_holes_with_cone.append({
+                    'type': 'blind_hole',
+                    'face_ids': [matched_cylinder['face_id'], cone['face_id']],
+                    'radius': matched_cylinder['radius'],
+                    'cylinders': [matched_cylinder],
+                    'has_conical_bottom': True
+                })
             
             consumed_cone_ids.add(cone['face_id'])
             consumed_cylinder_ids.add(matched_cylinder['face_id'])
     
-    logger.info(f"Found {len(countersinks)} countersink holes (cone + cylinder pairs)")
+    logger.info(f"Found {len(countersinks)} countersinks (cone wider than cylinder)")
+    logger.info(f"Found {len(blind_holes_with_cone)} blind holes with conical bottoms")
     
-    # Step 2: Identify tapered holes (cones without coaxial cylinders)
+    # Step 2: Identify tapered holes (standalone cones, NO coaxial cylinder)
     tapered_holes = []
     for cone in cones:
         if cone['face_id'] in consumed_cone_ids:
@@ -260,44 +279,43 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
             'angle': angle_deg
         })
     
-    logger.info(f"Found {len(tapered_holes)} tapered holes (cone only)")
+    logger.info(f"Found {len(tapered_holes)} tapered holes (standalone cones)")
     
-    # Step 3: Classify remaining cylinders (excluding those in countersinks)
+    # Step 3: Classify remaining cylinders
     hole_cylinders = []
     fillet_cylinders = []
     
     for cyl in cylinders:
         if cyl['face_id'] in consumed_cylinder_ids:
-            continue  # Skip cylinders that are part of countersinks
+            continue  # Already consumed as countersink or blind hole with cone
         
-        # Check if it's a full 360° cylinder (hole or boss)
         if has_closed_circular_edge(cyl['face']):
             if cyl['orientation'] == TopAbs_REVERSED:
-                # Normal IN = Hole
                 hole_cylinders.append(cyl)
-            # else: Normal OUT = Boss (intentionally skip, don't check for fillets)
-            continue  # CRITICAL: Skip fillet check for bosses
+            # Boss: skip (continue prevents fillet check)
+            continue
         
-        # If we reach here, it's not a full cylinder - check for fillets
         if has_arc_edge(cyl['face']):
             fillet_cylinders.append(cyl)
     
-    logger.info(f"Found {len(hole_cylinders)} hole cylinders")
+    logger.info(f"Found {len(hole_cylinders)} hole cylinders (through or blind with flat bottom)")
     logger.info(f"Found {len(fillet_cylinders)} fillet cylinders")
     
-    # Step 4: Group and classify cylindrical holes
+    # Step 4: Group coaxial cylindrical holes (counterbores, through, blind with flat bottom)
     hole_groups = group_coaxial_cylinders(hole_cylinders)
     
     holes = []
+    
+    # Add blind holes with conical bottoms first (already identified)
+    holes.extend(blind_holes_with_cone)
+    
+    # Process cylindrical hole groups
     for group in hole_groups:
         sorted_group = sorted(group, key=lambda c: c['radius'])
         primary = sorted_group[0]
         
         # Count circular edges to distinguish blind vs through
         circular_edge_count = count_circular_edges(primary['face'])
-        
-        # 2 circular edges = through (top + bottom openings)
-        # 1 circular edge = blind (top opening only, sealed bottom)
         is_through = circular_edge_count >= 2
         
         hole_type = 'counterbore' if len(group) > 1 else ('through_hole' if is_through else 'blind_hole')
