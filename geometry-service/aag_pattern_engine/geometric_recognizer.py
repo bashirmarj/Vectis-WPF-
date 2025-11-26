@@ -193,6 +193,7 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
     cylinders, cones = extract_cylinders_and_cones(shape)
     
     # Step 1: Identify countersink holes (cone + coaxial cylinder pairs)
+    # Must distinguish from blind holes with conical bottoms
     countersinks = []
     consumed_cylinder_ids = set()
     consumed_cone_ids = set()
@@ -211,8 +212,22 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
             
             # Check if coaxial
             if axes_are_coaxial(cone['axis'], cyl['axis']):
-                matched_cylinder = cyl
-                break
+                # CRITICAL: Distinguish countersink from blind hole with conical bottom
+                # Countersink: Cone base radius > Cylinder radius (cone is wider)
+                # Blind hole: Cone base radius ≈ Cylinder radius (cone is drill point inside)
+                
+                # Get cone base radius (larger end)
+                cone_surf = BRepAdaptor_Surface(cone['face'])
+                cone_geom = cone_surf.Cone()
+                cone_ref_radius = cone_geom.RefRadius()  # Cone radius at reference location
+                
+                # Compare: if cone is significantly wider than cylinder → countersink
+                radius_ratio = cone_ref_radius / cyl['radius']
+                
+                if radius_ratio > 1.1:  # Cone is >10% wider → Countersink
+                    matched_cylinder = cyl
+                    break
+                # else: Cone fits inside cylinder → Blind hole with conical bottom, skip
         
         if matched_cylinder:
             # This is a countersink hole (cone + cylinder)
@@ -255,11 +270,16 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
         if cyl['face_id'] in consumed_cylinder_ids:
             continue  # Skip cylinders that are part of countersinks
         
+        # Check if it's a full 360° cylinder (hole or boss)
         if has_closed_circular_edge(cyl['face']):
-            # Closed 360° - hole or boss
             if cyl['orientation'] == TopAbs_REVERSED:
+                # Normal IN = Hole
                 hole_cylinders.append(cyl)
-        elif has_arc_edge(cyl['face']):
+            # else: Normal OUT = Boss (intentionally skip, don't check for fillets)
+            continue  # CRITICAL: Skip fillet check for bosses
+        
+        # If we reach here, it's not a full cylinder - check for fillets
+        if has_arc_edge(cyl['face']):
             fillet_cylinders.append(cyl)
     
     logger.info(f"Found {len(hole_cylinders)} hole cylinders")
