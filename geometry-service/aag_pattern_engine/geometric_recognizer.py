@@ -172,200 +172,80 @@ def group_coaxial_cylinders(cylinders: List[Dict]) -> List[List[Dict]]:
     return groups
 
 
-def calculate_cylinder_depth(face) -> float:
-    """Calculate depth of cylindrical face using bounding box."""
-    from OCC.Core.Bnd import Bnd_Box
-    from OCC.Core.BRepBndLib import brepbndlib
-    
-    bbox = Bnd_Box()
-    brepbndlib.Add(face, bbox)
-    
-    xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-    
-    # Depth is along cylinder axis (typically Z, but calculate max dimension)
-    dx = xmax - xmin
-    dy = ymax - ymin
-    dz = zmax - zmin
-    
-    return max(dx, dy, dz)
-
-
-def has_planar_or_conical_cap(face, shape) -> bool:
-    """
-    Check if cylinder has a planar or conical end cap (indicates blind hole).
-    Uses proper topology check, not edge counting.
-    """
-    from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cone
-    from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
-    
-    # Build edge-face map
-    ef_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, ef_map)
-    
-    # Check circular edges for adjacent planar/conical faces
-    explorer = TopExp_Explorer(face, TopAbs_EDGE)
-    
-    while explorer.More():
-        edge_shape = topods.Edge(explorer.Current())
-        curve = BRepAdaptor_Curve(edge_shape)
-        
-        if curve.GetType() == GeomAbs_Circle:
-            if ef_map.Contains(edge_shape):
-                faces = ef_map.FindFromKey(edge_shape)
-                face_iter = TopTools_ListIteratorOfListOfShape(faces)
-                
-                while face_iter.More():
-                    adj_face = topods.Face(face_iter.Value())
-                    
-                    # Skip the cylinder itself
-                    if adj_face.IsSame(face):
-                        face_iter.Next()
-                        continue
-                    
-                    adj_surf = BRepAdaptor_Surface(adj_face)
-                    surf_type = adj_surf.GetType()
-                    
-                    if surf_type in (GeomAbs_Plane, GeomAbs_Cone):
-                        return True
-                    
-                    face_iter.Next()
-        
-        explorer.Next()
-    
-    return False
-
-
-def validate_counterbore(cylinders: List[Dict], shape) -> bool:
-    """
-    Strict validation for counterbore features.
-    
-    Rules:
-    1. Must have 2-3 steps (not 1, not 4+)
-    2. Decreasing diameters monotonically
-    3. Each step depth < 2× its diameter
-    4. Total depth < 3× outer diameter
-    
-    Returns: True if valid counterbore, False if should go to volume decomposer
-    """
-    if len(cylinders) < 2 or len(cylinders) > 3:
-        return False  # Must be 2-3 steps
-    
-    # Sort by radius (largest first)
-    sorted_cyls = sorted(cylinders, key=lambda c: c['radius'], reverse=True)
-    
-    # Check monotonically decreasing diameters
-    for i in range(len(sorted_cyls) - 1):
-        if sorted_cyls[i]['radius'] <= sorted_cyls[i+1]['radius']:
-            return False  # Not strictly decreasing
-        
-        # Check reasonable diameter ratio (next step should be meaningfully smaller)
-        ratio = sorted_cyls[i+1]['radius'] / sorted_cyls[i]['radius']
-        if ratio > 0.95:  # Steps too similar
-            return False
-    
-    # Check depth constraints
-    total_depth = 0
-    for cyl in sorted_cyls:
-        depth = calculate_cylinder_depth(cyl['face'])
-        
-        # Each step depth < 2× its diameter
-        if depth > 2.0 * cyl['radius'] * 2:  # diameter = 2 * radius
-            return False  # Step too deep for its diameter
-        
-        total_depth += depth
-    
-    # Total depth < 3× outer diameter
-    outer_diameter = sorted_cyls[0]['radius'] * 2
-    if total_depth > 3.0 * outer_diameter:
-        return False  # Too deep, likely a pocket
-    
-    return True
-
-
 def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict], List[Dict]]:
     """
-    Recognize SIMPLE geometric features with strict validation.
+    Recognize holes, fillets, countersinks, and tapered holes.
     
-    Scope: Only simple, unambiguous features
-    - Simple through/blind holes
-    - Validated 2-3 step counterbores
-    - Simple countersinks
-    - Fillets
-    
-    Complex/ambiguous features rejected → Volume decomposer handles them
-    
-    Returns: (holes, fillets, countersinks, tapered_holes)
+    Returns:
+        (holes, fillets, countersinks, tapered_holes)
+        
+    Hole Types:
+        - Through hole: Cylinder with 0 end caps
+        - Blind hole: Cylinder with 1+ end caps (planar or conical bottom)
+        - Counterbore: Multiple coaxial cylinders
+        - Countersink: Cone + coaxial cylinder below
+        - Tapered hole: Cone only (no cylinder below)
     """
     logger.info("=" * 70)
-    logger.info("GEOMETRIC RECOGNIZER - Production-Grade Validation")
+    logger.info("GEOMETRIC RECOGNIZER - Edge Closure Analysis")
     logger.info("=" * 70)
     
     cylinders, cones = extract_cylinders_and_cones(shape)
     
-    # Step 1: Match cones with coaxial cylinders
+    # Step 1: Identify countersink holes (cone + coaxial cylinder pairs)
+    # Must distinguish from blind holes with conical bottoms
     countersinks = []
-    blind_holes_with_cone = []
     consumed_cylinder_ids = set()
     consumed_cone_ids = set()
     
     for cone in cones:
         if cone['orientation'] != TopAbs_REVERSED:
-            continue
+            continue  # Only reversed cones (normal IN) are holes
         
+        # Find coaxial cylinder below this cone
         matched_cylinder = None
         for cyl in cylinders:
             if cyl['face_id'] in consumed_cylinder_ids:
                 continue
             if cyl['orientation'] != TopAbs_REVERSED:
-                continue
+                continue  # Only reversed cylinders
             
+            # Check if coaxial
             if axes_are_coaxial(cone['axis'], cyl['axis']):
-                matched_cylinder = cyl
-                break
+                # CRITICAL: Distinguish countersink from blind hole with conical bottom
+                # Countersink: Cone base radius > Cylinder radius (cone is wider)
+                # Blind hole: Cone base radius ≈ Cylinder radius (cone is drill point inside)
+                
+                # Get cone base radius (larger end)
+                cone_surf = BRepAdaptor_Surface(cone['face'])
+                cone_geom = cone_surf.Cone()
+                cone_ref_radius = cone_geom.RefRadius()  # Cone radius at reference location
+                
+                # Compare: if cone is significantly wider than cylinder → countersink
+                radius_ratio = cone_ref_radius / cyl['radius']
+                
+                if radius_ratio > 1.1:  # Cone is >10% wider → Countersink
+                    matched_cylinder = cyl
+                    break
+                # else: Cone fits inside cylinder → Blind hole with conical bottom, skip
         
         if matched_cylinder:
-            # Check if they share an edge
-            shares_edge = False
+            # This is a countersink hole (cone + cylinder)
+            angle_deg = math.degrees(cone['semi_angle']) * 2
             
-            cone_explorer = TopExp_Explorer(cone['face'], TopAbs_EDGE)
-            cone_edges = set()
-            while cone_explorer.More():
-               cone_edges.add(cone_explorer.Current())
-                cone_explorer.Next()
-            
-            cyl_explorer = TopExp_Explorer(matched_cylinder['face'], TopAbs_EDGE)
-            while cyl_explorer.More():
-                if cyl_explorer.Current() in cone_edges:
-                    shares_edge = True
-                    break
-                cyl_explorer.Next()
-            
-            if shares_edge:
-                # Countersink
-                angle_deg = math.degrees(cone['semi_angle']) * 2
-                countersinks.append({
-                    'type': 'countersink',
-                    'face_ids': [cone['face_id'], matched_cylinder['face_id']],
-                    'cone_angle': angle_deg,
-                    'hole_radius': matched_cylinder['radius']
-                })
-            else:
-                # Blind hole with conical bottom
-                blind_holes_with_cone.append({
-                    'type': 'blind_hole',
-                    'face_ids': [matched_cylinder['face_id'], cone['face_id']],
-                    'radius': matched_cylinder['radius'],
-                    'cylinders': [matched_cylinder],
-                    'has_conical_bottom': True
-                })
+            countersinks.append({
+                'type': 'countersink',
+                'face_ids': [cone['face_id'], matched_cylinder['face_id']],
+                'cone_angle': angle_deg,
+                'hole_radius': matched_cylinder['radius']
+            })
             
             consumed_cone_ids.add(cone['face_id'])
             consumed_cylinder_ids.add(matched_cylinder['face_id'])
     
-    logger.info(f"Found {len(countersinks)} countersinks")
-    logger.info(f"Found {len(blind_holes_with_cone)} blind holes with conical bottoms")
+    logger.info(f"Found {len(countersinks)} countersink holes (cone + cylinder pairs)")
     
-    # Step 2: Standalone cones → Tapered holes
+    # Step 2: Identify tapered holes (cones without coaxial cylinders)
     tapered_holes = []
     for cone in cones:
         if cone['face_id'] in consumed_cone_ids:
@@ -373,86 +253,63 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
         if cone['orientation'] != TopAbs_REVERSED:
             continue
         
+        angle_deg = math.degrees(cone['semi_angle']) * 2
         tapered_holes.append({
             'type': 'tapered_hole',
             'face_ids': [cone['face_id']],
-            'angle': math.degrees(cone['semi_angle']) * 2
+            'angle': angle_deg
         })
     
-    logger.info(f"Found {len(tapered_holes)} tapered holes")
+    logger.info(f"Found {len(tapered_holes)} tapered holes (cone only)")
     
-    # Step 3: Classify remaining cylinders
+    # Step 3: Classify remaining cylinders (excluding those in countersinks)
     hole_cylinders = []
     fillet_cylinders = []
     
     for cyl in cylinders:
         if cyl['face_id'] in consumed_cylinder_ids:
-            continue
+            continue  # Skip cylinders that are part of countersinks
         
+        # Check if it's a full 360° cylinder (hole or boss)
         if has_closed_circular_edge(cyl['face']):
             if cyl['orientation'] == TopAbs_REVERSED:
+                # Normal IN = Hole
                 hole_cylinders.append(cyl)
-            continue  # Skip bosses
+            # else: Normal OUT = Boss (intentionally skip, don't check for fillets)
+            continue  # CRITICAL: Skip fillet check for bosses
         
+        # If we reach here, it's not a full cylinder - check for fillets
         if has_arc_edge(cyl['face']):
             fillet_cylinders.append(cyl)
     
-    logger.info(f"Found {len(hole_cylinders)} potential hole cylinders")
+    logger.info(f"Found {len(hole_cylinders)} hole cylinders")
+    logger.info(f"Found {len(fillet_cylinders)} fillet cylinders")
     
-    # Step 4: Group and VALIDATE coaxial holes
+    # Step 4: Group and classify cylindrical holes
     hole_groups = group_coaxial_cylinders(hole_cylinders)
     
     holes = []
-    holes.extend(blind_holes_with_cone)  # Already validated
-    
-    rejected_count = 0
-    
     for group in hole_groups:
-        sorted_group = sorted(group, key=lambda c: c['radius'], reverse=True)
+        sorted_group = sorted(group, key=lambda c: c['radius'])
+        primary = sorted_group[0]
         
-        if len(group) == 1:
-            # Single cylinder - through or blind
-            cyl = group[0]
-            depth = calculate_cylinder_depth(cyl['face'])
-            diameter = cyl['radius'] * 2
-            
-            # Diameter validation
-            if diameter < 0.5 or diameter > 100:  # Reasonable hole range in mm
-                logger.debug(f"Rejected hole: diameter {diameter:.1f}mm out of range")
-                rejected_count += 1
-                continue
-            
-            # Depth/diameter ratio check
-            depth_ratio = depth / diameter
-            if depth_ratio > 10:  # Unreasonably deep for a hole
-                logger.debug(f"Rejected deep hole: depth/diameter ratio {depth_ratio:.1f}")
-                rejected_count += 1
-                continue
-            
-            # Check if blind or through
-            has_cap = has_planar_or_conical_cap(cyl['face'], shape)
-            
-            holes.append({
-                'type': 'blind_hole' if has_cap else 'through_hole',
-                'face_ids': [cyl['face_id']],
-                'radius': cyl['radius'],
-                'cylinders': [cyl]
-            })
+        # Count circular edges to distinguish blind vs through
+        circular_edge_count = count_circular_edges(primary['face'])
         
-        else:
-            # Multi-cylinder - validate as counterbore
-            if validate_counterbore(sorted_group, shape):
-                holes.append({
-                    'type': 'counterbore',
-                    'face_ids': [c['face_id'] for c in sorted_group],
-                    'radius': sorted_group[-1]['radius'],  # Smallest (primary hole)
-                    'cylinders': sorted_group
-                })
-            else:
-                logger.debug(f"Rejected invalid counterbore: {len(group)} steps failed validation")
-                rejected_count += 1
+        # 2 circular edges = through (top + bottom openings)
+        # 1 circular edge = blind (top opening only, sealed bottom)
+        is_through = circular_edge_count >= 2
+        
+        hole_type = 'counterbore' if len(group) > 1 else ('through_hole' if is_through else 'blind_hole')
+        
+        holes.append({
+            'type': hole_type,
+            'face_ids': [c['face_id'] for c in sorted_group],
+            'radius': primary['radius'],
+            'cylinders': sorted_group
+        })
     
-    # Fillets
+    # Step 5: Create fillets
     fillets = []
     for cyl in fillet_cylinders:
         fillets.append({
@@ -465,10 +322,9 @@ def recognize_simple_features(shape) -> Tuple[List[Dict], List[Dict], List[Dict]
     blind = sum(1 for h in holes if h['type'] == 'blind_hole')
     counterbore = sum(1 for h in holes if h['type'] == 'counterbore')
     
-    logger.info(f"✅ Recognized {len(holes)} holes ({through} through, {blind} blind, {counterbore} counterbored)")
-    logger.info(f"✅ Recognized {len(fillets)} fillets")
-    logger.info(f"✅ Recognized {len(countersinks)} countersinks")
-    logger.info(f"✅ Recognized {len(tapered_holes)} tapered holes")
-    logger.info(f"⚠️  Rejected {rejected_count} invalid features (→ volume decomposer)")
+    logger.info(f"Recognized {len(holes)} cylindrical holes ({through} through, {blind} blind, {counterbore} counterbored)")
+    logger.info(f"Recognized {len(fillets)} fillets")
+    logger.info(f"Recognized {len(countersinks)} countersink holes")
+    logger.info(f"Recognized {len(tapered_holes)} tapered holes")
     
     return holes, fillets, countersinks, tapered_holes
