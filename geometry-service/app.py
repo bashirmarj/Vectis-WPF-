@@ -631,15 +631,33 @@ def analyze_aag():
             # === STEP 2: Tessellate with face mapping ===
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
+            
             # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
             logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
             from aag_pattern_engine.graph_builder import AAGGraphBuilder
+            builder = AAGGraphBuilder(shape)
+            aag = builder.build()
+            
+            # === STEP 4: Feature Recognition ===
+            
+            # Initialize results
+            holes_geo = []
+            fillets_geo = []
+            bosses_geo = []
+            decomposition_results = {}
+            
+            # BLOCK 1: Geometric Recognition (Holes/Fillets/Bosses)
+            try:
+                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes/Fillets/Bosses)")
+                from aag_pattern_engine.geometric_recognizer import recognize_simple_features
                 
-                # Convert to feature format (simple dict for now)
+                holes_geo, fillets_geo, bosses_geo = recognize_simple_features(shape)
+                
+                # Convert to feature format
                 for hole_info in holes_geo:
                     features.append({
                         'type': 'hole',
-                        'method': 'geometric',  # Not fillet recognizer
+                        'method': 'geometric',
                         'face_ids': [hole_info['face_id']],
                         'radius': hole_info['radius'],
                         'confidence': 1.0
@@ -648,7 +666,7 @@ def analyze_aag():
                 for fillet_info in fillets_geo:
                     features.append({
                         'type': 'fillet',
-                        'method': 'geometric',  # Geometric, not AAG
+                        'method': 'geometric',
                         'face_ids': [fillet_info['face_id']],
                         'radius': fillet_info['radius'],
                         'confidence': 1.0
@@ -669,23 +687,26 @@ def analyze_aag():
                 logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
                 errors.append(f"Geometric recognition error: {str(e)}")
             
+            # BLOCK 2: Volume Decomposition (Pockets/Cavities)
+            try:
+                from volume_decomposer import VolumeDecomposer
+                from lump_classifier import LumpClassifier
+                from feature_mapper import FeatureMapper
+                
+                decomposer = VolumeDecomposer()
+                decomposition_results = decomposer.decompose(shape, part_type="prismatic")
                 
                 if decomposition_results:
-                    # 1. Classify Lumps
                     classifier = LumpClassifier()
                     mapper = FeatureMapper(shape, aag)
                     
                     classified_lumps = []
                     for lump in decomposition_results:
-                        # Pass stock_bbox to classifier for boundary analysis
                         classification = classifier.classify(lump['shape'], lump['stock_bbox'])
-                        
-                        # Merge classification into lump data
                         lump_data = lump.copy()
                         lump_data.update(classification)
                         classified_lumps.append(lump_data)
                         
-                    # 2. Map back to Face IDs
                     volumetric_features = mapper.map_features(classified_lumps)
                     features.extend(volumetric_features)
                     
