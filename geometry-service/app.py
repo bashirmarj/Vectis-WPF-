@@ -467,11 +467,12 @@ def analyze_cad():
                 
                 # 2. Surface Features (Fillets/Chamfers)
                 try:
-                    fillet_recognizer = FilletChamferRecognizer(aag)
+                    fillet_recognizer = FilletRecognizer(aag)
                     fillet_features = fillet_recognizer.recognize()
                     features.extend(fillet_features)
                 except Exception as e:
                     logger.error(f"[{correlation_id}] Surface recognition failed: {e}")
+
 
                 # 3. Volumetric Features (Holes, Pockets, Steps)
                 try:
