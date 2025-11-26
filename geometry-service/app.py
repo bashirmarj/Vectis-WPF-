@@ -641,28 +641,26 @@ def analyze_aag():
             # === STEP 4: Feature Recognition ===
             
             # Initialize results
-            holes_geo = []
-            fillets_geo = []
-            bosses_geo = []
             decomposition_results = {}
             
-            # BLOCK 1: Geometric Recognition (Holes/Fillets/Bosses)
+            # BLOCK 1: Geometric Recognition (Holes & Fillets)
             try:
-                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes/Fillets/Bosses)")
+                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition (Holes & Fillets)")
                 from aag_pattern_engine.geometric_recognizer import recognize_simple_features
                 
-                holes_geo, fillets_geo, bosses_geo = recognize_simple_features(shape)
+                holes_geo, fillets_geo = recognize_simple_features(shape)
                 
-                # Convert to feature format
+                # Convert holes to feature format
                 for hole_info in holes_geo:
                     features.append({
-                        'type': 'hole',
+                        'type': hole_info['type'],  # 'through_hole' or 'counterbore'
                         'method': 'geometric',
-                        'face_ids': [hole_info['face_id']],
+                        'face_ids': hole_info['face_ids'],
                         'radius': hole_info['radius'],
                         'confidence': 1.0
                     })
                 
+                # Convert fillets to feature format
                 for fillet_info in fillets_geo:
                     features.append({
                         'type': 'fillet',
@@ -671,17 +669,8 @@ def analyze_aag():
                         'radius': fillet_info['radius'],
                         'confidence': 1.0
                     })
-                    
-                for boss_info in bosses_geo:
-                    features.append({
-                        'type': 'boss',
-                        'method': 'geometric',
-                        'face_ids': [boss_info['face_id']],
-                        'radius': boss_info['radius'],
-                        'confidence': 1.0
-                    })
                 
-                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(bosses_geo)} bosses")
+                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets")
                 
             except Exception as e:
                 logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
