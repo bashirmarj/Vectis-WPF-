@@ -70,9 +70,7 @@ export function PartDetailCustomer({
   onRemove,
 }: PartDetailCustomerProps) {
   const hasAnalysis = !!file.analysis;
-  const hasFeatures =
-    hasAnalysis &&
-    file.analysis?.geometric_features?.instances?.length > 0;
+  const hasFeatures = hasAnalysis && file.analysis?.geometric_features?.instances?.length > 0;
   const hasQuote = !!file.quote;
 
   // Debug logging
@@ -92,8 +90,7 @@ export function PartDetailCustomer({
   });
 
   // Calculate feature count from geometric_features
-  const featureCount = 
-    file.analysis?.geometric_features?.instances?.length || 0;
+  const featureCount = file.analysis?.geometric_features?.instances?.length || 0;
 
   return (
     <Card className="w-full">
@@ -158,10 +155,10 @@ export function PartDetailCustomer({
             <TabsContent value="model" className="mt-4">
               <div className="space-y-4">
                 <MaterialSelector value={file.material} materials={materials} onSelect={onUpdateMaterial} compact />
-                
+
                 <div className="h-[600px]">
-                  <CADViewer 
-                    fileName={file.file.name} 
+                  <CADViewer
+                    fileName={file.file.name}
                     meshData={file.meshData}
                     geometricFeatures={file.analysis?.geometric_features}
                   />
