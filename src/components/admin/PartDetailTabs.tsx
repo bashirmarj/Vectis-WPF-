@@ -1,13 +1,13 @@
-import React from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { CADViewer } from "@/components/CADViewer";
-import FeatureTree from "@/components/FeatureTree";
-import { Box, Ruler, Gauge } from "lucide-react";
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { CADViewer } from '@/components/CADViewer';
+import FeatureTree from '@/components/FeatureTree';
+import { Box, Ruler, Gauge } from 'lucide-react';
 
 interface LineItem {
   id: string;
@@ -45,28 +45,34 @@ interface PartDetailTabsProps {
   onUpdateLineItem: (id: string, field: string, value: any) => void;
 }
 
-const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, onUpdateLineItem }) => {
+const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
+  lineItem,
+  featureTree,
+  onUpdateLineItem,
+}) => {
   const formatNumber = (num: number | null | undefined, decimals: number = 2): string => {
-    if (num === null || num === undefined) return "N/A";
+    if (num === null || num === undefined) return 'N/A';
     return num.toFixed(decimals);
   };
 
   const getComplexityColor = (score: number | null): string => {
-    if (!score) return "text-gray-600";
-    if (score <= 3) return "text-green-600";
-    if (score <= 6) return "text-yellow-600";
-    return "text-red-600";
+    if (!score) return 'text-gray-600';
+    if (score <= 3) return 'text-green-600';
+    if (score <= 6) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   const getComplexityBadge = (score: number | null): string => {
-    if (!score) return "bg-gray-100 text-gray-800";
-    if (score <= 3) return "bg-green-100 text-green-800";
-    if (score <= 6) return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
+    if (!score) return 'bg-gray-100 text-gray-800';
+    if (score <= 3) return 'bg-green-100 text-green-800';
+    if (score <= 6) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
   };
 
   // Calculate part dimensions from volume (cubic root approximation)
-  const estimatedSize = lineItem.estimated_volume_cm3 ? Math.cbrt(lineItem.estimated_volume_cm3) : null;
+  const estimatedSize = lineItem.estimated_volume_cm3
+    ? Math.cbrt(lineItem.estimated_volume_cm3)
+    : null;
 
   return (
     <Card>
@@ -99,7 +105,9 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
           {/* Features Tab - Geometric Recognition */}
           <TabsContent value="features" className="mt-4">
             {featureTree?.geometric_features ? (
-              <FeatureTree features={featureTree.geometric_features} />
+              <FeatureTree
+                features={featureTree.geometric_features}
+              />
             ) : (
               <Card>
                 <CardHeader>
@@ -131,7 +139,9 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                     <div className="space-y-2">
                       <Label>Volume</Label>
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold">{formatNumber(lineItem.estimated_volume_cm3)}</div>
+                        <div className="text-2xl font-bold">
+                          {formatNumber(lineItem.estimated_volume_cm3)}
+                        </div>
                         <div className="text-sm text-gray-500">cm³</div>
                       </div>
                     </div>
@@ -139,7 +149,9 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                     <div className="space-y-2">
                       <Label>Surface Area</Label>
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold">{formatNumber(lineItem.estimated_surface_area_cm2)}</div>
+                        <div className="text-2xl font-bold">
+                          {formatNumber(lineItem.estimated_surface_area_cm2)}
+                        </div>
                         <div className="text-sm text-gray-500">cm²</div>
                       </div>
                     </div>
@@ -148,7 +160,7 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                       <Label>Complexity Score</Label>
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <Badge className={getComplexityBadge(lineItem.estimated_complexity_score)}>
-                          {lineItem.estimated_complexity_score || "N/A"} / 10
+                          {lineItem.estimated_complexity_score || 'N/A'} / 10
                         </Badge>
                       </div>
                     </div>
@@ -157,7 +169,7 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                       <Label>Estimated Size</Label>
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <div className="text-2xl font-bold">
-                          {estimatedSize ? `~${formatNumber(estimatedSize, 1)}` : "N/A"}
+                          {estimatedSize ? `~${formatNumber(estimatedSize, 1)}` : 'N/A'}
                         </div>
                         <div className="text-sm text-gray-500">cm (approx)</div>
                       </div>
@@ -178,20 +190,24 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                   <div className="space-y-4">
                     <div>
                       <Label>Material</Label>
-                      <div className="p-3 bg-gray-50 rounded-lg mt-2">{lineItem.material_type || "Not specified"}</div>
+                      <div className="p-3 bg-gray-50 rounded-lg mt-2">
+                        {lineItem.material_type || 'Not specified'}
+                      </div>
                     </div>
 
                     <div>
                       <Label>Selected Process</Label>
                       <div className="p-3 bg-gray-50 rounded-lg mt-2">
-                        {lineItem.selected_process || "Not specified"}
+                        {lineItem.selected_process || 'Not specified'}
                       </div>
                     </div>
 
                     {lineItem.finish_type && (
                       <div>
                         <Label>Surface Finish</Label>
-                        <div className="p-3 bg-gray-50 rounded-lg mt-2">{lineItem.finish_type}</div>
+                        <div className="p-3 bg-gray-50 rounded-lg mt-2">
+                          {lineItem.finish_type}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -213,7 +229,9 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                         <div key={idx} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="font-medium">{routing}</div>
                           {lineItem.routing_reasoning && lineItem.routing_reasoning[idx] && (
-                            <div className="text-sm text-gray-600 mt-1">{lineItem.routing_reasoning[idx]}</div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {lineItem.routing_reasoning[idx]}
+                            </div>
                           )}
                         </div>
                       ))}
@@ -234,7 +252,9 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                         <div key={idx} className="p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="font-medium">{op.routing}</div>
-                            <Badge variant="outline">${formatNumber(op.machining_cost)}</Badge>
+                            <Badge variant="outline">
+                              ${formatNumber(op.machining_cost)}
+                            </Badge>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
                             Time: {formatNumber(op.machining_time_min)} minutes
@@ -307,8 +327,14 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                     id="unit-price"
                     type="number"
                     step="0.01"
-                    value={lineItem.unit_price || ""}
-                    onChange={(e) => onUpdateLineItem(lineItem.id, "unit_price", parseFloat(e.target.value) || null)}
+                    value={lineItem.unit_price || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(
+                        lineItem.id,
+                        'unit_price',
+                        parseFloat(e.target.value) || null
+                      )
+                    }
                     placeholder="Enter unit price"
                   />
                   {lineItem.preliminary_unit_price && (
@@ -323,8 +349,14 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                   <Input
                     id="lead-time"
                     type="number"
-                    value={lineItem.lead_time_days || ""}
-                    onChange={(e) => onUpdateLineItem(lineItem.id, "lead_time_days", parseInt(e.target.value) || null)}
+                    value={lineItem.lead_time_days || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(
+                        lineItem.id,
+                        'lead_time_days',
+                        parseInt(e.target.value) || null
+                      )
+                    }
                     placeholder="Enter lead time"
                   />
                 </div>
@@ -333,8 +365,10 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({ lineItem, featureTree, 
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
-                    value={lineItem.notes || ""}
-                    onChange={(e) => onUpdateLineItem(lineItem.id, "notes", e.target.value)}
+                    value={lineItem.notes || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(lineItem.id, 'notes', e.target.value)
+                    }
                     placeholder="Add any notes or special considerations"
                     rows={4}
                   />
