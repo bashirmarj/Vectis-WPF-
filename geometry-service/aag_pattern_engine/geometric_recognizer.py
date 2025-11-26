@@ -99,19 +99,8 @@ def classify_cylinder(cyl_info: Dict, ef_map) -> str:
     if is_target:
         logger.info(f"--- Analyzing Cylinder {face_id} ---")
 
-    # 1. Check Orientation (Hole vs Material)
-    # Cylinder natural normal points AWAY from axis.
-    # REVERSED: Normal points IN -> Material Outside -> HOLE
-    # FORWARD: Normal points OUT -> Material Inside -> BOSS or FILLET
-    orientation = face.Orientation()
-    is_reversed = (orientation == TopAbs_REVERSED)
-    
-    if is_reversed:
-        if is_target: logger.info(f"  -> HOLE (Reversed orientation, normal points IN)")
-        return 'hole'
-    
-    # 2. Material OUT (Boss or Fillet)
-    # We need to distinguish based on topology and continuity.
+    # STEP 1: Check if it's a closed 360° cylinder or a partial arc
+    # This is the PRIMARY distinction
     explorer = TopExp_Explorer(face, TopAbs_EDGE)
     has_sharp_linear_edge = False
     has_smooth_linear_edge = False
@@ -128,15 +117,11 @@ def classify_cylinder(cyl_info: Dict, ef_map) -> str:
             # Check for 360° closure (Seam edge of a full cylinder)
             if edge.closed_edge():
                 is_closed_cylinder = True
-            # Note: We ignore continuity of circular edges (top/bottom rims)
-            # because a Boss can have a filleted base (Smooth) or sharp base (Sharp).
+                if is_target: logger.info(f"  Found 360° seam edge (closed cylinder)")
             
         elif curve_type == GeomAbs_Line:
             # Linear edge (side boundary of a partial cylinder)
-            # This is the KEY discriminator.
-            # Fillets MUST be tangent (Smooth) along their rails.
-            # Bosses (partial) will have a sharp break where they protrude.
-            
+            # Check continuity with neighbors
             if ef_map.Contains(edge_shape):
                 faces = ef_map.FindFromKey(edge_shape)
                 if faces.Size() == 2:
@@ -157,23 +142,29 @@ def classify_cylinder(cyl_info: Dict, ef_map) -> str:
         
         explorer.Next()
     
-    # Decision Logic - Hierarchy is Critical
+    # STEP 2: Decision Logic - Hierarchy is Critical
     
-    # A. 360° Cylinder -> Always Boss (or Pin)
+    # A. Closed 360° Cylinder -> Use orientation to distinguish Hole vs Boss
     if is_closed_cylinder:
-        if is_target: logger.info(f"  -> BOSS (360° Closed Cylinder)")
-        return 'boss'
+        orientation = face.Orientation()
+        is_reversed = (orientation == TopAbs_REVERSED)
+        
+        if is_reversed:
+            if is_target: logger.info(f"  -> HOLE (360° closed + Normal IN)")
+            return 'hole'
+        else:
+            if is_target: logger.info(f"  -> BOSS (360° closed + Normal OUT)")
+            return 'boss'
     
-    # B. Partial Cylinder with ANY SHARP Linear Edges -> Boss (Ear/Protrusion)
-    # Even if it has a fillet at the base, if the side seams are sharp, it's a distinct feature.
+    # B. Partial Cylinder -> Use edge continuity to distinguish Fillet vs Boss
+    # (Orientation is NOT reliable for partial cylinders - fillets can be reversed!)
+    
     if has_sharp_linear_edge:
-        if is_target: logger.info(f"  -> BOSS (Has sharp linear edge/seam)")
+        if is_target: logger.info(f"  -> BOSS (Partial cylinder with sharp linear edges)")
         return 'boss'
     
-    # C. Partial Cylinder with ONLY Smooth Linear Edges -> Fillet (Blend/Round)
-    # A fillet is defined by tangent continuity along its rails.
-    if has_smooth_linear_edge and not has_sharp_linear_edge:
-        if is_target: logger.info(f"  -> FILLET (Has smooth linear edges)")
+    if has_smooth_linear_edge:
+        if is_target: logger.info(f"  -> FILLET (Partial cylinder with smooth linear edges)")
         return 'fillet'
         
     # D. Fallback (e.g. floating face, bad topology)
