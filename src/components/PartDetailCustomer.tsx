@@ -1,409 +1,400 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CADViewer } from "./CADViewer";
-import FeatureTree from "./FeatureTree";
-import { Package, Layers, DollarSign, Loader2, CheckCircle2, AlertCircle, Zap, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
-import { ChevronsUpDown, Check } from "lucide-react";
-import * as React from "react";
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { CADViewer } from '@/components/CADViewer';
+import FeatureTree from '@/components/FeatureTree';
+import { Box, Ruler, Gauge } from 'lucide-react';
 
-interface PartDetailCustomerProps {
-  file: {
-    file: File;
-    quantity: number;
-    material?: string;
-    process?: string;
-    meshData?: {
-      vertices: number[];
-      indices: number[];
-      normals: number[];
-      vertex_colors?: string[];
-      triangle_count: number;
-      face_types?: string[];
-      feature_edges?: number[][][];
-    };
-    analysis?: {
-      volume_cm3: number;
-      surface_area_cm2: number;
-      complexity_score: number;
-      confidence?: number;
-      method?: string;
-      recommended_processes?: string[];
-      geometric_features?: any;
-      recommended_routings?: string[];
-      routing_reasoning?: string[];
-      machining_summary?: Array<{
-        routing: string;
-        machining_time_min: number;
-        machining_cost: number;
-      }>;
-      estimated_total_cost_usd?: number;
-    };
-    quote?: {
-      unit_price: number;
-      total_price: number;
-      breakdown: {
-        material_cost: number;
-        machining_cost: number;
-        setup_cost: number;
-        finish_cost: number;
-      };
-      lead_time_days: number;
-    };
-    isAnalyzing?: boolean;
-  };
-  materials: string[];
-  onUpdateMaterial: (material: string) => void;
-  onAnalyze: () => void;
-  onRemove: () => void;
+interface LineItem {
+  id: string;
+  file_name: string;
+  file_path: string;
+  quantity: number;
+  unit_price: number | null;
+  lead_time_days: number | null;
+  notes: string | null;
+  estimated_volume_cm3: number | null;
+  estimated_surface_area_cm2: number | null;
+  estimated_complexity_score: number | null;
+  material_cost: number | null;
+  machining_cost: number | null;
+  setup_cost: number | null;
+  finish_cost: number | null;
+  preliminary_unit_price: number | null;
+  selected_process: string | null;
+  material_type: string | null;
+  finish_type: string | null;
+  mesh_id: string | null;
+  machining_operations: any[] | null;
+  estimated_machining_cost: number | null;
+  recommended_routings: string[] | null;
+  routing_reasoning: string[] | null;
 }
 
-export function PartDetailCustomer({
-  file,
-  materials,
-  onUpdateMaterial,
-  onAnalyze,
-  onRemove,
-}: PartDetailCustomerProps) {
-  const hasAnalysis = !!file.analysis;
-  const hasFeatures =
-    hasAnalysis &&
-    file.analysis?.geometric_features?.instances?.length > 0;
-  const hasQuote = !!file.quote;
+interface FeatureTree {
+  geometric_features?: any;
+}
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log("📊 Passing to CADViewer:", {
-      hasGeometricFeatures: !!file.analysis?.geometric_features,
-      hasFeatureInstances: !!file.analysis?.geometric_features?.feature_instances,
-      instanceCount: file.analysis?.geometric_features?.feature_instances?.length || 0,
-      structure: file.analysis?.geometric_features,
-    });
-  }, [file.analysis?.geometric_features]);
+interface PartDetailTabsProps {
+  lineItem: LineItem;
+  featureTree: FeatureTree | null;
+  onUpdateLineItem: (id: string, field: string, value: any) => void;
+}
 
-  console.log("🔍 Feature data:", {
-    hasAnalysis,
-    hasGeometricFeatures: !!file.analysis?.geometric_features,
-    featureCount: file.analysis?.geometric_features?.instances?.length || 0,
-  });
+const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
+  lineItem,
+  featureTree,
+  onUpdateLineItem,
+}) => {
+  const formatNumber = (num: number | null | undefined, decimals: number = 2): string => {
+    if (num === null || num === undefined) return 'N/A';
+    return num.toFixed(decimals);
+  };
 
-  // Calculate feature count from geometric_features
-  const featureCount = 
-    file.analysis?.geometric_features?.instances?.length || 0;
+  const getComplexityColor = (score: number | null): string => {
+    if (!score) return 'text-gray-600';
+    if (score <= 3) return 'text-green-600';
+    if (score <= 6) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getComplexityBadge = (score: number | null): string => {
+    if (!score) return 'bg-gray-100 text-gray-800';
+    if (score <= 3) return 'bg-green-100 text-green-800';
+    if (score <= 6) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  // Calculate part dimensions from volume (cubic root approximation)
+  const estimatedSize = lineItem.estimated_volume_cm3
+    ? Math.cbrt(lineItem.estimated_volume_cm3)
+    : null;
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Package className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base">{file.file.name}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {(file.file.size / 1024 / 1024).toFixed(2)} MB • Qty: {file.quantity}
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onRemove}>
-            <X className="h-4 w-4" />
-          </Button>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>{lineItem.file_name}</CardTitle>
+          <Badge variant="outline">Qty: {lineItem.quantity}</Badge>
         </div>
       </CardHeader>
-
       <CardContent>
-        {!hasAnalysis ? (
-          <div className="space-y-4">
-            <MaterialSelector value={file.material} materials={materials} onSelect={onUpdateMaterial} />
-            <Button onClick={onAnalyze} disabled={file.isAnalyzing || !file.material} className="w-full">
-              {file.isAnalyzing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  Analyze CAD File
-                </>
-              )}
-            </Button>
-            {!file.material && (
-              <p className="text-xs text-muted-foreground text-center">Select a material to enable analysis</p>
-            )}
-          </div>
-        ) : (
-          <Tabs defaultValue="model" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="model">
-                <Package className="h-4 w-4 mr-2" />
-                3D Model & Features
-                {featureCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {featureCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="quote">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Quote
-              </TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="3d-model" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="3d-model">3D Model</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
+            <TabsTrigger value="analysis">Analysis</TabsTrigger>
+            <TabsTrigger value="pricing">Pricing</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="model" className="mt-4">
-              <div className="space-y-4">
-                <MaterialSelector value={file.material} materials={materials} onSelect={onUpdateMaterial} compact />
-                
-                <div className="h-[600px]">
-                  <CADViewer 
-                    fileName={file.file.name} 
-                    meshData={file.meshData}
-                    geometricFeatures={file.analysis?.geometric_features}
+          {/* 3D Model Tab */}
+          <TabsContent value="3d-model" className="mt-4">
+            <div className="h-[600px] border rounded-lg overflow-hidden">
+              <CADViewer
+                fileName={lineItem.file_name}
+                fileUrl={lineItem.file_path}
+                geometricFeatures={featureTree?.geometric_features || null}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Features Tab - Geometric Recognition */}
+          <TabsContent value="features" className="mt-4">
+            {featureTree?.geometric_features ? (
+              <FeatureTree
+                features={featureTree.geometric_features}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Feature Recognition</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>No feature analysis available for this part.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Analysis Tab */}
+          <TabsContent value="analysis" className="mt-4">
+            <div className="space-y-6">
+              {/* Geometry Metrics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Box className="w-5 h-5" />
+                    Geometry Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Volume</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold">
+                          {formatNumber(lineItem.estimated_volume_cm3)}
+                        </div>
+                        <div className="text-sm text-gray-500">cm³</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Surface Area</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold">
+                          {formatNumber(lineItem.estimated_surface_area_cm2)}
+                        </div>
+                        <div className="text-sm text-gray-500">cm²</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Complexity Score</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Badge className={getComplexityBadge(lineItem.estimated_complexity_score)}>
+                          {lineItem.estimated_complexity_score || 'N/A'} / 10
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Estimated Size</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-2xl font-bold">
+                          {estimatedSize ? `~${formatNumber(estimatedSize, 1)}` : 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">cm (approx)</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Material & Process */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gauge className="w-5 h-5" />
+                    Material & Process
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Material</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg mt-2">
+                        {lineItem.material_type || 'Not specified'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Selected Process</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg mt-2">
+                        {lineItem.selected_process || 'Not specified'}
+                      </div>
+                    </div>
+
+                    {lineItem.finish_type && (
+                      <div>
+                        <Label>Surface Finish</Label>
+                        <div className="p-3 bg-gray-50 rounded-lg mt-2">
+                          {lineItem.finish_type}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recommended Routings */}
+              {lineItem.recommended_routings && lineItem.recommended_routings.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Ruler className="w-5 h-5" />
+                      Recommended Manufacturing Routings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {lineItem.recommended_routings.map((routing, idx) => (
+                        <div key={idx} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="font-medium">{routing}</div>
+                          {lineItem.routing_reasoning && lineItem.routing_reasoning[idx] && (
+                            <div className="text-sm text-gray-600 mt-1">
+                              {lineItem.routing_reasoning[idx]}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Machining Operations */}
+              {lineItem.machining_operations && lineItem.machining_operations.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Machining Operations Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {lineItem.machining_operations.map((op: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium">{op.routing}</div>
+                            <Badge variant="outline">
+                              ${formatNumber(op.machining_cost)}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            Time: {formatNumber(op.machining_time_min)} minutes
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cost Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cost Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {lineItem.material_cost !== null && (
+                      <div className="flex items-center justify-between">
+                        <span>Material Cost</span>
+                        <span className="font-medium">${formatNumber(lineItem.material_cost)}</span>
+                      </div>
+                    )}
+                    {lineItem.machining_cost !== null && (
+                      <div className="flex items-center justify-between">
+                        <span>Machining Cost</span>
+                        <span className="font-medium">${formatNumber(lineItem.machining_cost)}</span>
+                      </div>
+                    )}
+                    {lineItem.setup_cost !== null && (
+                      <div className="flex items-center justify-between">
+                        <span>Setup Cost</span>
+                        <span className="font-medium">${formatNumber(lineItem.setup_cost)}</span>
+                      </div>
+                    )}
+                    {lineItem.finish_cost !== null && (
+                      <div className="flex items-center justify-between">
+                        <span>Finish Cost</span>
+                        <span className="font-medium">${formatNumber(lineItem.finish_cost)}</span>
+                      </div>
+                    )}
+                    {lineItem.preliminary_unit_price !== null && (
+                      <>
+                        <div className="border-t pt-3 mt-3"></div>
+                        <div className="flex items-center justify-between text-lg">
+                          <span className="font-semibold">Preliminary Unit Price</span>
+                          <span className="font-bold text-blue-600">
+                            ${formatNumber(lineItem.preliminary_unit_price)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Pricing Tab */}
+          <TabsContent value="pricing" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit Pricing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="unit-price">Unit Price ($)</Label>
+                  <Input
+                    id="unit-price"
+                    type="number"
+                    step="0.01"
+                    value={lineItem.unit_price || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(
+                        lineItem.id,
+                        'unit_price',
+                        parseFloat(e.target.value) || null
+                      )
+                    }
+                    placeholder="Enter unit price"
+                  />
+                  {lineItem.preliminary_unit_price && (
+                    <p className="text-sm text-gray-500">
+                      Preliminary estimate: ${formatNumber(lineItem.preliminary_unit_price)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lead-time">Lead Time (days)</Label>
+                  <Input
+                    id="lead-time"
+                    type="number"
+                    value={lineItem.lead_time_days || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(
+                        lineItem.id,
+                        'lead_time_days',
+                        parseInt(e.target.value) || null
+                      )
+                    }
+                    placeholder="Enter lead time"
                   />
                 </div>
 
-                {hasAnalysis && (
-                  <>
-                    <div className="grid grid-cols-3 gap-3">
-                      <StatCard label="Volume" value={`${file.analysis.volume_cm3.toFixed(1)} cm³`} />
-                      <StatCard label="Surface Area" value={`${file.analysis.surface_area_cm2.toFixed(1)} cm²`} />
-                      <StatCard label="Complexity" value={file.analysis.complexity_score.toString()} />
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={lineItem.notes || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(lineItem.id, 'notes', e.target.value)
+                    }
+                    placeholder="Add any notes or special considerations"
+                    rows={4}
+                  />
+                </div>
+
+                {/* Total Price Display */}
+                {lineItem.unit_price && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between text-lg">
+                      <span className="font-semibold">Total Price</span>
+                      <span className="font-bold text-blue-600">
+                        ${formatNumber((lineItem.unit_price || 0) * lineItem.quantity)}
+                      </span>
                     </div>
-
-                    {file.analysis.routing_reasoning && file.analysis.routing_reasoning.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-purple-600" />
-                            Industrial Routing Logic
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <ul className="space-y-2">
-                            {file.analysis.routing_reasoning.map((reason, idx) => (
-                              <li key={idx} className="flex items-start gap-2 text-sm">
-                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                <span>{reason}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="quote" className="mt-4">
-              <div className="space-y-4">
-                <MaterialSelector value={file.material} materials={materials} onSelect={onUpdateMaterial} compact />
-
-                {hasQuote ? (
-                  <div className="space-y-4">
-                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-2 border-purple-200 dark:border-purple-800 rounded-lg p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <Badge className="bg-purple-600 text-white">
-                          <Zap className="h-3 w-3 mr-1" />
-                          AI Estimated Price
-                        </Badge>
-                        {file.analysis?.confidence && (
-                          <Badge variant="secondary">
-                            {file.analysis.confidence >= 0.85 ? (
-                              <>
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                High Confidence
-                              </>
-                            ) : (
-                              "Estimated"
-                            )}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Unit Price</p>
-                        <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">
-                          ${file.quote.unit_price.toFixed(2)}
-                        </p>
-                        <p className="text-lg text-muted-foreground mt-2">
-                          Total: ${file.quote.total_price.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {file.analysis?.machining_summary && file.analysis.machining_summary.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm flex items-center gap-2">
-                            <Layers className="h-4 w-4 text-blue-600" />
-                            Machining Operations
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            {file.analysis.machining_summary.map((op, idx) => (
-                              <div key={idx} className="flex justify-between items-center p-3 bg-muted/30 rounded-md">
-                                <div>
-                                  <div className="font-medium text-sm">{op.routing}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {op.machining_time_min.toFixed(1)} minutes
-                                  </div>
-                                </div>
-                                <div className="text-sm font-semibold">${op.machining_cost.toFixed(2)}</div>
-                              </div>
-                            ))}
-                            {file.analysis.estimated_total_cost_usd && (
-                              <div className="pt-2 border-t flex justify-between items-center">
-                                <span className="text-sm font-semibold">Total Machining Cost</span>
-                                <span className="text-base font-bold text-purple-600">
-                                  ${file.analysis.estimated_total_cost_usd.toFixed(2)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {file.analysis?.recommended_processes && file.analysis.recommended_processes.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm">Recommended Manufacturing Processes</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex flex-wrap gap-2">
-                            {file.analysis.recommended_processes.map((process, idx) => (
-                              <Badge key={idx} variant="secondary">
-                                {process}
-                              </Badge>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Cost Breakdown</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <CostRow label="Material" value={file.quote.breakdown.material_cost} />
-                        <CostRow label="Machining" value={file.quote.breakdown.machining_cost} />
-                        <CostRow label="Setup" value={file.quote.breakdown.setup_cost} />
-                        <CostRow label="Finish" value={file.quote.breakdown.finish_cost} />
-                        <div className="pt-2 border-t">
-                          <div className="flex justify-between text-sm font-semibold">
-                            <span>Lead Time</span>
-                            <span>{file.quote.lead_time_days} days</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground">
-                        💡 This is a preliminary estimate. Final pricing will be confirmed after engineering review.
-                      </p>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {lineItem.quantity} units × ${formatNumber(lineItem.unit_price)}
                     </div>
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <DollarSign className="h-12 w-12 text-muted-foreground mb-3" />
-                    <p className="text-sm text-muted-foreground mb-3">No pricing available yet</p>
-                    <Button onClick={onAnalyze} disabled={file.isAnalyzing || !file.material}>
-                      {file.isAnalyzing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="h-4 w-4" />
-                          Calculate Quote
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
-}
+};
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-card border rounded-lg p-3 text-center">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className="text-sm font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function CostRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">${value.toFixed(2)}</span>
-    </div>
-  );
-}
-
-function MaterialSelector({
-  value,
-  materials,
-  onSelect,
-  compact = false,
-}: {
-  value?: string;
-  materials: string[];
-  onSelect: (material: string) => void;
-  compact?: boolean;
-}) {
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <div className={compact ? "" : "space-y-2"}>
-      {!compact && <label className="text-sm font-medium">Material</label>}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
-            {value || "Select material..."}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
-          <Command>
-            <CommandInput placeholder="Search material..." />
-            <CommandList>
-              <CommandEmpty>No material found.</CommandEmpty>
-              <CommandGroup>
-                {materials.map((material) => (
-                  <CommandItem
-                    key={material}
-                    value={material}
-                    onSelect={() => {
-                      onSelect(material);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check className={cn("mr-2 h-4 w-4", value === material ? "opacity-100" : "opacity-0")} />
-                    {material}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-}
+export default PartDetailTabs;
