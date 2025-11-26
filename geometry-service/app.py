@@ -676,6 +676,15 @@ def analyze_aag():
                 logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
                 errors.append(f"Geometric recognition error: {str(e)}")
             
+            # Track consumed face IDs to prevent duplicates
+            consumed_face_ids = set()
+            for hole_info in holes_geo:
+                consumed_face_ids.update(hole_info['face_ids'])
+            for fillet_info in fillets_geo:
+                consumed_face_ids.add(fillet_info['face_id'])
+            
+            logger.info(f"[{correlation_id}] 🔒 Consumed {len(consumed_face_ids)} face IDs from geometric recognizer")
+            
             # BLOCK 2: Volume Decomposition (Pockets/Cavities)
             try:
                 from volume_decomposer import VolumeDecomposer
@@ -697,9 +706,21 @@ def analyze_aag():
                         classified_lumps.append(lump_data)
                         
                     volumetric_features = mapper.map_features(classified_lumps)
-                    features.extend(volumetric_features)
                     
-                    logger.info(f"[{correlation_id}] ✅ Found {len(volumetric_features)} volumetric features")
+                    # FILTER OUT FEATURES WITH CONSUMED FACES
+                    filtered_features = []
+                    skipped_count = 0
+                    for feature in volumetric_features:
+                        feature_face_ids = set(feature.get('face_ids', []))
+                        if feature_face_ids & consumed_face_ids:  # Intersection check
+                            skipped_count += 1
+                            logger.debug(f"[{correlation_id}] Skipping duplicate feature with face IDs: {feature_face_ids & consumed_face_ids}")
+                        else:
+                            filtered_features.append(feature)
+                    
+                    features.extend(filtered_features)
+                    
+                    logger.info(f"[{correlation_id}] ✅ Found {len(filtered_features)} volumetric features ({skipped_count} duplicates filtered)")
                 else:
                     logger.warning(f"[{correlation_id}] Volume decomposition returned no features")
                     

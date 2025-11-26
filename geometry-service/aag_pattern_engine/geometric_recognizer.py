@@ -88,6 +88,51 @@ def has_arc_edge(face) -> bool:
     return False
 
 
+def has_planar_cap(face, shape) -> bool:
+    """
+    Check if a cylindrical face has a planar end cap (indicating blind hole).
+    Through holes have no planar caps (both ends open to exterior).
+    """
+    from OCC.Core.GeomAbs import GeomAbs_Plane
+    from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+    
+    # Build edge-face map to find adjacent faces
+    ef_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    from OCC.Core.TopExp import topexp
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, ef_map)
+    
+    # Check circular edges of the cylinder for adjacent planar faces
+    explorer = TopExp_Explorer(face, TopAbs_EDGE)
+    
+    while explorer.More():
+        edge_shape = topods.Edge(explorer.Current())
+        
+        # Check if this is a circular edge (top/bottom rim of cylinder)
+        curve = BRepAdaptor_Curve(edge_shape)
+        if curve.GetType() == GeomAbs_Circle:
+            # Find faces adjacent to this circular edge
+            if ef_map.Contains(edge_shape):
+                faces = ef_map.FindFromKey(edge_shape)
+                
+                # Iterate through adjacent faces
+                from OCC.Core.TopTools import TopTools_ListIteratorOfListOfShape
+                face_iter = TopTools_ListIteratorOfListOfShape(faces)
+                while face_iter.More():
+                    adj_face = topods.Face(face_iter.Value())
+                    
+                    # Check if adjacent face is planar
+                    adj_surf = BRepAdaptor_Surface(adj_face)
+                    if adj_surf.GetType() == GeomAbs_Plane:
+                        # Found a planar cap!
+                        return True
+                    
+                    face_iter.Next()
+        
+        explorer.Next()
+    
+    return False
+
+
 def axes_are_coaxial(axis1: gp_Ax1, axis2: gp_Ax1, tolerance=1e-3) -> bool:
     """Check if two axes are co-axial."""
     # Check parallel directions
@@ -175,8 +220,12 @@ def recognize_simple_features(shape):
     for group in hole_groups:
         sorted_group = sorted(group, key=lambda c: c['radius'])
         
+        # Check if blind or through hole by checking for planar cap
+        primary_cyl = sorted_group[0]
+        is_blind = has_planar_cap(primary_cyl['face'], shape)
+        
         hole_info = {
-            'type': 'counterbore' if len(group) > 1 else 'through_hole',
+            'type': 'counterbore' if len(group) > 1 else ('blind_hole' if is_blind else 'through_hole'),
             'face_ids': [c['face_id'] for c in sorted_group],
             'radius': sorted_group[0]['radius'],  # Smallest radius
             'cylinders': sorted_group
