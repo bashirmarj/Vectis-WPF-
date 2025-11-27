@@ -302,7 +302,44 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
   onFeatureSelect,
   selectedFeature
 }) => {
-  // AI explanation removed per user feedback
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [loadingExplanation, setLoadingExplanation] = useState(false);
+
+  // Fetch AI explanation when features load
+  useEffect(() => {
+    if (features && features.instances && features.instances.length > 0 && !aiExplanation && !loadingExplanation) {
+      fetchAIExplanation();
+    }
+  }, [features]);
+
+  const fetchAIExplanation = async () => {
+    setLoadingExplanation(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('explain-features', {
+        body: {
+          features: features.instances.map(f => ({
+            type: f.type,
+            subtype: f.subtype,
+            dimensions: f.parameters
+          })),
+          material: 'Aluminum 6061',
+          volume_cm3: 0,
+          part_name: 'CAD Part'
+        }
+      });
+
+      if (error) {
+        console.error('AI explanation failed:', error);
+        return;
+      }
+
+      setAiExplanation(data.explanation);
+    } catch (err) {
+      console.error('AI explanation error:', err);
+    } finally {
+      setLoadingExplanation(false);
+    }
+  };
 
 
   // ✅ Add null check
@@ -365,7 +402,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
   // Calculate summary statistics
   const stats = useMemo(() => {
-    const totalFeatures = features.instances.length; // ✅ Fixed: use actual array length
+    const totalFeatures = features.num_features_detected;
     const totalFaces = features.num_faces_analyzed;
     const avgConfidence = features.confidence_score;
 
@@ -426,7 +463,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     return numbered;
   }, [categorizedFeatures]);
 
-
+  const [showAI, setShowAI] = useState(false);
 
   return (
     <div className="space-y-0">
@@ -442,64 +479,71 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
         </Badge>
       </div>
 
-      {/* SolidWorks-Style Collapsible Feature Tree */}
+      {/* Compact Feature List */}
       <ScrollArea className="h-[500px]">
-        <div>
-          {Object.entries(categorizedFeatures).map(([category, instances]) => {
-            if (instances.length === 0) return null;
-
-            const Icon = CategoryIcon[category];
-            const isExpanded = expandedCategories.has(category);
-            const categoryName = CATEGORY_NAMES[category];
-
-            return (
-              <div key={category} className="border-b border-border">
-                {/* Category Header - Compact */}
-                <div
-                  onClick={() => toggleCategory(category)}
-                  className="flex items-center gap-2 px-3 py-1 cursor-pointer hover:bg-accent/30 transition-colors bg-muted/20"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                  )}
-                  <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm font-medium text-foreground flex-1">
-                    {categoryName} ({instances.length})
-                  </span>
-                </div>
-
-                {/* Feature Items - Indented */}
-                {isExpanded && (
-                  <div>
-                    {numberedFeatures
-                      .filter((nf) => nf.category === category)
-                      .map(({ instance, displayName, icon: FeatureIcon }, idx) => (
-                        <div
-                          key={`${displayName}-${idx}`}
-                          onClick={() => onFeatureSelect?.(instance)}
-                          className={`flex items-center gap-2 pl-8 pr-3 py-0.5 cursor-pointer transition-colors ${selectedFeature === instance
-                              ? 'bg-primary/20 border-l-2 border-primary'
-                              : 'hover:bg-accent/50'
-                            }`}
-                        >
-                          <FeatureIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm text-foreground flex-1 truncate">
-                            {displayName}
-                          </span>
-                          {/* Space for dimensions */}
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="divide-y divide-border">
+          {numberedFeatures.map(({ instance, displayName, icon: Icon }, idx) => (
+            <div
+              key={`${displayName}-${idx}`}
+              onClick={() => onFeatureSelect?.(instance)}
+              className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${selectedFeature === instance
+                  ? 'bg-primary/20 border-l-2 border-primary'
+                  : 'hover:bg-accent/50'
+                }`}
+            >
+              <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm font-medium text-foreground flex-1">
+                {displayName}
+              </span>
+              {/* Space reserved for future dimensions */}
+            </div>
+          ))}
         </div>
       </ScrollArea>
 
+      {/* Collapsible AI Analysis */}
+      {aiExplanation && (
+        <>
+          <div className="border-t">
+            <button
+              onClick={() => setShowAI(!showAI)}
+              className="w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span className="font-medium">AI Manufacturing Analysis</span>
+              </div>
+              {showAI ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
 
+          {showAI && (
+            <div className="px-4 py-3 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-t border-purple-200 dark:border-purple-800">
+              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {aiExplanation}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {loadingExplanation && (
+        <div className="px-4 py-3 border-t">
+          <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            Generating AI insights...
+          </div>
+        </div>
+      )}
+
+      {/* Processing Info */}
+      <div className="px-4 py-2 text-xs text-muted-foreground text-center border-t">
+        Analysis: {features.inference_time_sec.toFixed(2)}s • {features.recognition_method || 'Feature Recognition'}
+      </div>
     </div>
   );
 };
