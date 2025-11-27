@@ -353,9 +353,40 @@ class HoleRecognizer:
         all_face_ids = []
         all_bores = []
         
-        for hint in group:
+        for i, hint in enumerate(group):
             all_face_ids.extend(hint['face_ids'])
             all_bores.extend(hint['bores'])
+            
+            # Check for connecting face with next cylinder (e.g. counterbore shelf)
+            if i < len(group) - 1:
+                next_hint = group[i+1]
+                
+                # Find faces adjacent to both cylinders
+                faces1 = set(hint['face_ids'])
+                faces2 = set(next_hint['face_ids'])
+                
+                neighbors1 = set()
+                for f1 in faces1:
+                    neighbors1.update(self.aag.get_adjacent_faces(f1))
+                    
+                neighbors2 = set()
+                for f2 in faces2:
+                    neighbors2.update(self.aag.get_adjacent_faces(f2))
+                
+                common = neighbors1.intersection(neighbors2)
+                
+                # Add connecting planes/cones to the feature
+                for face_id in common:
+                    # Avoid adding faces we already have (though unlikely for shelf)
+                    if face_id in all_face_ids:
+                        continue
+                        
+                    face_data = self.aag.nodes[face_id]
+                    stype = face_data.get('surface_type')
+                    
+                    # Include planes (shelves) and cones (countersinks)
+                    if stype in ['plane', 'cone']:
+                        all_face_ids.append(face_id)
             
         # Total depth
         total_depth = max(h['depth'] for h in group)
