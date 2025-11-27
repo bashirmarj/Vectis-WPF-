@@ -38,6 +38,7 @@ interface CADViewerProps {
     recognition_method: string;
     feature_summary?: Record<string, number>;
   } | null;
+  selectedFeature?: any | null;
 }
 
 interface MeshData {
@@ -92,12 +93,26 @@ export function CADViewer({
   isSidebarCollapsed = false,
   onMeshLoaded,
   geometricFeatures,
+  selectedFeature: selectedFeatureFromSidebar,
 }: CADViewerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [meshData, setMeshData] = useState<MeshData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
+
+  // Feature highlighting state
+  const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
+  const [highlightedFaceIds, setHighlightedFaceIds] = useState<number[]>([]);
+
+  // Sync with sidebar selection
+  useEffect(() => {
+    if (selectedFeatureFromSidebar) {
+      setSelectedFeature(selectedFeatureFromSidebar);
+      const faceIds = selectedFeatureFromSidebar.face_indices || selectedFeatureFromSidebar.face_ids || [];
+      setHighlightedFaceIds(faceIds);
+    }
+  }, [selectedFeatureFromSidebar]);
   const [showSolidEdges, setShowSolidEdges] = useState(true);
   const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
 
@@ -480,182 +495,152 @@ export function CADViewer({
             )}
           </div>
         ) : meshData && isRenderableFormat ? (
-          <ResizablePanelGroup direction="horizontal" className="w-full h-full">
-            {/* Feature Tree Sidebar */}
-            {geometricFeatures?.instances?.length > 0 && sidebarOpen && (
-              <>
-                <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
-                  <div className="h-full overflow-hidden">
-                    <FeatureTree
-                      features={geometricFeatures}
-                      onFeatureSelect={handleFeatureSelect}
-                      selectedFeature={selectedFeature}
-                    />
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle withHandle />
-              </>
-            )}
+        ): meshData && isRenderableFormat ? (
+        <div className="relative w-full h-full">
+          {/* Sidebar Toggle Button - REMOVED (controlled by parent) */}
 
-            {/* Main 3D Viewer Panel */}
-            <ResizablePanel defaultSize={geometricFeatures?.instances?.length > 0 && sidebarOpen ? 80 : 100}>
-              <div className="relative w-full h-full">
-                {/* Sidebar Toggle Button */}
-                {geometricFeatures?.instances?.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="absolute top-16 left-2 z-10"
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                  >
-                    {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </Button>
-                )}
+          <UnifiedCADToolbar
+            onHomeView={() => handleSetView("isometric")}
+            onFrontView={() => handleSetView("front")}
+            onTopView={() => handleSetView("top")}
+            onIsometricView={() => handleSetView("isometric")}
+            onFitView={() => handleSetView("isometric")}
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+            showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
+            onToggleEdges={() => {
+              if (displayMode === "wireframe") {
+                setShowWireframeHiddenEdges((prev) => !prev);
+              } else {
+                setShowSolidEdges((prev) => !prev);
+              }
+            }}
+            measurementMode={activeTool}
+            onMeasurementModeChange={setActiveTool}
+            measurementCount={measurements.length}
+            onClearMeasurements={clearAllMeasurements}
+            sectionPlane={sectionPlane}
+            onSectionPlaneChange={setSectionPlane}
+            sectionPosition={sectionPosition}
+            onSectionPositionChange={setSectionPosition}
+            shadowsEnabled={shadowsEnabled}
+            onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
+            ssaoEnabled={ssaoEnabled}
+            onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
+            boundingBox={boundingBox}
+          />
 
-                <UnifiedCADToolbar
-                  onHomeView={() => handleSetView("isometric")}
-                  onFrontView={() => handleSetView("front")}
-                  onTopView={() => handleSetView("top")}
-                  onIsometricView={() => handleSetView("isometric")}
-                  onFitView={() => handleSetView("isometric")}
-                  displayMode={displayMode}
-                  onDisplayModeChange={setDisplayMode}
-                  showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
-                  onToggleEdges={() => {
-                    if (displayMode === "wireframe") {
-                      setShowWireframeHiddenEdges((prev) => !prev);
-                    } else {
-                      setShowSolidEdges((prev) => !prev);
-                    }
-                  }}
-                  measurementMode={activeTool}
-                  onMeasurementModeChange={setActiveTool}
-                  measurementCount={measurements.length}
-                  onClearMeasurements={clearAllMeasurements}
-                  sectionPlane={sectionPlane}
-                  onSectionPlaneChange={setSectionPlane}
-                  sectionPosition={sectionPosition}
-                  onSectionPositionChange={setSectionPosition}
-                  shadowsEnabled={shadowsEnabled}
-                  onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
-                  ssaoEnabled={ssaoEnabled}
-                  onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
-                  boundingBox={boundingBox}
-                />
+          <Canvas
+            style={{ width: "100%", height: "100%" }}
+            shadows
+            gl={{
+              antialias: true,
+              alpha: true,
+              preserveDrawingBuffer: true,
+              powerPreference: "high-performance",
+            }}
+            onCreated={({ gl }) => {
+              const handleContextLost = (e: Event) => {
+                e.preventDefault();
+                console.warn("⚠️ WebGL context lost - browser will auto-recover");
+              };
 
-                <Canvas
-                  style={{ width: "100%", height: "100%" }}
-                  shadows
-                  gl={{
-                    antialias: true,
-                    alpha: true,
-                    preserveDrawingBuffer: true,
-                    powerPreference: "high-performance",
-                  }}
-                  onCreated={({ gl }) => {
-                    const handleContextLost = (e: Event) => {
-                      e.preventDefault();
-                      console.warn("⚠️ WebGL context lost - browser will auto-recover");
-                    };
+              const handleContextRestored = () => {
+                console.log("✅ WebGL context restored automatically");
+              };
 
-                    const handleContextRestored = () => {
-                      console.log("✅ WebGL context restored automatically");
-                    };
+              gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
+              gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
+            }}
+          >
+            <color attach="background" args={["#f8f9fa"]} />
 
-                    gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
-                    gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
-                  }}
-                >
-                  <color attach="background" args={["#f8f9fa"]} />
+            <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
-                  <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
+            <Suspense fallback={null}>
+              <ProfessionalLighting intensity={2.85} enableShadows={shadowsEnabled} shadowQuality="high" />
 
-                  <Suspense fallback={null}>
-                    <ProfessionalLighting intensity={2.85} enableShadows={shadowsEnabled} shadowQuality="high" />
+              <MeshModel
+                ref={meshRef}
+                meshData={meshData}
+                displayStyle={displayMode}
+                showEdges={showSolidEdges}
+                showHiddenEdges={showWireframeHiddenEdges}
+                sectionPlane={sectionPlane || "none"}
+                sectionPosition={sectionPosition}
+                useSilhouetteEdges={displayMode === "wireframe"}
+                controlsRef={controlsRef}
+                highlightedFaceIds={highlightedFaceIds}
+                highlightColor="#3B82F6"
+                highlightIntensity={0.85}
+              />
 
-                    <MeshModel
-                      ref={meshRef}
-                      meshData={meshData}
-                      displayStyle={displayMode}
-                      showEdges={showSolidEdges}
-                      showHiddenEdges={showWireframeHiddenEdges}
-                      sectionPlane={sectionPlane || "none"}
-                      sectionPosition={sectionPosition}
-                      useSilhouetteEdges={displayMode === "wireframe"}
-                      controlsRef={controlsRef}
-                      highlightedFaceIds={highlightedFaceIds}
-                      highlightColor="#3B82F6"
-                      highlightIntensity={0.85}
-                    />
+              <DimensionAnnotations boundingBox={boundingBox} />
 
-                    <DimensionAnnotations boundingBox={boundingBox} />
+              {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
+              <UnifiedMeasurementTool
+                meshData={meshData}
+                meshRef={meshRef.current?.mesh || null}
+                featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                enabled={activeTool === "measure"}
+                boundingSphere={{
+                  center: boundingBox.center,
+                  radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                }}
+              />
 
-                    {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
-                    <UnifiedMeasurementTool
-                      meshData={meshData}
-                      meshRef={meshRef.current?.mesh || null}
-                      featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                      enabled={activeTool === "measure"}
-                      boundingSphere={{
-                        center: boundingBox.center,
-                        radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
-                      }}
-                    />
+              <TrackballControls
+                ref={controlsRef}
+                makeDefault
+                target={boundingBox.center}
+                dynamicDampingFactor={0.2}
+                minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
+                maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
+                rotateSpeed={1.8}
+                panSpeed={0.8}
+                zoomSpeed={1.2}
+                staticMoving={false}
+                noPan={false}
+                noRotate={false}
+              />
+            </Suspense>
+          </Canvas>
 
-                    <TrackballControls
-                      ref={controlsRef}
-                      makeDefault
-                      target={boundingBox.center}
-                      dynamicDampingFactor={0.2}
-                      minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
-                      maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
-                      rotateSpeed={1.8}
-                      panSpeed={0.8}
-                      zoomSpeed={1.2}
-                      staticMoving={false}
-                      noPan={false}
-                      noRotate={false}
-                    />
-                  </Suspense>
-                </Canvas>
+          {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
+          <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
 
-                {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
-                <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
+          {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
+          <OrientationCubeViewport
+            mainCameraRef={cameraRef}
+            controlsRef={controlsRef}
+            onCubeClick={handleCubeClick}
+            onRotateUp={() => handleRotateCamera("up")}
+            onRotateDown={() => handleRotateCamera("down")}
+            onRotateLeft={() => handleRotateCamera("left")}
+            onRotateRight={() => handleRotateCamera("right")}
+            onRotateClockwise={() => handleRotateCamera("cw")}
+            onRotateCounterClockwise={() => handleRotateCamera("ccw")}
+          />
 
-                {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
-                <OrientationCubeViewport
-                  mainCameraRef={cameraRef}
-                  controlsRef={controlsRef}
-                  onCubeClick={handleCubeClick}
-                  onRotateUp={() => handleRotateCamera("up")}
-                  onRotateDown={() => handleRotateCamera("down")}
-                  onRotateLeft={() => handleRotateCamera("left")}
-                  onRotateRight={() => handleRotateCamera("right")}
-                  onRotateClockwise={() => handleRotateCamera("cw")}
-                  onRotateCounterClockwise={() => handleRotateCamera("ccw")}
-                />
-
-                {/* ✅ Measurement Panel - Shows measurement list and controls */}
-                <MeasurementPanel />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+          {/* ✅ Measurement Panel - Shows measurement list and controls */}
+          <MeasurementPanel />
+        </div>
         ) : isRenderableFormat ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <Box className="h-16 w-16 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground text-center">Upload a file to view 3D preview</p>
-            <p className="text-xs text-muted-foreground text-center max-w-md">Supports STEP, IGES, and STL formats</p>
-          </div>
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <Box className="h-16 w-16 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground text-center">Upload a file to view 3D preview</p>
+          <p className="text-xs text-muted-foreground text-center max-w-md">Supports STEP, IGES, and STL formats</p>
+        </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <Box className="h-16 w-16 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground text-center">
-              3D preview not available for {fileExtension.toUpperCase()} files
-            </p>
-            <Button variant="outline" onClick={handleDownload}>
-              Download File
-            </Button>
-          </div>
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <Box className="h-16 w-16 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground text-center">
+            3D preview not available for {fileExtension.toUpperCase()} files
+          </p>
+          <Button variant="outline" onClick={handleDownload}>
+            Download File
+          </Button>
+        </div>
         )}
       </CardContent>
     </div>
