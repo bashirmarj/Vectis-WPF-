@@ -495,152 +495,152 @@ export function CADViewer({
             )}
           </div>
         ) : meshData && isRenderableFormat ? (
-        ): meshData && isRenderableFormat ? (
-        <div className="relative w-full h-full">
-          {/* Sidebar Toggle Button - REMOVED (controlled by parent) */}
 
-          <UnifiedCADToolbar
-            onHomeView={() => handleSetView("isometric")}
-            onFrontView={() => handleSetView("front")}
-            onTopView={() => handleSetView("top")}
-            onIsometricView={() => handleSetView("isometric")}
-            onFitView={() => handleSetView("isometric")}
-            displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
-            showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
-            onToggleEdges={() => {
-              if (displayMode === "wireframe") {
-                setShowWireframeHiddenEdges((prev) => !prev);
-              } else {
-                setShowSolidEdges((prev) => !prev);
-              }
-            }}
-            measurementMode={activeTool}
-            onMeasurementModeChange={setActiveTool}
-            measurementCount={measurements.length}
-            onClearMeasurements={clearAllMeasurements}
-            sectionPlane={sectionPlane}
-            onSectionPlaneChange={setSectionPlane}
-            sectionPosition={sectionPosition}
-            onSectionPositionChange={setSectionPosition}
-            shadowsEnabled={shadowsEnabled}
-            onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
-            ssaoEnabled={ssaoEnabled}
-            onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
-            boundingBox={boundingBox}
-          />
+          <div className="relative w-full h-full">
+            {/* Sidebar Toggle Button - REMOVED (controlled by parent) */}
 
-          <Canvas
-            style={{ width: "100%", height: "100%" }}
-            shadows
-            gl={{
-              antialias: true,
-              alpha: true,
-              preserveDrawingBuffer: true,
-              powerPreference: "high-performance",
-            }}
-            onCreated={({ gl }) => {
-              const handleContextLost = (e: Event) => {
-                e.preventDefault();
-                console.warn("⚠️ WebGL context lost - browser will auto-recover");
-              };
+            <UnifiedCADToolbar
+              onHomeView={() => handleSetView("isometric")}
+              onFrontView={() => handleSetView("front")}
+              onTopView={() => handleSetView("top")}
+              onIsometricView={() => handleSetView("isometric")}
+              onFitView={() => handleSetView("isometric")}
+              displayMode={displayMode}
+              onDisplayModeChange={setDisplayMode}
+              showEdges={displayMode === "wireframe" ? showWireframeHiddenEdges : showSolidEdges}
+              onToggleEdges={() => {
+                if (displayMode === "wireframe") {
+                  setShowWireframeHiddenEdges((prev) => !prev);
+                } else {
+                  setShowSolidEdges((prev) => !prev);
+                }
+              }}
+              measurementMode={activeTool}
+              onMeasurementModeChange={setActiveTool}
+              measurementCount={measurements.length}
+              onClearMeasurements={clearAllMeasurements}
+              sectionPlane={sectionPlane}
+              onSectionPlaneChange={setSectionPlane}
+              sectionPosition={sectionPosition}
+              onSectionPositionChange={setSectionPosition}
+              shadowsEnabled={shadowsEnabled}
+              onToggleShadows={() => setShadowsEnabled((prev) => !prev)}
+              ssaoEnabled={ssaoEnabled}
+              onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
+              boundingBox={boundingBox}
+            />
 
-              const handleContextRestored = () => {
-                console.log("✅ WebGL context restored automatically");
-              };
+            <Canvas
+              style={{ width: "100%", height: "100%" }}
+              shadows
+              gl={{
+                antialias: true,
+                alpha: true,
+                preserveDrawingBuffer: true,
+                powerPreference: "high-performance",
+              }}
+              onCreated={({ gl }) => {
+                const handleContextLost = (e: Event) => {
+                  e.preventDefault();
+                  console.warn("⚠️ WebGL context lost - browser will auto-recover");
+                };
 
-              gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
-              gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
-            }}
-          >
-            <color attach="background" args={["#f8f9fa"]} />
+                const handleContextRestored = () => {
+                  console.log("✅ WebGL context restored automatically");
+                };
 
-            <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
+                gl.domElement.addEventListener("webglcontextlost", handleContextLost, false);
+                gl.domElement.addEventListener("webglcontextrestored", handleContextRestored, false);
+              }}
+            >
+              <color attach="background" args={["#f8f9fa"]} />
 
-            <Suspense fallback={null}>
-              <ProfessionalLighting intensity={2.85} enableShadows={shadowsEnabled} shadowQuality="high" />
+              <PerspectiveCamera ref={cameraRef} makeDefault position={initialCameraPosition} fov={50} />
 
-              <MeshModel
-                ref={meshRef}
-                meshData={meshData}
-                displayStyle={displayMode}
-                showEdges={showSolidEdges}
-                showHiddenEdges={showWireframeHiddenEdges}
-                sectionPlane={sectionPlane || "none"}
-                sectionPosition={sectionPosition}
-                useSilhouetteEdges={displayMode === "wireframe"}
-                controlsRef={controlsRef}
-                highlightedFaceIds={highlightedFaceIds}
-                highlightColor="#3B82F6"
-                highlightIntensity={0.85}
-              />
+              <Suspense fallback={null}>
+                <ProfessionalLighting intensity={2.85} enableShadows={shadowsEnabled} shadowQuality="high" />
 
-              <DimensionAnnotations boundingBox={boundingBox} />
+                <MeshModel
+                  ref={meshRef}
+                  meshData={meshData}
+                  displayStyle={displayMode}
+                  showEdges={showSolidEdges}
+                  showHiddenEdges={showWireframeHiddenEdges}
+                  sectionPlane={sectionPlane || "none"}
+                  sectionPosition={sectionPosition}
+                  useSilhouetteEdges={displayMode === "wireframe"}
+                  controlsRef={controlsRef}
+                  highlightedFaceIds={highlightedFaceIds}
+                  highlightColor="#3B82F6"
+                  highlightIntensity={0.85}
+                />
 
-              {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
-              <UnifiedMeasurementTool
-                meshData={meshData}
-                meshRef={meshRef.current?.mesh || null}
-                featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                enabled={activeTool === "measure"}
-                boundingSphere={{
-                  center: boundingBox.center,
-                  radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
-                }}
-              />
+                <DimensionAnnotations boundingBox={boundingBox} />
 
-              <TrackballControls
-                ref={controlsRef}
-                makeDefault
-                target={boundingBox.center}
-                dynamicDampingFactor={0.2}
-                minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
-                maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
-                rotateSpeed={1.8}
-                panSpeed={0.8}
-                zoomSpeed={1.2}
-                staticMoving={false}
-                noPan={false}
-                noRotate={false}
-              />
-            </Suspense>
-          </Canvas>
+                {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
+                <UnifiedMeasurementTool
+                  meshData={meshData}
+                  meshRef={meshRef.current?.mesh || null}
+                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                  enabled={activeTool === "measure"}
+                  boundingSphere={{
+                    center: boundingBox.center,
+                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                  }}
+                />
 
-          {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
-          <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
+                <TrackballControls
+                  ref={controlsRef}
+                  makeDefault
+                  target={boundingBox.center}
+                  dynamicDampingFactor={0.2}
+                  minDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 0.01}
+                  maxDistance={Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) * 5}
+                  rotateSpeed={1.8}
+                  panSpeed={0.8}
+                  zoomSpeed={1.2}
+                  staticMoving={false}
+                  noPan={false}
+                  noRotate={false}
+                />
+              </Suspense>
+            </Canvas>
 
-          {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
-          <OrientationCubeViewport
-            mainCameraRef={cameraRef}
-            controlsRef={controlsRef}
-            onCubeClick={handleCubeClick}
-            onRotateUp={() => handleRotateCamera("up")}
-            onRotateDown={() => handleRotateCamera("down")}
-            onRotateLeft={() => handleRotateCamera("left")}
-            onRotateRight={() => handleRotateCamera("right")}
-            onRotateClockwise={() => handleRotateCamera("cw")}
-            onRotateCounterClockwise={() => handleRotateCamera("ccw")}
-          />
+            {/* ✅ Axis Triad - SolidWorks-style XYZ indicator (bottom-left) */}
+            <AxisTriadInCanvas mainCameraRef={cameraRef} isSidebarCollapsed={isSidebarCollapsed} />
 
-          {/* ✅ Measurement Panel - Shows measurement list and controls */}
-          <MeasurementPanel />
-        </div>
+            {/* ✅ Orientation cube in separate Canvas (no WebGL conflicts) */}
+            <OrientationCubeViewport
+              mainCameraRef={cameraRef}
+              controlsRef={controlsRef}
+              onCubeClick={handleCubeClick}
+              onRotateUp={() => handleRotateCamera("up")}
+              onRotateDown={() => handleRotateCamera("down")}
+              onRotateLeft={() => handleRotateCamera("left")}
+              onRotateRight={() => handleRotateCamera("right")}
+              onRotateClockwise={() => handleRotateCamera("cw")}
+              onRotateCounterClockwise={() => handleRotateCamera("ccw")}
+            />
+
+            {/* ✅ Measurement Panel - Shows measurement list and controls */}
+            <MeasurementPanel />
+          </div>
         ) : isRenderableFormat ? (
-        <div className="flex flex-col items-center justify-center h-full gap-4">
-          <Box className="h-16 w-16 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground text-center">Upload a file to view 3D preview</p>
-          <p className="text-xs text-muted-foreground text-center max-w-md">Supports STEP, IGES, and STL formats</p>
-        </div>
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Box className="h-16 w-16 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground text-center">Upload a file to view 3D preview</p>
+            <p className="text-xs text-muted-foreground text-center max-w-md">Supports STEP, IGES, and STL formats</p>
+          </div>
         ) : (
-        <div className="flex flex-col items-center justify-center h-full gap-4">
-          <Box className="h-16 w-16 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground text-center">
-            3D preview not available for {fileExtension.toUpperCase()} files
-          </p>
-          <Button variant="outline" onClick={handleDownload}>
-            Download File
-          </Button>
-        </div>
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Box className="h-16 w-16 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground text-center">
+              3D preview not available for {fileExtension.toUpperCase()} files
+            </p>
+            <Button variant="outline" onClick={handleDownload}>
+              Download File
+            </Button>
+          </div>
         )}
       </CardContent>
     </div>
