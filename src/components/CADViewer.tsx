@@ -38,6 +38,7 @@ interface CADViewerProps {
     recognition_method: string;
     feature_summary?: Record<string, number>;
   } | null;
+  selectedFeature?: any | null;  // ✅ For highlighting from sidebar
 }
 
 interface MeshData {
@@ -92,6 +93,7 @@ export function CADViewer({
   isSidebarCollapsed = false,
   onMeshLoaded,
   geometricFeatures,
+  selectedFeature: selectedFeatureFromSidebar,  // ✅ Receive from parent
 }: CADViewerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
