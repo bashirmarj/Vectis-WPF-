@@ -476,16 +476,13 @@ export function CADViewer({
               <p className="text-xs text-muted-foreground max-w-md">{error}</p>
             </div>
             {fileUrl && (
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute top-16 left-2 z-10"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <Button variant="outline" onClick={handleDownload}>
+                Download File
               </Button>
             )}
-
+          </div>
+        ) : meshData && isRenderableFormat ? (
+          <div className="relative w-full h-full">
             <UnifiedCADToolbar
               onHomeView={() => handleSetView("isometric")}
               onFrontView={() => handleSetView("front")}
