@@ -116,10 +116,6 @@ export function CADViewer({
   const [showSolidEdges, setShowSolidEdges] = useState(true);
   const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
 
-  // Feature highlighting state
-  const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
-  const [highlightedFaceIds, setHighlightedFaceIds] = useState<number[]>([]);
-
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
