@@ -110,6 +110,12 @@ export function CADViewer({
     if (selectedFeatureFromSidebar) {
       setSelectedFeature(selectedFeatureFromSidebar);
       const faceIds = selectedFeatureFromSidebar.face_indices || selectedFeatureFromSidebar.face_ids || [];
+      console.log("🔍 Highlighting Feature:", {
+        name: selectedFeatureFromSidebar.name,
+        type: selectedFeatureFromSidebar.type,
+        faceIds: faceIds,
+        rawFeature: selectedFeatureFromSidebar
+      });
       setHighlightedFaceIds(faceIds);
     }
   }, [selectedFeatureFromSidebar]);

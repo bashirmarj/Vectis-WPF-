@@ -386,6 +386,7 @@ class HoleRecognizer:
                     
                     # Include planes (shelves) and cones (countersinks)
                     if stype in ['plane', 'cone']:
+                        logger.info(f"  → Found connecting face {face_id} ({stype}) between cylinders")
                         all_face_ids.append(face_id)
             
         # Total depth
