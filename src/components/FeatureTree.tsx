@@ -2,12 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  ChevronDown,
-  ChevronRight,
-  Box,
-  Circle,
-  Square,
+import { 
+  ChevronDown, 
+  ChevronRight, 
+  Box, 
+  Circle, 
+  Square, 
   Triangle,
   Layers,
   Zap,
@@ -61,7 +61,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'stepped_hole': 'Stepped Hole',
   'elliptical_hole': 'Elliptical Hole',
   'polygonal_hole': 'Polygonal Hole',
-
+  
   // ============================================================================
   // POCKET FEATURES (8 types) - New Taxonomy
   // ============================================================================
@@ -73,7 +73,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'island_pocket': 'Island Pocket',
   'triangular_pocket': 'Triangular Pocket',
   'hexagonal_pocket': 'Hexagonal Pocket (6-Sides)',
-
+  
   // ============================================================================
   // SLOT FEATURES (9 types) - New Taxonomy
   // ============================================================================
@@ -86,7 +86,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'keyway_slot': 'Keyway Slot',
   'woodruff_keyway': 'Woodruff Keyway',
   'v_slot': 'V-Slot',
-
+  
   // ============================================================================
   // STEP FEATURES (8 types) - New Taxonomy
   // ============================================================================
@@ -98,7 +98,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'circular_step': 'Circular Step',
   'two_sides_step': 'Two-Sides Step',
   'triangular_step': 'Triangular Step',
-
+  
   // ============================================================================
   // BOSS FEATURES (5 types) - New Taxonomy
   // ============================================================================
@@ -107,7 +107,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'irregular_boss': 'Irregular Boss',
   'rib': 'Rib',
   'lug': 'Lug',
-
+  
   // ============================================================================
   // FILLET FEATURES (4 types) - New Taxonomy
   // ============================================================================
@@ -115,7 +115,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'variable_radius_fillet': 'Variable Radius Fillet',
   'corner_fillet': 'Corner Fillet',
   'face_blend': 'Face Blend',
-
+  
   // ============================================================================
   // CHAMFER FEATURES (4 types) - New Taxonomy
   // ============================================================================
@@ -123,7 +123,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'distance_angle_chamfer': 'Distance-Angle Chamfer',
   'two_distance_chamfer': 'Two-Distance Chamfer',
   'corner_chamfer': 'Corner Chamfer',
-
+  
   // ============================================================================
   // GROOVE FEATURES (5 types) - New Taxonomy
   // ============================================================================
@@ -132,14 +132,14 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'face_groove': 'Face Groove',
   'o_ring_groove': 'O-Ring Groove',
   'thread_relief_groove': 'Thread Relief Groove',
-
+  
   // ============================================================================
   // OTHER FEATURES (3 types) - New Taxonomy
   // ============================================================================
   'protrusion': 'Protrusion',
   'depression': 'Depression',
   'transition': 'Transition',
-
+  
   // ============================================================================
   // BACKWARD COMPATIBILITY - Legacy types
   // ============================================================================
@@ -151,7 +151,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'boss': 'Boss',
   'step': 'Step',
   'groove': 'Groove',
-
+  
   // Old AAGNet types
   'triangular_passage': 'Triangular Passage',
   'rectangular_passage': 'Rectangular Passage',
@@ -173,7 +173,7 @@ const FEATURE_DISPLAY_NAMES: Record<string, string> = {
   'rectangular_blind_step': 'Rectangular Blind Step',
   'round': 'Round',
   'stock': 'Stock',
-
+  
   // Production recognizer subtypes (legacy)
   'tapped': 'Tapped Hole',
   'through': 'Through Hole',
@@ -297,10 +297,10 @@ const getConfidenceBadge = (confidence: number): string => {
   return 'Low';
 };
 
-const FeatureTree: React.FC<FeatureTreeProps> = ({
+const FeatureTree: React.FC<FeatureTreeProps> = ({ 
   features,
   onFeatureSelect,
-  selectedFeature
+  selectedFeature 
 }) => {
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
@@ -332,7 +332,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
         console.error('AI explanation failed:', error);
         return;
       }
-
+      
       setAiExplanation(data.explanation);
     } catch (err) {
       console.error('AI explanation error:', err);
@@ -341,7 +341,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     }
   };
 
-
+  
   // ✅ Add null check
   if (!features || !features.instances || features.instances.length === 0) {
     return (
@@ -383,7 +383,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
 
     features.instances.forEach(instance => {
       let categorized = false;
-
+      
       for (const [category, types] of Object.entries(FEATURE_CATEGORIES)) {
         if (types.includes(instance.type)) {
           grouped[category].push(instance);
@@ -391,7 +391,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
           break;
         }
       }
-
+      
       if (!categorized) {
         grouped.other.push(instance);
       }
@@ -405,7 +405,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     const totalFeatures = features.num_features_detected;
     const totalFaces = features.num_faces_analyzed;
     const avgConfidence = features.confidence_score;
-
+    
     return {
       totalFeatures,
       totalFaces,
@@ -441,16 +441,16 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
     Object.entries(categorizedFeatures).forEach(([category, instances]) => {
       instances.forEach(instance => {
         // Prioritize subtype for more detailed naming (e.g., "counterbore" over "hole")
-        const baseType = (instance.subtype && FEATURE_DISPLAY_NAMES[instance.subtype])
-          || FEATURE_DISPLAY_NAMES[instance.type]
-          || instance.subtype
+        const baseType = (instance.subtype && FEATURE_DISPLAY_NAMES[instance.subtype]) 
+          || FEATURE_DISPLAY_NAMES[instance.type] 
+          || instance.subtype 
           || instance.type;
-
+        
         if (!counters[baseType]) {
           counters[baseType] = 0;
         }
         counters[baseType]++;
-
+        
         numbered.push({
           instance,
           displayName: `${baseType}-${counters[baseType]}`,
@@ -483,14 +483,15 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
       <ScrollArea className="h-[500px]">
         <div className="divide-y divide-border">
           {numberedFeatures.map(({ instance, displayName, icon: Icon }, idx) => (
-            <div
-              key={`${displayName}-${idx}`}
-              onClick={() => onFeatureSelect?.(instance)}
-              className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${selectedFeature === instance
-                  ? 'bg-primary/20 border-l-2 border-primary'
-                  : 'hover:bg-accent/50'
-                }`}
-            >
+                <div 
+                  key={`${displayName}-${idx}`}
+                  onClick={() => onFeatureSelect?.(instance)}
+                  className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors ${
+                    selectedFeature === instance 
+                      ? 'bg-primary/20 border-l-2 border-primary' 
+                      : 'hover:bg-accent/50'
+                  }`}
+                >
               <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="text-sm font-medium text-foreground flex-1">
                 {displayName}
@@ -520,7 +521,7 @@ const FeatureTree: React.FC<FeatureTreeProps> = ({
               )}
             </button>
           </div>
-
+          
           {showAI && (
             <div className="px-4 py-3 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-t border-purple-200 dark:border-purple-800">
               <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">

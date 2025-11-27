@@ -83,7 +83,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 }) => {
   const [contactFormExpanded, setContactFormExpanded] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<any | null>(null); // ✅ Track selected feature
   const [contactInfo, setContactInfo] = useState({
     name: "",
     email: "",
@@ -140,248 +139,248 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     </Button>
                   </div>
 
-                  {/* File Selection */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Parts ({files.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {files.map((file, index) => (
-                        <button
-                          key={index}
-                          onClick={() => onSelectFile(index)}
-                          className={`w-full p-3 text-left rounded-lg border transition-colors ${index === selectedFileIndex
-                            ? "bg-blue-50 border-blue-500"
-                            : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                            }`}
-                        >
-                          <div className="font-medium text-sm truncate">{file.file.name}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Qty: {file.quantity} | {file.material || "No material"}
-                            {/* ✅ Debug indicator */}
-                            {file.meshData && <span className="ml-2 text-green-600">● 3D Ready</span>}
-                          </div>
-                        </button>
-                      ))}
-                    </CardContent>
-                  </Card>
+            {/* File Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Parts ({files.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {files.map((file, index) => (
+                  <button
+                    key={index}
+                    onClick={() => onSelectFile(index)}
+                    className={`w-full p-3 text-left rounded-lg border transition-colors ${
+                      index === selectedFileIndex
+                        ? "bg-blue-50 border-blue-500"
+                        : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    <div className="font-medium text-sm truncate">{file.file.name}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Qty: {file.quantity} | {file.material || "No material"}
+                      {/* ✅ Debug indicator */}
+                      {file.meshData && <span className="ml-2 text-green-600">● 3D Ready</span>}
+                    </div>
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
 
-                  {/* Feature Tree - Collapsible */}
-                  {selectedFile.analysis?.geometric_features && (
-                    <Collapsible defaultOpen={true} className="space-y-2">
-                      <Card>
-                        <CollapsibleTrigger className="w-full">
-                          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="flex items-center gap-2">
-                                <Box className="w-5 h-5" />
-                                Detected Features ({selectedFile.analysis.geometric_features.instances?.length || 0})
-                              </CardTitle>
-                              <ChevronDown className="w-5 h-5 transition-transform duration-200 data-[state=open]:rotate-180" />
-                            </div>
-                          </CardHeader>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <CardContent className="pt-0">
-                            <FeatureTree
-                              features={selectedFile.analysis.geometric_features}
-                              onFeatureSelect={setSelectedFeature} // ✅ Now properly connected!
-                              selectedFeature={selectedFeature}
-                            />
-                          </CardContent>
-                        </CollapsibleContent>
-                      </Card>
-                    </Collapsible>
-                  )}
-
-                  {/* Part Configuration */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Configuration</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Material Selection */}
-                      <div className="space-y-2">
-                        <Label htmlFor="material">Material *</Label>
-                        <Select
-                          value={selectedFile.material || ""}
-                          onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
-                        >
-                          <SelectTrigger id="material">
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {materials.map((material) => (
-                              <SelectItem key={material} value={material}>
-                                {material}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="space-y-2">
-                        <Label htmlFor="quantity">Quantity *</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min="1"
-                          value={selectedFile.quantity}
-                          onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
-                        />
-                      </div>
-
-                      {/* Process (Optional) */}
-                      <div className="space-y-2">
-                        <Label htmlFor="process">Preferred Process (Optional)</Label>
-                        <Select
-                          value={selectedFile.process || "auto"}
-                          onValueChange={(value) =>
-                            onUpdateFile(selectedFileIndex, { process: value === "auto" ? undefined : value })
-                          }
-                        >
-                          <SelectTrigger id="process">
-                            <SelectValue placeholder="Auto-select (recommended)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto-select (recommended)</SelectItem>
-                            {processes.map((process) => (
-                              <SelectItem key={process} value={process}>
-                                {process}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Analysis Results */}
-                  {selectedFile.analysis && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Analysis Results</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Volume</div>
-                            <div className="font-medium">{selectedFile.analysis.volume_cm3?.toFixed(2) || "N/A"} cm³</div>
-                          </div>
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Surface Area</div>
-                            <div className="font-medium">
-                              {selectedFile.analysis.surface_area_cm2?.toFixed(2) || "N/A"} cm²
-                            </div>
-                          </div>
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Complexity</div>
-                            <div className="font-medium">{selectedFile.analysis.complexity_score || "N/A"}/10</div>
-                          </div>
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Confidence</div>
-                            <div className="font-medium">
-                              {selectedFile.analysis.confidence ? (selectedFile.analysis.confidence * 100).toFixed(0) : "N/A"}
-                              %
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Contact Information (Collapsible) */}
-                  <Card>
-                    <CardHeader className="cursor-pointer" onClick={() => setContactFormExpanded(!contactFormExpanded)}>
+            {/* Feature Tree - Collapsible */}
+            {selectedFile.analysis?.geometric_features && (
+              <Collapsible defaultOpen={true} className="space-y-2">
+                <Card>
+                  <CollapsibleTrigger className="w-full">
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
-                        <CardTitle>Contact Information *</CardTitle>
-                        {contactFormExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        <CardTitle className="flex items-center gap-2">
+                          <Box className="w-5 h-5" />
+                          Detected Features ({selectedFile.analysis.geometric_features.instances?.length || 0})
+                        </CardTitle>
+                        <ChevronDown className="w-5 h-5 transition-transform duration-200 data-[state=open]:rotate-180" />
                       </div>
                     </CardHeader>
-                    {contactFormExpanded && (
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name" className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            Full Name *
-                          </Label>
-                          <Input
-                            id="name"
-                            value={contactInfo.name}
-                            onChange={(e) => handleContactInfoChange("name", e.target.value)}
-                            placeholder="John Doe"
-                          />
-                        </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0">
+                      <FeatureTree 
+                        features={selectedFile.analysis.geometric_features}
+                        onFeatureSelect={(feature) => {}}
+                      />
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            )}
 
-                        <div className="space-y-2">
-                          <Label htmlFor="email" className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            Email *
-                          </Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={contactInfo.email}
-                            onChange={(e) => handleContactInfoChange("email", e.target.value)}
-                            placeholder="john@example.com"
-                          />
-                        </div>
+            {/* Part Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Material Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="material">Material *</Label>
+                  <Select
+                    value={selectedFile.material || ""}
+                    onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
+                  >
+                    <SelectTrigger id="material">
+                      <SelectValue placeholder="Select material" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materials.map((material) => (
+                        <SelectItem key={material} value={material}>
+                          {material}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="phone" className="flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            Phone *
-                          </Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={contactInfo.phone}
-                            onChange={(e) => handleContactInfoChange("phone", e.target.value)}
-                            placeholder="+1 (555) 123-4567"
-                          />
-                        </div>
+                {/* Quantity */}
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={selectedFile.quantity}
+                    onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="company" className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4" />
-                            Company (Optional)
-                          </Label>
-                          <Input
-                            id="company"
-                            value={contactInfo.company}
-                            onChange={(e) => handleContactInfoChange("company", e.target.value)}
-                            placeholder="Acme Corp"
-                          />
-                        </div>
+                {/* Process (Optional) */}
+                <div className="space-y-2">
+                  <Label htmlFor="process">Preferred Process (Optional)</Label>
+                  <Select
+                    value={selectedFile.process || "auto"}
+                    onValueChange={(value) =>
+                      onUpdateFile(selectedFileIndex, { process: value === "auto" ? undefined : value })
+                    }
+                  >
+                    <SelectTrigger id="process">
+                      <SelectValue placeholder="Auto-select (recommended)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto-select (recommended)</SelectItem>
+                      {processes.map((process) => (
+                        <SelectItem key={process} value={process}>
+                          {process}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="address" className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Shipping Address
-                          </Label>
-                          <Textarea
-                            id="address"
-                            value={contactInfo.address}
-                            onChange={(e) => handleContactInfoChange("address", e.target.value)}
-                            placeholder="123 Main St, City, State, ZIP"
-                            rows={3}
-                          />
-                        </div>
+            {/* Analysis Results */}
+            {selectedFile.analysis && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Analysis Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-gray-50 rounded">
+                      <div className="text-xs text-gray-500">Volume</div>
+                      <div className="font-medium">{selectedFile.analysis.volume_cm3?.toFixed(2) || "N/A"} cm³</div>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <div className="text-xs text-gray-500">Surface Area</div>
+                      <div className="font-medium">
+                        {selectedFile.analysis.surface_area_cm2?.toFixed(2) || "N/A"} cm²
+                      </div>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <div className="text-xs text-gray-500">Complexity</div>
+                      <div className="font-medium">{selectedFile.analysis.complexity_score || "N/A"}/10</div>
+                    </div>
+                    <div className="p-2 bg-gray-50 rounded">
+                      <div className="text-xs text-gray-500">Confidence</div>
+                      <div className="font-medium">
+                        {selectedFile.analysis.confidence ? (selectedFile.analysis.confidence * 100).toFixed(0) : "N/A"}
+                        %
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-                        <div className="space-y-2">
-                          <Label htmlFor="message">Additional Notes</Label>
-                          <Textarea
-                            id="message"
-                            value={contactInfo.message}
-                            onChange={(e) => handleContactInfoChange("message", e.target.value)}
-                            placeholder="Any special requirements or notes..."
-                            rows={3}
-                          />
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
+            {/* Contact Information (Collapsible) */}
+            <Card>
+              <CardHeader className="cursor-pointer" onClick={() => setContactFormExpanded(!contactFormExpanded)}>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Contact Information *</CardTitle>
+                  {contactFormExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
+              </CardHeader>
+              {contactFormExpanded && (
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Full Name *
+                    </Label>
+                    <Input
+                      id="name"
+                      value={contactInfo.name}
+                      onChange={(e) => handleContactInfoChange("name", e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email *
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={contactInfo.email}
+                      onChange={(e) => handleContactInfoChange("email", e.target.value)}
+                      placeholder="john@example.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      Phone *
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={contactInfo.phone}
+                      onChange={(e) => handleContactInfoChange("phone", e.target.value)}
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="company" className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      Company (Optional)
+                    </Label>
+                    <Input
+                      id="company"
+                      value={contactInfo.company}
+                      onChange={(e) => handleContactInfoChange("company", e.target.value)}
+                      placeholder="Acme Corp"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Shipping Address
+                    </Label>
+                    <Textarea
+                      id="address"
+                      value={contactInfo.address}
+                      onChange={(e) => handleContactInfoChange("address", e.target.value)}
+                      placeholder="123 Main St, City, State, ZIP"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Additional Notes</Label>
+                    <Textarea
+                      id="message"
+                      value={contactInfo.message}
+                      onChange={(e) => handleContactInfoChange("message", e.target.value)}
+                      placeholder="Any special requirements or notes..."
+                      rows={3}
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
 
                   {/* Submit Button */}
                   <Button onClick={handleSubmit} disabled={!isFormValid() || isSubmitting} className="w-full" size="lg">
@@ -390,7 +389,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                 </div>
               </div>
             </ResizablePanel>
-
+            
             {/* Draggable resize handle */}
             <ResizableHandle withHandle />
           </>
@@ -439,7 +438,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                           meshData={selectedFile.meshData}
                           fileName={selectedFile.file.name}
                           geometricFeatures={selectedFile.analysis?.geometric_features || null}
-                          selectedFeature={selectedFeature} // ✅ Pass selected feature from sidebar
                           isSidebarCollapsed={isSidebarCollapsed}
                           onMeshLoaded={(meshData) => {
                             console.log("✅ Mesh loaded successfully:", {
