@@ -610,27 +610,24 @@ export function CADViewer({
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
           </div>
-            </ResizablePanel>
-    </ResizablePanelGroup>
-  ) : isRenderableFormat ? (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <Box className="h-16 w-16 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground text-center">Upload a file to view 3D preview</p>
-      <p className="text-xs text-muted-foreground text-center max-w-md">Supports STEP, IGES, and STL formats</p>
+        ) : isRenderableFormat ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Box className="h-16 w-16 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground text-center">Upload a file to view 3D preview</p>
+            <p className="text-xs text-muted-foreground text-center max-w-md">Supports STEP, IGES, and STL formats</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Box className="h-16 w-16 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground text-center">
+              3D preview not available for {fileExtension.toUpperCase()} files
+            </p>
+            <Button variant="outline" onClick={handleDownload}>
+              Download File
+            </Button>
+          </div>
+        )}
+      </CardContent>
     </div>
-  ) : (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <Box className="h-16 w-16 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground text-center">
-        3D preview not available for {fileExtension.toUpperCase()} files
-      </p>
-      <Button variant="outline" onClick={handleDownload}>
-        Download File
-      </Button>
-    </div>
-  )
-}
-      </CardContent >
-    </div >
   );
 }
