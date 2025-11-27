@@ -79,28 +79,41 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
     const internalMeshRef = useRef<THREE.Mesh>(null);
     const meshRef = internalMeshRef;
 
+    // Refs for geometry management (no memoization - manual change tracking)
+    const geometryRef = useRef<THREE.BufferGeometry | null>(null);
+    const prevMeshDataRef = useRef<MeshData | null>(null);
+
     // Create single unified geometry - ALWAYS USE INDEXED GEOMETRY
-    // This is critical for smooth shading and vertex normal sharing
-    const geometry = (() => {
-      if (!meshData?.vertices || !meshData?.indices || !meshData?.normals) {
-        console.warn("⚠️ Missing mesh data - creating fallback geometry");
-        return new THREE.BufferGeometry();
+    // Only recreate when meshData reference changes
+    if (meshData !== prevMeshDataRef.current) {
+      // Dispose old geometry
+      if (geometryRef.current) {
+        geometryRef.current.dispose();
       }
 
-      const geo = new THREE.BufferGeometry();
+      if (!meshData?.vertices || !meshData?.indices || !meshData?.normals) {
+        console.warn("⚠️ Missing mesh data - creating fallback geometry");
+        geometryRef.current = new THREE.BufferGeometry();
+      } else {
+        const geo = new THREE.BufferGeometry();
 
-      // ALWAYS use indexed geometry (vertices shared across triangles)
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(meshData.vertices, 3));
-      geo.setIndex(meshData.indices);
-      geo.setAttribute("normal", new THREE.Float32BufferAttribute(meshData.normals, 3));
+        // ALWAYS use indexed geometry (vertices shared across triangles)
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(meshData.vertices, 3));
+        geo.setIndex(meshData.indices);
+        geo.setAttribute("normal", new THREE.Float32BufferAttribute(meshData.normals, 3));
 
-      // ✅ CRITICAL: DO NOT call computeVertexNormals() - trust backend normals!
-      // The backend generates professional smooth normals that should not be overwritten
-      // Calling computeVertexNormals() here destroys the smooth normals and creates visible horizontal lines
+        // ✅ CRITICAL: DO NOT call computeVertexNormals() - trust backend normals!
+        // The backend generates professional smooth normals that should not be overwritten
+        // Calling computeVertexNormals() here destroys the smooth normals and creates visible horizontal lines
 
-      geo.computeBoundingSphere();
-      return geo;
-    })();
+        geo.computeBoundingSphere();
+        geometryRef.current = geo;
+      }
+
+      prevMeshDataRef.current = meshData;
+    }
+
+    const geometry = geometryRef.current!;
 
     // Apply vertex colors ONLY for topology mode (not for highlighting)
     useEffect(() => {
@@ -241,8 +254,29 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       return geo;
     }, [highlightedFaceIds, meshData.face_mapping, meshData.indices, meshData.vertices, meshData.normals]);
 
-    // Pre-compute feature edges (for solid mode) - NO CACHING
-    const featureEdgesGeometry = (() => {
+    // Refs for feature edges geometry
+    const featureEdgesRef = useRef<THREE.BufferGeometry | null>(null);
+    const prevFeatureEdgesDataRef = useRef<{
+      tagged_edges?: any[];
+      feature_edges?: any[];
+      indices?: number[];
+      vertices?: number[];
+    } | null>(null);
+
+    // Pre-compute feature edges (for solid mode) - Only recreate when edge data changes
+    const currentEdgesData = {
+      tagged_edges: meshData?.tagged_edges,
+      feature_edges: meshData?.feature_edges,
+      indices: meshData?.indices,
+      vertices: meshData?.vertices,
+    };
+
+    if (JSON.stringify(currentEdgesData) !== JSON.stringify(prevFeatureEdgesDataRef.current)) {
+      // Dispose old geometry
+      if (featureEdgesRef.current) {
+        featureEdgesRef.current.dispose();
+      }
+
       // PRIORITY: Use tagged_edges - backend handles all deduplication and filtering
       if (meshData?.tagged_edges && Array.isArray(meshData.tagged_edges) && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
@@ -265,12 +299,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           const geo = new THREE.BufferGeometry();
           geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
           geo.computeBoundingSphere();
-          return geo;
+          featureEdgesRef.current = geo;
         }
       }
-
       // FALLBACK: Use feature_edges if tagged_edges not available
-      if (meshData?.feature_edges && Array.isArray(meshData.feature_edges) && meshData.feature_edges.length > 0) {
+      else if (meshData?.feature_edges && Array.isArray(meshData.feature_edges) && meshData.feature_edges.length > 0) {
         const featureEdgePositions: number[] = [];
 
         meshData.feature_edges.forEach((polyline) => {
@@ -284,97 +317,74 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
         geo.computeBoundingSphere();
-        return geo;
+        featureEdgesRef.current = geo;
       }
-
       // FALLBACK: Compute from mesh triangles (for STL files without BREP data)
-      if (!meshData?.indices || !meshData?.vertices) {
-        return null;
-      }
-
-      const edgeMap = new Map<
-        string,
-        {
-          v1: THREE.Vector3;
-          v2: THREE.Vector3;
-          normals: THREE.Vector3[];
-        }
-      >();
-
-      const triangleCount = meshData.indices.length / 3;
-
-      // Build edge map with face normals
-      for (let i = 0; i < triangleCount; i++) {
-        const i0 = meshData.indices[i * 3];
-        const i1 = meshData.indices[i * 3 + 1];
-        const i2 = meshData.indices[i * 3 + 2];
-
-        const v0 = new THREE.Vector3(
-          meshData.vertices[i0 * 3],
-          meshData.vertices[i0 * 3 + 1],
-          meshData.vertices[i0 * 3 + 2],
-        );
-        const v1 = new THREE.Vector3(
-          meshData.vertices[i1 * 3],
-          meshData.vertices[i1 * 3 + 1],
-          meshData.vertices[i1 * 3 + 2],
-        );
-        const v2 = new THREE.Vector3(
-          meshData.vertices[i2 * 3],
-          meshData.vertices[i2 * 3 + 1],
-          meshData.vertices[i2 * 3 + 2],
-        );
-
-        const e1 = new THREE.Vector3().subVectors(v1, v0);
-        const e2 = new THREE.Vector3().subVectors(v2, v0);
-        const normal = new THREE.Vector3().crossVectors(e1, e2).normalize();
-
-        const getKey = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`);
-
-        const edges = [
-          { v1: v0, v2: v1, key: getKey(i0, i1) },
-          { v1: v1, v2: v2, key: getKey(i1, i2) },
-          { v1: v2, v2: v0, key: getKey(i2, i0) },
-        ];
-
-        edges.forEach((edge) => {
-          if (!edgeMap.has(edge.key)) {
-            edgeMap.set(edge.key, {
-              v1: edge.v1.clone(),
-              v2: edge.v2.clone(),
-              normals: [normal.clone()],
-            });
-          } else {
-            edgeMap.get(edge.key)!.normals.push(normal.clone());
+      else if (meshData?.indices && meshData?.vertices) {
+        const edgeMap = new Map<
+          string,
+          {
+            v1: THREE.Vector3;
+            v2: THREE.Vector3;
+            normals: THREE.Vector3[];
           }
-        });
-      }
+        >();
 
-      // Filter feature edges by angle threshold (20° - lowered to catch cylindrical edges)
-      const featureEdgePositions: number[] = [];
+        const triangleCount = meshData.indices.length / 3;
 
-      edgeMap.forEach((edgeData) => {
-        // Boundary edges (only 1 face) - always show
-        if (edgeData.normals.length === 1) {
-          featureEdgePositions.push(
-            edgeData.v1.x,
-            edgeData.v1.y,
-            edgeData.v1.z,
-            edgeData.v2.x,
-            edgeData.v2.y,
-            edgeData.v2.z,
+        // Build edge map with face normals
+        for (let i = 0; i < triangleCount; i++) {
+          const i0 = meshData.indices[i * 3];
+          const i1 = meshData.indices[i * 3 + 1];
+          const i2 = meshData.indices[i * 3 + 2];
+
+          const v0 = new THREE.Vector3(
+            meshData.vertices[i0 * 3],
+            meshData.vertices[i0 * 3 + 1],
+            meshData.vertices[i0 * 3 + 2],
           );
-          return;
+          const v1 = new THREE.Vector3(
+            meshData.vertices[i1 * 3],
+            meshData.vertices[i1 * 3 + 1],
+            meshData.vertices[i1 * 3 + 2],
+          );
+          const v2 = new THREE.Vector3(
+            meshData.vertices[i2 * 3],
+            meshData.vertices[i2 * 3 + 1],
+            meshData.vertices[i2 * 3 + 2],
+          );
+
+          const e1 = new THREE.Vector3().subVectors(v1, v0);
+          const e2 = new THREE.Vector3().subVectors(v2, v0);
+          const normal = new THREE.Vector3().crossVectors(e1, e2).normalize();
+
+          const getKey = (a: number, b: number) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+
+          const edges = [
+            { v1: v0, v2: v1, key: getKey(i0, i1) },
+            { v1: v1, v2: v2, key: getKey(i1, i2) },
+            { v1: v2, v2: v0, key: getKey(i2, i0) },
+          ];
+
+          edges.forEach((edge) => {
+            if (!edgeMap.has(edge.key)) {
+              edgeMap.set(edge.key, {
+                v1: edge.v1.clone(),
+                v2: edge.v2.clone(),
+                normals: [normal.clone()],
+              });
+            } else {
+              edgeMap.get(edge.key)!.normals.push(normal.clone());
+            }
+          });
         }
 
-        // Feature edges: angle between adjacent faces > 20° (lowered from 45°)
-        if (edgeData.normals.length === 2) {
-          const n1 = edgeData.normals[0];
-          const n2 = edgeData.normals[1];
-          const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
-          const normalAngleDeg = normalAngle * (180 / Math.PI);
+        // Filter feature edges by angle threshold (20° - lowered to catch cylindrical edges)
+        const featureEdgePositions: number[] = [];
 
-          if (normalAngleDeg > 20) {
+        edgeMap.forEach((edgeData) => {
+          // Boundary edges (only 1 face) - always show
+          if (edgeData.normals.length === 1) {
             featureEdgePositions.push(
               edgeData.v1.x,
               edgeData.v1.y,
@@ -383,42 +393,92 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               edgeData.v2.y,
               edgeData.v2.z,
             );
+            return;
           }
-        }
-      });
 
-      // Create geometry from filtered edges
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
-      return geo;
-    })();
+          // Feature edges: angle between adjacent faces > 20° (lowered from 45°)
+          if (edgeData.normals.length === 2) {
+            const n1 = edgeData.normals[0];
+            const n2 = edgeData.normals[1];
+            const normalAngle = Math.acos(Math.max(-1, Math.min(1, n1.dot(n2))));
+            const normalAngleDeg = normalAngle * (180 / Math.PI);
 
-    // Clean edge geometry for both solid and wireframe modes - NO CACHING
-    const cleanEdgesGeometry = geometry?.attributes?.position
-      ? new THREE.EdgesGeometry(geometry, 1)
-      : new THREE.BufferGeometry();
+            if (normalAngleDeg > 20) {
+              featureEdgePositions.push(
+                edgeData.v1.x,
+                edgeData.v1.y,
+                edgeData.v1.z,
+                edgeData.v2.x,
+                edgeData.v2.y,
+                edgeData.v2.z,
+              );
+            }
+          }
+        });
 
-    // Section plane - NO CACHING
-    const clippingPlane = (() => {
-      if (sectionPlane === "none") return undefined;
-
-      let normal: THREE.Vector3;
-      switch (sectionPlane) {
-        case "xy":
-          normal = new THREE.Vector3(0, 0, 1);
-          break;
-        case "xz":
-          normal = new THREE.Vector3(0, 1, 0);
-          break;
-        case "yz":
-          normal = new THREE.Vector3(1, 0, 0);
-          break;
-        default:
-          return undefined;
+        // Create geometry from filtered edges
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
+        featureEdgesRef.current = geo;
       }
 
-      return [new THREE.Plane(normal, -sectionPosition)];
-    })();
+      prevFeatureEdgesDataRef.current = currentEdgesData;
+    }
+
+    const featureEdgesGeometry = featureEdgesRef.current;
+
+    // Refs for clean edges geometry
+    const cleanEdgesRef = useRef<THREE.BufferGeometry | null>(null);
+    const prevGeometryRef = useRef<THREE.BufferGeometry | null>(null);
+
+    // Clean edge geometry for both solid and wireframe modes - Only recreate when geometry changes
+    if (geometry !== prevGeometryRef.current) {
+      if (cleanEdgesRef.current) {
+        cleanEdgesRef.current.dispose();
+      }
+      
+      cleanEdgesRef.current = geometry?.attributes?.position
+        ? new THREE.EdgesGeometry(geometry, 1)
+        : new THREE.BufferGeometry();
+      
+      prevGeometryRef.current = geometry;
+    }
+
+    const cleanEdgesGeometry = cleanEdgesRef.current!;
+
+    // Refs for section plane
+    const clippingPlaneRef = useRef<THREE.Plane[] | undefined>(undefined);
+    const prevSectionPlaneRef = useRef(sectionPlane);
+    const prevSectionPositionRef = useRef(sectionPosition);
+
+    // Section plane - Only recreate when section props change
+    if (sectionPlane !== prevSectionPlaneRef.current || sectionPosition !== prevSectionPositionRef.current) {
+      if (sectionPlane === "none") {
+        clippingPlaneRef.current = undefined;
+      } else {
+        let normal: THREE.Vector3;
+        switch (sectionPlane) {
+          case "xy":
+            normal = new THREE.Vector3(0, 0, 1);
+            break;
+          case "xz":
+            normal = new THREE.Vector3(0, 1, 0);
+            break;
+          case "yz":
+            normal = new THREE.Vector3(1, 0, 0);
+            break;
+          default:
+            normal = new THREE.Vector3(0, 0, 1);
+        }
+
+        clippingPlaneRef.current = [new THREE.Plane(normal, -sectionPosition)];
+      }
+
+      prevSectionPlaneRef.current = sectionPlane;
+      prevSectionPositionRef.current = sectionPosition;
+    }
+
+    const clippingPlane = clippingPlaneRef.current;
 
     const { gl } = useThree();
 
@@ -427,7 +487,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       gl.clippingPlanes = [];
     }, [sectionPlane, gl]);
 
-    const materialProps = (() => {
+    // Refs for material props
+    const materialPropsRef = useRef<any>(null);
+    const prevDisplayStyleRef = useRef(displayStyle);
+    const prevClippingPlaneRef = useRef(clippingPlane);
+
+    // Material props - Only recreate when display style or clipping plane changes
+    if (displayStyle !== prevDisplayStyleRef.current || clippingPlane !== prevClippingPlaneRef.current) {
       const base = {
         color: SOLID_COLOR,
         side: THREE.DoubleSide,
@@ -439,20 +505,39 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       };
 
       if (displayStyle === "wireframe") {
-        return { ...base, opacity: 0, transparent: true, wireframe: false };
+        materialPropsRef.current = { ...base, opacity: 0, transparent: true, wireframe: false };
       } else if (displayStyle === "translucent") {
-        return { ...base, transparent: true, opacity: 0.4, wireframe: false };
+        materialPropsRef.current = { ...base, transparent: true, opacity: 0.4, wireframe: false };
+      } else {
+        materialPropsRef.current = { ...base, transparent: false, opacity: 1, wireframe: false };
       }
 
-      return { ...base, transparent: false, opacity: 1, wireframe: false };
-    })();
+      prevDisplayStyleRef.current = displayStyle;
+      prevClippingPlaneRef.current = clippingPlane;
+    }
+
+    // Initialize material props on first render
+    if (!materialPropsRef.current) {
+      const base = {
+        color: SOLID_COLOR,
+        side: THREE.DoubleSide,
+        clippingPlanes: clippingPlane,
+        clipIntersection: true,
+        metalness: 0.0,
+        roughness: 0.9,
+        envMapIntensity: 0.5,
+      };
+      materialPropsRef.current = { ...base, transparent: false, opacity: 1, wireframe: false };
+    }
+
+    const materialProps = materialPropsRef.current;
 
     // Cleanup geometries on unmount to prevent memory leaks
     useEffect(() => {
       return () => {
-        geometry.dispose();
-        if (featureEdgesGeometry) featureEdgesGeometry.dispose();
-        cleanEdgesGeometry.dispose();
+        if (geometryRef.current) geometryRef.current.dispose();
+        if (featureEdgesRef.current) featureEdgesRef.current.dispose();
+        if (cleanEdgesRef.current) cleanEdgesRef.current.dispose();
         if (highlightGeometry) highlightGeometry.dispose();
       };
     }, [highlightGeometry]);

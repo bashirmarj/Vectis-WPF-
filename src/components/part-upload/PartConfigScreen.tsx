@@ -434,7 +434,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                   <div className="h-[calc(100vh-200px)]">
                     {selectedFile.meshData ? (
                       <>
-                        {console.log("✅ Rendering CADViewer with meshData")}
                         <CADViewer
                           meshData={selectedFile.meshData}
                           fileName={selectedFile.file.name}
