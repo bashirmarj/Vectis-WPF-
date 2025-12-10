@@ -316,7 +316,7 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about materials, heat treatment, tolerances..."
+              placeholder="Ask about our services, processes, or any of your engineering needs..."
               disabled={isLoading}
               rows={1}
               className="w-full resize-none bg-transparent
