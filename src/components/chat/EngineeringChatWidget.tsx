@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, ChevronDown, Send, RotateCcw, Loader2, User, Sparkles } from 'lucide-react';
+import { MessageCircle, X, ChevronDown, Send, RotateCcw, Loader2, User, Sparkles, Download } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEngineeringChat, PartContext, Message } from '@/hooks/useEngineeringChat';
 import { cn } from '@/lib/utils';
+import { jsPDF } from 'jspdf';
 import logo from '@/assets/logo.png';
 
 interface EngineeringChatWidgetProps {
@@ -66,6 +67,66 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
       sendMessage(messageText, partContext);
       setInputValue('');
     }
+  };
+
+  const downloadConversation = () => {
+    if (messages.length === 0) return;
+    
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+    let y = 20;
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Vectis Engineering Chat', margin, y);
+    y += 10;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(`Exported: ${new Date().toLocaleString()}`, margin, y);
+    y += 15;
+    
+    // Divider line
+    doc.setDrawColor(200);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 15;
+    
+    // Messages
+    doc.setTextColor(0);
+    messages.forEach((msg) => {
+      const role = msg.role === 'user' ? 'You' : 'Vectis Assistant';
+      const content = cleanMarkdown(msg.content);
+      
+      // Role label
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(msg.role === 'user' ? 50 : 150, 50, 50);
+      doc.text(role, margin, y);
+      y += 6;
+      
+      // Message content with word wrap
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60);
+      const lines = doc.splitTextToSize(content, maxWidth);
+      
+      lines.forEach((line: string) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(line, margin, y);
+        y += 5;
+      });
+      
+      y += 10;
+    });
+    
+    doc.save('vectis-chat-conversation.pdf');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -244,6 +305,15 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
           
           {/* Control buttons */}
           <div className="flex gap-1">
+            <button
+              onClick={downloadConversation}
+              className="h-9 w-9 rounded-xl flex items-center justify-center
+                text-muted-foreground hover:text-foreground hover:bg-background 
+                active:bg-muted transition-all duration-200"
+              title="Download conversation as PDF"
+            >
+              <Download className="h-4 w-4" />
+            </button>
             <button
               onClick={clearHistory}
               className="h-9 w-9 rounded-xl flex items-center justify-center
