@@ -102,7 +102,9 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-            <img src={logo} alt="Vectis Manufacturing Logo" className="h-14 w-auto drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1">
+              <img src={logo} alt="Vectis Manufacturing Logo" className="h-12 w-auto" />
+            </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-primary-foreground leading-tight">VECTIS</span>
               <span className="text-sm text-primary-foreground/80 leading-tight">Manufacturing</span>
