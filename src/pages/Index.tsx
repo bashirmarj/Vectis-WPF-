@@ -87,7 +87,7 @@ const Index = () => {
       <Navigation />
 
       {/* Hero Section - Full Viewport */}
-      <section className="relative min-h-[120vh] flex flex-col justify-center overflow-hidden -mt-16 pt-16">
+      <section className="relative min-h-[150vh] flex flex-col justify-center overflow-hidden -mt-16 pt-16">
         <ParallaxSection
           backgroundImage={heroImage}
           overlayOpacity={0.5}
@@ -142,7 +142,7 @@ const Index = () => {
         const isEven = index % 2 === 0;
         
         return (
-          <section key={index} className="relative min-h-[120vh] flex items-center">
+          <section key={index} className="relative min-h-[150vh] flex items-center">
             {/* Background Image */}
             <ParallaxSection
               backgroundImage={service.image}
@@ -187,7 +187,7 @@ const Index = () => {
         const isEven = index % 2 === 0;
         
         return (
-          <section key={index} className="relative min-h-[120vh] flex items-center">
+          <section key={index} className="relative min-h-[150vh] flex items-center">
             {/* Background Image */}
             <ParallaxSection
               backgroundImage={capability.image}
@@ -313,7 +313,7 @@ const Index = () => {
       </section>
 
       {/* CTA Section with Parallax */}
-      <section className="relative min-h-[120vh] flex items-center">
+      <section className="relative min-h-[150vh] flex items-center">
         <ParallaxSection
           backgroundImage={capabilitiesImg}
           overlayOpacity={0.5}

@@ -22,11 +22,9 @@ const ParallaxSection: React.FC<ParallaxSectionProps> = ({
     <div className={cn('relative overflow-hidden', className)}>
       {backgroundImage && (
         <div
-          className="absolute inset-x-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: `url(${backgroundImage})`,
-            height: '200%',
-            top: '-50%',
           }}
         />
       )}
