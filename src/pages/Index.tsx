@@ -8,11 +8,10 @@ import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParallaxSection from "@/components/home/ParallaxSection";
 import ProcessTimeline from "@/components/home/ProcessTimeline";
 import ScrollIndicator from "@/components/home/ScrollIndicator";
-import CapabilityCard from "@/components/home/CapabilityCard";
-import { useScrollAnimation, useStaggerAnimation } from "@/hooks/useScrollAnimation";
+import { useStaggerAnimation } from "@/hooks/useScrollAnimation";
 import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts.jpg";
-import prototypeImg from "@/assets/prototype-design.jpg";
+import prototypeImg from "@/assets/prototype-cnc-part.png";
 import turnkeyImg from "@/assets/turnkey-solutions.jpg";
 import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 
@@ -21,21 +20,21 @@ const Index = () => {
     {
       icon: Wrench,
       title: "Prototype Design",
-      description: "Transform your concepts into functional prototypes with our expert engineering team and rapid turnaround.",
+      description: "Transform your concepts into functional prototypes with our expert engineering team and rapid turnaround. We bridge the gap between design and production.",
       image: prototypeImg,
       link: "/services/prototype-design",
     },
     {
       icon: Package,
       title: "Custom Parts",
-      description: "High-quality custom components manufactured to meet your exact specifications and tolerances.",
+      description: "High-quality custom components manufactured to meet your exact specifications and tolerances. From one-off pieces to production runs.",
       image: customPartsImg,
       link: "/services/custom-parts",
     },
     {
       icon: TrendingUp,
       title: "Turnkey Solutions",
-      description: "Complete project lifecycle management from initial design through final delivery and beyond.",
+      description: "Complete project lifecycle management from initial design through final delivery and beyond. We handle everything so you can focus on your business.",
       image: turnkeyImg,
       link: "/services/turnkey-solutions",
     },
@@ -49,9 +48,24 @@ const Index = () => {
   ];
 
   const capabilities = [
-    { icon: Cpu, title: "CNC Machining", desc: "5-axis precision milling and turning" },
-    { icon: Zap, title: "Wire EDM", desc: "Complex geometries with tight tolerances" },
-    { icon: Layers, title: "Sheet Metal", desc: "Laser cutting, bending, and forming" },
+    { 
+      icon: Cpu, 
+      title: "CNC Machining", 
+      desc: "5-axis precision milling and turning for complex geometries with tolerances down to ±0.001\"",
+      image: capabilitiesImg // Placeholder - replace with CNC-specific image
+    },
+    { 
+      icon: Zap, 
+      title: "Wire EDM", 
+      desc: "Complex geometries with tight tolerances. Ideal for hardened materials and intricate details.",
+      image: capabilitiesImg // Placeholder - replace with Wire EDM image
+    },
+    { 
+      icon: Layers, 
+      title: "Sheet Metal", 
+      desc: "Laser cutting, bending, and forming. From prototypes to high-volume production.",
+      image: capabilitiesImg // Placeholder - replace with Sheet Metal image
+    },
   ];
 
   const whyChooseUs = [
@@ -72,15 +86,14 @@ const Index = () => {
     },
   ];
 
-  const { ref: servicesRef, isVisible: servicesVisible } = useStaggerAnimation(services.length, 150);
   const { ref: whyRef, isVisible: whyVisible } = useStaggerAnimation(whyChooseUs.length, 200);
 
   return (
     <div className="min-h-screen overflow-x-hidden">
       <Navigation />
 
-      {/* Hero Section - Full Viewport with Parallax, extends behind navigation */}
-      <section className="relative h-screen flex flex-col justify-center overflow-hidden -mt-16 pt-16">
+      {/* Hero Section - Full Viewport with Parallax */}
+      <section className="relative min-h-[120vh] flex flex-col justify-center overflow-hidden -mt-16 pt-16">
         <ParallaxSection
           backgroundImage={heroImage}
           speed={0.2}
@@ -133,90 +146,136 @@ const Index = () => {
         </div>
 
         {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20">
           <ScrollIndicator />
         </div>
 
         {/* Gradient fade into next section */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent to-background z-10" />
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-background z-10" />
       </section>
 
-      {/* Services Overview */}
-      <section className="py-20 md:py-32">
-        <div className="container-custom">
-          <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
-            <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
-              What We Offer
-            </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-              Our Core Services
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Comprehensive manufacturing solutions backed by decades of engineering expertise 
-              and state-of-the-art technology.
-            </p>
-          </AnimatedSection>
+      {/* Services - Full-Bleed Vertical Sections */}
+      {services.map((service, index) => {
+        const Icon = service.icon;
+        const isEven = index % 2 === 0;
+        
+        return (
+          <section key={index} className="relative min-h-screen flex items-center">
+            {/* Background Image with Parallax */}
+            <ParallaxSection
+              backgroundImage={service.image}
+              speed={0.15}
+              overlayOpacity={0.7}
+              className="absolute inset-0"
+              contentClassName="hidden"
+            >
+              <div />
+            </ParallaxSection>
 
-          <div ref={servicesRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <CapabilityCard
-                key={index}
-                title={service.title}
-                description={service.description}
-                image={service.image}
-                icon={service.icon}
-                link={service.link}
-                isVisible={servicesVisible}
-                delay={index * 150}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Capabilities Strip */}
-      <section className="py-16 border-t border-border/30">
-        <div className="container-custom">
-          <AnimatedSection className="text-center mb-12">
-            <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-3">
-              Manufacturing Capabilities
-            </p>
-            <h3 className="text-2xl md:text-3xl font-bold">
-              Precision at Every Step
-            </h3>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {capabilities.map((cap, index) => {
-              const Icon = cap.icon;
-              return (
-                <AnimatedSection
-                  key={index}
-                  animation="scaleIn"
-                  delay={index * 100}
-                  className="flex items-center gap-4 p-6 bg-background rounded-lg border border-border hover:border-primary/50 transition-colors group"
-                >
-                  <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <Icon className="w-7 h-7 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg">{cap.title}</h4>
-                    <p className="text-sm text-muted-foreground">{cap.desc}</p>
+            {/* Content */}
+            <div className="container-custom relative z-10">
+              <div className={`max-w-xl ${isEven ? '' : 'ml-auto'}`}>
+                <AnimatedSection animation={isEven ? "fadeRight" : "fadeLeft"}>
+                  <div className="w-16 h-16 bg-primary/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-8 border border-primary/30">
+                    <Icon className="w-8 h-8 text-primary" />
                   </div>
                 </AnimatedSection>
-              );
-            })}
-          </div>
+                
+                <AnimatedSection animation="fadeUp" delay={100}>
+                  <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
+                    {`0${index + 1}`} — Services
+                  </p>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={200}>
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+                    {service.title}
+                  </h2>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={300}>
+                  <p className="text-lg md:text-xl text-gray-300 mb-10 leading-relaxed">
+                    {service.description}
+                  </p>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={400}>
+                  <Button size="lg" variant="outline-light" className="group" asChild>
+                    <Link to={service.link}>
+                      Learn More 
+                      <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  </Button>
+                </AnimatedSection>
+              </div>
+            </div>
 
-          <AnimatedSection className="text-center mt-10">
-            <Button variant="outline" asChild>
-              <Link to="/capabilities">
-                View All Capabilities <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </AnimatedSection>
-        </div>
-      </section>
+            {/* Gradient fade at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-background z-10" />
+          </section>
+        );
+      })}
+
+      {/* Capabilities - Full-Bleed Vertical Sections */}
+      {capabilities.map((capability, index) => {
+        const Icon = capability.icon;
+        const isEven = index % 2 === 0;
+        
+        return (
+          <section key={index} className="relative min-h-[80vh] flex items-center">
+            {/* Background Image with Parallax */}
+            <ParallaxSection
+              backgroundImage={capability.image}
+              speed={0.1}
+              overlayOpacity={0.8}
+              className="absolute inset-0"
+              contentClassName="hidden"
+            >
+              <div />
+            </ParallaxSection>
+
+            {/* Content */}
+            <div className="container-custom relative z-10">
+              <div className={`max-w-xl ${isEven ? 'ml-auto' : ''}`}>
+                <AnimatedSection animation={isEven ? "fadeLeft" : "fadeRight"}>
+                  <div className="w-14 h-14 bg-primary/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-6 border border-primary/30">
+                    <Icon className="w-7 h-7 text-primary" />
+                  </div>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={100}>
+                  <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-3">
+                    Capabilities
+                  </p>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={200}>
+                  <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+                    {capability.title}
+                  </h3>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={300}>
+                  <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+                    {capability.desc}
+                  </p>
+                </AnimatedSection>
+                
+                <AnimatedSection animation="fadeUp" delay={400}>
+                  <Button variant="outline-light" asChild>
+                    <Link to="/capabilities">
+                      View Details <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </AnimatedSection>
+              </div>
+            </div>
+
+            {/* Gradient fade at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-background z-10" />
+          </section>
+        );
+      })}
 
       {/* Process Timeline */}
       <section className="py-20 md:py-32">
