@@ -180,49 +180,85 @@ const Index = () => {
         );
       })}
 
-      {/* Capabilities - Full-Bleed Vertical Sections */}
-      {capabilities.map((capability, index) => {
-        const isEven = index % 2 === 0;
+      {/* Capabilities Showcase - Horizontal Marquee with Grayscale-to-Color Effect */}
+      <section className="py-24 bg-neutral-950 border-y border-white/10 overflow-hidden">
+        {/* Section Header */}
+        <div className="container-custom mb-12">
+          <AnimatedSection animation="fadeUp">
+            <p className="text-sm font-mono tracking-[0.3em] text-gray-500 uppercase mb-3">
+              Our Capabilities
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-white">
+              Precision Manufacturing
+            </h2>
+          </AnimatedSection>
+        </div>
         
-        return (
-          <section key={index} className="relative min-h-[150vh] flex items-center">
-            {/* Background Image */}
-            <ParallaxSection
-              backgroundImage={capability.image}
-              overlayOpacity={0.45}
-              className="absolute inset-0"
-              contentClassName="hidden"
-            >
-              <div />
-            </ParallaxSection>
-
-            {/* Content */}
-            <div className="container-custom relative z-10">
-              <div className={`max-w-md ${isEven ? 'ml-auto text-right' : ''}`}>
-                <AnimatedSection animation="fadeUp" delay={0}>
-                  <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
+        {/* Infinite Scroll Strip */}
+        <div className="relative w-full overflow-hidden group">
+          <div className="flex whitespace-nowrap animate-marquee hover:[animation-play-state:paused]">
+            {/* First set of items */}
+            {capabilities.map((capability, index) => (
+              <div 
+                key={`first-${index}`}
+                className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 group/card cursor-pointer"
+              >
+                <div 
+                  className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-all duration-500 scale-100 group-hover/card:scale-105"
+                  style={{ backgroundImage: `url(${capability.image})` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
+                    Capability
+                  </span>
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                     {capability.title}
                   </h3>
-                </AnimatedSection>
-                
-                <AnimatedSection animation="fadeUp" delay={150}>
-                  <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+                  <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
                     {capability.description}
                   </p>
-                </AnimatedSection>
-                
-                <AnimatedSection animation="fadeUp" delay={300}>
-                  <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
-                    <Link to="/capabilities">
-                      View Details <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                  </Button>
-                </AnimatedSection>
+                </div>
               </div>
-            </div>
-          </section>
-        );
-      })}
+            ))}
+            {/* Duplicate set for seamless loop */}
+            {capabilities.map((capability, index) => (
+              <div 
+                key={`second-${index}`}
+                className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 group/card cursor-pointer"
+              >
+                <div 
+                  className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-all duration-500 scale-100 group-hover/card:scale-105"
+                  style={{ backgroundImage: `url(${capability.image})` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
+                    Capability
+                  </span>
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                    {capability.title}
+                  </h3>
+                  <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
+                    {capability.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* View All Button */}
+        <div className="container-custom mt-12 text-center">
+          <AnimatedSection animation="fadeUp" delay={200}>
+            <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
+              <Link to="/capabilities">
+                Explore All Capabilities <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Button>
+          </AnimatedSection>
+        </div>
+      </section>
 
       {/* Process Timeline */}
       <section className="py-20 md:py-32 bg-background">
