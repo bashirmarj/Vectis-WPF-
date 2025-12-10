@@ -76,7 +76,407 @@ Material Heat Treatments: 1018/1020 carburize for HRC 58-62 surface with HRC 15-
 
 Stock Sizes: Aluminum round bar comes in 1/8, 3/16, 1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1-1/8, 1-1/4, 1-1/2, 1-3/4, 2, 2-1/2, 3, 3-1/2, 4, 5, 6 inch. Steel round bar has similar sizes plus metric 8, 10, 12, 16, 20, 25, 30, 40, 50 mm. Aluminum plate: 0.025 through 2.0 inch in standard gauges. Steel plate: 3/16, 1/4, 5/16, 3/8, 1/2, 5/8, 3/4, 1, 1-1/4, 1-1/2, 2 inch.
 
-Formulas: Cantilever deflection δ = FL³/(3EI). Simply supported center load δ = FL³/(48EI). Uniform load δ = 5wL⁴/(384EI). Rectangle I = bh³/12. Circle I = πd⁴/64. Stress σ = F/A or σ = My/I for bending. Bearing life L₁₀ = (C/P)^p × 10⁶ revolutions. Safety factor n = σ_yield / σ_actual. Euler buckling Pcr = π²EI/(KL)². Torsion τ = Tr/J.
+COMPREHENSIVE ENGINEERING FORMULAS REFERENCE:
+
+=== GEARBOX, REDUCER & POWER TRANSMISSION ===
+
+TORQUE-POWER-SPEED RELATIONSHIPS:
+Metric: T = 9549 × P/n where T is torque in N·m, P is power in kW, n is speed in rpm.
+Imperial: T = 63,025 × HP/n where T is torque in lb-in, HP is horsepower, n is rpm.
+Power from torque: P = T × n / 9549 (kW) or HP = T × n / 63,025.
+Angular velocity: ω = 2πn/60 rad/s.
+
+GEARBOX TORQUE MULTIPLICATION:
+Output torque: T_output = T_input × i × η where i is gear ratio, η is efficiency.
+Multi-stage efficiency: η_total = η₁ × η₂ × η₃ × ... (multiply each stage).
+Speed reduction: n_output = n_input / (i₁ × i₂ × i₃ × ...).
+Torque amplification through stages: T_output = T_motor × i_total × η_total.
+
+GEARBOX EFFICIENCY BY TYPE:
+Spur/Helical gears: 95-98% per stage (typically 97%).
+Bevel gears: 95-97% per stage.
+Worm gears: 50-95% depending on lead angle and ratio (lower ratio = higher efficiency).
+Planetary gears: 97-99% per stage (most efficient).
+Chain drive: 95-98%.
+Belt drive (V-belt): 93-96%.
+Belt drive (timing/synchronous): 97-99%.
+
+WORM GEAR CALCULATIONS:
+Lead angle: λ = arctan(L / πd_w) where L is lead, d_w is worm pitch diameter.
+Worm efficiency: η = (cos φ_n - μ tan λ) / (cos φ_n + μ cot λ) where φ_n is normal pressure angle, μ is friction coefficient.
+Self-locking condition: Efficiency < 50% or lead angle < arctan(μ) (typically λ < 6°).
+Worm gear ratio: i = N_g / N_w where N_g is gear teeth, N_w is worm starts.
+
+SERVICE FACTORS FOR GEARBOXES:
+Uniform load (fans, conveyors): SF = 1.0-1.25.
+Moderate shock (machine tools, mixers): SF = 1.25-1.5.
+Heavy shock (crushers, presses, rolling mills): SF = 1.5-2.0.
+Intermittent duty: Reduce by 10-15%.
+Continuous 24-hour duty: Increase by 10-25%.
+Design torque: T_design = T_nominal × SF.
+
+MOTOR SELECTION:
+Required motor power: P_motor = (T_load × n_load) / (9549 × η_total).
+Motor starting torque: T_start ≥ 1.5-2.5 × T_load for high-inertia loads.
+Motor speed selection: n_motor = n_output × i_total.
+
+=== SHAFT DESIGN & SIZING ===
+
+PURE TORSION (solid shaft):
+Minimum diameter: d = ∛(16T / (π × τ_allow)) where τ_allow is allowable shear stress.
+Shear stress: τ = 16T / (πd³) for solid circular shaft.
+Polar moment of inertia: J = πd⁴/32 for solid shaft.
+
+HOLLOW SHAFT:
+Diameter: d = ∛(16T / (π × τ_allow × (1-k⁴))) where k = d_inner/d_outer.
+Polar moment: J = π(d_o⁴ - d_i⁴)/32.
+Weight savings: ~30-40% vs solid shaft for k = 0.6-0.7.
+
+COMBINED BENDING + TORSION (ASME Method):
+Equivalent torque: T_e = √(M² + T²).
+Equivalent moment: M_e = ½(M + √(M² + T²)).
+Shaft diameter: d = ∛(32 × M_e / (π × σ_allow)).
+With shock factors: d = ∛((32/π) × √((K_m × M)² + (K_t × T)²) / σ_allow).
+
+ASME SHOCK FACTORS (K_m, K_t):
+Stationary shaft, gradual load: K_m = 1.0, K_t = 1.0.
+Rotating shaft, gradual load: K_m = 1.5, K_t = 1.0.
+Rotating shaft, sudden light shock: K_m = 1.5, K_t = 1.5.
+Rotating shaft, sudden heavy shock: K_m = 2.0, K_t = 2.0.
+
+SHAFT DEFLECTION:
+Torsional deflection: θ = TL/(GJ) radians.
+Maximum recommended: θ ≤ 0.25° per foot of length.
+Lateral deflection: Use beam formulas with combined loads.
+
+KEYWAY STRESS:
+Shear stress in key: τ = 2T/(d × w × L) where w is key width, L is key length.
+Bearing/crushing stress: σ = 4T/(d × h × L) where h is key height.
+Typical key proportions: w ≈ d/4, h ≈ d/4.
+
+CRITICAL SPEED:
+Simple estimate: N_c = 946 × √(g/δ_static) rpm where δ_static is static deflection in inches.
+Operating speed should be < 0.7 × N_c or > 1.3 × N_c to avoid resonance.
+
+=== PLATE DEFLECTION FORMULAS ===
+
+ROARK'S RECTANGULAR PLATE - UNIFORM LOAD:
+Simply supported all edges: δ_max = α × q × a⁴ / (E × t³).
+All edges clamped: δ_max = α × q × a⁴ / (E × t³) with different α.
+α depends on aspect ratio a/b (lookup tables, typically 0.0138-0.0444 for SS, 0.0025-0.0138 for clamped).
+
+RECTANGULAR PLATE - CENTER POINT LOAD:
+Simply supported: δ = 0.0116 × P × a² / (E × t³) for square plate.
+All edges clamped: δ = 0.0056 × P × a² / (E × t³) for square plate.
+
+RECTANGULAR PLATE - PATCH LOAD (Critical for local deflection):
+Approximate as: δ ≈ δ_point × (1 - 0.3 × c/a) where c is patch size, a is plate dimension.
+For small patch (c/a < 0.2): Use point load formula with minimal correction.
+For larger patch: δ ≈ (q × a⁴ / (E × t³)) × β where β is from Roark's Table 26.
+
+LOCAL DEFORMATION UNDER DISTRIBUTED LOAD:
+Hertzian contact (cylindrical): δ_local ≈ (2P(1-ν²)) / (πLE) × [ln(4L/b) - 1].
+Simplified bearing deflection: δ_local ≈ P / (π × a × E_eff) for circular contact.
+For patch loads on thin plates: Local dimpling is usually negligible if σ_bearing << σ_yield.
+
+CIRCULAR PLATE - UNIFORM LOAD:
+Simply supported: δ = 3(1-ν²) × q × a⁴ / (16 × E × t³).
+Edge clamped: δ = 3(1-ν²) × q × a⁴ / (16 × E × t³) × (5+ν)/(1+ν) × factor.
+Center point load, clamped: δ = P × a² / (64 × π × D) where D = E × t³ / (12(1-ν²)).
+
+PLATE BENDING STRESS:
+Maximum stress (uniform load, clamped): σ_max = 0.308 × q × (a/t)².
+Check: σ_max < σ_yield / n for safety factor n.
+
+=== BEAM FORMULAS (EXPANDED) ===
+
+SIMPLY SUPPORTED:
+Center point load: δ = PL³/(48EI), M_max = PL/4 at center.
+Uniform load: δ = 5wL⁴/(384EI), M_max = wL²/8 at center.
+Off-center load at distance a: δ_max = Pa(L²-a²)^(3/2) / (9√3 × EIL).
+
+CANTILEVER:
+End load: δ = PL³/(3EI), M_max = PL at fixed end.
+Uniform load: δ = wL⁴/(8EI), M_max = wL²/2 at fixed end.
+Moment at end: δ = ML²/(2EI).
+
+FIXED-FIXED (Both ends clamped):
+Center point load: δ = PL³/(192EI), M_max = PL/8 at ends and center.
+Uniform load: δ = wL⁴/(384EI), M_max = wL²/12 at ends.
+
+OVERHANGING BEAM:
+End load on overhang: δ = Pa²(L+a)/(3EI).
+Maximum moment at support: M = P × a.
+
+CONTINUOUS BEAMS:
+Use three-moment equation: M₁L₁ + 2M₂(L₁+L₂) + M₃L₂ = -6(A₁a₁/L₁ + A₂b₂/L₂).
+
+BEAM ON ELASTIC FOUNDATION:
+Deflection: δ = Pβ/(2k) × e^(-βx) × (cos βx + sin βx).
+Characteristic: β = ⁴√(k/(4EI)) where k is foundation modulus.
+
+SECTION PROPERTIES:
+Rectangle: I = bh³/12, S = bh²/6.
+Circle: I = πd⁴/64, S = πd³/32.
+Hollow circle: I = π(d_o⁴ - d_i⁴)/64.
+I-beam: I = (b×H³ - (b-t_w)×h³)/12 approximately.
+
+=== FATIGUE & LIFE FORMULAS ===
+
+S-N CURVE (Basquin Equation):
+σ_a = σ'_f × (2N_f)^b where σ_a is stress amplitude, N_f is cycles to failure.
+Typical b = -0.05 to -0.12 for steels.
+
+ENDURANCE LIMIT ESTIMATION:
+Steel (S_ut < 200 ksi): S_e' = 0.5 × S_ut.
+Steel (S_ut ≥ 200 ksi): S_e' = 100 ksi.
+Aluminum: No true endurance limit; use S_e' at 5×10⁸ cycles ≈ 0.4 × S_ut.
+
+MODIFIED ENDURANCE LIMIT:
+S_e = k_a × k_b × k_c × k_d × k_e × S_e'.
+k_a = surface finish factor (machined ≈ 0.85, ground ≈ 0.9).
+k_b = size factor (d ≤ 8mm: 1.0; d > 8mm: 1.189 × d^(-0.097)).
+k_c = reliability factor (50%: 1.0, 99%: 0.814).
+k_d = temperature factor (T < 450°C: 1.0).
+
+MODIFIED GOODMAN CRITERION:
+σ_a/S_e + σ_m/S_ut = 1/n for infinite life.
+Gerber: (σ_a/S_e) + (σ_m/S_ut)² = 1/n (less conservative).
+Soderberg: σ_a/S_e + σ_m/S_y = 1/n (most conservative).
+
+MINER'S RULE (Cumulative Damage):
+Σ(n_i/N_i) = 1 at failure.
+Sum of (cycles at stress level / cycles to failure at that stress) = 1.
+Design for Σ(n_i/N_i) < 0.7-0.8 for safety.
+
+STRESS CONCENTRATION IN FATIGUE:
+K_f = 1 + q(K_t - 1) where K_f is fatigue stress concentration, q is notch sensitivity.
+Notch sensitivity q: Steel ≈ 0.6-0.95, Aluminum ≈ 0.5-0.8 (higher strength = higher q).
+
+=== BOLTED JOINT FORMULAS ===
+
+BOLT PRELOAD:
+F_i = T / (K × d) where T is torque, K is nut factor, d is nominal diameter.
+K values: Dry (unlubricated): 0.20, Lubricated: 0.15-0.18, Anti-seize: 0.12-0.15.
+Recommended preload: F_i = 0.75 × F_proof for reusable joints.
+
+BOLT STIFFNESS:
+k_b = A_t × E / L_grip where A_t is tensile stress area.
+Threaded portion: Use A_t = 0.7854 × (d - 0.9743p)² for metric.
+
+MEMBER (CLAMPED MATERIAL) STIFFNESS:
+Frustum method: k_m = 0.5774 × π × E × d / ln[(1.155t + D - d)(D + d) / ((1.155t + d - D)(D - d))].
+Simplified: k_m ≈ (0.78A_face × E) / t.
+
+JOINT STIFFNESS RATIO:
+C = k_b / (k_b + k_m) (typically 0.15-0.25).
+Bolt sees C × P of external load P.
+
+BOLT STRESS WITH EXTERNAL LOAD:
+F_bolt = F_i + C × P (bolt force with preload and external load).
+Joint separation occurs when: P_sep = F_i / (1 - C).
+
+BOLT FATIGUE:
+Stress amplitude: σ_a = C × ΔP / (2 × A_t).
+Use modified Goodman with σ_m = (F_i + C × P_mean) / A_t.
+
+=== WELD CALCULATIONS ===
+
+FILLET WELD THROAT:
+Throat size: a = 0.707 × w where w is leg size.
+Effective area: A_eff = a × L (throat × length).
+
+FILLET WELD STRENGTH:
+Allowable load per unit length: F = 0.707 × w × τ_allow.
+AWS D1.1 allowable: τ_allow = 0.30 × F_EXX for shear on filler metal.
+E70XX electrode: τ_allow = 0.30 × 70 = 21 ksi.
+
+COMBINED WELD STRESS:
+Resultant stress: τ = √(τ_direct² + τ_bending²) or √(f_x² + f_y²).
+Direct shear: f = P / A_weld.
+Bending: f = M × c / I_weld or f = M / S_weld.
+
+WELD GROUP PROPERTIES:
+Line method: Treat weld as line, I_weld = Σ(length × d²).
+Polar moment for torsion: J = I_x + I_y.
+For rectangular weld pattern (b × d): I = d²(3b + d)/6.
+
+WELD FATIGUE:
+Use stress categories from AWS or AISC (Category C-E typically).
+Fatigue strength at 2×10⁶ cycles: 13-44 ksi depending on detail category.
+
+=== THERMAL FORMULAS ===
+
+THERMAL EXPANSION:
+Free expansion: δ = α × L × ΔT.
+Typical α: Steel = 6.5×10⁻⁶/°F (11.7×10⁻⁶/°C), Aluminum = 13×10⁻⁶/°F (23×10⁻⁶/°C).
+
+THERMAL STRESS (Fully Constrained):
+σ = E × α × ΔT.
+Steel, 100°F rise: σ ≈ 29×10⁶ × 6.5×10⁻⁶ × 100 = 18,850 psi.
+
+PRESS FIT / INTERFERENCE FIT:
+Interface pressure: p = δ / [d × ((d_o² + d²)/(d_o² - d²) + ν_hub)/E_hub + ((d² + d_i²)/(d² - d_i²) - ν_shaft)/E_shaft)].
+Simplified (same material): p = E × δ / (2d) × [(d_o² - d²)/(d_o²)] for solid shaft in ring.
+Required interference: δ = 0.001 × d for light press fit, 0.002 × d for heavy.
+
+ASSEMBLY TEMPERATURE:
+Heat expansion: T_heat = T_room + δ_required / (α × d_hole).
+Cool shrinkage: T_cool = T_room - δ_required / (α × d_shaft).
+Clearance needed: δ_clearance ≈ 0.001 × d minimum.
+
+THERMAL GRADIENT STRESS:
+For plate: σ = E × α × ΔT / (2(1-ν)).
+
+=== SPRING FORMULAS ===
+
+HELICAL COMPRESSION/TENSION SPRING:
+Spring rate: k = G × d⁴ / (8 × D³ × N_a) where d = wire dia, D = mean coil dia, N_a = active coils.
+Shear stress: τ = 8 × F × D / (π × d³) × K_w.
+Wahl factor: K_w = (4C - 1)/(4C - 4) + 0.615/C where C = D/d (spring index).
+Recommended C: 4-12 (typically 6-10).
+
+SPRING DEFLECTION:
+δ = 8 × F × D³ × N_a / (G × d⁴) = F / k.
+
+SPRING SOLID HEIGHT:
+H_solid = (N_t + 1) × d for squared and ground ends.
+H_solid = N_t × d for plain ends.
+
+LEAF SPRING (Rectangular, simply supported):
+Deflection: δ = 6 × F × L³ / (E × n × b × t³) where n = number of leaves.
+Stress: σ = 6 × F × L / (n × b × t²).
+
+TORSION SPRING:
+Angular deflection: θ = M × L / (E × I) radians = 64 × M × D × N / (E × d⁴).
+Spring rate: k_θ = E × d⁴ / (64 × D × N) (moment per radian).
+
+=== COLUMN BUCKLING ===
+
+EULER FORMULA (Long columns):
+Critical load: P_cr = π² × E × I / (K × L)².
+Critical stress: σ_cr = π² × E / (K × L / r)² where r = √(I/A) is radius of gyration.
+
+SLENDERNESS RATIO:
+λ = K × L / r.
+Transition point: λ_c = √(2π²E / S_y) (above this use Euler, below use Johnson).
+
+JOHNSON FORMULA (Intermediate columns):
+P_cr = A × S_y × [1 - (S_y / (4π²E)) × (K×L/r)²].
+Use when λ < λ_c.
+
+END CONDITION FACTORS (K):
+Both ends pinned: K = 1.0.
+One end fixed, one pinned: K = 0.7.
+Both ends fixed: K = 0.5.
+One end fixed, one free (flagpole): K = 2.0.
+
+=== PRESSURE VESSEL FORMULAS ===
+
+THIN-WALL CYLINDER (t/D < 0.1):
+Hoop (circumferential) stress: σ_h = p × D / (2 × t).
+Longitudinal stress: σ_l = p × D / (4 × t).
+Hoop stress governs (2× longitudinal).
+
+THICK-WALL CYLINDER (Lamé Equations):
+Radial stress: σ_r = A - B/r².
+Tangential stress: σ_θ = A + B/r².
+Constants from boundary conditions: p_i at r_i, p_o at r_o.
+A = (p_i×r_i² - p_o×r_o²) / (r_o² - r_i²).
+B = (p_i - p_o) × r_i² × r_o² / (r_o² - r_i²).
+
+SPHERICAL VESSEL:
+Wall stress: σ = p × D / (4 × t) (same in all directions).
+
+ASME VESSEL DESIGN:
+Required thickness: t = p × R / (S × E - 0.6 × p) for cylindrical shell.
+S = allowable stress, E = joint efficiency (typically 0.85-1.0).
+
+=== GEAR FORMULAS ===
+
+GEAR GEOMETRY:
+Pitch diameter: d = N / P_d (inches) or d = m × N (metric, mm).
+Center distance: C = (N_p + N_g) / (2 × P_d) or C = m × (N_p + N_g) / 2.
+Gear ratio: i = N_driven / N_driver = d_driven / d_driver.
+
+LEWIS BENDING STRESS:
+σ = F_t / (b × m × Y) or σ = F_t × P_d / (b × Y).
+Y = Lewis form factor (from tables, typically 0.2-0.5).
+
+AGMA BENDING STRESS:
+σ = W_t × P_d × K_a × K_m × K_s × K_B × K_I / (F × J).
+K_a = application factor, K_m = load distribution, K_s = size factor.
+J = geometry factor (from AGMA tables).
+
+AGMA CONTACT (HERTZIAN) STRESS:
+σ_c = C_p × √[W_t × K_a × K_m × K_s × C_f / (d_p × F × I)].
+C_p = elastic coefficient (steel-steel ≈ 2300).
+I = geometry factor for pitting resistance.
+
+GEAR POWER:
+P = T × n / 9549 (kW) where T is torque in N·m.
+Tangential force: W_t = 2T / d = 2 × 9549 × P / (n × d).
+
+GEAR EFFICIENCY:
+Single mesh spur/helical: 98-99%.
+Per mesh loss: 1-2%.
+Total efficiency: η = η_mesh^(number of meshes).
+
+=== MACHINING PARAMETERS ===
+
+CUTTING SPEED (Surface speed):
+V = π × D × n / 1000 (m/min) where D is diameter in mm, n is rpm.
+Solving for RPM: n = V × 1000 / (π × D).
+
+FEED RATE:
+Turning: F = f × n (mm/min) where f is feed per revolution.
+Milling: F = f_z × z × n (mm/min) where f_z is feed per tooth, z is number of teeth.
+
+MATERIAL REMOVAL RATE:
+Turning: MRR = V × f × d_oc (cm³/min) where d_oc is depth of cut.
+Milling: MRR = a_p × a_e × v_f (cm³/min) where a_p is axial depth, a_e is radial depth, v_f is feed rate.
+
+MACHINING POWER:
+P = k_c × MRR / (60 × η) (kW) where k_c is specific cutting force, η is machine efficiency.
+Typical k_c: Aluminum 500-900 N/mm², Steel 1500-3000 N/mm², Stainless 2000-3500 N/mm².
+
+MACHINING TIME:
+Turning: t = L / F (min) where L is cut length.
+Milling: t = (L + approach + overtravel) / F.
+Drilling: t = (L + 0.3D) / F.
+
+SURFACE ROUGHNESS (Turning):
+Theoretical: R_a ≈ f² / (32 × r) where r is tool nose radius.
+Typical achievable: Rough turning 6.3-12.5 μm, Finish turning 1.6-3.2 μm, Grinding 0.4-1.6 μm.
+
+THREAD MACHINING:
+Thread pitch (metric): p = 25.4 / TPI.
+Lead (single start): L = p.
+Minor diameter: d_minor = d_major - 1.0825 × p (metric).
+
+=== BASIC FORMULAS (REFERENCE) ===
+
+STRESS & STRAIN:
+Normal stress: σ = F/A or σ = My/I for bending.
+Shear stress: τ = V×Q/(I×b) for beams, τ = Tr/J for torsion.
+Strain: ε = δ/L = σ/E.
+
+MOMENT OF INERTIA:
+Rectangle: I = bh³/12, Circle: I = πd⁴/64.
+Polar moment: J = πd⁴/32 for solid circle.
+
+BEARING LIFE:
+L₁₀ = (C/P)^p × 10⁶ revolutions where p = 3 for ball, p = 10/3 for roller.
+Life in hours: L_h = L₁₀ / (60 × n).
+
+SAFETY FACTOR:
+n = σ_yield / σ_actual (static).
+n = S_e / σ_a (fatigue).
+
+VON MISES (Combined stress):
+σ_eq = √(σ_x² - σ_x×σ_y + σ_y² + 3τ_xy²).
+For uniaxial + shear: σ_eq = √(σ² + 3τ²).
+Maximum shear: τ_max = √((σ/2)² + τ²).
 
 Material Properties: 6061-T6 Al has E=10×10⁶ psi, Sy=40 ksi. 7075-T6 Al has E=10.4×10⁶ psi, Sy=73 ksi. 1018 Steel has E=29×10⁶ psi, Sy=54 ksi. 4140 Steel has E=29×10⁶ psi, Sy=60-145 ksi depending on heat treat. 304 SS has E=28×10⁶ psi, Sy=31 ksi. Ti 6Al-4V has E=16.5×10⁶ psi, Sy=128 ksi.
 
