@@ -1,93 +1,153 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Cog, Wrench, Package, TrendingUp } from "lucide-react";
+import { ArrowRight, Wrench, Package, TrendingUp, Cpu, Zap, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import AnimatedSection from "@/components/home/AnimatedSection";
+import AnimatedCounter from "@/components/home/AnimatedCounter";
+import ParallaxSection from "@/components/home/ParallaxSection";
+import ProcessTimeline from "@/components/home/ProcessTimeline";
+import ScrollIndicator from "@/components/home/ScrollIndicator";
+import CapabilityCard from "@/components/home/CapabilityCard";
+import { useScrollAnimation, useStaggerAnimation } from "@/hooks/useScrollAnimation";
 import heroImage from "@/assets/hero-manufacturing.jpg";
 import customPartsImg from "@/assets/custom-parts.jpg";
 import prototypeImg from "@/assets/prototype-design.jpg";
 import turnkeyImg from "@/assets/turnkey-solutions.jpg";
+import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 
 const Index = () => {
   const services = [
     {
       icon: Wrench,
       title: "Prototype Design",
-      description: "Transform your concepts into functional prototypes with our expert engineering team.",
+      description: "Transform your concepts into functional prototypes with our expert engineering team and rapid turnaround.",
       image: prototypeImg,
+      link: "/services/prototype-design",
     },
     {
       icon: Package,
-      title: "Custom Parts & Assemblies",
-      description: "High-quality custom components manufactured to meet your specific application needs.",
+      title: "Custom Parts",
+      description: "High-quality custom components manufactured to meet your exact specifications and tolerances.",
       image: customPartsImg,
+      link: "/services/custom-parts",
     },
     {
       icon: TrendingUp,
       title: "Turnkey Solutions",
-      description: "Complete project lifecycle management from initial design through final delivery.",
+      description: "Complete project lifecycle management from initial design through final delivery and beyond.",
       image: turnkeyImg,
+      link: "/services/turnkey-solutions",
     },
   ];
 
   const stats = [
     { value: "25+", label: "Years Experience" },
     { value: "500+", label: "Projects Completed" },
-    { value: "98%", label: "Client Satisfaction" },
-    { value: "50+", label: "Team Members" },
+    { value: "98%", label: "On-Time Delivery" },
+    { value: "ISO", label: "9001 Certified" },
   ];
 
+  const capabilities = [
+    { icon: Cpu, title: "CNC Machining", desc: "5-axis precision milling and turning" },
+    { icon: Zap, title: "Wire EDM", desc: "Complex geometries with tight tolerances" },
+    { icon: Layers, title: "Sheet Metal", desc: "Laser cutting, bending, and forming" },
+  ];
+
+  const whyChooseUs = [
+    {
+      number: "01",
+      title: "End-to-End Solutions",
+      description: "From initial concept and design through manufacturing and final delivery, we manage your entire project lifecycle.",
+    },
+    {
+      number: "02",
+      title: "Precision Engineering",
+      description: "State-of-the-art equipment and rigorous quality control ensure every part meets exact specifications.",
+    },
+    {
+      number: "03",
+      title: "Expert Team",
+      description: "Our experienced engineers and technicians bring deep industry knowledge to every project.",
+    },
+  ];
+
+  const { ref: servicesRef, isVisible: servicesVisible } = useStaggerAnimation(services.length, 150);
+  const { ref: whyRef, isVisible: whyVisible } = useStaggerAnimation(whyChooseUs.length, 200);
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="relative min-h-[calc(100vh-80px)] md:min-h-screen flex flex-col justify-center overflow-hidden pb-32 md:pb-0">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroImage})` }}
+      {/* Hero Section - Full Viewport with Parallax */}
+      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
+        <ParallaxSection
+          backgroundImage={heroImage}
+          speed={0.2}
+          overlayOpacity={0.75}
+          className="absolute inset-0"
+          contentClassName="hidden"
         >
-          <div className="absolute inset-0 hero-gradient opacity-90"></div>
-        </div>
+          <div />
+        </ParallaxSection>
         
-        <div className="container-custom relative z-10 py-20 md:pt-20 flex-1 flex items-center">
+        <div className="container-custom relative z-10 pt-32 pb-40 flex-1 flex items-center">
           <div className="max-w-4xl">
-            <p className="text-primary font-semibold text-lg mb-4 uppercase tracking-wide">
-              Precision Manufacturing Excellence
-            </p>
-            <h1 className="text-foreground mb-6 text-white">
-              Custom Manufacturing Solutions From Concept to Completion
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl leading-relaxed">
-              Vectis delivers turnkey manufacturing projects, precision prototype designs, and custom parts engineered to perfection. We bring your vision to life with expert craftsmanship and cutting-edge technology.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild>
-                <Link to="/contact">
-                  Request a Quote <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline-light" asChild>
-                <Link to="/capabilities">Explore Capabilities</Link>
-              </Button>
-            </div>
+            <AnimatedSection animation="fadeUp" delay={0}>
+              <p className="text-primary font-semibold text-sm md:text-base mb-4 uppercase tracking-[0.2em]">
+                Precision Manufacturing Excellence
+              </p>
+            </AnimatedSection>
+            
+            <AnimatedSection animation="fadeUp" delay={150}>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
+                Custom Manufacturing
+                <br />
+                <span className="text-primary">From Concept</span>
+                <br />
+                to Completion
+              </h1>
+            </AnimatedSection>
+            
+            <AnimatedSection animation="fadeUp" delay={300}>
+              <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl leading-relaxed">
+                Vectis delivers turnkey manufacturing projects, precision prototype designs, 
+                and custom parts engineered to perfection.
+              </p>
+            </AnimatedSection>
+            
+            <AnimatedSection animation="fadeUp" delay={450}>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" className="group" asChild>
+                  <Link to="/contact">
+                    Request a Quote 
+                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline-light" asChild>
+                  <Link to="/capabilities">Explore Capabilities</Link>
+                </Button>
+              </div>
+            </AnimatedSection>
           </div>
         </div>
 
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-20">
+          <ScrollIndicator />
+        </div>
+
         {/* Stats Bar */}
-        <div className="relative md:absolute bottom-0 left-0 right-0 bg-accent/95 backdrop-blur-sm z-20">
-          <div className="container-custom py-6 md:py-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        <div className="absolute bottom-0 left-0 right-0 bg-accent/95 backdrop-blur-md z-20 border-t border-white/10">
+          <div className="container-custom py-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
               {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary mb-1">
-                    {stat.value}
-                  </div>
-                  <div className="text-xs md:text-sm text-muted-foreground uppercase tracking-wide">
-                    {stat.label}
-                  </div>
-                </div>
+                <AnimatedCounter
+                  key={index}
+                  value={stat.value}
+                  label={stat.label}
+                  delay={index * 100}
+                />
               ))}
             </div>
           </div>
@@ -95,127 +155,203 @@ const Index = () => {
       </section>
 
       {/* Services Overview */}
-      <section className="py-12 md:py-20 lg:py-24 bg-background">
-        <div className="container-custom px-4">
-          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-            <h2 className="mb-4">Our Core Services</h2>
-            <p className="text-lg text-muted-foreground">
-              Comprehensive manufacturing solutions backed by decades of engineering expertise and state-of-the-art technology.
+      <section className="py-20 md:py-32 bg-background">
+        <div className="container-custom">
+          <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
+            <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
+              What We Offer
             </p>
-          </div>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+              Our Core Services
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Comprehensive manufacturing solutions backed by decades of engineering expertise 
+              and state-of-the-art technology.
+            </p>
+          </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {services.map((service, index) => {
-              const Icon = service.icon;
+          <div ref={servicesRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {services.map((service, index) => (
+              <CapabilityCard
+                key={index}
+                title={service.title}
+                description={service.description}
+                image={service.image}
+                icon={service.icon}
+                link={service.link}
+                isVisible={servicesVisible}
+                delay={index * 150}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Capabilities Strip */}
+      <section className="py-16 bg-muted border-y border-border">
+        <div className="container-custom">
+          <AnimatedSection className="text-center mb-12">
+            <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-3">
+              Manufacturing Capabilities
+            </p>
+            <h3 className="text-2xl md:text-3xl font-bold">
+              Precision at Every Step
+            </h3>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {capabilities.map((cap, index) => {
+              const Icon = cap.icon;
               return (
-                <Card key={index} className="group hover:shadow-xl transition-all duration-300 border-2 overflow-hidden">
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={service.image}
-                      alt={service.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-accent/90 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4">
-                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                        <Icon className="h-6 w-6 text-primary-foreground" />
-                      </div>
-                    </div>
+                <AnimatedSection
+                  key={index}
+                  animation="scaleIn"
+                  delay={index * 100}
+                  className="flex items-center gap-4 p-6 bg-background rounded-lg border border-border hover:border-primary/50 transition-colors group"
+                >
+                  <div className="w-14 h-14 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <Icon className="w-7 h-7 text-primary" />
                   </div>
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold mb-2">{service.title}</h3>
-                    <p className="text-muted-foreground text-sm mb-4">{service.description}</p>
-                    <Link
-                      to="/services"
-                      className="text-primary font-semibold text-sm inline-flex items-center group-hover:gap-2 transition-all"
-                    >
-                      Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                    </Link>
-                  </CardContent>
-                </Card>
+                  <div>
+                    <h4 className="font-semibold text-lg">{cap.title}</h4>
+                    <p className="text-sm text-muted-foreground">{cap.desc}</p>
+                  </div>
+                </AnimatedSection>
               );
             })}
           </div>
+
+          <AnimatedSection className="text-center mt-10">
+            <Button variant="outline" asChild>
+              <Link to="/capabilities">
+                View All Capabilities <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Process Timeline */}
+      <section className="py-20 md:py-32 bg-background">
+        <div className="container-custom">
+          <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
+            <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
+              How It Works
+            </p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+              Our Process
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              From initial upload to final delivery, we streamline every step 
+              of your manufacturing journey.
+            </p>
+          </AnimatedSection>
+
+          <ProcessTimeline className="max-w-5xl mx-auto" />
         </div>
       </section>
 
       {/* Why Choose Vectis */}
-      <section className="py-12 md:py-20 lg:py-24 bg-muted">
-        <div className="container-custom px-4">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+      <section className="py-20 md:py-32 bg-muted">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div>
-              <h2 className="mb-6">Why Choose Vectis?</h2>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-xl">1</span>
+              <AnimatedSection animation="fadeLeft">
+                <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
+                  Why Vectis
+                </p>
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8">
+                  Built on Precision,
+                  <br />
+                  Driven by Excellence
+                </h2>
+              </AnimatedSection>
+
+              <div ref={whyRef} className="space-y-8">
+                {whyChooseUs.map((item, index) => (
+                  <div
+                    key={index}
+                    className={`flex gap-5 transition-all duration-700 ${
+                      whyVisible
+                        ? 'opacity-100 translate-x-0'
+                        : 'opacity-0 -translate-x-8'
+                    }`}
+                    style={{ transitionDelay: `${index * 200}ms` }}
+                  >
+                    <div className="flex-shrink-0 w-14 h-14 bg-primary rounded-lg flex items-center justify-center">
+                      <span className="text-primary-foreground font-bold text-lg">
+                        {item.number}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">End-to-End Solutions</h3>
-                    <p className="text-muted-foreground">
-                      From initial concept and design through manufacturing and final delivery, we manage your entire project lifecycle.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-xl">2</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Precision Engineering</h3>
-                    <p className="text-muted-foreground">
-                      State-of-the-art equipment and rigorous quality control ensure every part meets exact specifications.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-xl">3</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Expert Team</h3>
-                    <p className="text-muted-foreground">
-                      Our experienced engineers and technicians bring deep industry knowledge to every project.
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
-              <div className="mt-8">
+
+              <AnimatedSection animation="fadeUp" delay={600} className="mt-10">
                 <Button size="lg" asChild>
                   <Link to="/about">Learn About Us</Link>
                 </Button>
+              </AnimatedSection>
+            </div>
+
+            <AnimatedSection animation="fadeRight" className="relative">
+              <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                <img
+                  src={turnkeyImg}
+                  alt="Manufacturing facility"
+                  className="w-full h-auto"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-accent/40 to-transparent" />
               </div>
-            </div>
-            <div className="relative">
-              <img
-                src={turnkeyImg}
-                alt="Manufacturing facility"
-                className="rounded-lg shadow-2xl"
-              />
-            </div>
+              {/* Floating accent element */}
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-primary/10 rounded-lg -z-10" />
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/5 rounded-lg -z-10" />
+            </AnimatedSection>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-12 md:py-20 lg:py-24 bg-accent text-accent-foreground">
-        <div className="container-custom px-4 text-center">
-          <h2 className="mb-4 text-white">Ready to Start Your Project?</h2>
-          <p className="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
-            Let's discuss how Vectis can bring your manufacturing vision to life with precision and expertise.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild>
-              <Link to="/contact">
-                Get a Quote <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline-light" asChild>
-              <Link to="/projects">View Our Work</Link>
-            </Button>
-          </div>
+      {/* CTA Section with Parallax */}
+      <ParallaxSection
+        backgroundImage={capabilitiesImg}
+        speed={0.15}
+        overlayOpacity={0.85}
+        className="py-24 md:py-40"
+      >
+        <div className="container-custom text-center">
+          <AnimatedSection animation="fadeUp">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+              Ready to Start Your Project?
+            </h2>
+          </AnimatedSection>
+          
+          <AnimatedSection animation="fadeUp" delay={150}>
+            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+              Let's discuss how Vectis can bring your manufacturing vision to life 
+              with precision and expertise.
+            </p>
+          </AnimatedSection>
+          
+          <AnimatedSection animation="fadeUp" delay={300}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="animate-pulse-glow" asChild>
+                <Link to="/contact">
+                  Get a Quote <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline-light" asChild>
+                <Link to="/projects">View Our Work</Link>
+              </Button>
+            </div>
+          </AnimatedSection>
         </div>
-      </section>
+      </ParallaxSection>
 
       <Footer />
     </div>

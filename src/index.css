@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
 /* Premium Chat Widget Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
