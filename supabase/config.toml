@@ -30,3 +30,6 @@ verify_jwt = true
 
 [functions.explain-features]
 verify_jwt = false
+
+[functions.engineering-chat]
+verify_jwt = false
