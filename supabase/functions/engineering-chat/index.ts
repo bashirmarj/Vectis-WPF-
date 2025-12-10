@@ -32,7 +32,43 @@ After the user answers, continue the conversation naturally, ask follow-ups if n
 
 Your knowledge base includes:
 
-Heat Treatment Types: Annealing (softens, relieves stress, slow furnace cool), Normalizing (refines grain, air cool), Quenching (rapid cool for hardness - oil, water, or air), Tempering (reduces brittleness after quench), Case Hardening (hard surface, tough core), Carburizing (adds carbon at 1700°F, oil quench, HRC 58-64 surface), Nitriding (nitrogen at 950-1050°F, no quench, HRC 50-70), Induction Hardening (localized surface), Through Hardening (full section for smaller parts).
+COMPREHENSIVE HEAT TREATMENT GUIDE (Supplier Documentation):
+
+I. FUNDAMENTAL HEAT TREATMENT (Regulates overall workpiece properties):
+
+1. Annealing: Heat above Ac3/Ac1, hold, then slowly furnace cool (<50°C/h). Purpose: Eliminate internal stress, reduce hardness, refine grains, improve machinability. Subtypes: Full Annealing (hypo-eutectoid steel forgings), Spheroidizing Annealing (hyper-eutectoid tool steels for improved machinability), Stress-relief Annealing (precision parts to prevent deformation), Recrystallization Annealing (cold-deformed metals to restore ductility).
+
+2. Normalizing: Heat same as annealing, cool in air (faster than annealing, slower than quenching). Purpose: Refine grains, improve mechanical properties, eliminate network carbides. Application: Low-carbon steel stamping parts, homogenizing cast steel structures, preparing for subsequent heat treatment.
+
+3. Quenching: Heat above Ac3/Ac1, then rapidly cool in water, oil, or salt bath. Purpose: Significantly increase hardness and wear resistance (45# steel reaches HRC 55+). Subtypes: Water Quenching (carbon steels, fastest cooling, risk of cracking), Oil Quenching (alloy steels, reduced deformation/cracking risk), Isothermal/Austempering (spring steels, achieves high toughness + hardness, bainite structure).
+
+4. Tempering: After quenching, reheat below Ac1 (150-650°C), hold, air-cool. Purpose: Relieve internal stress from quenching, balance hardness with toughness. Subtypes: Low-Temperature Tempering 150-250°C (cutting tools, measuring tools, HRC 58-64, maximum hardness), Medium-Temperature Tempering 350-500°C (springs, dies, HRC 35-45, good elasticity), High-Temperature Tempering 500-650°C (quenched and tempered steels, HB 220-250, best toughness).
+
+II. SURFACE HARDENING (Hardened layer 0.1-5mm, for wear resistance with tough core):
+
+1. Surface Quenching: Rapidly heat surface to austenitizing temperature, immediately quench for martensitic hardened layer while core remains unchanged. Subtypes: Flame Hardening (large components like rolls, gears, localized heating), Induction Hardening with High-frequency for 0.5-2mm depth (automotive axle shafts, camshafts), Medium-frequency for 2-5mm depth (crankshafts, large gears), Laser Hardening (precision blades, molds, minimal distortion, 0.1-1mm depth).
+
+2. PVD/CVD Coating: Deposit thin film coatings like TiN, TiAlN, CrN at 1-10µm thickness. Purpose: Achieve HV 2000+ surface hardness, excellent wear and corrosion resistance, extends tool and mold life 3-10x. Applications: Cutting tools, injection molds, stamping dies.
+
+III. CHEMICAL HEAT TREATMENT (Surface composition and microstructure optimization):
+
+1. Carburizing: Heat to 900-950°C in carbon-rich medium (gas, pack, or liquid), carbon diffuses 0.5-2mm into low-carbon steel surface. Result: After quench + low-temperature temper, surface achieves HRC 58-64 while core remains tough at HRC 15-25. Application: Gear wheels, transmission shafts, camshafts, any component needing hard wear surface with impact-resistant core.
+
+2. Nitriding: Heat to 500-560°C in nitrogen-rich medium (gas or salt bath), nitrogen diffuses 0.1-0.5mm. Result: HV 800-1200 nitrided layer (harder than carburizing), excellent corrosion resistance, minimal deformation (no quench needed). Application: Machine tool spindles, precision screws, cylinder liners, components requiring dimensional stability.
+
+3. Carbonitriding: Heat to 820-880°C in carbon + nitrogen medium, both elements diffuse 0.2-0.8mm. Purpose: Faster penetration at lower temperature than carburizing alone, improved wear resistance. Application: Clutch plates, sprockets, small gears, fasteners.
+
+IV. SPECIAL HEAT TREATMENTS:
+
+1. Vacuum Heat Treatment: Conducted under vacuum (<10⁻³ Pa) in sealed furnace. Advantages: No oxidation or decarburization (bright surface), minimal distortion, precise temperature control, environmentally clean. Application: High-temperature alloy turbine blades, precision molds, aerospace components, medical instruments.
+
+2. Thermomechanical Treatment: Combines plastic deformation with heat treatment in single process (e.g., hot stamping + die quenching). Purpose: Achieve ultra-high strength (≥1500 MPa tensile) with controlled microstructure. Application: Automotive B-pillars, crash beams, structural safety components.
+
+HEAT TREATMENT SELECTION SUMMARY:
+Fundamental treatments (entire cross-section): Shafts, crankshafts, tools → balanced mechanical properties throughout.
+Surface hardening (0.1-5mm): Axle shafts, gears, cams → high surface wear resistance with strong tough core.
+Chemical treatments (0.1-2mm): Gearboxes, spindles, cylinders → surface alloying for superior hardness/corrosion resistance.
+Special treatments: Alloy blades, automotive safety parts, precision molds → ultra-high performance, minimal distortion.
 
 HRC by Application: General machining 1018/1020 steel is HRC 15-20. Gears and shafts in 4140/4340 should be HRC 28-35. High-strength shafts in 4340 go to HRC 35-42. Wear surfaces and dies need HRC 50-55. Cutting tools in A2/D2/M2 require HRC 58-64. Springs in 1095/5160 work best at HRC 48-52. Ball bearings in 52100 are HRC 58-64. P20 molds are pre-hardened to HRC 28-32. S7 for punches goes HRC 54-58.
 
