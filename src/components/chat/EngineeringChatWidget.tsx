@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, ChevronDown, Send, RotateCcw, Loader2, User, Sparkles, Wrench, Ruler, Flame } from 'lucide-react';
+import { MessageCircle, X, ChevronDown, Send, RotateCcw, Loader2, User, Sparkles } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEngineeringChat, PartContext, Message } from '@/hooks/useEngineeringChat';
 import { cn } from '@/lib/utils';
@@ -17,9 +17,9 @@ function cleanMarkdown(text: string): string {
 }
 
 const quickPrompts = [
-  { icon: Flame, title: "Heat Treatment", prompt: "What heat treatment for 4140 steel?" },
-  { icon: Ruler, title: "Stock Sizes", prompt: "Standard aluminum bar sizes" },
-  { icon: Wrench, title: "HRC Values", prompt: "Recommended HRC for gears" },
+  { title: "Heat Treatment", prompt: "What heat treatment for 4140 steel?" },
+  { title: "Stock Sizes", prompt: "Standard aluminum bar sizes" },
+  { title: "HRC Values", prompt: "Recommended HRC for gears" },
 ];
 
 export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProps) {
@@ -394,60 +394,21 @@ function EmptyState({
         </div>
       </div>
 
-      {/* Quick prompts - Light theme cards */}
-      <div className="space-y-3">
-        <p className="text-[11px] text-muted-foreground font-semibold tracking-wider uppercase px-1">
-          Suggested questions
-        </p>
-        <div className="grid gap-2.5">
-          {quickPrompts.map((item, i) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={i}
-                onClick={() => onPromptClick(item.prompt)}
-                className="group relative w-full text-left rounded-xl overflow-hidden
-                  animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className="relative flex items-center gap-3 px-4 py-3.5
-                  bg-background border border-border/50
-                  group-hover:border-primary/30 group-hover:bg-muted/30
-                  rounded-xl transition-all duration-300
-                  shadow-sm group-hover:shadow-md">
-                  
-                  {/* Icon container */}
-                  <div className="h-9 w-9 rounded-lg shrink-0
-                    bg-primary/10 border border-primary/20
-                    flex items-center justify-center
-                    group-hover:bg-primary/15
-                    transition-all duration-300">
-                    <Icon className="h-4 w-4 text-primary/80 group-hover:text-primary transition-colors" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-muted-foreground font-medium mb-0.5 group-hover:text-foreground/60 transition-colors">
-                      {item.title}
-                    </p>
-                    <p className="text-[13px] text-foreground/70 group-hover:text-foreground truncate transition-colors">
-                      {item.prompt}
-                    </p>
-                  </div>
-                  
-                  {/* Arrow indicator */}
-                  <div className="h-6 w-6 rounded-full 
-                    bg-muted group-hover:bg-primary/20
-                    flex items-center justify-center shrink-0
-                    opacity-0 group-hover:opacity-100 
-                    translate-x-2 group-hover:translate-x-0
-                    transition-all duration-300">
-                    <Send className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      {/* Quick prompts - Horizontal pills */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {quickPrompts.map((item, i) => (
+          <button
+            key={i}
+            onClick={() => onPromptClick(item.prompt)}
+            className="px-3 py-1.5 text-xs font-medium
+              bg-muted/50 hover:bg-primary/10 
+              border border-border/50 hover:border-primary/30
+              rounded-full text-foreground/70 hover:text-primary
+              transition-all duration-200"
+          >
+            {item.title}
+          </button>
+        ))}
       </div>
     </div>
   );
