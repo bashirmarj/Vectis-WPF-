@@ -15,8 +15,23 @@ export interface PartContext {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/engineering-chat`;
 
+const INITIAL_GREETING: Message = {
+  role: 'assistant',
+  content: `Welcome to Vectis Manufacturing! 👋
+
+We deliver exceptional manufacturing solutions through precision engineering, innovative technology, and unwavering commitment to quality. We transform concepts into reality with reliable, scalable manufacturing partnerships.
+
+Our capabilities include:
+• Aluminum Die Casting
+• CNC Machining (Milling, Turning, 5-Axis)
+• Post-Processing (Heat Treatment, Grinding, Surface Finishing)
+• Quality Inspection & Metrology
+
+Have questions about materials, tolerances, stock sizes, or heat treatment? I'm here to help - just ask!`
+};
+
 export function useEngineeringChat() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_GREETING]);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
