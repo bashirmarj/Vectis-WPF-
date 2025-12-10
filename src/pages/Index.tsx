@@ -79,8 +79,8 @@ const Index = () => {
     <div className="min-h-screen overflow-x-hidden">
       <Navigation />
 
-      {/* Hero Section - Full Viewport with Parallax */}
-      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
+      {/* Hero Section - Full Viewport with Parallax, extends behind navigation */}
+      <section className="relative h-screen flex flex-col justify-center overflow-hidden -mt-16 pt-16">
         <ParallaxSection
           backgroundImage={heroImage}
           speed={0.2}
@@ -91,7 +91,7 @@ const Index = () => {
           <div />
         </ParallaxSection>
         
-        <div className="container-custom relative z-10 pt-32 pb-40 flex-1 flex items-center">
+        <div className="container-custom relative z-10 flex-1 flex items-center">
           <div className="max-w-4xl">
             <AnimatedSection animation="fadeUp" delay={0}>
               <p className="text-primary font-semibold text-sm md:text-base mb-4 uppercase tracking-[0.2em]">
@@ -133,24 +133,8 @@ const Index = () => {
         </div>
 
         {/* Scroll Indicator */}
-        <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-20">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
           <ScrollIndicator />
-        </div>
-
-        {/* Stats Bar */}
-        <div className="absolute bottom-0 left-0 right-0 bg-accent/95 backdrop-blur-md z-20 border-t border-white/10">
-          <div className="container-custom py-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-              {stats.map((stat, index) => (
-                <AnimatedCounter
-                  key={index}
-                  value={stat.value}
-                  label={stat.label}
-                  delay={index * 100}
-                />
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -352,6 +336,22 @@ const Index = () => {
           </AnimatedSection>
         </div>
       </ParallaxSection>
+
+      {/* Stats Section - At bottom before footer */}
+      <section className="py-16 bg-accent border-y border-border">
+        <div className="container-custom">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {stats.map((stat, index) => (
+              <AnimatedCounter
+                key={index}
+                value={stat.value}
+                label={stat.label}
+                delay={index * 100}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
 
       <Footer />
     </div>
