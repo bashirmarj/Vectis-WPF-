@@ -18,7 +18,7 @@ const ProcessTimeline: React.FC<{ className?: string }> = ({ className }) => {
     <div ref={ref} className={cn('w-full', className)}>
       <div className="relative">
         {/* Connection line */}
-        <div className="absolute top-8 left-0 right-0 h-0.5 bg-border hidden md:block">
+        <div className="absolute top-8 left-0 right-0 h-0.5 bg-white/20 hidden md:block">
           <div
             className={cn(
               'h-full bg-primary transition-all duration-1000 ease-out',
@@ -45,15 +45,15 @@ const ProcessTimeline: React.FC<{ className?: string }> = ({ className }) => {
               >
                 <div
                   className={cn(
-                    'w-16 h-16 rounded-full bg-background border-2 border-primary flex items-center justify-center mb-3 transition-all duration-500 relative z-10',
+                    'w-16 h-16 rounded-full bg-neutral-900 border-2 border-primary flex items-center justify-center mb-3 transition-all duration-500 relative z-10',
                     isVisible ? 'scale-100' : 'scale-0'
                   )}
                   style={{ transitionDelay: `${index * 150 + 200}ms` }}
                 >
                   <Icon className="w-7 h-7 text-primary" />
                 </div>
-                <h4 className="font-semibold text-foreground mb-1">{step.label}</h4>
-                <p className="text-xs text-muted-foreground">{step.description}</p>
+                <h4 className="font-semibold text-white mb-1">{step.label}</h4>
+                <p className="text-xs text-gray-400">{step.description}</p>
               </div>
             );
           })}
