@@ -13,6 +13,7 @@ import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
 import capabilitiesImg from "@/assets/capabilities-bg.jpg";
+import darkSectionBg from "@/assets/dark-section-bg.png";
 
 const Index = () => {
   const services = [
@@ -154,136 +155,146 @@ const Index = () => {
         );
       })}
 
-      {/* Capabilities Showcase - Horizontal Marquee with Grayscale-to-Color Effect */}
-      <section className="py-24 dark-section-depth border-t border-white/10 overflow-hidden">
-        {/* Section Header */}
-        <div className="container-custom mb-12">
-          <AnimatedSection animation="fadeUp">
-            <p className="text-sm font-mono tracking-[0.3em] text-gray-500 uppercase mb-3">
-              Our Capabilities
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Precision Manufacturing
-            </h2>
-          </AnimatedSection>
-        </div>
-        
-        {/* Infinite Scroll Strip */}
-        <div className="relative w-full overflow-hidden group">
-          <div className="flex whitespace-nowrap animate-marquee hover:[animation-play-state:paused]">
-            {/* First set of items */}
-            {capabilities.map((capability, index) => (
-              <div 
-                key={`first-${index}`}
-                className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 group/card cursor-pointer"
-              >
-                <div 
-                  className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-all duration-500 scale-100 group-hover/card:scale-105"
-                  style={{ backgroundImage: `url(${capability.image})` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
-                    Capability
-                  </span>
-                  <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                    {capability.title}
-                  </h3>
-                  <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
-                    {capability.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {/* Duplicate set for seamless loop */}
-            {capabilities.map((capability, index) => (
-              <div 
-                key={`second-${index}`}
-                className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 group/card cursor-pointer"
-              >
-                <div 
-                  className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-all duration-500 scale-100 group-hover/card:scale-105"
-                  style={{ backgroundImage: `url(${capability.image})` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
-                    Capability
-                  </span>
-                  <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                    {capability.title}
-                  </h3>
-                  <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
-                    {capability.description}
-                  </p>
-                </div>
-              </div>
-            ))}
+      {/* Dark Sections with Textured Background */}
+      <div 
+        className="relative"
+        style={{ 
+          backgroundImage: `url(${darkSectionBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
+        {/* Capabilities Showcase - Horizontal Marquee with Grayscale-to-Color Effect */}
+        <section className="py-24 border-t border-white/10 overflow-hidden">
+          {/* Section Header */}
+          <div className="container-custom mb-12">
+            <AnimatedSection animation="fadeUp">
+              <p className="text-sm font-mono tracking-[0.3em] text-gray-500 uppercase mb-3">
+                Our Capabilities
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">
+                Precision Manufacturing
+              </h2>
+            </AnimatedSection>
           </div>
-        </div>
-        
-        {/* View All Button */}
-        <div className="container-custom mt-12 text-center">
-          <AnimatedSection animation="fadeUp" delay={200}>
-            <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
-              <Link to="/capabilities">
-                Explore All Capabilities <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Process Timeline */}
-      <section className="py-20 md:py-32 dark-section-depth">
-        <div className="container-custom">
-          <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
-            <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
-              How It Works
-            </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Our Process
-            </h2>
-            <p className="text-lg text-gray-400">
-              From initial upload to final delivery, we streamline every step 
-              of your manufacturing journey.
-            </p>
-          </AnimatedSection>
-
-          <ProcessTimeline className="max-w-5xl mx-auto" />
-        </div>
-      </section>
-
-
-      {/* CTA Section */}
-      <section className="py-20 md:py-32 dark-section-depth border-b border-white/10">
-        <div className="container-custom text-center">
-          <AnimatedSection animation="fadeUp">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
-              Ready to Start?
-            </h2>
-          </AnimatedSection>
           
-          <AnimatedSection animation="fadeUp" delay={150}>
-            <p className="text-xl text-gray-400 mb-10 max-w-lg mx-auto">
-              Let's bring your manufacturing vision to life.
-            </p>
-          </AnimatedSection>
+          {/* Infinite Scroll Strip */}
+          <div className="relative w-full overflow-hidden group">
+            <div className="flex whitespace-nowrap animate-marquee hover:[animation-play-state:paused]">
+              {/* First set of items */}
+              {capabilities.map((capability, index) => (
+                <div 
+                  key={`first-${index}`}
+                  className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 group/card cursor-pointer"
+                >
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-all duration-500 scale-100 group-hover/card:scale-105"
+                    style={{ backgroundImage: `url(${capability.image})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
+                      Capability
+                    </span>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                      {capability.title}
+                    </h3>
+                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
+                      {capability.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {/* Duplicate set for seamless loop */}
+              {capabilities.map((capability, index) => (
+                <div 
+                  key={`second-${index}`}
+                  className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 group/card cursor-pointer"
+                >
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-all duration-500 scale-100 group-hover/card:scale-105"
+                    style={{ backgroundImage: `url(${capability.image})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
+                      Capability
+                    </span>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                      {capability.title}
+                    </h3>
+                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
+                      {capability.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           
-          <AnimatedSection animation="fadeUp" delay={300}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="uppercase tracking-wider" asChild>
-                <Link to="/contact">
-                  Get a Quote <ArrowRight className="ml-2 h-5 w-5" />
+          {/* View All Button */}
+          <div className="container-custom mt-12 text-center">
+            <AnimatedSection animation="fadeUp" delay={200}>
+              <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
+                <Link to="/capabilities">
+                  Explore All Capabilities <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline-light" className="uppercase tracking-wider" asChild>
-                <Link to="/projects">View Our Work</Link>
-              </Button>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
+            </AnimatedSection>
+          </div>
+        </section>
+
+        {/* Process Timeline */}
+        <section className="py-20 md:py-32">
+          <div className="container-custom">
+            <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
+              <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
+                How It Works
+              </p>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+                Our Process
+              </h2>
+              <p className="text-lg text-gray-400">
+                From initial upload to final delivery, we streamline every step 
+                of your manufacturing journey.
+              </p>
+            </AnimatedSection>
+
+            <ProcessTimeline className="max-w-5xl mx-auto" />
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20 md:py-32 border-b border-white/10">
+          <div className="container-custom text-center">
+            <AnimatedSection animation="fadeUp">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
+                Ready to Start?
+              </h2>
+            </AnimatedSection>
+            
+            <AnimatedSection animation="fadeUp" delay={150}>
+              <p className="text-xl text-gray-400 mb-10 max-w-lg mx-auto">
+                Let's bring your manufacturing vision to life.
+              </p>
+            </AnimatedSection>
+            
+            <AnimatedSection animation="fadeUp" delay={300}>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button size="lg" className="uppercase tracking-wider" asChild>
+                  <Link to="/contact">
+                    Get a Quote <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline-light" className="uppercase tracking-wider" asChild>
+                  <Link to="/projects">View Our Work</Link>
+                </Button>
+              </div>
+            </AnimatedSection>
+          </div>
+        </section>
+      </div>
 
       {/* Stats Section - At bottom before footer */}
       <section className="py-16 bg-accent/50 border-t border-border/30">
