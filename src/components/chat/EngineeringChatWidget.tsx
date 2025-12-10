@@ -278,8 +278,8 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
 
       {/* Messages area - Light background with subtle gradient */}
       <div className="flex-1 overflow-hidden relative bg-gradient-to-b from-muted/30 to-background">
-        <ScrollArea className="h-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
-          <div ref={scrollRef} className="p-5 space-y-5">
+        <ScrollArea className="h-full [&_[data-radix-scroll-area-scrollbar]]:hidden" viewportRef={scrollRef}>
+          <div className="p-5 space-y-5">
             {messages.length === 0 ? (
               <EmptyState 
                 onPromptClick={(triggerMsg, displayMsg) => {
