@@ -17,9 +17,21 @@ function cleanMarkdown(text: string): string {
 }
 
 const quickPrompts = [
-  { title: "Heat Treatment", prompt: "What heat treatment for 4140 steel?" },
-  { title: "Stock Sizes", prompt: "Standard aluminum bar sizes" },
-  { title: "HRC Values", prompt: "Recommended HRC for gears" },
+  { 
+    title: "Stock Sizes", 
+    displayMessage: "I'd like help selecting stock material sizes",
+    triggerMessage: "[GUIDED_FLOW:STOCK_SIZES] Help user select optimal stock material sizes."
+  },
+  { 
+    title: "Heat Treatment", 
+    displayMessage: "I need help choosing a heat treatment",
+    triggerMessage: "[GUIDED_FLOW:HEAT_TREATMENT] Help user select appropriate heat treatment."
+  },
+  { 
+    title: "HRC Values", 
+    displayMessage: "I want to determine the right HRC values",
+    triggerMessage: "[GUIDED_FLOW:HRC_VALUES] Help user determine target HRC values."
+  },
 ];
 
 export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProps) {
@@ -270,7 +282,9 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
           <div ref={scrollRef} className="p-5 space-y-5">
             {messages.length === 0 ? (
               <EmptyState 
-                onPromptClick={handleSend} 
+                onPromptClick={(triggerMsg, displayMsg) => {
+                  sendMessage(triggerMsg, partContext, displayMsg);
+                }}
                 partContext={partContext}
               />
             ) : (
@@ -350,7 +364,7 @@ function EmptyState({
   onPromptClick, 
   partContext 
 }: { 
-  onPromptClick: (text: string) => void;
+  onPromptClick: (triggerMessage: string, displayMessage: string) => void;
   partContext?: PartContext;
 }) {
   return (
@@ -399,7 +413,7 @@ function EmptyState({
         {quickPrompts.map((item, i) => (
           <button
             key={i}
-            onClick={() => onPromptClick(item.prompt)}
+            onClick={() => onPromptClick(item.triggerMessage, item.displayMessage)}
             className="px-3 py-1.5 text-xs font-medium
               bg-muted/50 hover:bg-primary/10 
               border border-border/50 hover:border-primary/30

@@ -20,12 +20,17 @@ export function useEngineeringChat() {
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const sendMessage = useCallback(async (text: string, partContext?: PartContext) => {
+  const sendMessage = useCallback(async (text: string, partContext?: PartContext, displayMessage?: string) => {
     if (!text.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: text.trim() };
+    // Display message shows in chat, actual text goes to AI
+    const shownContent = displayMessage || text.trim();
+    const userMessage: Message = { role: 'user', content: shownContent };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+
+    // For API call, use the actual text (may include [GUIDED_FLOW:...] trigger)
+    const apiMessage: Message = { role: 'user', content: text.trim() };
 
     // Abort any existing request
     if (abortControllerRef.current) {
@@ -43,7 +48,7 @@ export function useEngineeringChat() {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: [...messages.map(m => ({ role: m.role, content: m.content })), apiMessage],
           partContext,
         }),
         signal: abortControllerRef.current.signal,
