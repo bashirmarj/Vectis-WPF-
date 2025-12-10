@@ -118,7 +118,7 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
           <div className="relative px-4 py-2 rounded-xl
             bg-foreground backdrop-blur-xl
             shadow-2xl shadow-black/20">
-            <p className="text-background font-medium text-sm whitespace-nowrap">Engineering Assistant</p>
+            <p className="text-background font-medium text-sm whitespace-nowrap">Vectis Assistant</p>
             <p className="text-background/60 text-xs flex items-center gap-1.5 mt-0.5">
               <Sparkles className="h-3 w-3" /> AI-Powered
             </p>
@@ -156,7 +156,7 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
                 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
             </div>
             <div>
-              <span className="font-semibold text-foreground text-sm tracking-tight">Engineering Assistant</span>
+              <span className="font-semibold text-foreground text-sm tracking-tight">Vectis Assistant</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_4px_rgba(52,211,153,0.8)]" />
                 <span className="text-[11px] text-muted-foreground font-medium">Online • Ready to help</span>
@@ -219,19 +219,14 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
             </div>
             
             <div>
-              <h3 className="font-semibold text-foreground text-[15px] tracking-tight flex items-center gap-2">
-                Engineering Assistant
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium
-                  bg-primary/10 text-primary
-                  border border-primary/20">
-                  AI
-                </span>
+              <h3 className="font-semibold text-foreground text-[15px] tracking-tight">
+                Vectis Assistant
               </h3>
-              <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
-                {partContext?.name 
-                  ? <span className="text-primary">Viewing: {partContext.name}</span>
-                  : 'Manufacturing & engineering expertise'}
-              </p>
+              {partContext?.name && (
+                <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
+                  <span className="text-primary">Viewing: {partContext.name}</span>
+                </p>
+              )}
             </div>
           </div>
           
@@ -271,7 +266,7 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
 
       {/* Messages area - Light background with subtle gradient */}
       <div className="flex-1 overflow-hidden relative bg-gradient-to-b from-muted/30 to-background">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full [&_[data-radix-scroll-area-scrollbar]]:hidden">
           <div ref={scrollRef} className="p-5 space-y-5">
             {messages.length === 0 ? (
               <EmptyState 
