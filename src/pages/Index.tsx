@@ -100,12 +100,10 @@ const Index = () => {
         <div className="container-custom relative z-10 flex-1 flex items-center">
           <div className="max-w-3xl">
             <AnimatedSection animation="fadeUp" delay={0}>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 leading-[1.05] tracking-tight uppercase">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-white mb-6 leading-tight tracking-tight">
                 Custom Manufacturing
                 <br />
-                <span className="text-primary">From Concept</span>
-                <br />
-                to Completion
+                <span className="text-primary font-light">From Concept to Completion</span>
               </h1>
             </AnimatedSection>
             
