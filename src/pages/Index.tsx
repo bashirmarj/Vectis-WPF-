@@ -8,7 +8,7 @@ import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParallaxSection from "@/components/home/ParallaxSection";
 import ProcessTimeline from "@/components/home/ProcessTimeline";
 import ScrollIndicator from "@/components/home/ScrollIndicator";
-import { useStaggerAnimation } from "@/hooks/useScrollAnimation";
+
 import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
@@ -55,25 +55,6 @@ const Index = () => {
     },
   ];
 
-  const whyChooseUs = [
-    {
-      number: "01",
-      title: "End-to-End Solutions",
-      description: "From initial concept and design through manufacturing and final delivery, we manage your entire project lifecycle.",
-    },
-    {
-      number: "02",
-      title: "Precision Engineering",
-      description: "State-of-the-art equipment and rigorous quality control ensure every part meets exact specifications.",
-    },
-    {
-      number: "03",
-      title: "Expert Team",
-      description: "Our experienced engineers and technicians bring deep industry knowledge to every project.",
-    },
-  ];
-
-  const { ref: whyRef, isVisible: whyVisible } = useStaggerAnimation(whyChooseUs.length, 200);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-black">
@@ -273,71 +254,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Why Choose Vectis */}
-      <section className="py-20 md:py-32 bg-background">
-        <div className="container-custom">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div>
-              <AnimatedSection animation="fadeLeft">
-                <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
-                  Why Vectis
-                </p>
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8">
-                  Built on Precision,
-                  <br />
-                  Driven by Excellence
-                </h2>
-              </AnimatedSection>
-
-              <div ref={whyRef} className="space-y-8">
-                {whyChooseUs.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`flex gap-5 transition-all duration-700 ${
-                      whyVisible
-                        ? 'opacity-100 translate-x-0'
-                        : 'opacity-0 -translate-x-8'
-                    }`}
-                    style={{ transitionDelay: `${index * 200}ms` }}
-                  >
-                    <div className="flex-shrink-0 w-14 h-14 bg-primary rounded-lg flex items-center justify-center">
-                      <span className="text-primary-foreground font-bold text-lg">
-                        {item.number}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <AnimatedSection animation="fadeUp" delay={600} className="mt-10">
-                <Button size="lg" asChild>
-                  <Link to="/about">Learn About Us</Link>
-                </Button>
-              </AnimatedSection>
-            </div>
-
-            <AnimatedSection animation="fadeRight" className="relative">
-              <div className="relative rounded-lg overflow-hidden shadow-2xl">
-                <img
-                  src={capabilitiesImg}
-                  alt="Manufacturing facility"
-                  className="w-full h-auto"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-accent/40 to-transparent" />
-              </div>
-              {/* Floating accent element */}
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-primary/10 rounded-lg -z-10" />
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/5 rounded-lg -z-10" />
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
 
       {/* CTA Section with Parallax */}
       <section className="relative min-h-[150vh] flex items-center">
