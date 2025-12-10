@@ -87,10 +87,9 @@ const Index = () => {
       <Navigation />
 
       {/* Hero Section - Full Viewport */}
-      <section className="relative h-screen flex flex-col justify-center overflow-hidden -mt-16 pt-16">
+      <section className="relative min-h-[120vh] flex flex-col justify-center overflow-hidden -mt-16 pt-16">
         <ParallaxSection
           backgroundImage={heroImage}
-          speed={0.2}
           overlayOpacity={0.5}
           className="absolute inset-0"
           contentClassName="hidden"
@@ -143,11 +142,10 @@ const Index = () => {
         const isEven = index % 2 === 0;
         
         return (
-          <section key={index} className="relative h-screen flex items-center">
-            {/* Background Image with Parallax */}
+          <section key={index} className="relative min-h-[120vh] flex items-center">
+            {/* Background Image */}
             <ParallaxSection
               backgroundImage={service.image}
-              speed={0.15}
               overlayOpacity={0.4}
               className="absolute inset-0"
               contentClassName="hidden"
@@ -189,11 +187,10 @@ const Index = () => {
         const isEven = index % 2 === 0;
         
         return (
-          <section key={index} className="relative h-screen flex items-center">
-            {/* Background Image with Parallax */}
+          <section key={index} className="relative min-h-[120vh] flex items-center">
+            {/* Background Image */}
             <ParallaxSection
               backgroundImage={capability.image}
-              speed={0.1}
               overlayOpacity={0.45}
               className="absolute inset-0"
               contentClassName="hidden"
@@ -316,10 +313,9 @@ const Index = () => {
       </section>
 
       {/* CTA Section with Parallax */}
-      <section className="relative h-screen flex items-center">
+      <section className="relative min-h-[120vh] flex items-center">
         <ParallaxSection
           backgroundImage={capabilitiesImg}
-          speed={0.15}
           overlayOpacity={0.5}
           className="absolute inset-0"
           contentClassName="hidden"
