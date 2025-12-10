@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Wrench, Package, TrendingUp, Cpu, Zap, Layers } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -18,23 +18,20 @@ import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 const Index = () => {
   const services = [
     {
-      icon: Wrench,
-      title: "Prototype Design",
-      description: "Transform your concepts into functional prototypes with our expert engineering team and rapid turnaround. We bridge the gap between design and production.",
+      title: "PROTOTYPE DESIGN",
+      description: "From concept to functional prototype. Fast turnaround, precision engineering.",
       image: prototypeImg,
       link: "/services/prototype-design",
     },
     {
-      icon: Package,
-      title: "Custom Parts",
-      description: "High-quality custom components manufactured to meet your exact specifications and tolerances. From one-off pieces to production runs.",
+      title: "CUSTOM PARTS",
+      description: "High-quality components manufactured to exact specifications.",
       image: customPartsImg,
       link: "/services/custom-parts",
     },
     {
-      icon: TrendingUp,
-      title: "Turnkey Solutions",
-      description: "Complete project lifecycle management from initial design through final delivery and beyond. We handle everything so you can focus on your business.",
+      title: "TURNKEY SOLUTIONS",
+      description: "Complete project management from design to delivery.",
       image: turnkeyImg,
       link: "/services/turnkey-solutions",
     },
@@ -49,22 +46,19 @@ const Index = () => {
 
   const capabilities = [
     { 
-      icon: Cpu, 
-      title: "CNC Machining", 
-      desc: "5-axis precision milling and turning for complex geometries with tolerances down to ±0.001\"",
-      image: capabilitiesImg // Placeholder - replace with CNC-specific image
+      title: "CNC MACHINING", 
+      description: "5-axis precision milling and turning for complex geometries.",
+      image: capabilitiesImg
     },
     { 
-      icon: Zap, 
-      title: "Wire EDM", 
-      desc: "Complex geometries with tight tolerances. Ideal for hardened materials and intricate details.",
-      image: capabilitiesImg // Placeholder - replace with Wire EDM image
+      title: "WIRE EDM", 
+      description: "Complex geometries with tight tolerances in hardened materials.",
+      image: capabilitiesImg
     },
     { 
-      icon: Layers, 
-      title: "Sheet Metal", 
-      desc: "Laser cutting, bending, and forming. From prototypes to high-volume production.",
-      image: capabilitiesImg // Placeholder - replace with Sheet Metal image
+      title: "SHEET METAL", 
+      description: "Laser cutting, bending, and forming at any scale.",
+      image: capabilitiesImg
     },
   ];
 
@@ -89,15 +83,15 @@ const Index = () => {
   const { ref: whyRef, isVisible: whyVisible } = useStaggerAnimation(whyChooseUs.length, 200);
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-black">
       <Navigation />
 
-      {/* Hero Section - Full Viewport with Parallax */}
-      <section className="relative min-h-[120vh] flex flex-col justify-center overflow-hidden -mt-16 pt-16">
+      {/* Hero Section - Full Viewport */}
+      <section className="relative h-screen flex flex-col justify-center overflow-hidden -mt-16 pt-16">
         <ParallaxSection
           backgroundImage={heroImage}
           speed={0.2}
-          overlayOpacity={0.75}
+          overlayOpacity={0.5}
           className="absolute inset-0"
           contentClassName="hidden"
         >
@@ -105,15 +99,9 @@ const Index = () => {
         </ParallaxSection>
         
         <div className="container-custom relative z-10 flex-1 flex items-center">
-          <div className="max-w-4xl">
+          <div className="max-w-3xl">
             <AnimatedSection animation="fadeUp" delay={0}>
-              <p className="text-primary font-semibold text-sm md:text-base mb-4 uppercase tracking-[0.2em]">
-                Precision Manufacturing Excellence
-              </p>
-            </AnimatedSection>
-            
-            <AnimatedSection animation="fadeUp" delay={150}>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 leading-[1.05] tracking-tight uppercase">
                 Custom Manufacturing
                 <br />
                 <span className="text-primary">From Concept</span>
@@ -122,22 +110,21 @@ const Index = () => {
               </h1>
             </AnimatedSection>
             
-            <AnimatedSection animation="fadeUp" delay={300}>
-              <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl leading-relaxed">
-                Vectis delivers turnkey manufacturing projects, precision prototype designs, 
-                and custom parts engineered to perfection.
+            <AnimatedSection animation="fadeUp" delay={200}>
+              <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-lg leading-relaxed">
+                Precision engineering and turnkey manufacturing solutions.
               </p>
             </AnimatedSection>
             
-            <AnimatedSection animation="fadeUp" delay={450}>
+            <AnimatedSection animation="fadeUp" delay={400}>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="group" asChild>
+                <Button size="lg" className="group uppercase tracking-wider" asChild>
                   <Link to="/contact">
                     Request a Quote 
                     <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline-light" asChild>
+                <Button size="lg" variant="outline-light" className="uppercase tracking-wider" asChild>
                   <Link to="/capabilities">Explore Capabilities</Link>
                 </Button>
               </div>
@@ -146,26 +133,22 @@ const Index = () => {
         </div>
 
         {/* Scroll Indicator */}
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20">
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20">
           <ScrollIndicator />
         </div>
-
-        {/* Gradient fade into next section */}
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-background z-10" />
       </section>
 
       {/* Services - Full-Bleed Vertical Sections */}
       {services.map((service, index) => {
-        const Icon = service.icon;
         const isEven = index % 2 === 0;
         
         return (
-          <section key={index} className="relative min-h-screen flex items-center">
+          <section key={index} className="relative h-screen flex items-center">
             {/* Background Image with Parallax */}
             <ParallaxSection
               backgroundImage={service.image}
               speed={0.15}
-              overlayOpacity={0.7}
+              overlayOpacity={0.4}
               className="absolute inset-0"
               contentClassName="hidden"
             >
@@ -174,33 +157,21 @@ const Index = () => {
 
             {/* Content */}
             <div className="container-custom relative z-10">
-              <div className={`max-w-xl ${isEven ? '' : 'ml-auto'}`}>
-                <AnimatedSection animation={isEven ? "fadeRight" : "fadeLeft"}>
-                  <div className="w-16 h-16 bg-primary/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-8 border border-primary/30">
-                    <Icon className="w-8 h-8 text-primary" />
-                  </div>
-                </AnimatedSection>
-                
-                <AnimatedSection animation="fadeUp" delay={100}>
-                  <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
-                    {`0${index + 1}`} — Services
-                  </p>
-                </AnimatedSection>
-                
-                <AnimatedSection animation="fadeUp" delay={200}>
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+              <div className={`max-w-md ${isEven ? '' : 'ml-auto text-right'}`}>
+                <AnimatedSection animation="fadeUp" delay={0}>
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
                     {service.title}
                   </h2>
                 </AnimatedSection>
                 
-                <AnimatedSection animation="fadeUp" delay={300}>
-                  <p className="text-lg md:text-xl text-gray-300 mb-10 leading-relaxed">
+                <AnimatedSection animation="fadeUp" delay={150}>
+                  <p className="text-lg text-gray-300 mb-8 leading-relaxed">
                     {service.description}
                   </p>
                 </AnimatedSection>
                 
-                <AnimatedSection animation="fadeUp" delay={400}>
-                  <Button size="lg" variant="outline-light" className="group" asChild>
+                <AnimatedSection animation="fadeUp" delay={300}>
+                  <Button size="lg" variant="outline-light" className="group uppercase tracking-wider" asChild>
                     <Link to={service.link}>
                       Learn More 
                       <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -209,25 +180,21 @@ const Index = () => {
                 </AnimatedSection>
               </div>
             </div>
-
-            {/* Gradient fade at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-background z-10" />
           </section>
         );
       })}
 
       {/* Capabilities - Full-Bleed Vertical Sections */}
       {capabilities.map((capability, index) => {
-        const Icon = capability.icon;
         const isEven = index % 2 === 0;
         
         return (
-          <section key={index} className="relative min-h-[80vh] flex items-center">
+          <section key={index} className="relative h-screen flex items-center">
             {/* Background Image with Parallax */}
             <ParallaxSection
               backgroundImage={capability.image}
               speed={0.1}
-              overlayOpacity={0.8}
+              overlayOpacity={0.45}
               className="absolute inset-0"
               contentClassName="hidden"
             >
@@ -236,49 +203,34 @@ const Index = () => {
 
             {/* Content */}
             <div className="container-custom relative z-10">
-              <div className={`max-w-xl ${isEven ? 'ml-auto' : ''}`}>
-                <AnimatedSection animation={isEven ? "fadeLeft" : "fadeRight"}>
-                  <div className="w-14 h-14 bg-primary/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-6 border border-primary/30">
-                    <Icon className="w-7 h-7 text-primary" />
-                  </div>
-                </AnimatedSection>
-                
-                <AnimatedSection animation="fadeUp" delay={100}>
-                  <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-3">
-                    Capabilities
-                  </p>
-                </AnimatedSection>
-                
-                <AnimatedSection animation="fadeUp" delay={200}>
-                  <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+              <div className={`max-w-md ${isEven ? 'ml-auto text-right' : ''}`}>
+                <AnimatedSection animation="fadeUp" delay={0}>
+                  <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
                     {capability.title}
                   </h3>
                 </AnimatedSection>
                 
-                <AnimatedSection animation="fadeUp" delay={300}>
+                <AnimatedSection animation="fadeUp" delay={150}>
                   <p className="text-lg text-gray-300 mb-8 leading-relaxed">
-                    {capability.desc}
+                    {capability.description}
                   </p>
                 </AnimatedSection>
                 
-                <AnimatedSection animation="fadeUp" delay={400}>
-                  <Button variant="outline-light" asChild>
+                <AnimatedSection animation="fadeUp" delay={300}>
+                  <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
                     <Link to="/capabilities">
-                      View Details <ArrowRight className="ml-2 h-4 w-4" />
+                      View Details <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                   </Button>
                 </AnimatedSection>
               </div>
             </div>
-
-            {/* Gradient fade at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-background z-10" />
           </section>
         );
       })}
 
       {/* Process Timeline */}
-      <section className="py-20 md:py-32">
+      <section className="py-20 md:py-32 bg-background">
         <div className="container-custom">
           <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
             <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
@@ -298,7 +250,7 @@ const Index = () => {
       </section>
 
       {/* Why Choose Vectis */}
-      <section className="py-20 md:py-32">
+      <section className="py-20 md:py-32 bg-background">
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div>
@@ -364,40 +316,44 @@ const Index = () => {
       </section>
 
       {/* CTA Section with Parallax */}
-      <ParallaxSection
-        backgroundImage={capabilitiesImg}
-        speed={0.15}
-        overlayOpacity={0.85}
-        className="py-24 md:py-40"
-      >
-        <div className="container-custom text-center">
+      <section className="relative h-screen flex items-center">
+        <ParallaxSection
+          backgroundImage={capabilitiesImg}
+          speed={0.15}
+          overlayOpacity={0.5}
+          className="absolute inset-0"
+          contentClassName="hidden"
+        >
+          <div />
+        </ParallaxSection>
+        
+        <div className="container-custom relative z-10 text-center">
           <AnimatedSection animation="fadeUp">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Ready to Start Your Project?
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
+              Ready to Start?
             </h2>
           </AnimatedSection>
           
           <AnimatedSection animation="fadeUp" delay={150}>
-            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-              Let's discuss how Vectis can bring your manufacturing vision to life 
-              with precision and expertise.
+            <p className="text-xl text-gray-300 mb-10 max-w-lg mx-auto">
+              Let's bring your manufacturing vision to life.
             </p>
           </AnimatedSection>
           
           <AnimatedSection animation="fadeUp" delay={300}>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="animate-pulse-glow" asChild>
+              <Button size="lg" className="uppercase tracking-wider" asChild>
                 <Link to="/contact">
                   Get a Quote <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline-light" asChild>
+              <Button size="lg" variant="outline-light" className="uppercase tracking-wider" asChild>
                 <Link to="/projects">View Our Work</Link>
               </Button>
             </div>
           </AnimatedSection>
         </div>
-      </ParallaxSection>
+      </section>
 
       {/* Stats Section - At bottom before footer */}
       <section className="py-16 bg-accent/50 border-t border-border/30">
