@@ -10,7 +10,7 @@ import ProcessTimeline from "@/components/home/ProcessTimeline";
 import ScrollIndicator from "@/components/home/ScrollIndicator";
 import CapabilityCard from "@/components/home/CapabilityCard";
 import { useScrollAnimation, useStaggerAnimation } from "@/hooks/useScrollAnimation";
-import heroImage from "@/assets/hero-manufacturing.jpg";
+import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts.jpg";
 import prototypeImg from "@/assets/prototype-design.jpg";
 import turnkeyImg from "@/assets/turnkey-solutions.jpg";
