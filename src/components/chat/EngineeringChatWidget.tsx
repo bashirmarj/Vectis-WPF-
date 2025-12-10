@@ -391,8 +391,7 @@ function EmptyState({
               
               <div className="flex-1 pt-0.5">
                 <p className="text-[14px] text-foreground/80 leading-relaxed">
-                  Hey there! I'm your <span className="text-primary font-medium">engineering assistant</span>. 
-                  I specialize in heat treatment, stock sizes, HRC values, and material calculations.
+                  I'm here to assist with any questions about our manufacturing capabilities and services.
                 </p>
                 {partContext?.name && (
                   <p className="text-[13px] text-primary mt-3 font-medium flex items-center gap-2

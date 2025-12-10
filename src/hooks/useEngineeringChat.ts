@@ -27,7 +27,7 @@ Our capabilities include:
 • Post-Processing (Heat Treatment, Grinding, Surface Finishing)
 • Quality Inspection & Metrology
 
-Have questions about materials, tolerances, stock sizes, or heat treatment? I'm here to help - just ask!`
+How can I assist you today?`
 };
 
 export function useEngineeringChat() {
