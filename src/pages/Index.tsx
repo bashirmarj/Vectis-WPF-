@@ -235,16 +235,16 @@ const Index = () => {
       </section>
 
       {/* Process Timeline */}
-      <section className="py-20 md:py-32 bg-background">
+      <section className="py-20 md:py-32 bg-neutral-950 border-y border-white/10">
         <div className="container-custom">
           <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
             <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
               How It Works
             </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
               Our Process
             </h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-gray-400">
               From initial upload to final delivery, we streamline every step 
               of your manufacturing journey.
             </p>
@@ -255,18 +255,9 @@ const Index = () => {
       </section>
 
 
-      {/* CTA Section with Parallax */}
-      <section className="relative min-h-[150vh] flex items-center">
-        <ParallaxSection
-          backgroundImage={capabilitiesImg}
-          overlayOpacity={0.5}
-          className="absolute inset-0"
-          contentClassName="hidden"
-        >
-          <div />
-        </ParallaxSection>
-        
-        <div className="container-custom relative z-10 text-center">
+      {/* CTA Section */}
+      <section className="py-20 md:py-32 bg-neutral-950 border-y border-white/10">
+        <div className="container-custom text-center">
           <AnimatedSection animation="fadeUp">
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
               Ready to Start?
@@ -274,7 +265,7 @@ const Index = () => {
           </AnimatedSection>
           
           <AnimatedSection animation="fadeUp" delay={150}>
-            <p className="text-xl text-gray-300 mb-10 max-w-lg mx-auto">
+            <p className="text-xl text-gray-400 mb-10 max-w-lg mx-auto">
               Let's bring your manufacturing vision to life.
             </p>
           </AnimatedSection>
