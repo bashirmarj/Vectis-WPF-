@@ -10,9 +10,8 @@ import ProcessTimeline from "@/components/home/ProcessTimeline";
 import ScrollIndicator from "@/components/home/ScrollIndicator";
 import { useStaggerAnimation } from "@/hooks/useScrollAnimation";
 import heroImage from "@/assets/hero-cnc-turbine.png";
-import customPartsImg from "@/assets/custom-parts.jpg";
+import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
-import turnkeyImg from "@/assets/turnkey-solutions.jpg";
 import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 
 const Index = () => {
@@ -28,12 +27,6 @@ const Index = () => {
       description: "High-quality components manufactured to exact specifications.",
       image: customPartsImg,
       link: "/services/custom-parts",
-    },
-    {
-      title: "TURNKEY SOLUTIONS",
-      description: "Complete project management from design to delivery.",
-      image: turnkeyImg,
-      link: "/services/turnkey-solutions",
     },
   ];
 
@@ -332,7 +325,7 @@ const Index = () => {
             <AnimatedSection animation="fadeRight" className="relative">
               <div className="relative rounded-lg overflow-hidden shadow-2xl">
                 <img
-                  src={turnkeyImg}
+                  src={capabilitiesImg}
                   alt="Manufacturing facility"
                   className="w-full h-auto"
                 />
