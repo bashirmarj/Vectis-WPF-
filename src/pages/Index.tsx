@@ -155,7 +155,7 @@ const Index = () => {
       })}
 
       {/* Capabilities Showcase - Horizontal Marquee with Grayscale-to-Color Effect */}
-      <section className="py-24 bg-neutral-950 border-y border-white/10 overflow-hidden">
+      <section className="py-24 bg-neutral-950 border-t border-white/10 overflow-hidden">
         {/* Section Header */}
         <div className="container-custom mb-12">
           <AnimatedSection animation="fadeUp">
@@ -235,7 +235,7 @@ const Index = () => {
       </section>
 
       {/* Process Timeline */}
-      <section className="py-20 md:py-32 bg-neutral-950 border-y border-white/10">
+      <section className="py-20 md:py-32 bg-neutral-950">
         <div className="container-custom">
           <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
             <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
@@ -256,7 +256,7 @@ const Index = () => {
 
 
       {/* CTA Section */}
-      <section className="py-20 md:py-32 bg-neutral-950 border-y border-white/10">
+      <section className="py-20 md:py-32 bg-neutral-950 border-b border-white/10">
         <div className="container-custom text-center">
           <AnimatedSection animation="fadeUp">
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
