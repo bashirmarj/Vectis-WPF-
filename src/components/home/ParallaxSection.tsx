@@ -25,8 +25,8 @@ const ParallaxSection: React.FC<ParallaxSectionProps> = ({
           className="absolute inset-x-0 bg-cover bg-center"
           style={{
             backgroundImage: `url(${backgroundImage})`,
-            height: '150%',
-            top: '-25%',
+            height: '200%',
+            top: '-50%',
           }}
         />
       )}
