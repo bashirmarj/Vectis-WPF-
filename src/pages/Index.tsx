@@ -136,10 +136,13 @@ const Index = () => {
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
           <ScrollIndicator />
         </div>
+
+        {/* Gradient fade into next section */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent to-background z-10" />
       </section>
 
       {/* Services Overview */}
-      <section className="py-20 md:py-32 bg-background">
+      <section className="py-20 md:py-32">
         <div className="container-custom">
           <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
             <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
@@ -172,7 +175,7 @@ const Index = () => {
       </section>
 
       {/* Capabilities Strip */}
-      <section className="py-16 bg-muted border-y border-border">
+      <section className="py-16 border-t border-border/30">
         <div className="container-custom">
           <AnimatedSection className="text-center mb-12">
             <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-3">
@@ -216,7 +219,7 @@ const Index = () => {
       </section>
 
       {/* Process Timeline */}
-      <section className="py-20 md:py-32 bg-background">
+      <section className="py-20 md:py-32">
         <div className="container-custom">
           <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
             <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
@@ -236,7 +239,7 @@ const Index = () => {
       </section>
 
       {/* Why Choose Vectis */}
-      <section className="py-20 md:py-32 bg-muted">
+      <section className="py-20 md:py-32">
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div>
@@ -338,7 +341,7 @@ const Index = () => {
       </ParallaxSection>
 
       {/* Stats Section - At bottom before footer */}
-      <section className="py-16 bg-accent border-y border-border">
+      <section className="py-16 bg-accent/50 border-t border-border/30">
         <div className="container-custom">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {stats.map((stat, index) => (
