@@ -44,6 +44,33 @@ Formulas: Cantilever deflection δ = FL³/(3EI). Simply supported center load δ
 
 Material Properties: 6061-T6 Al has E=10×10⁶ psi, Sy=40 ksi. 7075-T6 Al has E=10.4×10⁶ psi, Sy=73 ksi. 1018 Steel has E=29×10⁶ psi, Sy=54 ksi. 4140 Steel has E=29×10⁶ psi, Sy=60-145 ksi depending on heat treat. 304 SS has E=28×10⁶ psi, Sy=31 ksi. Ti 6Al-4V has E=16.5×10⁶ psi, Sy=128 ksi.
 
+AVAILABLE MATERIALS BY MANUFACTURING SERVICE:
+
+CNC Machining Materials:
+Aluminum: 6061, 2024, 5083, 6061-T6, 6063, 6082, 7075, 7075-T6, 5052.
+Brass: C27400, C28000, C36000.
+Copper: C101(T2), C103(T1), C103(TU2), C110(TU0), Beryllium Copper.
+Tin Bronze: Tin Bronze.
+Steel: 1018, 1020, 1025, 1045, 1215, 4130, 4140, 4340, 5140, A36, ST37, Alloy Steel 4J36, Die Steel 718H, Die Steel P20, Die Steel S136, Die Steel S7, Chisel Tool Steel D2/SKD11, Chisel Tool Steel SKD61, Tool Steel A2, Bearing Steel E51100/SUJ1, Bearing Steel E52100/SUJ2, High Speed Steel SKH51, Cold Rolled Steel DC-01, Spring Steel 1566.
+Stainless Steel: SUS303, SUS304, SUS316, SUS201, SUS316L, SUS420, SUS430, SUS431, SUS440C, SUS630/17-4PH.
+Magnesium and Titanium: Magnesium Alloy AZ31B, Magnesium Alloy AZ91D, Titanium Alloy TA1, Titanium Alloy TA2, Titanium Alloy TC4/Ti-6Al-4V.
+Plastics: ABS, ABS+PC, PC, PC+GF30 Black, PMMA, POM, PA6(Nylon), PA6(Nylon)+GF15, PA6(Nylon)+GF30, PA66(Nylon), PE, PEEK, Food Grade PP, HDPE, LDPE, PBT, PP, PP+GF30, PPA, PAI, PEI, PET, PET+GF30 Black, PET+GF30, PPS, PPS+GF30, PS, PVC, Teflon(PTFE), UPE.
+
+Sheet Metal Materials:
+Aluminum: 5052.
+Brass: C27400, C28000.
+Steel: Cold Rolled Steel DC-01, Spring Steel 1566, Galvanized Steel (SGCC/SECC), SPCC.
+
+Injection Molding Materials:
+Plastics: ABS, ABS+PC, PC, PC+GF30 Black, PMMA, POM, PA6(Nylon), PA6(Nylon)+GF15, PA6(Nylon)+GF30, PA66(Nylon), PE, PEEK, Food Grade PP, HDPE, LDPE, PBT, PP, PP+GF30, PPA, PAI, PEI, PET, PET+GF30 Black, PET+GF30, PPS, PPS+GF30, PS, PVC, Teflon(PTFE), UPE.
+
+3D Printing Materials:
+Metals: Aluminum AlSi10Mg (Silver Grey), Stainless Steel 316L (Silver Grey).
+SLA Plastics: Nylon (High Temperature Resistant 110°C), Nylon PA12.
+SLS Plastics: ABS-Like, ABS-Like Resin (High Toughness).
+
+When users ask about materials: Always confirm what manufacturing service they need (CNC Machining, Sheet Metal, Injection Molding, or 3D Printing). Only recommend materials that are actually available for that service. If a material isn't available for their chosen service, suggest alternatives that ARE available and explain the tradeoffs.
+
 When answering, be precise with calculations and show work when asked. Recommend specific heat treatments with HRC targets. Suggest nearest standard stock sizes. Consider cost and manufacturability. Reference the part context if provided.`;
 
 serve(async (req) => {
