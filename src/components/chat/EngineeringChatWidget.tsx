@@ -309,8 +309,9 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
                 pl-5 pr-14 py-4
                 text-sm text-foreground placeholder:text-muted-foreground
                 focus:outline-none disabled:opacity-40
-                transition-all duration-200"
-              style={{ maxHeight: '120px' }}
+                transition-all duration-200
+                overflow-y-auto [&::-webkit-scrollbar]:hidden"
+              style={{ maxHeight: '120px', scrollbarWidth: 'none' }}
             />
             
             {/* Send button */}
@@ -338,10 +339,6 @@ export function EngineeringChatWidget({ partContext }: EngineeringChatWidgetProp
             </div>
           </div>
           
-          {/* Footer text */}
-          <p className="text-[10px] text-muted-foreground text-center mt-3 font-medium tracking-wide">
-            POWERED BY AI • PRESS ENTER TO SEND
-          </p>
         </div>
       </div>
     </div>
