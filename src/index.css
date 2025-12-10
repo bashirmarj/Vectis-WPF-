@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Premium Chat Widget Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes elasticBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-8px) scale(1.1); }
+  50% { transform: translateY(2px) scale(0.9); }
+  70% { transform: translateY(-3px) scale(1.05); }
+}
+
+@keyframes sendPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
