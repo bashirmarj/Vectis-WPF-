@@ -126,7 +126,8 @@ function generateContactEmailTemplate(options: {
             <!-- Spacer -->
             <div style="height: 40px;"></div>
 
-            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765525395/LOGO_-_Copy-removebg-preview_gu9f3c_fntdzw.png'); background-repeat: no-repeat; background-position: center 18%; background-size: 80%;">
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 22px; background-size: 80%;">
+              <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
               
                 <!-- 1. Brand Header -->
                 <div style="background-color: #000000; padding: 30px 40px; text-align: center; position: relative; z-index: 2;">
@@ -171,6 +172,7 @@ function generateContactEmailTemplate(options: {
 
                 </div>
 
+              </div>
             </div>
 
             <!-- Footer -->
