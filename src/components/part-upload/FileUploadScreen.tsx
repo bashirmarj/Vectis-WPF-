@@ -100,7 +100,7 @@ export const FileUploadScreen = ({
                             {fileItem.uploadSpeed && fileItem.isAnalyzing && (
                               <span className="ml-2">• {formatSpeed(fileItem.uploadSpeed)}</span>
                             )}
-                            {failed && <span className="text-destructive ml-2">• Analysis failed</span>}
+                            {failed && <span className="text-destructive ml-2">• Preview unavailable</span>}
                             {fileItem.analysis && <span className="text-green-600 ml-2">• Complete</span>}
                           </p>
                         </div>
@@ -180,11 +180,10 @@ export const FileUploadScreen = ({
           )}
 
           {hasFailedFiles && (
-            <Alert variant="destructive">
+            <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Some files failed to analyze. This may be due to the geometry service starting up. 
-                Please use the "Retry" button to try again, or remove the failed files to continue.
+                Failed to load your step file(s). We will still receive your request and provide you with the quotation.
               </AlertDescription>
             </Alert>
           )}
