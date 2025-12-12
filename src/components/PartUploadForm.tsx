@@ -385,12 +385,11 @@ export const PartUploadForm = () => {
         isAnalyzing: false,
         uploadProgress: 0,
         analysisProgress: 0,
-        analysisStatus: 'Failed',
+        analysisStatus: 'Preview unavailable',
       } : f)));
       toast({
-        title: "Analysis Failed",
-        description: error.message || "Backend may be waking up - please try again",
-        variant: "destructive",
+        title: "Preview Unavailable",
+        description: "Failed to load your step file. We will still receive your request and provide you with the quotation.",
       });
     }
   };
@@ -468,18 +467,15 @@ export const PartUploadForm = () => {
   };
 
   const handleContinue = () => {
-    // Check if all files have been analyzed
-    const unanalyzedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
+    // Check for files that failed to load
     const failedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
     
-    if (unanalyzedFiles.length > 0) {
-      const fileList = unanalyzedFiles.map(f => f.file.name).join(', ');
+    // Warn about failed files but allow continuing
+    if (failedFiles.length > 0) {
       toast({
-        title: "⚠️ Files Not Analyzed",
-        description: `${unanalyzedFiles.length} file(s) failed analysis: ${fileList}. Please retry or remove them to continue.`,
-        variant: "destructive",
+        title: "Some files couldn't be previewed",
+        description: "Failed to load your step file. We will still receive your request and provide you with the quotation.",
       });
-      return;
     }
 
     console.log(
