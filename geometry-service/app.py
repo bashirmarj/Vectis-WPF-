@@ -49,6 +49,13 @@ from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletRecog
 # === Configuration ===
 app = Flask(__name__)
 CORS(app)
+
+# ========== TEMPORARY: Skip feature recognition for faster processing ==========
+# Set to False to re-enable feature recognition (AAG, geometric recognition, volume decomposition)
+# When True: Only tessellation + basic metrics run (5-15 seconds)
+# When False: Full feature recognition runs (60+ seconds)
+SKIP_FEATURE_RECOGNITION = True
+# ================================================================================
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s'
@@ -439,7 +446,10 @@ def analyze_cad():
             features = []
             recognition_methods = []
             
-            if part_type in ["prismatic", "mixed"] and brepnet_recognizer:
+            if SKIP_FEATURE_RECOGNITION:
+                logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
+                recognition_methods.append("Skipped (SKIP_FEATURE_RECOGNITION=True)")
+            elif part_type in ["prismatic", "mixed"] and brepnet_recognizer:
                 logger.info(f"[{correlation_id}] 🤖 Running BRepNet ML feature recognition")
                 try:
                     brepnet_start = time.time()
@@ -499,7 +509,7 @@ def analyze_cad():
                 from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
                 features = [standardize_feature_output(f) for f in features]
             
-            if part_type in ["turning", "mixed"] and turning_detector:
+            if not SKIP_FEATURE_RECOGNITION and part_type in ["turning", "mixed"] and turning_detector:
                 logger.info(f"[{correlation_id}] Running geometric turning feature detection")
                 try:
                     turning_features = turning_detector.detect_features(shape)
@@ -633,130 +643,135 @@ def analyze_aag():
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
             
-            # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
-            logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
-            from aag_pattern_engine.graph_builder import AAGGraphBuilder
-            builder = AAGGraphBuilder(shape)
-            aag = builder.build()
-            
-            # === STEP 4: Feature Recognition ===
-            
-            # Initialize results
-            decomposition_results = {}
-            
-            # BLOCK 1: Geometric Recognition (Holes & Fillets & Countersinks & Tapered Holes)
-            try:
-                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition")
-                from aag_pattern_engine.geometric_recognizer import recognize_simple_features
+            # === STEP 3 & 4: Feature Recognition (conditionally skipped) ===
+            if SKIP_FEATURE_RECOGNITION:
+                logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
+                # No AAG building, no geometric recognition, no volume decomposition
+            else:
+                # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
+                logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
+                from aag_pattern_engine.graph_builder import AAGGraphBuilder
+                builder = AAGGraphBuilder(shape)
+                aag = builder.build()
                 
-                holes_geo, fillets_geo, countersinks_geo, tapered_geo = recognize_simple_features(shape)
+                # === STEP 4: Feature Recognition ===
                 
-                # Convert holes to feature format
+                # Initialize results
+                decomposition_results = {}
+                
+                # BLOCK 1: Geometric Recognition (Holes & Fillets & Countersinks & Tapered Holes)
+                try:
+                    logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition")
+                    from aag_pattern_engine.geometric_recognizer import recognize_simple_features
+                    
+                    holes_geo, fillets_geo, countersinks_geo, tapered_geo = recognize_simple_features(shape)
+                    
+                    # Convert holes to feature format
+                    for hole_info in holes_geo:
+                        features.append({
+                            'type': hole_info['type'],
+                            'method': 'geometric',
+                            'face_ids': hole_info['face_ids'],
+                            'radius': hole_info['radius'],
+                            'confidence': 1.0
+                        })
+                    
+                    # Convert fillets to feature format
+                    for fillet_info in fillets_geo:
+                        features.append({
+                            'type': 'fillet',
+                            'method': 'geometric',
+                            'face_ids': [fillet_info['face_id']],
+                            'radius': fillet_info['radius'],
+                            'confidence': 1.0
+                        })
+                    
+                    # Convert countersinks to feature format
+                    for csink_info in countersinks_geo:
+                        features.append({
+                            'type': 'countersink',
+                            'method': 'geometric',
+                            'face_ids': csink_info['face_ids'],
+                            'cone_angle': csink_info['cone_angle'],
+                            'hole_radius': csink_info['hole_radius'],
+                            'confidence': 1.0
+                        })
+                    
+                    # Convert tapered holes to feature format
+                    for tapered_info in tapered_geo:
+                        features.append({
+                            'type': 'tapered_hole',
+                            'method': 'geometric',
+                            'face_ids': tapered_info['face_ids'],
+                            'angle': tapered_info['angle'],
+                            'confidence': 1.0
+                        })
+                    
+                    logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(countersinks_geo)} countersinks, {len(tapered_geo)} tapered")
+                    
+                except Exception as e:
+                    logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
+                    errors.append(f"Geometric recognition error: {str(e)}")
+                
+                # Track consumed face IDs to prevent duplicates
+                consumed_face_ids = set()
                 for hole_info in holes_geo:
-                    features.append({
-                        'type': hole_info['type'],  # 'through_hole', 'blind_hole', or 'counterbore'
-                        'method': 'geometric',
-                        'face_ids': hole_info['face_ids'],
-                        'radius': hole_info['radius'],
-                        'confidence': 1.0
-                    })
-                
-                # Convert fillets to feature format
+                    consumed_face_ids.update(hole_info['face_ids'])
                 for fillet_info in fillets_geo:
-                    features.append({
-                        'type': 'fillet',
-                        'method': 'geometric',
-                        'face_ids': [fillet_info['face_id']],
-                        'radius': fillet_info['radius'],
-                        'confidence': 1.0
-                    })
-                
-                # Convert countersinks to feature format
+                    consumed_face_ids.add(fillet_info['face_id'])
                 for csink_info in countersinks_geo:
-                    features.append({
-                        'type': 'countersink',
-                        'method': 'geometric',
-                        'face_ids': csink_info['face_ids'],
-                        'cone_angle': csink_info['cone_angle'],
-                        'hole_radius': csink_info['hole_radius'],
-                        'confidence': 1.0
-                    })
-                
-                # Convert tapered holes to feature format
+                    consumed_face_ids.update(csink_info['face_ids'])
                 for tapered_info in tapered_geo:
-                    features.append({
-                        'type': 'tapered_hole',
-                        'method': 'geometric',
-                        'face_ids': tapered_info['face_ids'],
-                        'angle': tapered_info['angle'],
-                        'confidence': 1.0
-                    })
+                    consumed_face_ids.update(tapered_info['face_ids'])
                 
-                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(countersinks_geo)} countersinks, {len(tapered_geo)} tapered")
+                logger.info(f"[{correlation_id}] 🔒 Consumed {len(consumed_face_ids)} face IDs from geometric recognizer")
                 
-            except Exception as e:
-                logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
-                errors.append(f"Geometric recognition error: {str(e)}")
-            
-            # Track consumed face IDs to prevent duplicates
-            consumed_face_ids = set()
-            for hole_info in holes_geo:
-                consumed_face_ids.update(hole_info['face_ids'])
-            for fillet_info in fillets_geo:
-                consumed_face_ids.add(fillet_info['face_id'])
-            for csink_info in countersinks_geo:
-                consumed_face_ids.update(csink_info['face_ids'])
-            for tapered_info in tapered_geo:
-                consumed_face_ids.update(tapered_info['face_ids'])
-            
-            logger.info(f"[{correlation_id}] 🔒 Consumed {len(consumed_face_ids)} face IDs from geometric recognizer")
-            
-            # BLOCK 2: Volume Decomposition (Pockets/Cavities)
-            try:
-                from volume_decomposer import VolumeDecomposer
-                from lump_classifier import LumpClassifier
-                from feature_mapper import FeatureMapper
-                
-                decomposer = VolumeDecomposer()
-                decomposition_results = decomposer.decompose(shape, part_type="prismatic")
-                
-                if decomposition_results:
-                    classifier = LumpClassifier()
-                    mapper = FeatureMapper(shape, aag)
+                # BLOCK 2: Volume Decomposition (Pockets/Cavities)
+                try:
+                    from volume_decomposer import VolumeDecomposer
+                    from lump_classifier import LumpClassifier
+                    from feature_mapper import FeatureMapper
                     
-                    classified_lumps = []
-                    for lump in decomposition_results:
-                        classification = classifier.classify(lump['shape'], lump['stock_bbox'])
-                        lump_data = lump.copy()
-                        lump_data.update(classification)
-                        classified_lumps.append(lump_data)
+                    decomposer = VolumeDecomposer()
+                    decomposition_results = decomposer.decompose(shape, part_type="prismatic")
+                    
+                    if decomposition_results:
+                        classifier = LumpClassifier()
+                        mapper = FeatureMapper(shape, aag)
                         
-                    volumetric_features = mapper.map_features(classified_lumps)
-                    
-                    # FILTER OUT FEATURES WITH CONSUMED FACES
-                    filtered_features = []
-                    skipped_count = 0
-                    for feature in volumetric_features:
-                        feature_face_ids = set(feature.get('face_ids', []))
-                        if feature_face_ids & consumed_face_ids:  # Intersection check
-                            skipped_count += 1
-                            logger.debug(f"[{correlation_id}] Skipping duplicate feature with face IDs: {feature_face_ids & consumed_face_ids}")
-                        else:
-                            filtered_features.append(feature)
-                    
-                    features.extend(filtered_features)
-                    
-                    logger.info(f"[{correlation_id}] ✅ Found {len(filtered_features)} volumetric features ({skipped_count} duplicates filtered)")
-                else:
-                    logger.warning(f"[{correlation_id}] Volume decomposition returned no features")
-                    
-            except Exception as e:
-                logger.error(f"[{correlation_id}] ❌ Volume decomposition failed: {e}", exc_info=True)
-                errors.append(f"Volume decomposition failed: {str(e)}")
+                        classified_lumps = []
+                        for lump in decomposition_results:
+                            classification = classifier.classify(lump['shape'], lump['stock_bbox'])
+                            lump_data = lump.copy()
+                            lump_data.update(classification)
+                            classified_lumps.append(lump_data)
+                            
+                        volumetric_features = mapper.map_features(classified_lumps)
+                        
+                        # FILTER OUT FEATURES WITH CONSUMED FACES
+                        filtered_features = []
+                        skipped_count = 0
+                        for feature in volumetric_features:
+                            feature_face_ids = set(feature.get('face_ids', []))
+                            if feature_face_ids & consumed_face_ids:
+                                skipped_count += 1
+                                logger.debug(f"[{correlation_id}] Skipping duplicate feature with face IDs: {feature_face_ids & consumed_face_ids}")
+                            else:
+                                filtered_features.append(feature)
+                        
+                        features.extend(filtered_features)
+                        
+                        logger.info(f"[{correlation_id}] ✅ Found {len(filtered_features)} volumetric features ({skipped_count} duplicates filtered)")
+                    else:
+                        logger.warning(f"[{correlation_id}] Volume decomposition returned no features")
+                        
+                except Exception as e:
+                    logger.error(f"[{correlation_id}] ❌ Volume decomposition failed: {e}", exc_info=True)
+                    errors.append(f"Volume decomposition failed: {str(e)}")
 
-            # Standardize output
-            from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
-            features = [standardize_feature_output(f) for f in features]
+                # Standardize output
+                from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
+                features = [standardize_feature_output(f) for f in features]
             
             # === STEP 5: Extract metadata ===
             try:
