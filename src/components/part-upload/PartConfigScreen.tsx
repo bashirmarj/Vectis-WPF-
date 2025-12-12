@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, Mail, Phone, Building2, MapPin, User, Loader2, FileText } from "lucide-react";
+import { ChevronLeft, Mail, Phone, Building2, MapPin, User, Loader2 } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 
 interface FileWithData {
@@ -118,7 +118,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
       </div>
 
       {/* CAD Viewer Section - Full Width */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex flex-col">
         {/* Tab-style Header with Part Name */}
         <div className="bg-background border-b">
           <Tabs value={selectedFileIndex.toString()} onValueChange={(v) => onSelectFile(parseInt(v))}>
@@ -128,7 +128,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                   value="0" 
                   className="data-[state=active]:bg-background data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none"
                 >
-                  <FileText className="w-4 h-4 mr-2" />
                   {selectedFile.file.name}
                 </TabsTrigger>
               ) : (
@@ -138,7 +137,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     value={index.toString()}
                     className="data-[state=active]:bg-background data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none"
                   >
-                    <FileText className="w-4 h-4 mr-2" />
                     <span className="max-w-[150px] truncate">{file.file.name}</span>
                   </TabsTrigger>
                 ))
@@ -148,7 +146,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         </div>
 
         {/* CAD Viewer Area */}
-        <div className="flex-1 p-4 min-h-[350px]">
+        <div className="h-[500px] p-4">
           <div className="h-full rounded-lg border bg-muted/20 overflow-hidden">
             {selectedFile.meshData ? (
               <CADViewer
