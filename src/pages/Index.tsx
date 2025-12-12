@@ -225,14 +225,14 @@ const Index = () => {
           {/* Infinite Scroll Strip */}
           <div 
             ref={marqueeRef}
-            className="relative w-full overflow-x-auto group cursor-grab scrollbar-hide"
+            className="relative w-full overflow-x-auto group cursor-grab select-none"
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onMouseMove={handleMouseMove}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            <div className={`flex whitespace-nowrap ${isDragging ? '' : 'animate-marquee'} hover:[animation-play-state:paused]`}>
+            <div className={`flex whitespace-nowrap select-none ${isDragging ? '' : 'animate-marquee'} hover:[animation-play-state:paused]`}>
               {/* First set of items */}
               {capabilities.map((capability, index) => (
                 <div 
