@@ -331,7 +331,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-center pt-2">
                 <Button 
                   onClick={handleSubmit} 
                   disabled={!isFormValid() || isSubmitting} 
