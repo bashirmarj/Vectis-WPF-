@@ -21,6 +21,241 @@ interface QuoteEmailRequest {
   quoteNumber: string;
 }
 
+// Unified email template generator
+function generateUnifiedEmailTemplate(options: {
+  heroTitle: string;
+  heroSubtitle: string;
+  quoteNumber: string;
+  statusStep: 1 | 2 | 3;
+  detailsContent: string;
+  lineItemsContent?: string;
+  timelineText?: string;
+  showStatusTracker?: boolean;
+  footerText?: string;
+}): string {
+  const {
+    heroTitle,
+    heroSubtitle,
+    quoteNumber,
+    statusStep,
+    detailsContent,
+    lineItemsContent,
+    timelineText,
+    showStatusTracker = true,
+    footerText
+  } = options;
+
+  const statusTracker = showStatusTracker ? `
+    <!-- 2. Visual Status Tracker -->
+    <div style="background-color: rgba(248, 250, 252, 0.9); padding: 25px 20px; border-bottom: 1px solid #e2e8f0; text-align: center;">
+      <div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
+        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+        <span style="font-size: 11px; color: ${statusStep >= 1 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Received</span>
+      </div><!--
+      --><div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
+        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+        <span style="font-size: 11px; color: ${statusStep >= 2 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Reviewing</span>
+      </div><!--
+      --><div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
+        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+        <span style="font-size: 11px; color: ${statusStep >= 3 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Quote Ready</span>
+      </div>
+    </div>
+  ` : '';
+
+  const timelineBox = timelineText ? `
+    <!-- Timeline / Next Steps -->
+    <div style="margin-top: 30px; text-align: center; padding: 20px; background-color: rgba(255, 251, 235, 0.9); border: 1px solid #fcd34d; border-radius: 6px;">
+      <p style="color: #92400e; font-size: 14px; font-weight: 500; margin: 0;">
+        ${timelineText}
+      </p>
+    </div>
+  ` : '';
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${heroTitle}</title>
+      <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+      <![endif]-->
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f4f9; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+
+    <div style="width: 100%; table-layout: fixed; background-color: #f1f4f9; padding-bottom: 40px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="center">
+            
+            <!-- Spacer -->
+            <div style="height: 40px;"></div>
+
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765512246/LOGO_edi8ss.png'); background-repeat: no-repeat; background-position: center 120px; background-size: 80%;">
+              <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
+              
+                <!-- 1. Brand Header -->
+                <div style="background-color: #000000; padding: 30px 40px; text-align: center; position: relative; z-index: 2;">
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td align="center" style="vertical-align: middle;">
+                        <img src="https://res.cloudinary.com/dbcfeio6b/image/upload/v1765508292/output-onlinepngtools-removebg-preview_1_kkhayz.png" alt="VM Logo" width="88" style="display: inline-block; vertical-align: middle; margin-right: 15px; height: auto; border: 0;">
+                        <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; display: inline-block; vertical-align: middle;">Vectis Manufacturing</span>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+
+                ${statusTracker}
+
+                <!-- 3. Hero Section -->
+                <div style="padding: 40px 40px 20px 40px; text-align: center;">
+                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: #d1fae5; margin-bottom: 20px; line-height: 64px;">
+                    <span style="font-size: 32px; color: #10b981; line-height: 64px; font-family: Arial, sans-serif;">&#10003;</span>
+                  </div>
+                  
+                  <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 10px 0;">${heroTitle}</h2>
+                  <p style="color: #64748b; font-size: 16px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                </div>
+
+                <!-- 4. Content & Details -->
+                <div style="padding: 0 40px 40px 40px;">
+                  
+                  <!-- Reference Number Block -->
+                  <div style="text-align: center; margin-bottom: 25px;">
+                    <span style="background: #e2e8f0; color: #475569; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">REF: ${quoteNumber}</span>
+                  </div>
+
+                  <!-- Details "Receipt" Card -->
+                  <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 25px; overflow: hidden;">
+                    <div style="background-color: rgba(239, 246, 255, 0.9); padding: 12px 20px; border-bottom: 1px solid #dbeafe;">
+                      <h3 style="color: #1e40af; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Quote Details</h3>
+                    </div>
+                    
+                    ${detailsContent}
+                  </div>
+
+                  ${lineItemsContent || ''}
+
+                  ${timelineBox}
+
+                  <p style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
+                    Questions about this quote? <a href="mailto:belmarj@vectismanufacturing.com" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Reply to this email</a>
+                  </p>
+
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #f1f4f9; padding: 30px; text-align: center; font-size: 12px; color: #94a3b8;">
+              <p style="margin-bottom: 10px;">&copy; ${new Date().getFullYear()} Vectis Manufacturing. All rights reserved.</p>
+              ${footerText ? `<p>${footerText}</p>` : ''}
+            </div>
+
+            <!-- Spacer -->
+            <div style="height: 40px;"></div>
+
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    </body>
+    </html>
+  `;
+}
+
+// Helper to generate detail rows
+function generateDetailRow(label: string, value: string): string {
+  return `
+    <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
+      <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left; width: 40%;">${label}</span>
+      <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right; width: 60%; text-align: right;">${value}</span>
+      <div style="clear: both;"></div>
+    </div>
+  `;
+}
+
+// Helper to generate line items table
+function generateLineItemsTable(lineItems: any[]): string {
+  const rows = lineItems.map(item => `
+    <tr>
+      <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155;">${item.file_name}</td>
+      <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; text-align: center;">${item.quantity}</td>
+      <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; text-align: right;">$${Number(item.unit_price || 0).toFixed(2)}</td>
+      <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; text-align: right; font-weight: 600;">$${(Number(item.unit_price || 0) * item.quantity).toFixed(2)}</td>
+    </tr>
+    ${item.notes ? `
+    <tr>
+      <td colspan="4" style="padding: 8px 15px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-style: italic; background-color: rgba(248, 250, 252, 0.5);">
+        ${item.notes}
+      </td>
+    </tr>
+    ` : ''}
+  `).join('');
+
+  return `
+    <!-- Line Items Table -->
+    <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 20px; overflow: hidden;">
+      <div style="background-color: rgba(239, 246, 255, 0.9); padding: 12px 20px; border-bottom: 1px solid #dbeafe;">
+        <h3 style="color: #1e40af; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Line Items</h3>
+      </div>
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <thead>
+          <tr style="background-color: rgba(241, 245, 249, 0.9);">
+            <th style="padding: 12px 15px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Part</th>
+            <th style="padding: 12px 15px; text-align: center; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Qty</th>
+            <th style="padding: 12px 15px; text-align: right; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Unit Price</th>
+            <th style="padding: 12px 15px; text-align: right; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// Helper to generate totals section
+function generateTotalsSection(quote: any): string {
+  return `
+    <!-- Totals Section -->
+    <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 20px; overflow: hidden;">
+      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
+        <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left;">Subtotal</span>
+        <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right;">$${Number(quote.subtotal).toFixed(2)}</span>
+        <div style="clear: both;"></div>
+      </div>
+      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
+        <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left;">Shipping</span>
+        <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right;">$${Number(quote.shipping_cost).toFixed(2)}</span>
+        <div style="clear: both;"></div>
+      </div>
+      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
+        <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left;">Tax (${Number(quote.tax_rate).toFixed(2)}%)</span>
+        <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right;">$${Number(quote.tax_amount).toFixed(2)}</span>
+        <div style="clear: both;"></div>
+      </div>
+      <div style="padding: 15px 20px; background-color: rgba(16, 185, 129, 0.1);">
+        <span style="color: #1e293b; font-size: 15px; font-weight: 700; float: left;">Total</span>
+        <span style="color: #10b981; font-size: 18px; font-weight: 700; float: right;">$${Number(quote.total_amount).toFixed(2)} ${quote.currency}</span>
+        <div style="clear: both;"></div>
+      </div>
+    </div>
+  `;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -55,124 +290,49 @@ const handler = async (req: Request): Promise<Response> => {
       throw lineItemsError;
     }
 
-    // Build email HTML
-    const lineItemsHtml = (lineItems || []).map(item => `
-      <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.file_name}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${Number(item.unit_price || 0).toFixed(2)}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${(Number(item.unit_price || 0) * item.quantity).toFixed(2)}</td>
-      </tr>
-      ${item.notes ? `
-      <tr>
-        <td colspan="4" style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 0.875rem; color: #6b7280;">
-          <em>${item.notes}</em>
-        </td>
-      </tr>
-      ` : ''}
-    `).join('');
-
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #ffffff;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <img src="https://inqabwlmvrvqsdrgskju.supabase.co/storage/v1/object/public/logos/logo-email.png" alt="Vectis Manufacturing" style="height: 60px; width: auto;" />
-            </div>
-            <div style="margin-bottom: 30px;">
-              <div style="font-size: 18px; font-weight: bold; color: #000000; margin-bottom: 20px;">VECTIS MANUFACTURING</div>
-            </div>
-
-            <div style="font-size: 14px; line-height: 1.6; color: #000000; margin-bottom: 30px;">
-              Hello ${customerName}, Thank you for your quotation request. We're pleased to provide you with the following quote for your custom manufacturing project.
-            </div>
-
-            <!-- Quote Summary -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; width: 180px;">Quote Number</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${quoteNumber}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Date</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${new Date().toLocaleDateString()}</td>
-              </tr>
-              ${quote.estimated_lead_time_days ? `
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Estimated Lead Time</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${quote.estimated_lead_time_days} business days</td>
-              </tr>` : ''}
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Valid Until</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${new Date(quote.valid_until).toLocaleDateString()}</td>
-              </tr>
-            </table>
-
-            <!-- Line Items Table -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-              <thead>
-                <tr>
-                  <th style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; text-align: left; font-size: 14px; font-weight: normal;">Part</th>
-                  <th style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; text-align: center; font-size: 14px; font-weight: normal;">Qty</th>
-                  <th style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; text-align: right; font-size: 14px; font-weight: normal;">Unit Price</th>
-                  <th style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; text-align: right; font-size: 14px; font-weight: normal;">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lineItemsHtml}
-              </tbody>
-            </table>
-
-            <!-- Totals -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; width: 180px;">Subtotal</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; text-align: right; color: #000000;">$${Number(quote.subtotal).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Shipping</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; text-align: right; color: #000000;">$${Number(quote.shipping_cost).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Tax (${Number(quote.tax_rate).toFixed(2)}%)</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; text-align: right; color: #000000;">$${Number(quote.tax_amount).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; font-weight: bold;">Total</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; text-align: right; font-weight: bold; color: #000000;">$${Number(quote.total_amount).toFixed(2)} ${quote.currency}</td>
-              </tr>
-            </table>
-
-            ${quote.notes ? `
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-              <tr>
-                <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; vertical-align: top; width: 180px;">Additional Notes</td>
-                <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000; white-space: pre-line;">${quote.notes}</td>
-              </tr>
-            </table>
-            ` : ''}
-
-            <div style="font-size: 14px; line-height: 1.6; color: #000000; margin-bottom: 30px;">
-              If you have any questions or would like to proceed with this order, please reply to this email or contact us directly.
-            </div>
-
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #cccccc; font-size: 12px; color: #666666;">
-              Thank you for choosing Vectis Manufacturing.
-            </div>
-          </div>
-        </body>
-      </html>
+    // Generate quote details content
+    const detailsContent = `
+      ${generateDetailRow('Quote Number', quoteNumber)}
+      ${generateDetailRow('Date', new Date().toLocaleDateString())}
+      ${quote.estimated_lead_time_days ? generateDetailRow('Estimated Lead Time', `${quote.estimated_lead_time_days} business days`) : ''}
+      ${generateDetailRow('Valid Until', new Date(quote.valid_until).toLocaleDateString())}
     `;
+
+    // Build line items and totals content
+    const lineItemsContent = `
+      ${generateLineItemsTable(lineItems || [])}
+      ${generateTotalsSection(quote)}
+      ${quote.notes ? `
+        <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px 20px; margin-top: 20px;">
+          <span style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Additional Notes</span>
+          <p style="color: #334155; font-size: 14px; margin: 0; line-height: 1.6; white-space: pre-line;">${quote.notes}</p>
+        </div>
+      ` : ''}
+    `;
+
+    // Calculate days until expiry
+    const validUntil = new Date(quote.valid_until);
+    const today = new Date();
+    const daysUntilExpiry = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const expiryText = daysUntilExpiry > 0 
+      ? `&#128197; This quote is valid for <strong>${daysUntilExpiry} days</strong>`
+      : `&#9888; This quote has expired`;
+
+    const emailHtml = generateUnifiedEmailTemplate({
+      heroTitle: 'Your Quote is Ready',
+      heroSubtitle: `Hello <strong>${customerName}</strong>,<br>We've completed your custom manufacturing quote.`,
+      quoteNumber: quoteNumber,
+      statusStep: 3,
+      detailsContent: detailsContent,
+      lineItemsContent: lineItemsContent,
+      timelineText: expiryText,
+      footerText: 'Thank you for choosing Vectis Manufacturing.'
+    });
 
     console.log('Sending email to:', customerEmail);
 
     const emailResponse = await resend.emails.send({
-      from: "Manufacturing Quote <belmarj@vectismanufacturing.com>",
+      from: "Vectis Manufacturing <belmarj@vectismanufacturing.com>",
       to: [customerEmail],
       subject: `Your Quote ${quoteNumber} is Ready`,
       html: emailHtml
