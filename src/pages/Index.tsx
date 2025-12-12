@@ -13,6 +13,7 @@ import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
 import capabilitiesImg from "@/assets/capabilities-bg.jpg";
+import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
 import darkSectionBg from "@/assets/dark-section-bg.png";
 
 const Index = () => {
@@ -42,7 +43,7 @@ const Index = () => {
     { 
       title: "CNC MACHINING", 
       description: "5-axis precision milling and turning for complex geometries.",
-      image: capabilitiesImg
+      image: cncMachiningImg
     },
     { 
       title: "WIRE EDM", 
