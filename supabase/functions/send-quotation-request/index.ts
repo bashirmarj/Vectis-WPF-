@@ -103,7 +103,16 @@ function encodeEmailWithAttachments(
   // Convert to base64url (Gmail API requirement)
   const encoder = new TextEncoder();
   const bytes = encoder.encode(rawMessage);
-  const base64 = btoa(String.fromCharCode(...bytes));
+  
+  // Process in chunks to avoid stack overflow with large attachments
+  const chunkSize = 8192;
+  let binaryString = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binaryString += String.fromCharCode(...chunk);
+  }
+  
+  const base64 = btoa(binaryString);
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
