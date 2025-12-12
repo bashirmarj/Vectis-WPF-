@@ -8,10 +8,6 @@ import { EngineeringChatWidget } from "./components/chat/EngineeringChatWidget";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Services from "./pages/Services";
-import PrototypeDesign from "./pages/services/PrototypeDesign";
-import CustomParts from "./pages/services/CustomParts";
-import PrototypingServices from "./pages/services/PrototypingServices";
-import TurnkeySolutions from "./pages/services/TurnkeySolutions";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
@@ -34,10 +30,6 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
-            <Route path="/services/prototype-design" element={<PrototypeDesign />} />
-            <Route path="/services/custom-parts" element={<CustomParts />} />
-            <Route path="/services/prototyping" element={<PrototypingServices />} />
-            <Route path="/services/turnkey-solutions" element={<TurnkeySolutions />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />

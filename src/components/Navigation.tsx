@@ -55,20 +55,7 @@ const Navigation = () => {
     }]
   }, {
     name: "Services",
-    path: "/services",
-    subItems: [{
-      name: "Prototype Design",
-      path: "/services/prototype-design"
-    }, {
-      name: "Custom Parts & Assemblies",
-      path: "/services/custom-parts"
-    }, {
-      name: "Prototyping Services",
-      path: "/services/prototyping"
-    }, {
-      name: "Turnkey Solutions",
-      path: "/services/turnkey-solutions"
-    }]
+    path: "/services"
   }, {
     name: "Contact",
     path: "/contact"
