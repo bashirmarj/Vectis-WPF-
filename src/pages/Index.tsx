@@ -80,7 +80,7 @@ const Index = () => {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!marqueeRef.current) return;
     setIsDragging(true);
-    setStartX(e.pageX - marqueeRef.current.offsetLeft);
+    setStartX(e.pageX);
     setScrollLeft(marqueeRef.current.scrollLeft);
     marqueeRef.current.style.cursor = "grabbing";
   };
@@ -95,8 +95,7 @@ const Index = () => {
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !marqueeRef.current) return;
     e.preventDefault();
-    const x = e.pageX - marqueeRef.current.offsetLeft;
-    const walk = (x - startX) * 0.8;
+    const walk = (e.pageX - startX) * 0.8;
     marqueeRef.current.scrollLeft = scrollLeft - walk;
   };
 
