@@ -78,7 +78,12 @@ const Index = () => {
   const [startX, setStartX] = useState(0);
   const [animationOffset, setAnimationOffset] = useState(0);
   const [baseTranslateX, setBaseTranslateX] = useState(0);
+  const [resumeDelay, setResumeDelay] = useState(0);
   const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Total width of one set of cards (5 cards * (450px + 32px margin) = 2410px)
+  const TOTAL_MARQUEE_WIDTH = 2410;
+  const ANIMATION_DURATION = 35; // seconds
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!marqueeRef.current) return;
@@ -110,6 +115,17 @@ const Index = () => {
     if (marqueeRef.current) {
       marqueeRef.current.style.cursor = "grab";
     }
+
+    // Calculate final position and convert to animation delay
+    const finalPosition = baseTranslateX + animationOffset;
+    // Normalize position to be within one cycle (0 to -TOTAL_MARQUEE_WIDTH)
+    let normalizedPosition = finalPosition % TOTAL_MARQUEE_WIDTH;
+    if (normalizedPosition > 0) normalizedPosition -= TOTAL_MARQUEE_WIDTH;
+    
+    // Convert position to time offset (negative delay to "skip ahead")
+    const positionPercent = Math.abs(normalizedPosition) / TOTAL_MARQUEE_WIDTH;
+    const timeOffset = positionPercent * ANIMATION_DURATION;
+    setResumeDelay(-timeOffset);
 
     // Resume animation after 2 seconds
     resumeTimeoutRef.current = setTimeout(() => {
@@ -253,8 +269,15 @@ const Index = () => {
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <div
-              className={`flex whitespace-nowrap select-none ${isPaused ? "" : "animate-marquee"} hover:[animation-play-state:paused]`}
-              style={isPaused ? { transform: `translateX(${baseTranslateX + animationOffset}px)` } : undefined}
+              className="flex whitespace-nowrap select-none"
+              style={
+                isPaused
+                  ? { transform: `translateX(${baseTranslateX + animationOffset}px)` }
+                  : {
+                      animation: `marquee ${ANIMATION_DURATION}s linear infinite`,
+                      animationDelay: `${resumeDelay}s`,
+                    }
+              }
             >
               {/* First set of items */}
               {capabilities.map((capability, index) => (
