@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -8,7 +9,6 @@ import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParallaxSection from "@/components/home/ParallaxSection";
 import ProcessTimeline from "@/components/home/ProcessTimeline";
 import ScrollIndicator from "@/components/home/ScrollIndicator";
-
 import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
@@ -51,7 +51,8 @@ const Index = () => {
     { 
       title: "WIRE EDM", 
       description: "Complex geometries with tight tolerances in hardened materials.",
-      image: wireEdmImg
+      image: wireEdmImg,
+      imageStyle: "bg-[length:70%] bg-center"
     },
     { 
       title: "SHEET METAL", 
@@ -68,8 +69,36 @@ const Index = () => {
       description: "Precision die casting service for customized metal parts",
       image: dieCastingImg
     },
-  ];
+];
 
+  // Drag to scroll state
+  const marqueeRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!marqueeRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - marqueeRef.current.offsetLeft);
+    setScrollLeft(marqueeRef.current.scrollLeft);
+    marqueeRef.current.style.cursor = 'grabbing';
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    if (marqueeRef.current) {
+      marqueeRef.current.style.cursor = 'grab';
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !marqueeRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - marqueeRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    marqueeRef.current.scrollLeft = scrollLeft - walk;
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-black">
@@ -194,8 +223,16 @@ const Index = () => {
           </div>
           
           {/* Infinite Scroll Strip */}
-          <div className="relative w-full overflow-hidden group">
-            <div className="flex whitespace-nowrap animate-marquee hover:[animation-play-state:paused]">
+          <div 
+            ref={marqueeRef}
+            className="relative w-full overflow-x-auto group cursor-grab scrollbar-hide"
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <div className={`flex whitespace-nowrap ${isDragging ? '' : 'animate-marquee'} hover:[animation-play-state:paused]`}>
               {/* First set of items */}
               {capabilities.map((capability, index) => (
                 <div 
@@ -203,7 +240,7 @@ const Index = () => {
                   className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
                 >
                   <div 
-                    className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105"
+                    className={`absolute inset-0 bg-no-repeat grayscale group-hover/card:grayscale-0 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || 'bg-cover bg-center'}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -227,7 +264,7 @@ const Index = () => {
                   className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
                 >
                   <div 
-                    className="absolute inset-0 bg-cover bg-center grayscale group-hover/card:grayscale-0 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105"
+                    className={`absolute inset-0 bg-no-repeat grayscale group-hover/card:grayscale-0 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || 'bg-cover bg-center'}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
