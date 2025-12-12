@@ -15,7 +15,7 @@ import prototypeImg from "@/assets/prototype-cnc-part.png";
 import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
 import darkSectionBg from "@/assets/dark-section-bg.png";
 import sheetMetalImg from "@/assets/sheet-metal-new.png";
-import heatTreatmentImg from "@/assets/heat-treatment.png";
+import heatTreatmentImg from "@/assets/heat-treatment-new.png";
 import dieCastingImg from "@/assets/die-casting.png";
 import wireEdmImg from "@/assets/wire-edm.png";
 
