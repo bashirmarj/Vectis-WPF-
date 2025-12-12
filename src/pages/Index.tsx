@@ -74,11 +74,28 @@ const Index = () => {
   // Drag to scroll state
   const marqueeRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!marqueeRef.current) return;
+    
+    // Get the inner animated container
+    const animatedContainer = marqueeRef.current.firstElementChild as HTMLElement;
+    if (animatedContainer) {
+      // Get current transform position
+      const computedStyle = window.getComputedStyle(animatedContainer);
+      const matrix = new DOMMatrixReadOnly(computedStyle.transform);
+      const currentTranslateX = matrix.m41;
+      
+      // Convert the negative translateX to a positive scrollLeft
+      marqueeRef.current.scrollLeft = -currentTranslateX;
+      
+      // Reset the transform to prevent double-offset
+      animatedContainer.style.transform = 'translateX(0)';
+    }
+    
     setIsDragging(true);
     setStartX(e.pageX);
     setScrollLeft(marqueeRef.current.scrollLeft);
@@ -87,6 +104,7 @@ const Index = () => {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    setIsPaused(true); // Keep animation paused after manual scroll
     if (marqueeRef.current) {
       marqueeRef.current.style.cursor = "grab";
     }
@@ -226,7 +244,7 @@ const Index = () => {
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <div
-              className={`flex whitespace-nowrap select-none ${isDragging ? "" : "animate-marquee"} hover:[animation-play-state:paused]`}
+              className={`flex whitespace-nowrap select-none ${isDragging || isPaused ? "" : "animate-marquee"} hover:[animation-play-state:paused]`}
             >
               {/* First set of items */}
               {capabilities.map((capability, index) => (
