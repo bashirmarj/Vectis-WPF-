@@ -14,7 +14,7 @@ import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
 import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
 import darkSectionBg from "@/assets/dark-section-bg.png";
-import sheetMetalImg from "@/assets/sheet-metal.png";
+import sheetMetalImg from "@/assets/sheet-metal-new.png";
 import heatTreatmentImg from "@/assets/heat-treatment.png";
 import dieCastingImg from "@/assets/die-casting.png";
 import wireEdmImg from "@/assets/wire-edm.png";
@@ -76,45 +76,54 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+  const [animationOffset, setAnimationOffset] = useState(0);
+  const [baseTranslateX, setBaseTranslateX] = useState(0);
+  const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!marqueeRef.current) return;
     
+    // Clear any pending resume timeout
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+      resumeTimeoutRef.current = null;
+    }
+    
     // Get the inner animated container
     const animatedContainer = marqueeRef.current.firstElementChild as HTMLElement;
     if (animatedContainer) {
-      // Get current transform position
+      // Capture current transform position
       const computedStyle = window.getComputedStyle(animatedContainer);
       const matrix = new DOMMatrixReadOnly(computedStyle.transform);
-      const currentTranslateX = matrix.m41;
-      
-      // Convert the negative translateX to a positive scrollLeft
-      marqueeRef.current.scrollLeft = -currentTranslateX;
-      
-      // Reset the transform to prevent double-offset
-      animatedContainer.style.transform = 'translateX(0)';
+      setBaseTranslateX(matrix.m41);
     }
     
     setIsDragging(true);
+    setIsPaused(true);
     setStartX(e.pageX);
-    setScrollLeft(marqueeRef.current.scrollLeft);
+    setAnimationOffset(0);
     marqueeRef.current.style.cursor = "grabbing";
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    setIsPaused(true); // Keep animation paused after manual scroll
     if (marqueeRef.current) {
       marqueeRef.current.style.cursor = "grab";
     }
+    
+    // Resume animation after 2 seconds
+    resumeTimeoutRef.current = setTimeout(() => {
+      setIsPaused(false);
+      setAnimationOffset(0);
+      setBaseTranslateX(0);
+    }, 2000);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !marqueeRef.current) return;
+    if (!isDragging) return;
     e.preventDefault();
-    const walk = (e.pageX - startX) * 0.8;
-    marqueeRef.current.scrollLeft = scrollLeft - walk;
+    const dragDelta = (e.pageX - startX) * 0.8;
+    setAnimationOffset(dragDelta);
   };
 
   return (
@@ -244,7 +253,8 @@ const Index = () => {
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <div
-              className={`flex whitespace-nowrap select-none ${isDragging || isPaused ? "" : "animate-marquee"} hover:[animation-play-state:paused]`}
+              className={`flex whitespace-nowrap select-none ${isPaused ? "" : "animate-marquee"} hover:[animation-play-state:paused]`}
+              style={isPaused ? { transform: `translateX(${baseTranslateX + animationOffset}px)` } : undefined}
             >
               {/* First set of items */}
               {capabilities.map((capability, index) => (
