@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -73,17 +73,63 @@ const Index = () => {
 
   // Drag to scroll state
   const marqueeRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [startX, setStartX] = useState(0);
-  const [animationOffset, setAnimationOffset] = useState(0);
-  const [baseTranslateX, setBaseTranslateX] = useState(0);
-  const [resumeStartPosition, setResumeStartPosition] = useState(0);
+  const dragStartPositionRef = useRef(0);
   const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Animation refs (using refs for performance - no re-renders)
+  const positionRef = useRef(0);
+  const animationRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
 
   // Total width of one set of cards (5 cards * (450px + 32px margin) = 2410px)
   const TOTAL_MARQUEE_WIDTH = 2410;
   const ANIMATION_DURATION = 35; // seconds
+  const SPEED = TOTAL_MARQUEE_WIDTH / (ANIMATION_DURATION * 1000); // pixels per ms
+
+  const animate = useCallback((currentTime: number) => {
+    if (!containerRef.current) return;
+
+    if (lastTimeRef.current === 0) {
+      lastTimeRef.current = currentTime;
+    }
+
+    const deltaTime = currentTime - lastTimeRef.current;
+    lastTimeRef.current = currentTime;
+
+    // Update position (move left)
+    positionRef.current -= SPEED * deltaTime;
+
+    // Loop when we've scrolled one full set
+    if (positionRef.current <= -TOTAL_MARQUEE_WIDTH) {
+      positionRef.current += TOTAL_MARQUEE_WIDTH;
+    }
+
+    // Apply transform directly to DOM (no React re-render)
+    containerRef.current.style.transform = `translateX(${positionRef.current}px)`;
+
+    animationRef.current = requestAnimationFrame(animate);
+  }, [SPEED, TOTAL_MARQUEE_WIDTH]);
+
+  const startAnimation = useCallback(() => {
+    lastTimeRef.current = 0;
+    animationRef.current = requestAnimationFrame(animate);
+  }, [animate]);
+
+  const stopAnimation = useCallback(() => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  }, []);
+
+  // Start animation on mount
+  useEffect(() => {
+    startAnimation();
+    return () => stopAnimation();
+  }, [startAnimation, stopAnimation]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!marqueeRef.current) return;
@@ -94,19 +140,12 @@ const Index = () => {
       resumeTimeoutRef.current = null;
     }
 
-    // Get the inner animated container
-    const animatedContainer = marqueeRef.current.firstElementChild as HTMLElement;
-    if (animatedContainer) {
-      // Capture current transform position
-      const computedStyle = window.getComputedStyle(animatedContainer);
-      const matrix = new DOMMatrixReadOnly(computedStyle.transform);
-      setBaseTranslateX(matrix.m41);
-    }
+    // Stop the animation immediately
+    stopAnimation();
 
     setIsDragging(true);
-    setIsPaused(true);
     setStartX(e.pageX);
-    setAnimationOffset(0);
+    dragStartPositionRef.current = positionRef.current;
     marqueeRef.current.style.cursor = "grabbing";
   };
 
@@ -116,26 +155,28 @@ const Index = () => {
       marqueeRef.current.style.cursor = "grab";
     }
 
-    // Calculate final position
-    const finalPosition = baseTranslateX + animationOffset;
-    // Normalize position to be within one cycle (0 to -TOTAL_MARQUEE_WIDTH)
-    let normalizedPosition = finalPosition % TOTAL_MARQUEE_WIDTH;
-    if (normalizedPosition > 0) normalizedPosition -= TOTAL_MARQUEE_WIDTH;
-    
-    // Store the normalized position for seamless resume
-    setResumeStartPosition(normalizedPosition);
+    // Normalize position to stay within bounds
+    positionRef.current = positionRef.current % TOTAL_MARQUEE_WIDTH;
+    if (positionRef.current > 0) {
+      positionRef.current -= TOTAL_MARQUEE_WIDTH;
+    }
 
-    // Resume animation after 2 seconds
+    // Resume animation after 2 seconds FROM CURRENT POSITION
     resumeTimeoutRef.current = setTimeout(() => {
-      setIsPaused(false);
+      startAnimation();
     }, 2000);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || !containerRef.current) return;
     e.preventDefault();
+    
     const dragDelta = (e.pageX - startX) * 0.8;
-    setAnimationOffset(dragDelta);
+    const newPosition = dragStartPositionRef.current + dragDelta;
+    
+    // Apply directly to DOM for smooth drag
+    positionRef.current = newPosition;
+    containerRef.current.style.transform = `translateX(${newPosition}px)`;
   };
 
   return (
@@ -265,15 +306,9 @@ const Index = () => {
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <div
+              ref={containerRef}
               className="flex whitespace-nowrap select-none"
-              style={
-                isPaused
-                  ? { transform: `translateX(${baseTranslateX + animationOffset}px)` }
-                  : ({
-                      '--marquee-start': `${resumeStartPosition}px`,
-                      animation: `marquee ${ANIMATION_DURATION}s linear infinite`,
-                    } as React.CSSProperties)
-              }
+              style={{ transform: 'translateX(0px)' }}
             >
               {/* First set of items */}
               {capabilities.map((capability, index) => (
