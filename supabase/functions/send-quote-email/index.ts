@@ -1,26 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 // Helper to get OAuth2 access token using refresh token
 async function getAccessToken(): Promise<string> {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: Deno.env.get('GMAIL_CLIENT_ID')!,
-      client_secret: Deno.env.get('GMAIL_CLIENT_SECRET')!,
-      refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')!,
+      grant_type: "refresh_token",
+      client_id: Deno.env.get("GMAIL_CLIENT_ID")!,
+      client_secret: Deno.env.get("GMAIL_CLIENT_SECRET")!,
+      refresh_token: Deno.env.get("GMAIL_REFRESH_TOKEN")!,
     }),
   });
   const data = await response.json();
@@ -32,17 +31,14 @@ async function getAccessToken(): Promise<string> {
 
 // Helper to send email via Gmail API
 async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
-  const response = await fetch(
-    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw: rawEmail }),
-    }
-  );
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw: rawEmail }),
+  });
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Gmail API error: ${error}`);
@@ -51,29 +47,29 @@ async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
 
 // Helper to encode email in base64url format
 function encodeEmail(to: string, subject: string, htmlBody: string): string {
-  const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
+  const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
   const boundary = `boundary_${Date.now()}`;
-  
+
   const messageParts = [
     `From: "Vectis Manufacturing" <${gmailUser}>`,
     `To: ${to}`,
     `Subject: ${subject}`,
     `MIME-Version: 1.0`,
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    '',
+    "",
     `--${boundary}`,
     `Content-Type: text/html; charset=utf-8`,
     `Content-Transfer-Encoding: base64`,
-    '',
+    "",
     btoa(unescape(encodeURIComponent(htmlBody))),
-    `--${boundary}--`
-  ].join('\r\n');
+    `--${boundary}--`,
+  ].join("\r\n");
 
   // Convert to base64url (Gmail API requirement)
   const encoder = new TextEncoder();
   const bytes = encoder.encode(messageParts);
   const base64 = btoa(String.fromCharCode(...bytes));
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 interface QuoteEmailRequest {
@@ -104,42 +100,46 @@ function generateUnifiedEmailTemplate(options: {
     lineItemsContent,
     timelineText,
     showStatusTracker = true,
-    footerText
+    footerText,
   } = options;
 
-  const statusTracker = showStatusTracker ? `
+  const statusTracker = showStatusTracker
+    ? `
     <!-- 2. Visual Status Tracker - Table-based for mobile -->
     <div style="background-color: rgba(248, 250, 252, 0.9); padding: 20px 10px; border-bottom: 1px solid #e2e8f0;">
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
         <tr>
           <td width="33%" align="center" valign="top" style="padding: 5px;">
-            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? "#10b981" : "#cbd5e1"}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? "box-shadow: 0 0 0 4px #d1fae5;" : ""}"></span>
             <br>
-            <span style="font-size: 10px; color: ${statusStep >= 1 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Received</span>
+            <span style="font-size: 10px; color: ${statusStep >= 1 ? "#10b981" : "#64748b"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Received</span>
           </td>
           <td width="33%" align="center" valign="top" style="padding: 5px;">
-            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? "#10b981" : "#cbd5e1"}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? "box-shadow: 0 0 0 4px #d1fae5;" : ""}"></span>
             <br>
-            <span style="font-size: 10px; color: ${statusStep >= 2 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Reviewing</span>
+            <span style="font-size: 10px; color: ${statusStep >= 2 ? "#10b981" : "#64748b"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Reviewing</span>
           </td>
           <td width="33%" align="center" valign="top" style="padding: 5px;">
-            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? "#10b981" : "#cbd5e1"}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? "box-shadow: 0 0 0 4px #d1fae5;" : ""}"></span>
             <br>
-            <span style="font-size: 10px; color: ${statusStep >= 3 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quote Ready</span>
+            <span style="font-size: 10px; color: ${statusStep >= 3 ? "#10b981" : "#64748b"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quote Ready</span>
           </td>
         </tr>
       </table>
     </div>
-  ` : '';
+  `
+    : "";
 
-  const timelineBox = timelineText ? `
+  const timelineBox = timelineText
+    ? `
     <!-- Timeline / Next Steps -->
     <div style="margin-top: 30px; text-align: center; padding: 20px; background-color: rgba(255, 251, 235, 0.9); border: 1px solid #fcd34d; border-radius: 6px;">
       <p style="color: #92400e; font-size: 14px; font-weight: 500; margin: 0;">
         ${timelineText}
       </p>
     </div>
-  ` : '';
+  `
+    : "";
 
   return `
     <!DOCTYPE html>
@@ -168,7 +168,7 @@ function generateUnifiedEmailTemplate(options: {
             <!-- Spacer -->
             <div style="height: 40px;"></div>
 
-            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 22px; background-size: 80%;">
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 60px; background-size: 80%;">
               <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
               
                 <!-- 1. Brand Header - Table-based for mobile -->
@@ -216,7 +216,7 @@ function generateUnifiedEmailTemplate(options: {
                     ${detailsContent}
                   </div>
 
-                  ${lineItemsContent || ''}
+                  ${lineItemsContent || ""}
 
                   ${timelineBox}
 
@@ -232,7 +232,7 @@ function generateUnifiedEmailTemplate(options: {
             <!-- Footer -->
             <div style="background-color: #f1f4f9; padding: 30px; text-align: center; font-size: 12px; color: #94a3b8;">
               <p style="margin-bottom: 10px;">&copy; ${new Date().getFullYear()} Vectis Manufacturing. All rights reserved.</p>
-              ${footerText ? `<p>${footerText}</p>` : ''}
+              ${footerText ? `<p>${footerText}</p>` : ""}
             </div>
 
             <!-- Spacer -->
@@ -262,21 +262,29 @@ function generateDetailRow(label: string, value: string): string {
 
 // Helper to generate line items table
 function generateLineItemsTable(lineItems: any[]): string {
-  const rows = lineItems.map(item => `
+  const rows = lineItems
+    .map(
+      (item) => `
     <tr>
       <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155;">${item.file_name}</td>
       <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; text-align: center;">${item.quantity}</td>
       <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; text-align: right;">$${Number(item.unit_price || 0).toFixed(2)}</td>
       <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; text-align: right; font-weight: 600;">$${(Number(item.unit_price || 0) * item.quantity).toFixed(2)}</td>
     </tr>
-    ${item.notes ? `
+    ${
+      item.notes
+        ? `
     <tr>
       <td colspan="4" style="padding: 8px 15px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-style: italic; background-color: rgba(248, 250, 252, 0.5);">
         ${item.notes}
       </td>
     </tr>
-    ` : ''}
-  `).join('');
+    `
+        : ""
+    }
+  `,
+    )
+    .join("");
 
   return `
     <!-- Line Items Table -->
@@ -336,112 +344,106 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { quotationId, customerEmail, customerName, quoteNumber }: QuoteEmailRequest = await req.json();
 
-    console.log('Fetching quote data for:', quoteNumber);
+    console.log("Fetching quote data for:", quoteNumber);
 
     // Fetch quote details
     const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
-      .select('*')
-      .eq('quotation_id', quotationId)
+      .from("quotes")
+      .select("*")
+      .eq("quotation_id", quotationId)
       .single();
 
     if (quoteError || !quote) {
-      console.error('Error fetching quote:', quoteError);
-      throw new Error('Quote not found');
+      console.error("Error fetching quote:", quoteError);
+      throw new Error("Quote not found");
     }
 
     // Fetch line items
     const { data: lineItems, error: lineItemsError } = await supabase
-      .from('quote_line_items')
-      .select('*')
-      .eq('quotation_id', quotationId)
-      .order('created_at', { ascending: true });
+      .from("quote_line_items")
+      .select("*")
+      .eq("quotation_id", quotationId)
+      .order("created_at", { ascending: true });
 
     if (lineItemsError) {
-      console.error('Error fetching line items:', lineItemsError);
+      console.error("Error fetching line items:", lineItemsError);
       throw lineItemsError;
     }
 
     // Generate quote details content
     const detailsContent = `
-      ${generateDetailRow('Quote Number', quoteNumber)}
-      ${generateDetailRow('Date', new Date().toLocaleDateString())}
-      ${quote.estimated_lead_time_days ? generateDetailRow('Estimated Lead Time', `${quote.estimated_lead_time_days} business days`) : ''}
-      ${generateDetailRow('Valid Until', new Date(quote.valid_until).toLocaleDateString())}
+      ${generateDetailRow("Quote Number", quoteNumber)}
+      ${generateDetailRow("Date", new Date().toLocaleDateString())}
+      ${quote.estimated_lead_time_days ? generateDetailRow("Estimated Lead Time", `${quote.estimated_lead_time_days} business days`) : ""}
+      ${generateDetailRow("Valid Until", new Date(quote.valid_until).toLocaleDateString())}
     `;
 
     // Build line items and totals content
     const lineItemsContent = `
       ${generateLineItemsTable(lineItems || [])}
       ${generateTotalsSection(quote)}
-      ${quote.notes ? `
+      ${
+        quote.notes
+          ? `
         <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px 20px; margin-top: 20px;">
           <span style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Additional Notes</span>
           <p style="color: #334155; font-size: 14px; margin: 0; line-height: 1.6; white-space: pre-line;">${quote.notes}</p>
         </div>
-      ` : ''}
+      `
+          : ""
+      }
     `;
 
     // Calculate days until expiry
     const validUntil = new Date(quote.valid_until);
     const today = new Date();
     const daysUntilExpiry = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const expiryText = daysUntilExpiry > 0 
-      ? `&#128197; This quote is valid for <strong>${daysUntilExpiry} days</strong>`
-      : `&#9888; This quote has expired`;
+    const expiryText =
+      daysUntilExpiry > 0
+        ? `&#128197; This quote is valid for <strong>${daysUntilExpiry} days</strong>`
+        : `&#9888; This quote has expired`;
 
     const emailHtml = generateUnifiedEmailTemplate({
-      heroTitle: 'Your Quote is Ready',
+      heroTitle: "Your Quote is Ready",
       heroSubtitle: `Hello <strong>${customerName}</strong>,<br>We've completed your custom manufacturing quote.`,
       quoteNumber: quoteNumber,
       statusStep: 3,
       detailsContent: detailsContent,
       lineItemsContent: lineItemsContent,
       timelineText: expiryText,
-      footerText: 'Thank you for choosing Vectis Manufacturing.'
+      footerText: "Thank you for choosing Vectis Manufacturing.",
     });
 
-    console.log('Sending email to:', customerEmail);
+    console.log("Sending email to:", customerEmail);
 
     // Get access token and send email
     const accessToken = await getAccessToken();
-    const encodedMessage = encodeEmail(
-      customerEmail,
-      `Your Quote ${quoteNumber} is Ready`,
-      emailHtml
-    );
+    const encodedMessage = encodeEmail(customerEmail, `Your Quote ${quoteNumber} is Ready`, emailHtml);
 
     await sendEmail(accessToken, encodedMessage);
 
-    console.log('Email sent successfully via Gmail API');
+    console.log("Email sent successfully via Gmail API");
 
     // Update quote with sent_at timestamp
     const { error: updateError } = await supabase
-      .from('quotes')
+      .from("quotes")
       .update({ sent_at: new Date().toISOString() })
-      .eq('id', quote.id);
+      .eq("id", quote.id);
 
     if (updateError) {
-      console.error('Error updating quote sent_at:', updateError);
+      console.error("Error updating quote sent_at:", updateError);
     }
 
-    return new Response(
-      JSON.stringify({ success: true, message: 'Quote email sent successfully' }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
-
+    return new Response(JSON.stringify({ success: true, message: "Quote email sent successfully" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   } catch (error: any) {
     console.error("Error in send-quote-email function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
