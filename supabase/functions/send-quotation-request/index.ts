@@ -294,8 +294,8 @@ function generateUnifiedEmailTemplate(options: {
                 ${statusTracker}
 
                 <!-- 3. Hero Section -->
-                <div style="padding: 30px 20px 15px 20px; text-align: center;">
-                  <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 15px; line-height: 56px;">
+                <div style="padding: 30px 20px 15px 20px; text-align: center; background-color: transparent;">
+                  <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: rgba(224, 242, 254, 0.85); margin-bottom: 15px; line-height: 56px;">
                     <span style="font-size: 28px; color: #0284c7; line-height: 56px; font-family: Arial, sans-serif;">&#10003;</span>
                   </div>
                   
@@ -304,8 +304,8 @@ function generateUnifiedEmailTemplate(options: {
                 </div>
 
                 <!-- Reference Number Block -->
-                <div style="text-align: center; padding-bottom: 25px;">
-                  <span style="background: #e2e8f0; color: #475569; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">REF: ${quoteNumber}</span>
+                <div style="text-align: center; padding-bottom: 25px; background-color: transparent;">
+                  <span style="background: rgba(226, 232, 240, 0.85); color: #475569; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">REF: ${quoteNumber}</span>
                 </div>
 
                 <!-- 4. Content & Details -->

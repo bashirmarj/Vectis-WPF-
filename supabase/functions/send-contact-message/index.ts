@@ -141,8 +141,8 @@ function generateContactEmailTemplate(options: {
                 </div>
 
                 <!-- 3. Hero Section -->
-                <div style="padding: 40px 40px 20px 40px; text-align: center;">
-                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 20px; line-height: 64px;">
+                <div style="padding: 40px 40px 20px 40px; text-align: center; background-color: transparent;">
+                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: rgba(224, 242, 254, 0.85); margin-bottom: 20px; line-height: 64px;">
                     <span style="font-size: 32px; color: #0284c7; line-height: 64px; font-family: Arial, sans-serif;">&#9993;</span>
                   </div>
                   
