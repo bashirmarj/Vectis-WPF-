@@ -112,8 +112,8 @@ export default {
           "50%": { boxShadow: "0 0 0 15px hsl(var(--primary) / 0)" },
         },
         "marquee": {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(calc(-1 * (450px + 32px) * 5))" },
+          "0%": { transform: "translateX(var(--marquee-start, 0px))" },
+          "100%": { transform: "translateX(calc(var(--marquee-start, 0px) - (450px + 32px) * 5))" },
         },
       },
       animation: {

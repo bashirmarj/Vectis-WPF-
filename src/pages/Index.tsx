@@ -78,7 +78,7 @@ const Index = () => {
   const [startX, setStartX] = useState(0);
   const [animationOffset, setAnimationOffset] = useState(0);
   const [baseTranslateX, setBaseTranslateX] = useState(0);
-  const [resumeDelay, setResumeDelay] = useState(0);
+  const [resumeStartPosition, setResumeStartPosition] = useState(0);
   const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Total width of one set of cards (5 cards * (450px + 32px margin) = 2410px)
@@ -116,22 +116,18 @@ const Index = () => {
       marqueeRef.current.style.cursor = "grab";
     }
 
-    // Calculate final position and convert to animation delay
+    // Calculate final position
     const finalPosition = baseTranslateX + animationOffset;
     // Normalize position to be within one cycle (0 to -TOTAL_MARQUEE_WIDTH)
     let normalizedPosition = finalPosition % TOTAL_MARQUEE_WIDTH;
     if (normalizedPosition > 0) normalizedPosition -= TOTAL_MARQUEE_WIDTH;
     
-    // Convert position to time offset (negative delay to "skip ahead")
-    const positionPercent = Math.abs(normalizedPosition) / TOTAL_MARQUEE_WIDTH;
-    const timeOffset = positionPercent * ANIMATION_DURATION;
-    setResumeDelay(-timeOffset);
+    // Store the normalized position for seamless resume
+    setResumeStartPosition(normalizedPosition);
 
     // Resume animation after 2 seconds
     resumeTimeoutRef.current = setTimeout(() => {
       setIsPaused(false);
-      setAnimationOffset(0);
-      setBaseTranslateX(0);
     }, 2000);
   };
 
@@ -273,10 +269,10 @@ const Index = () => {
               style={
                 isPaused
                   ? { transform: `translateX(${baseTranslateX + animationOffset}px)` }
-                  : {
+                  : ({
+                      '--marquee-start': `${resumeStartPosition}px`,
                       animation: `marquee ${ANIMATION_DURATION}s linear infinite`,
-                      animationDelay: `${resumeDelay}s`,
-                    }
+                    } as React.CSSProperties)
               }
             >
               {/* First set of items */}
