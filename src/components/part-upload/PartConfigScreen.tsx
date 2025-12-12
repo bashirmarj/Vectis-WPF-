@@ -3,15 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronLeft, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen, FileText } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
-// FeatureTree import removed - feature recognition disabled for faster processing
-import { RoutingEditor } from "./RoutingEditor";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface FileWithData {
@@ -81,9 +77,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
   onSelectFile,
   isSubmitting,
 }) => {
-  const [contactFormExpanded, setContactFormExpanded] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  // selectedFeature state removed - feature recognition disabled
   const [contactInfo, setContactInfo] = useState({
     name: "",
     email: "",
@@ -116,19 +110,19 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       <ResizablePanelGroup direction="horizontal" className="h-screen">
-        {/* Collapsible Left Sidebar */}
+        {/* Collapsible Left Sidebar - Compact Configuration */}
         {!isSidebarCollapsed && (
           <>
-            <ResizablePanel defaultSize={30} minSize={20} maxSize={50} className="bg-white">
+            <ResizablePanel defaultSize={25} minSize={18} maxSize={35} className="bg-background">
               <div className="h-full overflow-y-auto">
-                <div className="p-6 space-y-6">
+                <div className="p-4 space-y-4">
                   {/* Header with collapse button */}
                   <div className="flex items-center justify-between">
-                    <Button variant="ghost" onClick={onBack} className="flex-1 justify-start">
-                      <ChevronLeft className="w-4 h-4 mr-2" />
-                      Back to Upload
+                    <Button variant="ghost" size="sm" onClick={onBack} className="flex-1 justify-start">
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Back
                     </Button>
                     <Button
                       variant="ghost"
@@ -140,323 +134,289 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     </Button>
                   </div>
 
-                  {/* File Selection */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Parts ({files.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {files.map((file, index) => (
-                        <button
-                          key={index}
-                          onClick={() => onSelectFile(index)}
-                          className={`w-full p-3 text-left rounded-lg border transition-colors ${index === selectedFileIndex
-                              ? "bg-blue-50 border-blue-500"
-                              : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                  {/* Compact Configuration Section */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground">Configuration</h3>
+                    
+                    {/* Material Selection */}
+                    <div className="space-y-1">
+                      <Label htmlFor="material" className="text-xs">Material *</Label>
+                      <Select
+                        value={selectedFile.material || ""}
+                        onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
+                      >
+                        <SelectTrigger id="material" className="h-9">
+                          <SelectValue placeholder="Select material" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materials.map((material) => (
+                            <SelectItem key={material} value={material}>
+                              {material}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="space-y-1">
+                      <Label htmlFor="quantity" className="text-xs">Quantity *</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        className="h-9"
+                        value={selectedFile.quantity}
+                        onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
+                      />
+                    </div>
+
+                    {/* Process (Optional) */}
+                    <div className="space-y-1">
+                      <Label htmlFor="process" className="text-xs">Preferred Process</Label>
+                      <Select
+                        value={selectedFile.process || "auto"}
+                        onValueChange={(value) =>
+                          onUpdateFile(selectedFileIndex, { process: value === "auto" ? undefined : value })
+                        }
+                      >
+                        <SelectTrigger id="process" className="h-9">
+                          <SelectValue placeholder="Auto-select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Auto-select</SelectItem>
+                          {processes.map((process) => (
+                            <SelectItem key={process} value={process}>
+                              {process}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Multiple files indicator */}
+                  {files.length > 1 && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {files.length} files uploaded
+                      </p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {files.map((file, index) => (
+                          <button
+                            key={index}
+                            onClick={() => onSelectFile(index)}
+                            className={`w-full p-2 text-left rounded text-xs transition-colors flex items-center gap-2 ${
+                              index === selectedFileIndex
+                                ? "bg-primary/10 text-primary"
+                                : "hover:bg-muted"
                             }`}
-                        >
-                          <div className="font-medium text-sm truncate">{file.file.name}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Qty: {file.quantity} | {file.material || "No material"}
-                            {/* ✅ Debug indicator */}
-                            {file.meshData && <span className="ml-2 text-green-600">● 3D Ready</span>}
-                          </div>
-                        </button>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Feature Tree section removed - feature recognition disabled for faster processing */}
-
-                  {/* Part Configuration */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Configuration</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Material Selection */}
-                      <div className="space-y-2">
-                        <Label htmlFor="material">Material *</Label>
-                        <Select
-                          value={selectedFile.material || ""}
-                          onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
-                        >
-                          <SelectTrigger id="material">
-                            <SelectValue placeholder="Select material" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {materials.map((material) => (
-                              <SelectItem key={material} value={material}>
-                                {material}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          >
+                            <FileText className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{file.file.name}</span>
+                          </button>
+                        ))}
                       </div>
-
-                      {/* Quantity */}
-                      <div className="space-y-2">
-                        <Label htmlFor="quantity">Quantity *</Label>
-                        <Input
-                          id="quantity"
-                          type="number"
-                          min="1"
-                          value={selectedFile.quantity}
-                          onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
-                        />
-                      </div>
-
-                      {/* Process (Optional) */}
-                      <div className="space-y-2">
-                        <Label htmlFor="process">Preferred Process (Optional)</Label>
-                        <Select
-                          value={selectedFile.process || "auto"}
-                          onValueChange={(value) =>
-                            onUpdateFile(selectedFileIndex, { process: value === "auto" ? undefined : value })
-                          }
-                        >
-                          <SelectTrigger id="process">
-                            <SelectValue placeholder="Auto-select (recommended)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto-select (recommended)</SelectItem>
-                            {processes.map((process) => (
-                              <SelectItem key={process} value={process}>
-                                {process}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Analysis Results */}
-                  {selectedFile.analysis && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Analysis Results</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Volume</div>
-                            <div className="font-medium">{selectedFile.analysis.volume_cm3?.toFixed(2) || "N/A"} cm³</div>
-                          </div>
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Surface Area</div>
-                            <div className="font-medium">
-                              {selectedFile.analysis.surface_area_cm2?.toFixed(2) || "N/A"} cm²
-                            </div>
-                          </div>
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Complexity</div>
-                            <div className="font-medium">{selectedFile.analysis.complexity_score || "N/A"}/10</div>
-                          </div>
-                          <div className="p-2 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500">Confidence</div>
-                            <div className="font-medium">
-                              {selectedFile.analysis.confidence ? (selectedFile.analysis.confidence * 100).toFixed(0) : "N/A"}
-                              %
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    </div>
                   )}
 
-                  {/* Contact Information (Collapsible) */}
-                  <Card>
-                    <CardHeader className="cursor-pointer" onClick={() => setContactFormExpanded(!contactFormExpanded)}>
-                      <div className="flex items-center justify-between">
-                        <CardTitle>Contact Information *</CardTitle>
-                        {contactFormExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </div>
-                    </CardHeader>
-                    {contactFormExpanded && (
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name" className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            Full Name *
-                          </Label>
-                          <Input
-                            id="name"
-                            value={contactInfo.name}
-                            onChange={(e) => handleContactInfoChange("name", e.target.value)}
-                            placeholder="John Doe"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="email" className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            Email *
-                          </Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={contactInfo.email}
-                            onChange={(e) => handleContactInfoChange("email", e.target.value)}
-                            placeholder="john@example.com"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="phone" className="flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            Phone *
-                          </Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={contactInfo.phone}
-                            onChange={(e) => handleContactInfoChange("phone", e.target.value)}
-                            placeholder="+1 (555) 123-4567"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="company" className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4" />
-                            Company (Optional)
-                          </Label>
-                          <Input
-                            id="company"
-                            value={contactInfo.company}
-                            onChange={(e) => handleContactInfoChange("company", e.target.value)}
-                            placeholder="Acme Corp"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="address" className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Shipping Address
-                          </Label>
-                          <Textarea
-                            id="address"
-                            value={contactInfo.address}
-                            onChange={(e) => handleContactInfoChange("address", e.target.value)}
-                            placeholder="123 Main St, City, State, ZIP"
-                            rows={3}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="message">Additional Notes</Label>
-                          <Textarea
-                            id="message"
-                            value={contactInfo.message}
-                            onChange={(e) => handleContactInfoChange("message", e.target.value)}
-                            placeholder="Any special requirements or notes..."
-                            rows={3}
-                          />
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-
                   {/* Submit Button */}
-                  <Button onClick={handleSubmit} disabled={!isFormValid() || isSubmitting} className="w-full" size="lg">
-                    {isSubmitting ? "Submitting..." : "Submit Quote Request"}
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={!isFormValid() || isSubmitting} 
+                    className="w-full" 
+                    size="default"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Quote Request"
+                    )}
                   </Button>
                 </div>
               </div>
             </ResizablePanel>
 
-            {/* Draggable resize handle */}
             <ResizableHandle withHandle />
           </>
         )}
 
-        {/* Right Panel - 3D Viewer (expands when sidebar collapsed) */}
-        <ResizablePanel defaultSize={70} className="bg-white">
-          <div className="h-full flex flex-col">
-            <Tabs defaultValue="3d-model" className="h-full flex flex-col">
-              <div className="border-b px-6 pt-6">
-                <TabsList className="w-full">
-                  <TabsTrigger value="3d-model" className="flex-1">
-                    3D Model
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+        {/* Right Panel - 3D Viewer + Contact Form */}
+        <ResizablePanel defaultSize={75} className="bg-background">
+          <div className="h-full flex flex-col overflow-y-auto">
+            {/* Part Name Header */}
+            <div className="border-b px-6 py-3 flex items-center justify-between bg-muted/30">
+              {isSidebarCollapsed && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsSidebarCollapsed(false)}
+                        className="mr-3"
+                      >
+                        <PanelLeftOpen className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Show Configuration</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <h2 className="font-medium text-foreground truncate flex-1">
+                {selectedFile.file.name}
+              </h2>
+              {selectedFile.meshData && (
+                <span className="text-xs text-green-600 ml-2">● 3D Ready</span>
+              )}
+            </div>
 
-              <div className="flex-1 overflow-y-auto">
-                {/* ✅ 3D Model Tab with improved debugging */}
-                <TabsContent value="3d-model" className="h-full m-0 p-6 relative">
-                  {/* Expand button when sidebar is collapsed - positioned inside viewport */}
-                  {isSidebarCollapsed && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setIsSidebarCollapsed(false)}
-                            className="absolute top-7 left-7 z-50 shadow-lg"
-                          >
-                            <PanelLeftOpen className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Show Configuration</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <div className="h-[calc(100vh-200px)]">
-                    {selectedFile.meshData ? (
+            {/* CAD Viewer Area */}
+            <div className="flex-1 min-h-[400px] p-4">
+              <div className="h-full rounded-lg border bg-muted/20 overflow-hidden">
+                {selectedFile.meshData ? (
+                  <CADViewer
+                    meshData={selectedFile.meshData}
+                    fileName={selectedFile.file.name}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    onMeshLoaded={(meshData) => {
+                      console.log("✅ Mesh loaded successfully:", {
+                        triangles: meshData.triangle_count,
+                        hasColors: !!meshData.vertex_colors,
+                      });
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-6">
+                    {selectedFile.isAnalyzing ? (
                       <>
-                      <CADViewer
-                          meshData={selectedFile.meshData}
-                          fileName={selectedFile.file.name}
-                          isSidebarCollapsed={isSidebarCollapsed}
-                          onMeshLoaded={(meshData) => {
-                            console.log("✅ Mesh loaded successfully:", {
-                              triangles: meshData.triangle_count,
-                              hasColors: !!meshData.vertex_colors,
-                              colorCount: meshData.vertex_colors?.length,
-                            });
-                          }}
-                        />
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Analyzing CAD file...</p>
+                          <p className="text-xs text-muted-foreground mt-1">This may take 30-60 seconds</p>
+                        </div>
                       </>
                     ) : (
                       <>
-                        {console.log("⚠️ No meshData available:", {
-                          fileName: selectedFile.file.name,
-                          isAnalyzing: selectedFile.isAnalyzing,
-                          hasAnalysis: !!selectedFile.analysis,
-                        })}
-                        <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-                          <div className="text-muted-foreground">
-                            {selectedFile.isAnalyzing ? (
-                              <>
-                                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                                <p className="text-sm font-medium">Analyzing CAD file...</p>
-                                <p className="text-xs mt-2">Generating 3D mesh and extracting features</p>
-                                <p className="text-xs text-gray-400 mt-1">This may take 30-60 seconds</p>
-                              </>
-                            ) : (
-                              <>
-                                <div className="text-6xl mb-4">📦</div>
-                                <p className="text-sm font-medium">3D preview not yet available</p>
-                                <p className="text-xs mt-2 text-gray-500">{selectedFile.file.name}</p>
-                                <p className="text-xs mt-1 text-gray-400">
-                                  {selectedFile.analysis
-                                    ? "Analysis complete but mesh data not loaded - check console logs"
-                                    : "The file is being processed in the background"}
-                                </p>
-                              </>
-                            )}
-                          </div>
+                        <div className="text-5xl">📦</div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Preview not available</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            You can still submit your quote request
+                          </p>
                         </div>
                       </>
                     )}
                   </div>
-                </TabsContent>
+                )}
               </div>
-            </Tabs>
+            </div>
+
+            {/* Contact Information - Always Visible Below CAD Viewer */}
+            <div className="border-t bg-background p-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Row 1: Name, Email, Phone */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="name" className="text-xs flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        Full Name *
+                      </Label>
+                      <Input
+                        id="name"
+                        className="h-9"
+                        value={contactInfo.name}
+                        onChange={(e) => handleContactInfoChange("name", e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="email" className="text-xs flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        Email *
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        className="h-9"
+                        value={contactInfo.email}
+                        onChange={(e) => handleContactInfoChange("email", e.target.value)}
+                        placeholder="john@example.com"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="phone" className="text-xs flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        Phone *
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        className="h-9"
+                        value={contactInfo.phone}
+                        onChange={(e) => handleContactInfoChange("phone", e.target.value)}
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Company, Address */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="company" className="text-xs flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        Company
+                      </Label>
+                      <Input
+                        id="company"
+                        className="h-9"
+                        value={contactInfo.company}
+                        onChange={(e) => handleContactInfoChange("company", e.target.value)}
+                        placeholder="Acme Corp"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="address" className="text-xs flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        Shipping Address
+                      </Label>
+                      <Input
+                        id="address"
+                        className="h-9"
+                        value={contactInfo.address}
+                        onChange={(e) => handleContactInfoChange("address", e.target.value)}
+                        placeholder="123 Main St, City, State, ZIP"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Notes */}
+                  <div className="space-y-1">
+                    <Label htmlFor="message" className="text-xs">Additional Notes</Label>
+                    <Textarea
+                      id="message"
+                      value={contactInfo.message}
+                      onChange={(e) => handleContactInfoChange("message", e.target.value)}
+                      placeholder="Any special requirements or notes..."
+                      rows={2}
+                      className="resize-none"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
