@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN conda install -y -c conda-forge python=3.10 pythonocc-core=7.7.2 numpy && \
     conda clean --all --yes
 
-# Install PyTorch CPU-only (before requirements.txt to use cache)
-RUN pip install --no-cache-dir torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+# PyTorch DISABLED - not needed when SKIP_FEATURE_RECOGNITION=True
+# RUN pip install --no-cache-dir torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
 
 # Copy ALL application code FIRST (includes occwl folder)
 COPY . .

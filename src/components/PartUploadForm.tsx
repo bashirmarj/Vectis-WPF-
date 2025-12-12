@@ -299,7 +299,8 @@ export const PartUploadForm = () => {
         hasVertexFaceIds: !!meshData?.vertex_face_ids, // ✅ Added debug log
       });
       
-      if (result.mesh_url && !meshData.vertices) {
+      // Fetch mesh from URL if meshData is missing vertices
+      if (result.mesh_url && meshData && !meshData.vertices) {
         console.log("📥 Fetching large mesh data from:", result.mesh_url);
         try {
           const meshResponse = await fetch(result.mesh_url);
@@ -314,12 +315,13 @@ export const PartUploadForm = () => {
         }
       }
 
-      // Add vertex_colors to meshData if available
-      if (result.vertex_colors || meshData.vertex_colors) {
+      // Add vertex_colors to meshData if available (with null safety)
+      if (meshData && (result.vertex_colors || meshData.vertex_colors)) {
         meshData.vertex_colors = result.vertex_colors || meshData.vertex_colors;
       }
 
-      console.log("🎨 Mesh data received:", {
+      // Log mesh data with null safety
+      console.log("🎨 Mesh data received:", meshData ? {
         hasVertexColors: !!meshData.vertex_colors,
         vertexColorCount: meshData.vertex_colors?.length,
         triangleCount: result.triangle_count || meshData.triangle_count,
@@ -332,7 +334,7 @@ export const PartUploadForm = () => {
         taggedEdgesCount: meshData.tagged_edges?.length || 0,
         hasEdgeClassifications: !!meshData.edge_classifications,
         edgeClassificationsCount: meshData.edge_classifications?.length || 0,
-      });
+      } : { source: 'null - backend returned no mesh data' });
 
       // Extract analysis data
       const analysis = {
