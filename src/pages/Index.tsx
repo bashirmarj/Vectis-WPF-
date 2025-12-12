@@ -14,6 +14,7 @@ import customPartsImg from "@/assets/custom-parts-cnc.png";
 import prototypeImg from "@/assets/prototype-cnc-part.png";
 import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
 import darkSectionBg from "@/assets/dark-section-bg.png";
+import qualityInspectionBg from "@/assets/quality-inspection-bg.png";
 import sheetMetalImg from "@/assets/sheet-metal-new.png";
 import heatTreatmentImg from "@/assets/heat-treatment-new.png";
 import dieCastingImg from "@/assets/die-casting.png";
@@ -367,8 +368,18 @@ const Index = () => {
         </section>
 
         {/* Process Timeline */}
-        <section className="py-20 md:py-32">
-          <div className="container-custom">
+        <section className="relative py-20 md:py-32 overflow-hidden">
+          {/* Background Image */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-fixed"
+            style={{ backgroundImage: `url(${qualityInspectionBg})` }}
+          />
+          
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/70" />
+          
+          {/* Content */}
+          <div className="container-custom relative z-10">
             <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
               <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">How It Works</p>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">Our Process</h2>
