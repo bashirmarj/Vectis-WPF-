@@ -504,6 +504,9 @@ export const PartUploadForm = () => {
     console.log("📤 Submitting quote request:", formData);
     setUploading(true);
 
+    // Extract contact info from the nested structure
+    const contact = formData.contact || {};
+    
     try {
       // Convert files to base64 for transmission
       const filesWithContent = await Promise.all(
@@ -530,12 +533,12 @@ export const PartUploadForm = () => {
         'send-quotation-request',
         {
           body: {
-            name: formData.name,
-            company: formData.company || '',
-            email: formData.email,
-            phone: formData.phone,
-            shippingAddress: formData.shippingAddress,
-            message: formData.message || '',
+            name: contact.name,
+            company: contact.company || '',
+            email: contact.email,
+            phone: contact.phone,
+            shippingAddress: contact.address || '',
+            message: contact.message || '',
             files: filesWithContent,
             drawingFiles: [],
           }
