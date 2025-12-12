@@ -368,18 +368,12 @@ const Index = () => {
         </section>
 
         {/* Process Timeline */}
-        <section className="relative py-20 md:py-32 overflow-hidden">
-          {/* Background Image */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-fixed"
-            style={{ backgroundImage: `url(${qualityInspectionBg})` }}
-          />
-          
-          {/* Dark Overlay */}
-          <div className="absolute inset-0 bg-black/70" />
-          
-          {/* Content */}
-          <div className="container-custom relative z-10">
+        <ParallaxSection
+          backgroundImage={qualityInspectionBg}
+          overlayOpacity={0.7}
+          className="py-20 md:py-32"
+        >
+          <div className="container-custom">
             <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
               <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">How It Works</p>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">Our Process</h2>
@@ -390,7 +384,7 @@ const Index = () => {
 
             <ProcessTimeline className="max-w-5xl mx-auto" />
           </div>
-        </section>
+        </ParallaxSection>
 
         {/* CTA Section */}
         <section className="py-20 md:py-32 border-b border-white/10">
