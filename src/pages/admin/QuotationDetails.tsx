@@ -489,7 +489,6 @@ const QuotationDetails = () => {
                     
                     <PartDetailTabs
                       lineItem={item}
-                      featureTree={featureTrees.get(item.id)}
                       onUpdateLineItem={updateLineItem}
                     />
                   </div>

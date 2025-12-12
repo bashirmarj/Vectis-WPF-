@@ -342,7 +342,7 @@ export const PartUploadForm = () => {
         confidence: result.confidence,
         method: result.method,
         triangle_count: result.triangle_count,
-        geometric_features: result.geometric_features,
+        geometric_features: null, // Feature recognition disabled for faster processing
         recommended_processes: result.recommended_processes,
         routing_reasoning: result.routing_reasoning,
         machining_summary: result.machining_summary,

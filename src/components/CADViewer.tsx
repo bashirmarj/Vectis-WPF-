@@ -20,7 +20,7 @@ import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import FeatureTree from "./FeatureTree";
+// FeatureTree import removed - feature recognition disabled for faster processing
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CADViewerProps {
@@ -29,18 +29,8 @@ interface CADViewerProps {
   fileName?: string;
   isSidebarCollapsed?: boolean;
   onMeshLoaded?: (data: MeshData) => void;
-  geometricFeatures?: {
-    instances: any[];
-    num_features_detected: number;
-    num_faces_analyzed: number;
-    confidence_score: number;
-    inference_time_sec: number;
-    recognition_method: string;
-    feature_summary?: Record<string, number>;
-  } | null;
-  selectedFeature?: any | null;
+  // geometricFeatures prop removed - feature recognition disabled for faster processing
 }
-
 interface MeshData {
   vertices: number[];
   indices: number[];
@@ -92,8 +82,6 @@ export function CADViewer({
   fileName,
   isSidebarCollapsed = false,
   onMeshLoaded,
-  geometricFeatures,
-  selectedFeature: selectedFeatureFromSidebar,
 }: CADViewerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,24 +89,8 @@ export function CADViewer({
   const [error, setError] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<"solid" | "wireframe" | "translucent">("solid");
 
-  // Feature highlighting state
-  const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
-  const [highlightedFaceIds, setHighlightedFaceIds] = useState<number[]>([]);
-
-  // Sync with sidebar selection
-  useEffect(() => {
-    if (selectedFeatureFromSidebar) {
-      setSelectedFeature(selectedFeatureFromSidebar);
-      const faceIds = selectedFeatureFromSidebar.face_indices || selectedFeatureFromSidebar.face_ids || [];
-      console.log("🔍 Highlighting Feature:", {
-        name: selectedFeatureFromSidebar.name,
-        type: selectedFeatureFromSidebar.type,
-        faceIds: faceIds,
-        rawFeature: selectedFeatureFromSidebar
-      });
-      setHighlightedFaceIds(faceIds);
-    }
-  }, [selectedFeatureFromSidebar]);
+  // Feature highlighting removed - feature recognition disabled for faster processing
+  const highlightedFaceIds: number[] = [];
   const [showSolidEdges, setShowSolidEdges] = useState(true);
   const [showWireframeHiddenEdges, setShowWireframeHiddenEdges] = useState(false);
 
@@ -133,15 +105,7 @@ export function CADViewer({
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);
 
-  // Debug logging for geometric features
-  useEffect(() => {
-    console.log("🔍 CADViewer received geometricFeatures:", {
-      exists: !!geometricFeatures,
-      hasInstances: !!geometricFeatures?.instances,
-      instanceCount: geometricFeatures?.instances?.length || 0,
-      data: geometricFeatures,
-    });
-  }, [geometricFeatures]);
+  // Feature recognition logging removed - disabled for faster processing
 
   // File extension detection
   const fileExtension = useMemo(() => {
@@ -260,21 +224,8 @@ export function CADViewer({
   }, [fileUrl, fileName]);
 
   // Set predefined view
-  // Feature selection callback
-  const handleFeatureSelect = useCallback((feature: any) => {
-    console.log("🎯 Feature selected:", feature);
-    // ✅ FIXED: Use face_indices (backend property) instead of face_ids
-    const faceIds = feature.face_indices || feature.face_ids || [];
-    console.log("🔦 Highlighting face IDs:", faceIds);
-    console.log("📋 Feature data:", {
-      type: feature.type,
-      subtype: feature.subtype,
-      face_count: faceIds.length,
-      confidence: feature.confidence,
-    });
-    setSelectedFeature(feature);
-    setHighlightedFaceIds(faceIds);
-  }, []);
+  // Feature selection callback - disabled for faster processing
+  // handleFeatureSelect removed - feature recognition disabled
 
   const handleSetView = useCallback(
     (view: "front" | "back" | "left" | "right" | "top" | "bottom" | "isometric") => {

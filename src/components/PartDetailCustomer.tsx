@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { CADViewer } from '@/components/CADViewer';
-import FeatureTree from '@/components/FeatureTree';
+// FeatureTree import removed - feature recognition disabled for faster processing
 import { Box, Ruler, Gauge } from 'lucide-react';
 
 interface LineItem {
@@ -35,19 +35,13 @@ interface LineItem {
   routing_reasoning: string[] | null;
 }
 
-interface FeatureTree {
-  geometric_features?: any;
-}
-
 interface PartDetailTabsProps {
   lineItem: LineItem;
-  featureTree: FeatureTree | null;
   onUpdateLineItem: (id: string, field: string, value: any) => void;
 }
 
 const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
   lineItem,
-  featureTree,
   onUpdateLineItem,
 }) => {
   const formatNumber = (num: number | null | undefined, decimals: number = 2): string => {
@@ -84,44 +78,22 @@ const PartDetailTabs: React.FC<PartDetailTabsProps> = ({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="3d-model" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="3d-model">3D Model</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-            <TabsTrigger value="analysis">Analysis</TabsTrigger>
-            <TabsTrigger value="pricing">Pricing</TabsTrigger>
-          </TabsList>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="3d-model">3D Model</TabsTrigger>
+          <TabsTrigger value="analysis">Analysis</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
+        </TabsList>
 
-          {/* 3D Model Tab */}
           <TabsContent value="3d-model" className="mt-4">
             <div className="h-[600px] border rounded-lg overflow-hidden">
               <CADViewer
                 fileName={lineItem.file_name}
                 fileUrl={lineItem.file_path}
-                geometricFeatures={featureTree?.geometric_features || null}
               />
             </div>
           </TabsContent>
 
-          {/* Features Tab - Geometric Recognition */}
-          <TabsContent value="features" className="mt-4">
-            {featureTree?.geometric_features ? (
-              <FeatureTree
-                features={featureTree.geometric_features}
-              />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Feature Recognition</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Box className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No feature analysis available for this part.</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+          {/* Features tab removed - feature recognition disabled for faster processing */}
 
           {/* Analysis Tab */}
           <TabsContent value="analysis" className="mt-4">

@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen, Box } from "lucide-react";
+import { ChevronLeft, ChevronDown, ChevronUp, Mail, Phone, Building2, MapPin, User, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
-import FeatureTree from "@/components/FeatureTree";
+// FeatureTree import removed - feature recognition disabled for faster processing
 import { RoutingEditor } from "./RoutingEditor";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
@@ -83,7 +83,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 }) => {
   const [contactFormExpanded, setContactFormExpanded] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<any | null>(null);
+  // selectedFeature state removed - feature recognition disabled
   const [contactInfo, setContactInfo] = useState({
     name: "",
     email: "",
@@ -166,33 +166,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                     </CardContent>
                   </Card>
 
-                  {/* Feature Tree - Collapsible */}
-                  {selectedFile.analysis?.geometric_features && (
-                    <Collapsible defaultOpen={true} className="space-y-2">
-                      <Card>
-                        <CollapsibleTrigger className="w-full">
-                          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="flex items-center gap-2">
-                                <Box className="w-5 h-5" />
-                                Detected Features ({selectedFile.analysis.geometric_features.instances?.length || 0})
-                              </CardTitle>
-                              <ChevronDown className="w-5 h-5 transition-transform duration-200 data-[state=open]:rotate-180" />
-                            </div>
-                          </CardHeader>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <CardContent className="pt-0">
-                            <FeatureTree
-                              features={selectedFile.analysis.geometric_features}
-                              onFeatureSelect={setSelectedFeature}
-                              selectedFeature={selectedFeature}
-                            />
-                          </CardContent>
-                        </CollapsibleContent>
-                      </Card>
-                    </Collapsible>
-                  )}
+                  {/* Feature Tree section removed - feature recognition disabled for faster processing */}
 
                   {/* Part Configuration */}
                   <Card>
@@ -434,11 +408,9 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                   <div className="h-[calc(100vh-200px)]">
                     {selectedFile.meshData ? (
                       <>
-                        <CADViewer
+                      <CADViewer
                           meshData={selectedFile.meshData}
                           fileName={selectedFile.file.name}
-                          geometricFeatures={selectedFile.analysis?.geometric_features || null}
-                          selectedFeature={selectedFeature}
                           isSidebarCollapsed={isSidebarCollapsed}
                           onMeshLoaded={(meshData) => {
                             console.log("✅ Mesh loaded successfully:", {
