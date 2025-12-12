@@ -15,6 +15,9 @@ import prototypeImg from "@/assets/prototype-cnc-part.png";
 import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
 import darkSectionBg from "@/assets/dark-section-bg.png";
+import sheetMetalImg from "@/assets/sheet-metal.png";
+import heatTreatmentImg from "@/assets/heat-treatment.png";
+import dieCastingImg from "@/assets/die-casting.png";
 
 const Index = () => {
   const services = [
@@ -53,7 +56,17 @@ const Index = () => {
     { 
       title: "SHEET METAL", 
       description: "Laser cutting, bending, and forming at any scale.",
-      image: capabilitiesImg
+      image: sheetMetalImg
+    },
+    { 
+      title: "HEAT TREATMENT", 
+      description: "Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment",
+      image: heatTreatmentImg
+    },
+    { 
+      title: "DIE CASTING", 
+      description: "Precision die casting service for customized metal parts",
+      image: dieCastingImg
     },
   ];
 
