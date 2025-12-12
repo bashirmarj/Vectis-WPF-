@@ -108,20 +108,27 @@ function generateUnifiedEmailTemplate(options: {
   } = options;
 
   const statusTracker = showStatusTracker ? `
-    <!-- 2. Visual Status Tracker -->
-    <div style="background-color: rgba(248, 250, 252, 0.9); padding: 25px 20px; border-bottom: 1px solid #e2e8f0; text-align: center;">
-      <div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
-        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
-        <span style="font-size: 11px; color: ${statusStep >= 1 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Received</span>
-      </div><!--
-      --><div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
-        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
-        <span style="font-size: 11px; color: ${statusStep >= 2 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Reviewing</span>
-      </div><!--
-      --><div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
-        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
-        <span style="font-size: 11px; color: ${statusStep >= 3 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Quote Ready</span>
-      </div>
+    <!-- 2. Visual Status Tracker - Table-based for mobile -->
+    <div style="background-color: rgba(248, 250, 252, 0.9); padding: 20px 10px; border-bottom: 1px solid #e2e8f0;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td width="33%" align="center" valign="top" style="padding: 5px;">
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <br>
+            <span style="font-size: 10px; color: ${statusStep >= 1 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Received</span>
+          </td>
+          <td width="33%" align="center" valign="top" style="padding: 5px;">
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <br>
+            <span style="font-size: 10px; color: ${statusStep >= 2 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Reviewing</span>
+          </td>
+          <td width="33%" align="center" valign="top" style="padding: 5px;">
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <br>
+            <span style="font-size: 10px; color: ${statusStep >= 3 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quote Ready</span>
+          </td>
+        </tr>
+      </table>
     </div>
   ` : '';
 
@@ -164,13 +171,17 @@ function generateUnifiedEmailTemplate(options: {
             <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765512246/LOGO_edi8ss.png'); background-repeat: no-repeat; background-position: center 120px; background-size: 80%;">
               <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
               
-                <!-- 1. Brand Header -->
-                <div style="background-color: #000000; padding: 30px 40px; text-align: center; position: relative; z-index: 2;">
+                <!-- 1. Brand Header - Table-based for mobile -->
+                <div style="background-color: #000000; padding: 20px 15px; text-align: center; position: relative; z-index: 2;">
                   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
-                      <td align="center" style="vertical-align: middle;">
-                        <img src="https://res.cloudinary.com/dbcfeio6b/image/upload/v1765508292/output-onlinepngtools-removebg-preview_1_kkhayz.png" alt="VM Logo" width="88" style="display: inline-block; vertical-align: middle; margin-right: 15px; height: auto; border: 0;">
-                        <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; display: inline-block; vertical-align: middle;">Vectis Manufacturing</span>
+                      <td align="center">
+                        <img src="https://res.cloudinary.com/dbcfeio6b/image/upload/v1765508292/output-onlinepngtools-removebg-preview_1_kkhayz.png" alt="VM Logo" width="70" style="display: block; margin: 0 auto 10px auto; height: auto; border: 0;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center">
+                        <span style="color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Vectis Manufacturing</span>
                       </td>
                     </tr>
                   </table>
@@ -179,17 +190,17 @@ function generateUnifiedEmailTemplate(options: {
                 ${statusTracker}
 
                 <!-- 3. Hero Section -->
-                <div style="padding: 40px 40px 20px 40px; text-align: center;">
-                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: #d1fae5; margin-bottom: 20px; line-height: 64px;">
-                    <span style="font-size: 32px; color: #10b981; line-height: 64px; font-family: Arial, sans-serif;">&#10003;</span>
+                <div style="padding: 30px 20px 15px 20px; text-align: center;">
+                  <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: #d1fae5; margin-bottom: 15px; line-height: 56px;">
+                    <span style="font-size: 28px; color: #10b981; line-height: 56px; font-family: Arial, sans-serif;">&#10003;</span>
                   </div>
                   
-                  <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 10px 0;">${heroTitle}</h2>
-                  <p style="color: #64748b; font-size: 16px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin: 0 0 8px 0;">${heroTitle}</h2>
+                  <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
                 </div>
 
                 <!-- 4. Content & Details -->
-                <div style="padding: 0 40px 40px 40px;">
+                <div style="padding: 0 20px 30px 20px;">
                   
                   <!-- Reference Number Block -->
                   <div style="text-align: center; margin-bottom: 25px;">
@@ -237,14 +248,15 @@ function generateUnifiedEmailTemplate(options: {
   `;
 }
 
-// Helper to generate detail rows
+// Helper to generate detail rows - Table-based for mobile
 function generateDetailRow(label: string, value: string): string {
   return `
-    <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
-      <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left; width: 40%;">${label}</span>
-      <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right; width: 60%; text-align: right;">${value}</span>
-      <div style="clear: both;"></div>
-    </div>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
+      <tr>
+        <td style="padding: 10px 15px; width: 40%; color: #64748b; font-size: 12px; font-weight: 600; vertical-align: top;">${label}</td>
+        <td style="padding: 10px 15px; width: 60%; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right; vertical-align: top;">${value}</td>
+      </tr>
+    </table>
   `;
 }
 
@@ -289,31 +301,29 @@ function generateLineItemsTable(lineItems: any[]): string {
   `;
 }
 
-// Helper to generate totals section
+// Helper to generate totals section - Table-based for mobile
 function generateTotalsSection(quote: any): string {
   return `
     <!-- Totals Section -->
     <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 20px; overflow: hidden;">
-      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
-        <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left;">Subtotal</span>
-        <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right;">$${Number(quote.subtotal).toFixed(2)}</span>
-        <div style="clear: both;"></div>
-      </div>
-      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
-        <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left;">Shipping</span>
-        <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right;">$${Number(quote.shipping_cost).toFixed(2)}</span>
-        <div style="clear: both;"></div>
-      </div>
-      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
-        <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left;">Tax (${Number(quote.tax_rate).toFixed(2)}%)</span>
-        <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right;">$${Number(quote.tax_amount).toFixed(2)}</span>
-        <div style="clear: both;"></div>
-      </div>
-      <div style="padding: 15px 20px; background-color: rgba(16, 185, 129, 0.1);">
-        <span style="color: #1e293b; font-size: 15px; font-weight: 700; float: left;">Total</span>
-        <span style="color: #10b981; font-size: 18px; font-weight: 700; float: right;">$${Number(quote.total_amount).toFixed(2)} ${quote.currency}</span>
-        <div style="clear: both;"></div>
-      </div>
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 15px; color: #64748b; font-size: 12px; font-weight: 600;">Subtotal</td>
+          <td style="padding: 10px 15px; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right;">$${Number(quote.subtotal).toFixed(2)}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 15px; color: #64748b; font-size: 12px; font-weight: 600;">Shipping</td>
+          <td style="padding: 10px 15px; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right;">$${Number(quote.shipping_cost).toFixed(2)}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 15px; color: #64748b; font-size: 12px; font-weight: 600;">Tax (${Number(quote.tax_rate).toFixed(2)}%)</td>
+          <td style="padding: 10px 15px; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right;">$${Number(quote.tax_amount).toFixed(2)}</td>
+        </tr>
+        <tr style="background-color: rgba(16, 185, 129, 0.1);">
+          <td style="padding: 12px 15px; color: #1e293b; font-size: 14px; font-weight: 700;">Total</td>
+          <td style="padding: 12px 15px; color: #10b981; font-size: 16px; font-weight: 700; text-align: right;">$${Number(quote.total_amount).toFixed(2)} ${quote.currency}</td>
+        </tr>
+      </table>
     </div>
   `;
 }
