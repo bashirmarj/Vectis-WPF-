@@ -43,33 +43,33 @@ const Index = () => {
   ];
 
   const capabilities = [
-    { 
-      title: "CNC MACHINING", 
+    {
+      title: "CNC MACHINING",
       description: "5-axis precision milling and turning for complex geometries.",
-      image: cncMachiningImg
+      image: cncMachiningImg,
     },
-    { 
-      title: "WIRE EDM", 
+    {
+      title: "WIRE EDM",
       description: "Complex geometries with tight tolerances in hardened materials.",
       image: wireEdmImg,
-      imageStyle: "bg-[length:70%] bg-center"
+      imageStyle: "bg-[length:70%] bg-center",
     },
-    { 
-      title: "SHEET METAL", 
+    {
+      title: "SHEET METAL",
       description: "Laser cutting, bending, and forming at any scale.",
-      image: sheetMetalImg
+      image: sheetMetalImg,
     },
-    { 
-      title: "HEAT TREATMENT", 
+    {
+      title: "HEAT TREATMENT",
       description: "Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment",
-      image: heatTreatmentImg
+      image: heatTreatmentImg,
     },
-    { 
-      title: "DIE CASTING", 
+    {
+      title: "DIE CASTING",
       description: "Precision die casting service for customized metal parts",
-      image: dieCastingImg
+      image: dieCastingImg,
     },
-];
+  ];
 
   // Drag to scroll state
   const marqueeRef = useRef<HTMLDivElement>(null);
@@ -82,13 +82,13 @@ const Index = () => {
     setIsDragging(true);
     setStartX(e.pageX - marqueeRef.current.offsetLeft);
     setScrollLeft(marqueeRef.current.scrollLeft);
-    marqueeRef.current.style.cursor = 'grabbing';
+    marqueeRef.current.style.cursor = "grabbing";
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
     if (marqueeRef.current) {
-      marqueeRef.current.style.cursor = 'grab';
+      marqueeRef.current.style.cursor = "grab";
     }
   };
 
@@ -114,7 +114,7 @@ const Index = () => {
         >
           <div />
         </ParallaxSection>
-        
+
         <div className="container-custom relative z-10 flex-1 flex items-center">
           <div className="max-w-3xl">
             <AnimatedSection animation="fadeUp" delay={0}>
@@ -124,18 +124,18 @@ const Index = () => {
                 <span className="text-primary font-light">From Concept to Completion</span>
               </h1>
             </AnimatedSection>
-            
+
             <AnimatedSection animation="fadeUp" delay={200}>
               <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-lg leading-relaxed">
                 Precision engineering and turnkey manufacturing solutions.
               </p>
             </AnimatedSection>
-            
+
             <AnimatedSection animation="fadeUp" delay={400}>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" className="group uppercase tracking-wider" asChild>
                   <Link to="/contact">
-                    Request a Quote 
+                    Request a Quote
                     <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
@@ -156,7 +156,7 @@ const Index = () => {
       {/* Services - Full-Bleed Vertical Sections */}
       {services.map((service, index) => {
         const isEven = index % 2 === 0;
-        
+
         return (
           <section key={index} className="relative min-h-[150vh] flex items-center">
             {/* Background Image */}
@@ -171,23 +171,21 @@ const Index = () => {
 
             {/* Content */}
             <div className="container-custom relative z-10">
-              <div className={`max-w-md ${isEven ? '' : 'ml-auto text-right'}`}>
+              <div className={`max-w-md ${isEven ? "" : "ml-auto text-right"}`}>
                 <AnimatedSection animation="fadeUp" delay={0}>
                   <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 uppercase tracking-wide">
                     {service.title}
                   </h2>
                 </AnimatedSection>
-                
+
                 <AnimatedSection animation="fadeUp" delay={150}>
-                  <p className="text-lg text-gray-300 mb-8 leading-relaxed">
-                    {service.description}
-                  </p>
+                  <p className="text-lg text-gray-300 mb-8 leading-relaxed">{service.description}</p>
                 </AnimatedSection>
-                
+
                 <AnimatedSection animation="fadeUp" delay={300}>
                   <Button size="lg" variant="outline-light" className="group uppercase tracking-wider" asChild>
                     <Link to={service.link}>
-                      Learn More 
+                      Learn More
                       <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </Link>
                   </Button>
@@ -199,13 +197,13 @@ const Index = () => {
       })}
 
       {/* Dark Sections with Textured Background */}
-      <div 
+      <div
         className="relative"
-        style={{ 
+        style={{
           backgroundImage: `url(${darkSectionBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed'
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
         }}
       >
         {/* Capabilities Showcase - Horizontal Marquee with Grayscale-to-Color Effect */}
@@ -213,34 +211,32 @@ const Index = () => {
           {/* Section Header */}
           <div className="container-custom mb-12">
             <AnimatedSection animation="fadeUp">
-              <p className="text-sm font-mono tracking-[0.3em] text-gray-500 uppercase mb-3">
-                Our Capabilities
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
-                Precision Manufacturing
-              </h2>
+              <p className="text-sm font-mono tracking-[0.3em] text-gray-500 uppercase mb-3">Our Capabilities</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">Precision Manufacturing</h2>
             </AnimatedSection>
           </div>
-          
+
           {/* Infinite Scroll Strip */}
-          <div 
+          <div
             ref={marqueeRef}
             className="relative w-full overflow-x-auto group cursor-grab select-none"
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onMouseMove={handleMouseMove}
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            <div className={`flex whitespace-nowrap select-none ${isDragging ? '' : 'animate-marquee'} hover:[animation-play-state:paused]`}>
+            <div
+              className={`flex whitespace-nowrap select-none ${isDragging ? "" : "animate-marquee"} hover:[animation-play-state:paused]`}
+            >
               {/* First set of items */}
               {capabilities.map((capability, index) => (
-                <div 
+                <div
                   key={`first-${index}`}
                   className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
                 >
-                  <div 
-                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-110 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || 'bg-cover bg-center'}`}
+                  <div
+                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-160 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -248,23 +244,19 @@ const Index = () => {
                     <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
                       Capability
                     </span>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                      {capability.title}
-                    </h3>
-                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
-                      {capability.description}
-                    </p>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">{capability.title}</h3>
+                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">{capability.description}</p>
                   </div>
                 </div>
               ))}
               {/* Duplicate set for seamless loop */}
               {capabilities.map((capability, index) => (
-                <div 
+                <div
                   key={`second-${index}`}
                   className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
                 >
-                  <div 
-                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-110 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || 'bg-cover bg-center'}`}
+                  <div
+                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-110 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -272,24 +264,21 @@ const Index = () => {
                     <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
                       Capability
                     </span>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                      {capability.title}
-                    </h3>
-                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">
-                      {capability.description}
-                    </p>
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">{capability.title}</h3>
+                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">{capability.description}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          
+
           {/* View All Button */}
           <div className="container-custom mt-12 text-center">
             <AnimatedSection animation="fadeUp" delay={200}>
               <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
                 <Link to="/capabilities">
-                  Explore All Capabilities <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  Explore All Capabilities{" "}
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             </AnimatedSection>
@@ -300,15 +289,10 @@ const Index = () => {
         <section className="py-20 md:py-32">
           <div className="container-custom">
             <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
-              <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">
-                How It Works
-              </p>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-                Our Process
-              </h2>
+              <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">How It Works</p>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">Our Process</h2>
               <p className="text-lg text-gray-400">
-                From initial upload to final delivery, we streamline every step 
-                of your manufacturing journey.
+                From initial upload to final delivery, we streamline every step of your manufacturing journey.
               </p>
             </AnimatedSection>
 
@@ -324,13 +308,13 @@ const Index = () => {
                 Ready to Start?
               </h2>
             </AnimatedSection>
-            
+
             <AnimatedSection animation="fadeUp" delay={150}>
               <p className="text-xl text-gray-400 mb-10 max-w-lg mx-auto">
                 Let's bring your manufacturing vision to life.
               </p>
             </AnimatedSection>
-            
+
             <AnimatedSection animation="fadeUp" delay={300}>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="uppercase tracking-wider" asChild>
@@ -352,12 +336,7 @@ const Index = () => {
         <div className="container-custom">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {stats.map((stat, index) => (
-              <AnimatedCounter
-                key={index}
-                value={stat.value}
-                label={stat.label}
-                delay={index * 100}
-              />
+              <AnimatedCounter key={index} value={stat.value} label={stat.label} delay={index * 100} />
             ))}
           </div>
         </div>
