@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { google } from "https://esm.sh/googleapis@134.0.0";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -12,16 +11,42 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Gmail OAuth2 setup
-function getGmailClient() {
-  const oauth2Client = new google.auth.OAuth2(
-    Deno.env.get('GMAIL_CLIENT_ID'),
-    Deno.env.get('GMAIL_CLIENT_SECRET')
-  );
-  oauth2Client.setCredentials({
-    refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')
+// Helper to get OAuth2 access token using refresh token
+async function getAccessToken(): Promise<string> {
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: Deno.env.get('GMAIL_CLIENT_ID')!,
+      client_secret: Deno.env.get('GMAIL_CLIENT_SECRET')!,
+      refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')!,
+    }),
   });
-  return google.gmail({ version: 'v1', auth: oauth2Client });
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(`OAuth error: ${data.error_description || data.error}`);
+  }
+  return data.access_token;
+}
+
+// Helper to send email via Gmail API
+async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
+  const response = await fetch(
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: rawEmail }),
+    }
+  );
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gmail API error: ${error}`);
+  }
 }
 
 // Helper to encode email with attachments in base64url format (MIME multipart)
@@ -76,10 +101,10 @@ function encodeEmailWithAttachments(
   const rawMessage = messageParts.join('\r\n');
   
   // Convert to base64url (Gmail API requirement)
-  return btoa(unescape(encodeURIComponent(rawMessage)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(rawMessage);
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // Helper to get MIME type based on file extension
@@ -709,7 +734,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails in the background to not block the response
     const sendEmails = async () => {
       try {
-        const gmail = getGmailClient();
+        const accessToken = await getAccessToken();
         const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
         
         // Format shipping address for display
@@ -763,10 +788,7 @@ const handler = async (req: Request): Promise<Response> => {
           attachments
         );
 
-        await gmail.users.messages.send({
-          userId: 'me',
-          requestBody: { raw: adminEncodedMessage }
-        });
+        await sendEmail(accessToken, adminEncodedMessage);
         console.log("Admin email sent via Gmail API");
 
         // Send customer confirmation email (without attachments)
@@ -776,10 +798,7 @@ const handler = async (req: Request): Promise<Response> => {
           customerEmailHtml
         );
 
-        await gmail.users.messages.send({
-          userId: 'me',
-          requestBody: { raw: customerEncodedMessage }
-        });
+        await sendEmail(accessToken, customerEncodedMessage);
         console.log("Customer email sent via Gmail API");
 
       } catch (emailError) {

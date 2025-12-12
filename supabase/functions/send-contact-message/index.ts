@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { google } from "https://esm.sh/googleapis@134.0.0";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -12,16 +11,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Gmail OAuth2 setup
-function getGmailClient() {
-  const oauth2Client = new google.auth.OAuth2(
-    Deno.env.get('GMAIL_CLIENT_ID'),
-    Deno.env.get('GMAIL_CLIENT_SECRET')
-  );
-  oauth2Client.setCredentials({
-    refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')
+// Helper to get OAuth2 access token using refresh token
+async function getAccessToken(): Promise<string> {
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: Deno.env.get('GMAIL_CLIENT_ID')!,
+      client_secret: Deno.env.get('GMAIL_CLIENT_SECRET')!,
+      refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')!,
+    }),
   });
-  return google.gmail({ version: 'v1', auth: oauth2Client });
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(`OAuth error: ${data.error_description || data.error}`);
+  }
+  return data.access_token;
+}
+
+// Helper to send email via Gmail API
+async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
+  const response = await fetch(
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: rawEmail }),
+    }
+  );
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gmail API error: ${error}`);
+  }
 }
 
 // Helper to encode email in base64url format
@@ -46,10 +71,10 @@ function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: st
   ].filter(Boolean).join('\r\n');
 
   // Convert to base64url (Gmail API requirement)
-  return btoa(unescape(encodeURIComponent(messageParts)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(messageParts);
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // Helper function to hash IP addresses for privacy
@@ -236,9 +261,9 @@ const handler = async (req: Request): Promise<Response> => {
       footerText: 'This message was sent via the website contact form.'
     });
 
-    // Send email using Gmail API
-    const gmail = getGmailClient();
+    // Get access token and send email
     const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
+    const accessToken = await getAccessToken();
     
     const encodedMessage = encodeEmail(
       gmailUser,
@@ -247,10 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
       email
     );
 
-    await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: { raw: encodedMessage }
-    });
+    await sendEmail(accessToken, encodedMessage);
 
     console.log('Email sent successfully via Gmail API');
 
