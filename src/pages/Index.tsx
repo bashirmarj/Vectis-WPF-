@@ -82,13 +82,13 @@ const Index = () => {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!marqueeRef.current) return;
-    
+
     // Clear any pending resume timeout
     if (resumeTimeoutRef.current) {
       clearTimeout(resumeTimeoutRef.current);
       resumeTimeoutRef.current = null;
     }
-    
+
     // Get the inner animated container
     const animatedContainer = marqueeRef.current.firstElementChild as HTMLElement;
     if (animatedContainer) {
@@ -97,7 +97,7 @@ const Index = () => {
       const matrix = new DOMMatrixReadOnly(computedStyle.transform);
       setBaseTranslateX(matrix.m41);
     }
-    
+
     setIsDragging(true);
     setIsPaused(true);
     setStartX(e.pageX);
@@ -110,7 +110,7 @@ const Index = () => {
     if (marqueeRef.current) {
       marqueeRef.current.style.cursor = "grab";
     }
-    
+
     // Resume animation after 2 seconds
     resumeTimeoutRef.current = setTimeout(() => {
       setIsPaused(false);
@@ -263,7 +263,7 @@ const Index = () => {
                   className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
                 >
                   <div
-                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-110 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
+                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-100 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
