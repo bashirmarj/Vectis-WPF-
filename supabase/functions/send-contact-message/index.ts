@@ -126,8 +126,7 @@ function generateContactEmailTemplate(options: {
             <!-- Spacer -->
             <div style="height: 40px;"></div>
 
-            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 80px; background-size: 80%;">
-              <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
               
                 <!-- 1. Brand Header -->
                 <div style="background-color: #000000; padding: 30px 40px; text-align: center; position: relative; z-index: 2;">
@@ -141,14 +140,23 @@ function generateContactEmailTemplate(options: {
                   </table>
                 </div>
 
-                <!-- 3. Hero Section -->
-                <div style="padding: 40px 40px 20px 40px; text-align: center;">
-                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 20px; line-height: 64px;">
-                    <span style="font-size: 32px; color: #0284c7; line-height: 64px; font-family: Arial, sans-serif;">&#9993;</span>
-                  </div>
+                <!-- Watermark Wrapper - anchored to Hero section -->
+                <div style="position: relative;">
+                  <!-- Watermark - absolutely positioned, bottom aligned -->
+                  <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center bottom; background-size: 80%; pointer-events: none; z-index: 0;"></div>
                   
-                  <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 10px 0;">${heroTitle}</h2>
-                  <p style="color: #64748b; font-size: 16px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                  <!-- Content overlay with semi-transparent background -->
+                  <div style="position: relative; z-index: 1; background-color: rgba(255, 255, 255, 0.93);">
+                    <!-- 3. Hero Section -->
+                    <div style="padding: 40px 40px 20px 40px; text-align: center;">
+                      <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 20px; line-height: 64px;">
+                        <span style="font-size: 32px; color: #0284c7; line-height: 64px; font-family: Arial, sans-serif;">&#9993;</span>
+                      </div>
+                      
+                      <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 10px 0;">${heroTitle}</h2>
+                      <p style="color: #64748b; font-size: 16px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- 4. Content & Details -->
@@ -172,7 +180,6 @@ function generateContactEmailTemplate(options: {
 
                 </div>
 
-              </div>
             </div>
 
             <!-- Footer -->

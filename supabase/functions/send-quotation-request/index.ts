@@ -273,8 +273,7 @@ function generateUnifiedEmailTemplate(options: {
             <!-- Spacer -->
             <div style="height: 40px;"></div>
 
-            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 80px; background-size: 80%;">
-              <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
               
                 <!-- 1. Brand Header - Table-based for mobile -->
                 <div style="background-color: #000000; padding: 20px 15px; text-align: center; position: relative; z-index: 2;">
@@ -294,23 +293,32 @@ function generateUnifiedEmailTemplate(options: {
 
                 ${statusTracker}
 
-                <!-- 3. Hero Section -->
-                <div style="padding: 30px 20px 15px 20px; text-align: center;">
-                  <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 15px; line-height: 56px;">
-                    <span style="font-size: 28px; color: #0284c7; line-height: 56px; font-family: Arial, sans-serif;">&#10003;</span>
-                  </div>
+                <!-- Watermark Wrapper - anchored to Hero + REF section -->
+                <div style="position: relative;">
+                  <!-- Watermark - absolutely positioned, bottom aligned to REF badge -->
+                  <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center bottom; background-size: 80%; pointer-events: none; z-index: 0;"></div>
                   
-                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin: 0 0 8px 0;">${heroTitle}</h2>
-                  <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                  <!-- Content overlay with semi-transparent background -->
+                  <div style="position: relative; z-index: 1; background-color: rgba(255, 255, 255, 0.93);">
+                    <!-- 3. Hero Section -->
+                    <div style="padding: 30px 20px 15px 20px; text-align: center;">
+                      <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 15px; line-height: 56px;">
+                        <span style="font-size: 28px; color: #0284c7; line-height: 56px; font-family: Arial, sans-serif;">&#10003;</span>
+                      </div>
+                      
+                      <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin: 0 0 8px 0;">${heroTitle}</h2>
+                      <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                    </div>
+
+                    <!-- Reference Number Block -->
+                    <div style="text-align: center; padding-bottom: 25px;">
+                      <span style="background: #e2e8f0; color: #475569; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">REF: ${quoteNumber}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- 4. Content & Details -->
                 <div style="padding: 0 20px 30px 20px;">
-                  
-                  <!-- Reference Number Block -->
-                  <div style="text-align: center; margin-bottom: 25px;">
-                    <span style="background: #e2e8f0; color: #475569; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">REF: ${quoteNumber}</span>
-                  </div>
 
                   <!-- Details "Receipt" Card -->
                   <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 25px; overflow: hidden;">
@@ -331,7 +339,6 @@ function generateUnifiedEmailTemplate(options: {
 
                 </div>
 
-              </div>
             </div>
 
             <!-- Footer -->
