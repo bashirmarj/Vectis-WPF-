@@ -132,6 +132,7 @@ interface FileInfo {
   content: string;
   size: number;
   quantity: number;
+  material?: string;
   geometric_features?: any;
   mesh_data?: {
     vertices: number[];
@@ -349,7 +350,11 @@ function generateFileList(files: FileInfo[], drawingFiles?: FileInfo[]): string 
     <div style="background-color: rgba(255, 255, 255, 0.8); border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px; margin-top: 10px;">
       <span style="display: inline-block; width: 12px; height: 16px; border: 2px solid #64748b; border-radius: 2px; vertical-align: middle; margin-right: 8px; position: relative; top: -1px;"></span>
       <span style="font-size: 14px; color: #334155; font-weight: 500; vertical-align: middle;">${f.name}</span>
-      <span style="float: right; font-size: 12px; color: #64748b; font-weight: 600;">x${f.quantity}</span>
+      <div style="float: right; text-align: right;">
+        <span style="font-size: 12px; color: #3b82f6; font-weight: 600;">${f.material || 'TBD'}</span>
+        <span style="font-size: 12px; color: #64748b; font-weight: 600; margin-left: 10px;">x${f.quantity}</span>
+      </div>
+      <div style="clear: both;"></div>
     </div>
   `).join('');
 
@@ -478,6 +483,7 @@ const handler = async (req: Request): Promise<Response> => {
         file_name: file.name,
         file_path: `${submission.id}/cad/${file.name}`,
         quantity: file.quantity,
+        material_type: file.material || null,
       })),
       ...(drawingFiles || []).map(file => ({
         quotation_id: submission.id,

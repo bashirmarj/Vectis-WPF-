@@ -520,6 +520,7 @@ export const PartUploadForm = () => {
                 content: base64,
                 size: f.file.size,
                 quantity: f.quantity,
+                material: f.material || 'Not specified',
                 geometric_features: f.analysis?.geometric_features,
                 mesh_data: f.meshData,
               });
