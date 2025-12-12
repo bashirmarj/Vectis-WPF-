@@ -1,26 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 // Helper to get OAuth2 access token using refresh token
 async function getAccessToken(): Promise<string> {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: Deno.env.get('GMAIL_CLIENT_ID')!,
-      client_secret: Deno.env.get('GMAIL_CLIENT_SECRET')!,
-      refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')!,
+      grant_type: "refresh_token",
+      client_id: Deno.env.get("GMAIL_CLIENT_ID")!,
+      client_secret: Deno.env.get("GMAIL_CLIENT_SECRET")!,
+      refresh_token: Deno.env.get("GMAIL_REFRESH_TOKEN")!,
     }),
   });
   const data = await response.json();
@@ -32,17 +31,14 @@ async function getAccessToken(): Promise<string> {
 
 // Helper to send email via Gmail API
 async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
-  const response = await fetch(
-    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw: rawEmail }),
-    }
-  );
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw: rawEmail }),
+  });
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Gmail API error: ${error}`);
@@ -54,11 +50,11 @@ function encodeEmailWithAttachments(
   to: string,
   subject: string,
   htmlBody: string,
-  attachments?: Array<{ filename: string; content: string }>
+  attachments?: Array<{ filename: string; content: string }>,
 ): string {
-  const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
+  const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
   const boundary = `boundary_${Date.now()}`;
-  
+
   let messageParts = [
     `From: "Vectis Manufacturing" <${gmailUser}>`,
     `To: ${to}`,
@@ -69,71 +65,71 @@ function encodeEmailWithAttachments(
   if (attachments && attachments.length > 0) {
     // Multipart mixed for email with attachments
     messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
-    messageParts.push('');
-    
+    messageParts.push("");
+
     // HTML body part
     messageParts.push(`--${boundary}`);
-    messageParts.push('Content-Type: text/html; charset=utf-8');
-    messageParts.push('Content-Transfer-Encoding: base64');
-    messageParts.push('');
+    messageParts.push("Content-Type: text/html; charset=utf-8");
+    messageParts.push("Content-Transfer-Encoding: base64");
+    messageParts.push("");
     messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
-    
+
     // Attachment parts
     for (const attachment of attachments) {
       const mimeType = getMimeType(attachment.filename);
       messageParts.push(`--${boundary}`);
       messageParts.push(`Content-Type: ${mimeType}; name="${attachment.filename}"`);
-      messageParts.push('Content-Transfer-Encoding: base64');
+      messageParts.push("Content-Transfer-Encoding: base64");
       messageParts.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
-      messageParts.push('');
+      messageParts.push("");
       messageParts.push(attachment.content); // Already base64 encoded from client
     }
-    
+
     messageParts.push(`--${boundary}--`);
   } else {
     // Simple email without attachments
     messageParts.push(`Content-Type: text/html; charset=utf-8`);
-    messageParts.push('Content-Transfer-Encoding: base64');
-    messageParts.push('');
+    messageParts.push("Content-Transfer-Encoding: base64");
+    messageParts.push("");
     messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
   }
 
-  const rawMessage = messageParts.join('\r\n');
-  
+  const rawMessage = messageParts.join("\r\n");
+
   // Convert to base64url (Gmail API requirement)
   const encoder = new TextEncoder();
   const bytes = encoder.encode(rawMessage);
-  
+
   // Process in chunks to avoid stack overflow with large attachments
   const chunkSize = 8192;
-  let binaryString = '';
+  let binaryString = "";
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.slice(i, i + chunkSize);
     binaryString += String.fromCharCode(...chunk);
   }
-  
+
   const base64 = btoa(binaryString);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 // Helper to get MIME type based on file extension
 function getMimeType(filename: string): string {
-  const ext = filename.toLowerCase().split('.').pop();
+  const ext = filename.toLowerCase().split(".").pop();
   const mimeTypes: Record<string, string> = {
-    'step': 'application/STEP',
-    'stp': 'application/STEP',
-    'stl': 'application/sla',
-    'obj': 'model/obj',
-    'iges': 'model/iges',
-    'igs': 'model/iges',
-    'pdf': 'application/pdf',
-    'dxf': 'application/dxf',
-    'dwg': 'application/dwg',
-    'png': 'image/png',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
+    step: "application/STEP",
+    stp: "application/STEP",
+    stl: "application/sla",
+    obj: "model/obj",
+    iges: "model/iges",
+    igs: "model/iges",
+    pdf: "application/pdf",
+    dxf: "application/dxf",
+    dwg: "application/dwg",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
   };
-  return mimeTypes[ext || ''] || 'application/octet-stream';
+  return mimeTypes[ext || ""] || "application/octet-stream";
 }
 
 interface FileInfo {
@@ -174,18 +170,18 @@ interface StorageFileInfo {
 async function hashIP(ip: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(ip);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // Helper function to hash strings
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // Unified email template generator
@@ -209,42 +205,46 @@ function generateUnifiedEmailTemplate(options: {
     fileListContent,
     timelineText,
     showStatusTracker = true,
-    footerText
+    footerText,
   } = options;
 
-  const statusTracker = showStatusTracker ? `
+  const statusTracker = showStatusTracker
+    ? `
     <!-- 2. Visual Status Tracker - Table-based for mobile -->
     <div style="background-color: rgba(248, 250, 252, 0.9); padding: 20px 10px; border-bottom: 1px solid #e2e8f0;">
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
         <tr>
           <td width="33%" align="center" valign="top" style="padding: 5px;">
-            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? "#10b981" : "#cbd5e1"}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? "box-shadow: 0 0 0 4px #d1fae5;" : ""}"></span>
             <br>
-            <span style="font-size: 10px; color: ${statusStep >= 1 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Received</span>
+            <span style="font-size: 10px; color: ${statusStep >= 1 ? "#10b981" : "#64748b"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Received</span>
           </td>
           <td width="33%" align="center" valign="top" style="padding: 5px;">
-            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? "#10b981" : "#cbd5e1"}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? "box-shadow: 0 0 0 4px #d1fae5;" : ""}"></span>
             <br>
-            <span style="font-size: 10px; color: ${statusStep >= 2 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Reviewing</span>
+            <span style="font-size: 10px; color: ${statusStep >= 2 ? "#10b981" : "#64748b"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Reviewing</span>
           </td>
           <td width="33%" align="center" valign="top" style="padding: 5px;">
-            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+            <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? "#10b981" : "#cbd5e1"}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? "box-shadow: 0 0 0 4px #d1fae5;" : ""}"></span>
             <br>
-            <span style="font-size: 10px; color: ${statusStep >= 3 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quote Ready</span>
+            <span style="font-size: 10px; color: ${statusStep >= 3 ? "#10b981" : "#64748b"}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quote Ready</span>
           </td>
         </tr>
       </table>
     </div>
-  ` : '';
+  `
+    : "";
 
-  const timelineBox = timelineText ? `
+  const timelineBox = timelineText
+    ? `
     <!-- Timeline / Next Steps -->
     <div style="margin-top: 30px; text-align: center; padding: 20px; background-color: rgba(255, 251, 235, 0.9); border: 1px solid #fcd34d; border-radius: 6px;">
       <p style="color: #92400e; font-size: 14px; font-weight: 500; margin: 0;">
         &#9201; ${timelineText}
       </p>
     </div>
-  ` : '';
+  `
+    : "";
 
   return `
     <!DOCTYPE html>
@@ -273,7 +273,7 @@ function generateUnifiedEmailTemplate(options: {
             <!-- Spacer -->
             <div style="height: 40px;"></div>
 
-            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 22px; background-size: 80%;">
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 60px; background-size: 80%;">
               <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
               
                 <!-- 1. Brand Header - Table-based for mobile -->
@@ -320,7 +320,7 @@ function generateUnifiedEmailTemplate(options: {
                     
                     ${detailsContent}
                     
-                    ${fileListContent || ''}
+                    ${fileListContent || ""}
                   </div>
 
                   ${timelineBox}
@@ -337,7 +337,7 @@ function generateUnifiedEmailTemplate(options: {
             <!-- Footer -->
             <div style="background-color: #f1f4f9; padding: 30px; text-align: center; font-size: 12px; color: #94a3b8;">
               <p style="margin-bottom: 10px;">&copy; ${new Date().getFullYear()} Vectis Manufacturing. All rights reserved.</p>
-              ${footerText ? `<p>${footerText}</p>` : ''}
+              ${footerText ? `<p>${footerText}</p>` : ""}
             </div>
 
             <!-- Spacer -->
@@ -367,21 +367,29 @@ function generateDetailRow(label: string, value: string): string {
 
 // Helper to generate file list - Table-based for mobile
 function generateFileList(files: FileInfo[], drawingFiles?: FileInfo[]): string {
-  const fileItems = files.map(f => `
+  const fileItems = files
+    .map(
+      (f) => `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(255, 255, 255, 0.8); border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 8px;">
       <tr>
         <td style="padding: 10px; width: 60%; vertical-align: middle;">
           <span style="font-size: 13px; color: #334155; font-weight: 500; word-break: break-word;">${f.name}</span>
         </td>
         <td style="padding: 10px; width: 40%; text-align: right; vertical-align: middle;">
-          <span style="font-size: 11px; color: #3b82f6; font-weight: 600;">${f.material || 'TBD'}</span>
+          <span style="font-size: 11px; color: #3b82f6; font-weight: 600;">${f.material || "TBD"}</span>
           <span style="font-size: 11px; color: #64748b; font-weight: 600; margin-left: 8px;">x${f.quantity}</span>
         </td>
       </tr>
     </table>
-  `).join('');
+  `,
+    )
+    .join("");
 
-  const drawingItems = drawingFiles && drawingFiles.length > 0 ? drawingFiles.map(f => `
+  const drawingItems =
+    drawingFiles && drawingFiles.length > 0
+      ? drawingFiles
+          .map(
+            (f) => `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(255, 255, 255, 0.8); border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 8px;">
       <tr>
         <td style="padding: 10px; width: 70%; vertical-align: middle;">
@@ -392,7 +400,10 @@ function generateFileList(files: FileInfo[], drawingFiles?: FileInfo[]): string 
         </td>
       </tr>
     </table>
-  `).join('') : '';
+  `,
+          )
+          .join("")
+      : "";
 
   return `
     <div style="padding: 10px 15px; background-color: rgba(255,255,255,0.7);">
@@ -410,46 +421,37 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     // Extract IP address from request for logging (rate limiting disabled)
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
-    
+    const clientIP =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+
     const ipHash = await hashIP(clientIP);
 
-    const { 
-      name, 
-      company, 
-      email, 
-      phone, 
-      shippingAddress,
-      message,
-      files,
-      drawingFiles
-    }: QuotationRequest = await req.json();
+    const { name, company, email, phone, shippingAddress, message, files, drawingFiles }: QuotationRequest =
+      await req.json();
 
-    console.log("Processing quotation request:", { 
-      name, 
-      company, 
-      email, 
-      phone, 
+    console.log("Processing quotation request:", {
+      name,
+      company,
+      email,
+      phone,
       filesCount: files.length,
-      drawingFilesCount: drawingFiles?.length || 0
+      drawingFilesCount: drawingFiles?.length || 0,
     });
 
     // Check total attachment size (Gmail limit is 25MB, but we'll be conservative)
-    const totalSize = files.reduce((sum, f) => sum + f.size, 0) + 
-                     (drawingFiles?.reduce((sum, f) => sum + f.size, 0) || 0);
+    const totalSize =
+      files.reduce((sum, f) => sum + f.size, 0) + (drawingFiles?.reduce((sum, f) => sum + f.size, 0) || 0);
     const totalSizeMB = totalSize / 1024 / 1024;
-    
+
     console.log(`Total attachment size: ${totalSizeMB.toFixed(2)} MB`);
-    
+
     if (totalSizeMB > 20) {
-      console.error('Total attachment size exceeds limit:', totalSizeMB);
+      console.error("Total attachment size exceeds limit:", totalSizeMB);
       return new Response(
         JSON.stringify({
-          error: 'file_size_exceeded',
-          message: 'Total file size exceeds 20MB limit for email attachments',
-          totalSizeMB
+          error: "file_size_exceeded",
+          message: "Total file size exceeds 20MB limit for email attachments",
+          totalSizeMB,
         }),
         {
           status: 400,
@@ -457,7 +459,7 @@ const handler = async (req: Request): Promise<Response> => {
             "Content-Type": "application/json",
             ...corsHeaders,
           },
-        }
+        },
       );
     }
 
@@ -486,7 +488,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Record the submission with full customer details FIRST
     const { data: submission, error: insertError } = await supabase
-      .from('quotation_submissions')
+      .from("quotation_submissions")
       .insert({
         email: email,
         customer_name: name,
@@ -500,36 +502,36 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (insertError || !submission) {
-      console.error('Error recording submission:', insertError);
-      throw new Error('Failed to create quotation record');
+      console.error("Error recording submission:", insertError);
+      throw new Error("Failed to create quotation record");
     }
 
     // Store file metadata in quote_line_items
     const lineItems = [
-      ...files.map(file => ({
+      ...files.map((file) => ({
         quotation_id: submission.id,
         file_name: file.name,
         file_path: `${submission.id}/cad/${file.name}`,
         quantity: file.quantity,
         material_type: file.material || null,
       })),
-      ...(drawingFiles || []).map(file => ({
+      ...(drawingFiles || []).map((file) => ({
         quotation_id: submission.id,
         file_name: file.name,
         file_path: `${submission.id}/drawings/${file.name}`,
         quantity: 1,
-      }))
+      })),
     ];
 
     let insertedLineItems: any[] = [];
     if (lineItems.length > 0) {
       const { data: inserted, error: lineItemsError } = await supabase
-        .from('quote_line_items')
+        .from("quote_line_items")
         .insert(lineItems)
         .select();
 
       if (lineItemsError) {
-        console.error('Error storing line items:', lineItemsError);
+        console.error("Error storing line items:", lineItemsError);
       } else {
         insertedLineItems = inserted || [];
       }
@@ -538,280 +540,274 @@ const handler = async (req: Request): Promise<Response> => {
     // Trigger CAD analysis and preliminary pricing in background
     // Don't await - run asynchronously to avoid blocking response
     if (insertedLineItems.length > 0) {
-      Promise.all(files.map(async (file, index) => {
-        const lineItem = insertedLineItems[index];
-        if (!lineItem) return;
+      Promise.all(
+        files.map(async (file, index) => {
+          const lineItem = insertedLineItems[index];
+          if (!lineItem) return;
 
-        try {
-          // Save mesh data and geometric_features to cad_meshes table
-          if (file.mesh_data) {
-            const fileHash = await hashString(file.name + file.size);
-            
-            const { data: meshData, error: meshError } = await supabase
-              .from('cad_meshes')
-              .insert({
-                quotation_id: submission.id,
-                line_item_id: lineItem.id,
-                file_name: file.name,
-                file_hash: fileHash,
-                vertices: file.mesh_data.vertices || [],
-                indices: file.mesh_data.indices || [],
-                normals: file.mesh_data.normals || [],
-                triangle_count: file.mesh_data.triangle_count || 0,
-                vertex_face_ids: file.mesh_data.vertex_face_ids || [],
-                geometric_features: file.geometric_features || null
-              })
-              .select('id')
-              .single();
-            
-            if (!meshError && meshData) {
-              // Update line item with mesh_id
-              await supabase
-                .from('quote_line_items')
-                .update({ mesh_id: meshData.id })
-                .eq('id', lineItem.id);
-              
-              console.log(`✅ Saved mesh data for ${file.name} with geometric_features`);
-            } else if (meshError) {
-              console.error(`Error saving mesh for ${file.name}:`, meshError);
-            }
-          }
-          
-          // Call analyze-cad function
-          const analysisResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-cad`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseServiceKey}`,
-            },
-            body: JSON.stringify({
-              file_name: file.name,
-              file_size: file.size,
-              quantity: file.quantity
-            })
-          });
+          try {
+            // Save mesh data and geometric_features to cad_meshes table
+            if (file.mesh_data) {
+              const fileHash = await hashString(file.name + file.size);
 
-          if (!analysisResponse.ok) {
-            console.error(`Analysis failed for ${file.name}`);
-            return;
-          }
-
-          const analysisData = await analysisResponse.json();
-
-          // Call pricing calculator
-          const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/calculate-preliminary-quote`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${supabaseServiceKey}`,
-            },
-            body: JSON.stringify({
-              volume_cm3: analysisData.volume_cm3,
-              surface_area_cm2: analysisData.surface_area_cm2,
-              complexity_score: analysisData.complexity_score,
-              quantity: file.quantity,
-              process: 'CNC Machining',
-              material: 'Aluminum 6061',
-              finish: 'As-machined'
-            })
-          });
-
-          if (!quoteResponse.ok) {
-            console.error(`Quote calculation failed for ${file.name}`);
-            return;
-          }
-
-          const quoteData = await quoteResponse.json();
-
-          // Update line item with preliminary pricing
-          const updateData: any = {
-            estimated_volume_cm3: analysisData.volume_cm3,
-            estimated_surface_area_cm2: analysisData.surface_area_cm2,
-            estimated_complexity_score: analysisData.complexity_score,
-            preliminary_unit_price: quoteData.unit_price,
-            material_cost: quoteData.breakdown.material_cost,
-            machining_cost: quoteData.breakdown.machining_cost,
-            setup_cost: quoteData.breakdown.setup_cost,
-            finish_cost: quoteData.breakdown.finish_cost,
-            selected_process: quoteData.process,
-            material_type: quoteData.material,
-            finish_type: quoteData.finish,
-            estimated_machine_time_hours: quoteData.estimated_hours
-          };
-          
-          await supabase
-            .from('quote_line_items')
-            .update(updateData)
-            .eq('id', lineItem.id);
-
-          console.log(`Preliminary quote generated for ${file.name}: $${quoteData.unit_price}`);
-
-          // Save detected features using NEW manufacturing_features format
-          if (analysisData.manufacturing_features || analysisData.feature_summary) {
-            const features: any[] = [];
-            const mfg = analysisData.manufacturing_features || {};
-            
-            // Process through-holes
-            if (mfg.through_holes?.length > 0) {
-              mfg.through_holes.forEach((hole: any, idx: number) => {
-                features.push({
+              const { data: meshData, error: meshError } = await supabase
+                .from("cad_meshes")
+                .insert({
                   quotation_id: submission.id,
                   line_item_id: lineItem.id,
                   file_name: file.name,
-                  feature_type: 'through_hole',
-                  orientation: null,
-                  parameters: { ...hole, index: idx }
-                });
-              });
-            }
-            
-            // Process blind-holes
-            if (mfg.blind_holes?.length > 0) {
-              mfg.blind_holes.forEach((hole: any, idx: number) => {
-                features.push({
-                  quotation_id: submission.id,
-                  line_item_id: lineItem.id,
-                  file_name: file.name,
-                  feature_type: 'blind_hole',
-                  orientation: null,
-                  parameters: { ...hole, index: idx }
-                });
-              });
-            }
-            
-            // Process bores
-            if (mfg.bores?.length > 0) {
-              mfg.bores.forEach((bore: any, idx: number) => {
-                features.push({
-                  quotation_id: submission.id,
-                  line_item_id: lineItem.id,
-                  file_name: file.name,
-                  feature_type: 'bore',
-                  orientation: null,
-                  parameters: { ...bore, index: idx }
-                });
-              });
-            }
-            
-            // Process bosses
-            if (mfg.bosses?.length > 0) {
-              mfg.bosses.forEach((boss: any, idx: number) => {
-                features.push({
-                  quotation_id: submission.id,
-                  line_item_id: lineItem.id,
-                  file_name: file.name,
-                  feature_type: 'boss',
-                  orientation: null,
-                  parameters: { ...boss, index: idx }
-                });
-              });
-            }
-            
-            // Process planar faces
-            if (mfg.planar_faces?.length > 0) {
-              mfg.planar_faces.forEach((face: any, idx: number) => {
-                features.push({
-                  quotation_id: submission.id,
-                  line_item_id: lineItem.id,
-                  file_name: file.name,
-                  feature_type: 'planar_face',
-                  orientation: null,
-                  parameters: { ...face, index: idx }
-                });
-              });
-            }
-            
-            // Process fillets
-            if (mfg.fillets?.length > 0) {
-              mfg.fillets.forEach((fillet: any, idx: number) => {
-                features.push({
-                  quotation_id: submission.id,
-                  line_item_id: lineItem.id,
-                  file_name: file.name,
-                  feature_type: 'fillet',
-                  orientation: null,
-                  parameters: { ...fillet, index: idx }
-                });
-              });
-            }
-            
-            // Also save the summary for quick access
-            if (analysisData.feature_summary) {
-              features.push({
-                quotation_id: submission.id,
-                line_item_id: lineItem.id,
-                file_name: file.name,
-                feature_type: 'summary',
-                orientation: null,
-                parameters: analysisData.feature_summary
-              });
-            }
-            
-            if (features.length > 0) {
-              const { error: featuresError } = await supabase
-                .from('part_features')
-                .insert(features);
-              
-              if (featuresError) {
-                console.error(`Error saving features for ${file.name}:`, featuresError);
-              } else {
-                console.log(`Saved ${features.length} features for ${file.name}`);
+                  file_hash: fileHash,
+                  vertices: file.mesh_data.vertices || [],
+                  indices: file.mesh_data.indices || [],
+                  normals: file.mesh_data.normals || [],
+                  triangle_count: file.mesh_data.triangle_count || 0,
+                  vertex_face_ids: file.mesh_data.vertex_face_ids || [],
+                  geometric_features: file.geometric_features || null,
+                })
+                .select("id")
+                .single();
+
+              if (!meshError && meshData) {
+                // Update line item with mesh_id
+                await supabase.from("quote_line_items").update({ mesh_id: meshData.id }).eq("id", lineItem.id);
+
+                console.log(`✅ Saved mesh data for ${file.name} with geometric_features`);
+              } else if (meshError) {
+                console.error(`Error saving mesh for ${file.name}:`, meshError);
               }
             }
+
+            // Call analyze-cad function
+            const analysisResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-cad`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                file_name: file.name,
+                file_size: file.size,
+                quantity: file.quantity,
+              }),
+            });
+
+            if (!analysisResponse.ok) {
+              console.error(`Analysis failed for ${file.name}`);
+              return;
+            }
+
+            const analysisData = await analysisResponse.json();
+
+            // Call pricing calculator
+            const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/calculate-preliminary-quote`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                volume_cm3: analysisData.volume_cm3,
+                surface_area_cm2: analysisData.surface_area_cm2,
+                complexity_score: analysisData.complexity_score,
+                quantity: file.quantity,
+                process: "CNC Machining",
+                material: "Aluminum 6061",
+                finish: "As-machined",
+              }),
+            });
+
+            if (!quoteResponse.ok) {
+              console.error(`Quote calculation failed for ${file.name}`);
+              return;
+            }
+
+            const quoteData = await quoteResponse.json();
+
+            // Update line item with preliminary pricing
+            const updateData: any = {
+              estimated_volume_cm3: analysisData.volume_cm3,
+              estimated_surface_area_cm2: analysisData.surface_area_cm2,
+              estimated_complexity_score: analysisData.complexity_score,
+              preliminary_unit_price: quoteData.unit_price,
+              material_cost: quoteData.breakdown.material_cost,
+              machining_cost: quoteData.breakdown.machining_cost,
+              setup_cost: quoteData.breakdown.setup_cost,
+              finish_cost: quoteData.breakdown.finish_cost,
+              selected_process: quoteData.process,
+              material_type: quoteData.material,
+              finish_type: quoteData.finish,
+              estimated_machine_time_hours: quoteData.estimated_hours,
+            };
+
+            await supabase.from("quote_line_items").update(updateData).eq("id", lineItem.id);
+
+            console.log(`Preliminary quote generated for ${file.name}: $${quoteData.unit_price}`);
+
+            // Save detected features using NEW manufacturing_features format
+            if (analysisData.manufacturing_features || analysisData.feature_summary) {
+              const features: any[] = [];
+              const mfg = analysisData.manufacturing_features || {};
+
+              // Process through-holes
+              if (mfg.through_holes?.length > 0) {
+                mfg.through_holes.forEach((hole: any, idx: number) => {
+                  features.push({
+                    quotation_id: submission.id,
+                    line_item_id: lineItem.id,
+                    file_name: file.name,
+                    feature_type: "through_hole",
+                    orientation: null,
+                    parameters: { ...hole, index: idx },
+                  });
+                });
+              }
+
+              // Process blind-holes
+              if (mfg.blind_holes?.length > 0) {
+                mfg.blind_holes.forEach((hole: any, idx: number) => {
+                  features.push({
+                    quotation_id: submission.id,
+                    line_item_id: lineItem.id,
+                    file_name: file.name,
+                    feature_type: "blind_hole",
+                    orientation: null,
+                    parameters: { ...hole, index: idx },
+                  });
+                });
+              }
+
+              // Process bores
+              if (mfg.bores?.length > 0) {
+                mfg.bores.forEach((bore: any, idx: number) => {
+                  features.push({
+                    quotation_id: submission.id,
+                    line_item_id: lineItem.id,
+                    file_name: file.name,
+                    feature_type: "bore",
+                    orientation: null,
+                    parameters: { ...bore, index: idx },
+                  });
+                });
+              }
+
+              // Process bosses
+              if (mfg.bosses?.length > 0) {
+                mfg.bosses.forEach((boss: any, idx: number) => {
+                  features.push({
+                    quotation_id: submission.id,
+                    line_item_id: lineItem.id,
+                    file_name: file.name,
+                    feature_type: "boss",
+                    orientation: null,
+                    parameters: { ...boss, index: idx },
+                  });
+                });
+              }
+
+              // Process planar faces
+              if (mfg.planar_faces?.length > 0) {
+                mfg.planar_faces.forEach((face: any, idx: number) => {
+                  features.push({
+                    quotation_id: submission.id,
+                    line_item_id: lineItem.id,
+                    file_name: file.name,
+                    feature_type: "planar_face",
+                    orientation: null,
+                    parameters: { ...face, index: idx },
+                  });
+                });
+              }
+
+              // Process fillets
+              if (mfg.fillets?.length > 0) {
+                mfg.fillets.forEach((fillet: any, idx: number) => {
+                  features.push({
+                    quotation_id: submission.id,
+                    line_item_id: lineItem.id,
+                    file_name: file.name,
+                    feature_type: "fillet",
+                    orientation: null,
+                    parameters: { ...fillet, index: idx },
+                  });
+                });
+              }
+
+              // Also save the summary for quick access
+              if (analysisData.feature_summary) {
+                features.push({
+                  quotation_id: submission.id,
+                  line_item_id: lineItem.id,
+                  file_name: file.name,
+                  feature_type: "summary",
+                  orientation: null,
+                  parameters: analysisData.feature_summary,
+                });
+              }
+
+              if (features.length > 0) {
+                const { error: featuresError } = await supabase.from("part_features").insert(features);
+
+                if (featuresError) {
+                  console.error(`Error saving features for ${file.name}:`, featuresError);
+                } else {
+                  console.log(`Saved ${features.length} features for ${file.name}`);
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`Error processing ${file.name}:`, error);
           }
-        } catch (error) {
-          console.error(`Error processing ${file.name}:`, error);
-        }
-      })).catch(err => console.error('Background analysis error:', err));
+        }),
+      ).catch((err) => console.error("Background analysis error:", err));
     }
 
     // Send emails in the background to not block the response
     const sendEmails = async () => {
       try {
         const accessToken = await getAccessToken();
-        const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
-        
+        const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
+
         // Format shipping address for display
-        const formattedAddress = shippingAddress.split('\n').join(', ');
+        const formattedAddress = shippingAddress.split("\n").join(", ");
 
         // Generate admin email content
         const adminDetailsContent = `
-          ${generateDetailRow('Quote Number', submission.quote_number)}
-          ${generateDetailRow('Date', new Date().toLocaleDateString())}
-          ${generateDetailRow('Name', name)}
-          ${generateDetailRow('Company', company || 'N/A')}
-          ${generateDetailRow('Email', email)}
-          ${generateDetailRow('Phone', phone || 'N/A')}
-          ${generateDetailRow('Shipping Address', formattedAddress)}
-          ${message ? generateDetailRow('Additional Notes', message) : ''}
+          ${generateDetailRow("Quote Number", submission.quote_number)}
+          ${generateDetailRow("Date", new Date().toLocaleDateString())}
+          ${generateDetailRow("Name", name)}
+          ${generateDetailRow("Company", company || "N/A")}
+          ${generateDetailRow("Email", email)}
+          ${generateDetailRow("Phone", phone || "N/A")}
+          ${generateDetailRow("Shipping Address", formattedAddress)}
+          ${message ? generateDetailRow("Additional Notes", message) : ""}
         `;
 
         const adminEmailHtml = generateUnifiedEmailTemplate({
-          heroTitle: 'New Quote Request',
+          heroTitle: "New Quote Request",
           heroSubtitle: `A new quotation request has been submitted by <strong>${name}</strong>.<br>Please review the details below.`,
           quoteNumber: submission.quote_number,
           statusStep: 1,
           detailsContent: adminDetailsContent,
           fileListContent: generateFileList(files, drawingFiles),
           timelineText: `Review and respond within <strong>24-48 Hours</strong>`,
-          footerText: `${attachments.length} file(s) attached to this email.`
+          footerText: `${attachments.length} file(s) attached to this email.`,
         });
 
         // Generate customer email content
         const customerDetailsContent = `
-          ${generateDetailRow('Company', company || 'N/A')}
-          ${generateDetailRow('Total Quantity', `${totalQuantity} Parts`)}
-          ${generateDetailRow('Shipping To', formattedAddress)}
+          ${generateDetailRow("Company", company || "N/A")}
+          ${generateDetailRow("Total Quantity", `${totalQuantity} Parts`)}
+          ${generateDetailRow("Shipping To", formattedAddress)}
         `;
 
         const customerEmailHtml = generateUnifiedEmailTemplate({
-          heroTitle: 'Request Received',
+          heroTitle: "Request Received",
           heroSubtitle: `Thanks for your request, <strong>${name}</strong>.<br>Our engineering team has started reviewing your files.`,
           quoteNumber: submission.quote_number,
           statusStep: 1,
           detailsContent: customerDetailsContent,
           fileListContent: generateFileList(files, drawingFiles),
-          timelineText: `Estimated Response Time: <strong>24-48 Hours</strong>`
+          timelineText: `Estimated Response Time: <strong>24-48 Hours</strong>`,
         });
 
         // Send admin email with attachments
@@ -819,7 +815,7 @@ const handler = async (req: Request): Promise<Response> => {
           gmailUser,
           `New Part Quotation Request - ${submission.quote_number}`,
           adminEmailHtml,
-          attachments
+          attachments,
         );
 
         await sendEmail(accessToken, adminEncodedMessage);
@@ -829,12 +825,11 @@ const handler = async (req: Request): Promise<Response> => {
         const customerEncodedMessage = encodeEmailWithAttachments(
           email,
           `Quotation Request Received - ${submission.quote_number}`,
-          customerEmailHtml
+          customerEmailHtml,
         );
 
         await sendEmail(accessToken, customerEncodedMessage);
         console.log("Customer email sent via Gmail API");
-
       } catch (emailError) {
         console.error("Error sending emails in background:", emailError);
       }
@@ -845,25 +840,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Return immediate response without waiting for emails
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      quoteNumber: submission.quote_number
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
+    return new Response(
+      JSON.stringify({
+        success: true,
+        quoteNumber: submission.quote_number,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
       },
-    });
+    );
   } catch (error: any) {
     console.error("Error in send-quotation-request function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 
