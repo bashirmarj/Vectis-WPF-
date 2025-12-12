@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, Mail, Phone, Building2, MapPin, User, Loader2 } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 
@@ -119,30 +118,13 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
       {/* CAD Viewer Section - Full Width */}
       <div className="flex flex-col">
-        {/* Tab-style Header with Part Name */}
-        <div className="bg-background border-b">
-          <Tabs value={selectedFileIndex.toString()} onValueChange={(v) => onSelectFile(parseInt(v))}>
-            <TabsList className="h-10 bg-transparent border-b-0 px-4">
-              {files.length === 1 ? (
-                <TabsTrigger 
-                  value="0" 
-                  className="data-[state=active]:bg-background data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none"
-                >
-                  {selectedFile.file.name}
-                </TabsTrigger>
-              ) : (
-                files.map((file, index) => (
-                  <TabsTrigger 
-                    key={index} 
-                    value={index.toString()}
-                    className="data-[state=active]:bg-background data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none"
-                  >
-                    <span className="max-w-[150px] truncate">{file.file.name}</span>
-                  </TabsTrigger>
-                ))
-              )}
-            </TabsList>
-          </Tabs>
+        {/* Part Name Header Box */}
+        <div className="p-4 bg-background">
+          <div className="border rounded-lg h-10 flex items-center justify-center bg-background">
+            <span className="text-sm font-medium">
+              {selectedFile.file.name.replace(/\.[^/.]+$/, "")}
+            </span>
+          </div>
         </div>
 
         {/* CAD Viewer Area */}
