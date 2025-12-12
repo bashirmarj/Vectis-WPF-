@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@4.0.0";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { google } from "https://esm.sh/googleapis@134.0.0";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,6 +11,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Gmail OAuth2 setup
+function getGmailClient() {
+  const oauth2Client = new google.auth.OAuth2(
+    Deno.env.get('GMAIL_CLIENT_ID'),
+    Deno.env.get('GMAIL_CLIENT_SECRET')
+  );
+  oauth2Client.setCredentials({
+    refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')
+  });
+  return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
+// Helper to encode email in base64url format
+function encodeEmail(to: string, subject: string, htmlBody: string): string {
+  const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
+  const boundary = `boundary_${Date.now()}`;
+  
+  const messageParts = [
+    `From: "Vectis Manufacturing" <${gmailUser}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    `Content-Type: text/html; charset=utf-8`,
+    `Content-Transfer-Encoding: base64`,
+    '',
+    btoa(unescape(encodeURIComponent(htmlBody))),
+    `--${boundary}--`
+  ].join('\r\n');
+
+  // Convert to base64url (Gmail API requirement)
+  return btoa(unescape(encodeURIComponent(messageParts)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
 interface QuoteEmailRequest {
   quotationId: string;
@@ -331,14 +368,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Sending email to:', customerEmail);
 
-    const emailResponse = await resend.emails.send({
-      from: "Vectis Manufacturing <belmarj@vectismanufacturing.com>",
-      to: [customerEmail],
-      subject: `Your Quote ${quoteNumber} is Ready`,
-      html: emailHtml
+    // Send email using Gmail API
+    const gmail = getGmailClient();
+    const encodedMessage = encodeEmail(
+      customerEmail,
+      `Your Quote ${quoteNumber} is Ready`,
+      emailHtml
+    );
+
+    await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage }
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email sent successfully via Gmail API");
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

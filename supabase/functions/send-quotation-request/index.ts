@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@4.0.0";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { google } from "https://esm.sh/googleapis@134.0.0";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -13,6 +11,96 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Gmail OAuth2 setup
+function getGmailClient() {
+  const oauth2Client = new google.auth.OAuth2(
+    Deno.env.get('GMAIL_CLIENT_ID'),
+    Deno.env.get('GMAIL_CLIENT_SECRET')
+  );
+  oauth2Client.setCredentials({
+    refresh_token: Deno.env.get('GMAIL_REFRESH_TOKEN')
+  });
+  return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
+// Helper to encode email with attachments in base64url format (MIME multipart)
+function encodeEmailWithAttachments(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  attachments?: Array<{ filename: string; content: string }>
+): string {
+  const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
+  const boundary = `boundary_${Date.now()}`;
+  
+  let messageParts = [
+    `From: "Vectis Manufacturing" <${gmailUser}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+  ];
+
+  if (attachments && attachments.length > 0) {
+    // Multipart mixed for email with attachments
+    messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+    messageParts.push('');
+    
+    // HTML body part
+    messageParts.push(`--${boundary}`);
+    messageParts.push('Content-Type: text/html; charset=utf-8');
+    messageParts.push('Content-Transfer-Encoding: base64');
+    messageParts.push('');
+    messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
+    
+    // Attachment parts
+    for (const attachment of attachments) {
+      const mimeType = getMimeType(attachment.filename);
+      messageParts.push(`--${boundary}`);
+      messageParts.push(`Content-Type: ${mimeType}; name="${attachment.filename}"`);
+      messageParts.push('Content-Transfer-Encoding: base64');
+      messageParts.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
+      messageParts.push('');
+      messageParts.push(attachment.content); // Already base64 encoded from client
+    }
+    
+    messageParts.push(`--${boundary}--`);
+  } else {
+    // Simple email without attachments
+    messageParts.push(`Content-Type: text/html; charset=utf-8`);
+    messageParts.push('Content-Transfer-Encoding: base64');
+    messageParts.push('');
+    messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
+  }
+
+  const rawMessage = messageParts.join('\r\n');
+  
+  // Convert to base64url (Gmail API requirement)
+  return btoa(unescape(encodeURIComponent(rawMessage)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// Helper to get MIME type based on file extension
+function getMimeType(filename: string): string {
+  const ext = filename.toLowerCase().split('.').pop();
+  const mimeTypes: Record<string, string> = {
+    'step': 'application/STEP',
+    'stp': 'application/STEP',
+    'stl': 'application/sla',
+    'obj': 'model/obj',
+    'iges': 'model/iges',
+    'igs': 'model/iges',
+    'pdf': 'application/pdf',
+    'dxf': 'application/dxf',
+    'dwg': 'application/dwg',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
+}
 
 interface FileInfo {
   name: string;
@@ -290,19 +378,19 @@ const handler = async (req: Request): Promise<Response> => {
       drawingFilesCount: drawingFiles?.length || 0
     });
 
-    // Check total attachment size (Resend limit is 40MB)
+    // Check total attachment size (Gmail limit is 25MB, but we'll be conservative)
     const totalSize = files.reduce((sum, f) => sum + f.size, 0) + 
                      (drawingFiles?.reduce((sum, f) => sum + f.size, 0) || 0);
     const totalSizeMB = totalSize / 1024 / 1024;
     
     console.log(`Total attachment size: ${totalSizeMB.toFixed(2)} MB`);
     
-    if (totalSizeMB > 35) {
+    if (totalSizeMB > 20) {
       console.error('Total attachment size exceeds limit:', totalSizeMB);
       return new Response(
         JSON.stringify({
           error: 'file_size_exceeded',
-          message: 'Total file size exceeds 35MB limit',
+          message: 'Total file size exceeds 20MB limit for email attachments',
           totalSizeMB
         }),
         {
@@ -621,6 +709,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails in the background to not block the response
     const sendEmails = async () => {
       try {
+        const gmail = getGmailClient();
+        const gmailUser = Deno.env.get('GMAIL_USER') || 'belmarj@vectismanufacturing.com';
+        
         // Format shipping address for display
         const formattedAddress = shippingAddress.split('\n').join(', ');
 
@@ -664,26 +755,33 @@ const handler = async (req: Request): Promise<Response> => {
           timelineText: `Estimated Response Time: <strong>24-48 Hours</strong>`
         });
 
-        const [emailResponse, customerEmailResponse] = await Promise.all([
-          // Admin email with attachments
-          resend.emails.send({
-            from: "Vectis Manufacturing <belmarj@vectismanufacturing.com>",
-            to: ["belmarj@vectismanufacturing.com"],
-            subject: `New Part Quotation Request - ${submission.quote_number}`,
-            html: adminEmailHtml,
-            attachments: attachments,
-          }),
-          // Customer confirmation email (without attachments)
-          resend.emails.send({
-            from: "Vectis Manufacturing <belmarj@vectismanufacturing.com>",
-            to: [email],
-            subject: `Quotation Request Received - ${submission.quote_number}`,
-            html: customerEmailHtml
-          })
-        ]);
+        // Send admin email with attachments
+        const adminEncodedMessage = encodeEmailWithAttachments(
+          gmailUser,
+          `New Part Quotation Request - ${submission.quote_number}`,
+          adminEmailHtml,
+          attachments
+        );
 
-        console.log("Admin email sent:", emailResponse);
-        console.log("Customer email sent:", customerEmailResponse);
+        await gmail.users.messages.send({
+          userId: 'me',
+          requestBody: { raw: adminEncodedMessage }
+        });
+        console.log("Admin email sent via Gmail API");
+
+        // Send customer confirmation email (without attachments)
+        const customerEncodedMessage = encodeEmailWithAttachments(
+          email,
+          `Quotation Request Received - ${submission.quote_number}`,
+          customerEmailHtml
+        );
+
+        await gmail.users.messages.send({
+          userId: 'me',
+          requestBody: { raw: customerEncodedMessage }
+        });
+        console.log("Customer email sent via Gmail API");
+
       } catch (emailError) {
         console.error("Error sending emails in background:", emailError);
       }
