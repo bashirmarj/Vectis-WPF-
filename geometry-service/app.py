@@ -38,24 +38,28 @@ from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
 
-# Local modules
-from brepnet_wrapper import BRepNetRecognizer, FeatureType
-from geometric_fallback import TurningFeatureDetector
-from volume_decomposer import VolumeDecomposer
-from lump_classifier import LumpClassifier
-from feature_mapper import FeatureMapper
-from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletRecognizer
-
-# === Configuration ===
-app = Flask(__name__)
-CORS(app)
-
 # ========== TEMPORARY: Skip feature recognition for faster processing ==========
 # Set to False to re-enable feature recognition (AAG, geometric recognition, volume decomposition)
 # When True: Only tessellation + basic metrics run (5-15 seconds)
 # When False: Full feature recognition runs (60+ seconds)
 SKIP_FEATURE_RECOGNITION = True
 # ================================================================================
+
+# Local modules - always needed
+from volume_decomposer import VolumeDecomposer
+from lump_classifier import LumpClassifier
+from feature_mapper import FeatureMapper
+
+# Heavy ML modules - conditional import to avoid loading BRepNet when skipped
+if not SKIP_FEATURE_RECOGNITION:
+    from brepnet_wrapper import BRepNetRecognizer, FeatureType
+    from geometric_fallback import TurningFeatureDetector
+    from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletRecognizer
+
+# === Configuration ===
+app = Flask(__name__)
+CORS(app)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s'
@@ -78,33 +82,36 @@ if SUPABASE_URL and SUPABASE_KEY:
 brepnet_recognizer = None
 turning_detector = None
 
-try:
-    # Load BRepNet with pre-trained PyTorch Lightning checkpoint
-    model_path = "models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt"
-    logger.info(f"🔄 Loading BRepNet from {model_path}...")
-    
-    brepnet_recognizer = BRepNetRecognizer(
-        model_path=model_path,
-        device="cpu",  # Use CPU for production
-        confidence_threshold=0.30  # Lowered from 0.70 to capture more features
-    )
-    logger.info("✅ BRepNet recognizer loaded successfully")
-except FileNotFoundError as e:
-    logger.error(f"❌ BRepNet model file not found: {e}")
-    brepnet_recognizer = None
-except ImportError as e:
-    logger.error(f"❌ BRepNet dependencies missing: {e}")
-    brepnet_recognizer = None
-except Exception as e:
-    logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
-    brepnet_recognizer = None
+if not SKIP_FEATURE_RECOGNITION:
+    try:
+        # Load BRepNet with pre-trained PyTorch Lightning checkpoint
+        model_path = "models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt"
+        logger.info(f"🔄 Loading BRepNet from {model_path}...")
+        
+        brepnet_recognizer = BRepNetRecognizer(
+            model_path=model_path,
+            device="cpu",  # Use CPU for production
+            confidence_threshold=0.30  # Lowered from 0.70 to capture more features
+        )
+        logger.info("✅ BRepNet recognizer loaded successfully")
+    except FileNotFoundError as e:
+        logger.error(f"❌ BRepNet model file not found: {e}")
+        brepnet_recognizer = None
+    except ImportError as e:
+        logger.error(f"❌ BRepNet dependencies missing: {e}")
+        brepnet_recognizer = None
+    except Exception as e:
+        logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
+        brepnet_recognizer = None
 
-try:
-    # Geometric fallback for turning features
-    turning_detector = TurningFeatureDetector(tolerance=0.001)
-    logger.info("✅ Turning feature detector loaded")
-except Exception as e:
-    logger.error(f"❌ Turning detector failed: {e}")
+    try:
+        # Geometric fallback for turning features
+        turning_detector = TurningFeatureDetector(tolerance=0.001)
+        logger.info("✅ Turning feature detector loaded")
+    except Exception as e:
+        logger.error(f"❌ Turning detector failed: {e}")
+else:
+    logger.info("⏭️ SKIP_FEATURE_RECOGNITION=True - Skipping BRepNet and ML model loading")
 
 
 @dataclass
