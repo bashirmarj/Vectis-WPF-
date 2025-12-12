@@ -236,7 +236,7 @@ const Index = () => {
                   className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
                 >
                   <div
-                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-260 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
+                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-150 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
