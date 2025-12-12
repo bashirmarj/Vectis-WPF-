@@ -65,6 +65,198 @@ async function hashString(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Unified email template generator
+function generateUnifiedEmailTemplate(options: {
+  heroTitle: string;
+  heroSubtitle: string;
+  quoteNumber: string;
+  statusStep: 1 | 2 | 3; // 1=Received, 2=Reviewing, 3=Quote Ready
+  detailsContent: string;
+  fileListContent?: string;
+  timelineText?: string;
+  showStatusTracker?: boolean;
+  footerText?: string;
+}): string {
+  const {
+    heroTitle,
+    heroSubtitle,
+    quoteNumber,
+    statusStep,
+    detailsContent,
+    fileListContent,
+    timelineText,
+    showStatusTracker = true,
+    footerText
+  } = options;
+
+  const statusTracker = showStatusTracker ? `
+    <!-- 2. Visual Status Tracker -->
+    <div style="background-color: rgba(248, 250, 252, 0.9); padding: 25px 20px; border-bottom: 1px solid #e2e8f0; text-align: center;">
+      <div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
+        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 1 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 1 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+        <span style="font-size: 11px; color: ${statusStep >= 1 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Received</span>
+      </div><!--
+      --><div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
+        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 2 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 2 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+        <span style="font-size: 11px; color: ${statusStep >= 2 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Reviewing</span>
+      </div><!--
+      --><div style="display: inline-block; width: 30%; vertical-align: top; position: relative;">
+        <span style="height: 12px; width: 12px; background-color: ${statusStep >= 3 ? '#10b981' : '#cbd5e1'}; border-radius: 50%; display: inline-block; margin-bottom: 8px; ${statusStep >= 3 ? 'box-shadow: 0 0 0 4px #d1fae5;' : ''}"></span>
+        <span style="font-size: 11px; color: ${statusStep >= 3 ? '#10b981' : '#64748b'}; font-weight: 600; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Quote Ready</span>
+      </div>
+    </div>
+  ` : '';
+
+  const timelineBox = timelineText ? `
+    <!-- Timeline / Next Steps -->
+    <div style="margin-top: 30px; text-align: center; padding: 20px; background-color: rgba(255, 251, 235, 0.9); border: 1px solid #fcd34d; border-radius: 6px;">
+      <p style="color: #92400e; font-size: 14px; font-weight: 500; margin: 0;">
+        &#9201; ${timelineText}
+      </p>
+    </div>
+  ` : '';
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${heroTitle}</title>
+      <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+      <![endif]-->
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f1f4f9; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+
+    <div style="width: 100%; table-layout: fixed; background-color: #f1f4f9; padding-bottom: 40px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="center">
+            
+            <!-- Spacer -->
+            <div style="height: 40px;"></div>
+
+            <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765512246/LOGO_edi8ss.png'); background-repeat: no-repeat; background-position: center 120px; background-size: 80%;">
+              <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
+              
+                <!-- 1. Brand Header -->
+                <div style="background-color: #000000; padding: 30px 40px; text-align: center; position: relative; z-index: 2;">
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                      <td align="center" style="vertical-align: middle;">
+                        <img src="https://res.cloudinary.com/dbcfeio6b/image/upload/v1765508292/output-onlinepngtools-removebg-preview_1_kkhayz.png" alt="VM Logo" width="88" style="display: inline-block; vertical-align: middle; margin-right: 15px; height: auto; border: 0;">
+                        <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; display: inline-block; vertical-align: middle;">Vectis Manufacturing</span>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+
+                ${statusTracker}
+
+                <!-- 3. Hero Section -->
+                <div style="padding: 40px 40px 20px 40px; text-align: center;">
+                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: #e0f2fe; margin-bottom: 20px; line-height: 64px;">
+                    <span style="font-size: 32px; color: #0284c7; line-height: 64px; font-family: Arial, sans-serif;">&#10003;</span>
+                  </div>
+                  
+                  <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 10px 0;">${heroTitle}</h2>
+                  <p style="color: #64748b; font-size: 16px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                </div>
+
+                <!-- 4. Content & Details -->
+                <div style="padding: 0 40px 40px 40px;">
+                  
+                  <!-- Reference Number Block -->
+                  <div style="text-align: center; margin-bottom: 25px;">
+                    <span style="background: #e2e8f0; color: #475569; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">REF: ${quoteNumber}</span>
+                  </div>
+
+                  <!-- Details "Receipt" Card -->
+                  <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 25px; overflow: hidden;">
+                    <div style="background-color: rgba(239, 246, 255, 0.9); padding: 12px 20px; border-bottom: 1px solid #dbeafe;">
+                      <h3 style="color: #1e40af; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Order Summary</h3>
+                    </div>
+                    
+                    ${detailsContent}
+                    
+                    ${fileListContent || ''}
+                  </div>
+
+                  ${timelineBox}
+
+                  <p style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
+                    Need to make changes? <a href="mailto:belmarj@vectismanufacturing.com" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Reply to this email</a>
+                  </p>
+
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #f1f4f9; padding: 30px; text-align: center; font-size: 12px; color: #94a3b8;">
+              <p style="margin-bottom: 10px;">&copy; ${new Date().getFullYear()} Vectis Manufacturing. All rights reserved.</p>
+              ${footerText ? `<p>${footerText}</p>` : ''}
+            </div>
+
+            <!-- Spacer -->
+            <div style="height: 40px;"></div>
+
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    </body>
+    </html>
+  `;
+}
+
+// Helper to generate detail rows
+function generateDetailRow(label: string, value: string): string {
+  return `
+    <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
+      <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left; width: 40%;">${label}</span>
+      <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right; width: 60%; text-align: right;">${value}</span>
+      <div style="clear: both;"></div>
+    </div>
+  `;
+}
+
+// Helper to generate file list
+function generateFileList(files: FileInfo[], drawingFiles?: FileInfo[]): string {
+  const fileItems = files.map(f => `
+    <div style="background-color: rgba(255, 255, 255, 0.8); border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px; margin-top: 10px;">
+      <span style="display: inline-block; width: 12px; height: 16px; border: 2px solid #64748b; border-radius: 2px; vertical-align: middle; margin-right: 8px; position: relative; top: -1px;"></span>
+      <span style="font-size: 14px; color: #334155; font-weight: 500; vertical-align: middle;">${f.name}</span>
+      <span style="float: right; font-size: 12px; color: #64748b; font-weight: 600;">x${f.quantity}</span>
+    </div>
+  `).join('');
+
+  const drawingItems = drawingFiles && drawingFiles.length > 0 ? drawingFiles.map(f => `
+    <div style="background-color: rgba(255, 255, 255, 0.8); border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px; margin-top: 10px;">
+      <span style="display: inline-block; width: 12px; height: 16px; border: 2px solid #64748b; border-radius: 2px; vertical-align: middle; margin-right: 8px; position: relative; top: -1px;"></span>
+      <span style="font-size: 14px; color: #334155; font-weight: 500; vertical-align: middle;">${f.name}</span>
+      <span style="float: right; font-size: 12px; color: #64748b; font-weight: 600;">Drawing</span>
+    </div>
+  `).join('') : '';
+
+  return `
+    <div style="padding: 12px 20px; background-color: rgba(255,255,255,0.7);">
+      <span style="color: #64748b; font-size: 13px; font-weight: 600; width: 100%; margin-bottom: 8px; display: block;">Uploaded Files</span>
+      ${fileItems}
+      ${drawingItems}
+    </div>
+  `;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -144,18 +336,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Build file lists for email
-    const cadFilesList = files.map((f, i) => 
-      `<li>${f.name} - Quantity: ${f.quantity} (${(f.size / 1024 / 1024).toFixed(2)} MB)</li>`
-    ).join('');
-
     const totalQuantity = files.reduce((sum, f) => sum + f.quantity, 0);
-
-    const drawingFilesList = drawingFiles && drawingFiles.length > 0
-      ? drawingFiles.map((f, i) => 
-          `<li>${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)</li>`
-        ).join('')
-      : null;
 
     // Record the submission with full customer details FIRST
     const { data: submission, error: insertError } = await supabase
@@ -440,16 +621,48 @@ const handler = async (req: Request): Promise<Response> => {
     // Send emails in the background to not block the response
     const sendEmails = async () => {
       try {
-        // Read logo file
-        const logoPath = '/var/task/public/logo-email.png';
-        let logoContent: Uint8Array;
-        
-        try {
-          logoContent = await Deno.readFile(logoPath);
-        } catch (error) {
-          console.error('Could not read logo file:', error);
-          logoContent = new Uint8Array(0);
-        }
+        // Format shipping address for display
+        const formattedAddress = shippingAddress.split('\n').join(', ');
+
+        // Generate admin email content
+        const adminDetailsContent = `
+          ${generateDetailRow('Quote Number', submission.quote_number)}
+          ${generateDetailRow('Date', new Date().toLocaleDateString())}
+          ${generateDetailRow('Name', name)}
+          ${generateDetailRow('Company', company || 'N/A')}
+          ${generateDetailRow('Email', email)}
+          ${generateDetailRow('Phone', phone || 'N/A')}
+          ${generateDetailRow('Shipping Address', formattedAddress)}
+          ${message ? generateDetailRow('Additional Notes', message) : ''}
+        `;
+
+        const adminEmailHtml = generateUnifiedEmailTemplate({
+          heroTitle: 'New Quote Request',
+          heroSubtitle: `A new quotation request has been submitted by <strong>${name}</strong>.<br>Please review the details below.`,
+          quoteNumber: submission.quote_number,
+          statusStep: 1,
+          detailsContent: adminDetailsContent,
+          fileListContent: generateFileList(files, drawingFiles),
+          timelineText: `Review and respond within <strong>24-48 Hours</strong>`,
+          footerText: `${attachments.length} file(s) attached to this email.`
+        });
+
+        // Generate customer email content
+        const customerDetailsContent = `
+          ${generateDetailRow('Company', company || 'N/A')}
+          ${generateDetailRow('Total Quantity', `${totalQuantity} Parts`)}
+          ${generateDetailRow('Shipping To', formattedAddress)}
+        `;
+
+        const customerEmailHtml = generateUnifiedEmailTemplate({
+          heroTitle: 'Request Received',
+          heroSubtitle: `Thanks for your request, <strong>${name}</strong>.<br>Our engineering team has started reviewing your files.`,
+          quoteNumber: submission.quote_number,
+          statusStep: 1,
+          detailsContent: customerDetailsContent,
+          fileListContent: generateFileList(files, drawingFiles),
+          timelineText: `Estimated Response Time: <strong>24-48 Hours</strong>`
+        });
 
         const [emailResponse, customerEmailResponse] = await Promise.all([
           // Admin email with attachments
@@ -457,100 +670,7 @@ const handler = async (req: Request): Promise<Response> => {
             from: "Vectis Manufacturing <belmarj@vectismanufacturing.com>",
             to: ["belmarj@vectismanufacturing.com"],
             subject: `New Part Quotation Request - ${submission.quote_number}`,
-            html: `
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <style>
-                    body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #ffffff; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
-                    .logo { text-align: center; margin-bottom: 20px; }
-                    .logo img { height: 60px; width: auto; }
-                    .header { margin-bottom: 30px; }
-                    .company-name { font-size: 18px; font-weight: bold; color: #000000; margin-bottom: 20px; }
-                    .intro { font-size: 14px; line-height: 1.6; color: #000000; margin-bottom: 30px; }
-                    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                    .info-table td { padding: 12px; border: 1px solid #cccccc; font-size: 14px; }
-                    .info-table td:first-child { background-color: #f9f9f9; font-weight: normal; color: #000000; width: 180px; vertical-align: top; }
-                    .info-table td:last-child { color: #000000; }
-                    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #cccccc; font-size: 12px; color: #666666; }
-                    .file-list { margin: 0; padding: 0; list-style: none; }
-                    .file-list li { margin: 4px 0; }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <div class="logo">
-                      <img src="cid:logo" alt="Vectis Manufacturing" />
-                    </div>
-                    <div class="header">
-                      <div class="company-name">VECTIS MANUFACTURING</div>
-                    </div>
-                    
-                    <div class="intro">
-                      Hello, You have received a new Request for Quote. Your request will be handled in the order it was submitted. It could take up to 48 hours to receive a response, especially if your request is complex. Thank you for choosing Vectis Manufacturing! Here is a summary of the submission:
-                    </div>
-                    
-                    <table class="info-table">
-                      <tr>
-                        <td>Quote Number</td>
-                        <td>${submission.quote_number}</td>
-                      </tr>
-                      <tr>
-                        <td>Date</td>
-                        <td>${new Date().toLocaleDateString()}</td>
-                      </tr>
-                      <tr>
-                        <td>Name</td>
-                        <td>${name}</td>
-                      </tr>
-                      <tr>
-                        <td>Company</td>
-                        <td>${company || 'N/A'}</td>
-                      </tr>
-                      <tr>
-                        <td>Email</td>
-                        <td>${email}</td>
-                      </tr>
-                      <tr>
-                        <td>Phone</td>
-                        <td>${phone || 'N/A'}</td>
-                      </tr>
-                      <tr>
-                        <td>Shipping Address</td>
-                        <td>${shippingAddress}</td>
-                      </tr>
-                      <tr>
-                        <td>Part Files</td>
-                        <td>
-                          <ul class="file-list">
-                            ${files.map(f => `<li>${f.name} (${f.quantity} units)</li>`).join('')}
-                          </ul>
-                        </td>
-                      </tr>
-                      ${drawingFiles && drawingFiles.length > 0 ? `<tr>
-                        <td>Technical Drawings</td>
-                        <td>
-                          <ul class="file-list">
-                            ${drawingFiles.map((f: FileInfo) => `<li>${f.name}</li>`).join('')}
-                          </ul>
-                        </td>
-                      </tr>` : ''}
-                      ${message ? `<tr>
-                        <td>Additional Information</td>
-                        <td>${message}</td>
-                      </tr>` : ''}
-                    </table>
-                    
-                    <div class="footer">
-                      ${attachments.length} file(s) attached to this email.
-                    </div>
-                  </div>
-                </body>
-              </html>
-            `,
+            html: adminEmailHtml,
             attachments: attachments,
           }),
           // Customer confirmation email (without attachments)
@@ -558,92 +678,7 @@ const handler = async (req: Request): Promise<Response> => {
             from: "Vectis Manufacturing <belmarj@vectismanufacturing.com>",
             to: [email],
             subject: `Quotation Request Received - ${submission.quote_number}`,
-            html: `
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                </head>
-                <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #ffffff;">
-                  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <img src="https://inqabwlmvrvqsdrgskju.supabase.co/storage/v1/object/public/logos/logo-email.png" alt="Vectis Manufacturing" style="height: 60px; width: auto;" />
-                    </div>
-                    <div style="margin-bottom: 30px;">
-                      <div style="font-size: 18px; font-weight: bold; color: #000000; margin-bottom: 20px;">VECTIS MANUFACTURING</div>
-                    </div>
-
-                    <div style="font-size: 14px; line-height: 1.6; color: #000000; margin-bottom: 30px;">
-                      Hello ${name}, Thank you for your quotation request. We have successfully received your submission and our team will review it shortly. We will provide you with a detailed quote within 24-48 hours.
-                    </div>
-
-                    <!-- Quote Summary -->
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; width: 180px;">Quote Number</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${submission.quote_number}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Date</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${new Date().toLocaleDateString()}</td>
-                      </tr>
-                      ${company ? `
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Company</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${company}</td>
-                      </tr>` : ''}
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Phone</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${phone}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px;">Total Parts</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">${totalQuantity}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; vertical-align: top;">Shipping Address</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000; white-space: pre-line;">${shippingAddress}</td>
-                      </tr>
-                      ${message ? `
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; vertical-align: top;">Additional Information</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000; white-space: pre-line;">${message}</td>
-                      </tr>` : ''}
-                    </table>
-
-                    <!-- Submitted Files -->
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; vertical-align: top; width: 180px;">CAD Files (${files.length})</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">
-                          <ul style="margin: 0; padding: 0; list-style: none;">
-                            ${files.map(f => `<li style="margin: 4px 0;">${f.name} - Quantity: ${f.quantity}</li>`).join('')}
-                          </ul>
-                        </td>
-                      </tr>
-                      ${drawingFiles && drawingFiles.length > 0 ? `
-                      <tr>
-                        <td style="padding: 12px; border: 1px solid #cccccc; background-color: #f9f9f9; font-size: 14px; vertical-align: top;">Technical Drawings (${drawingFiles.length})</td>
-                        <td style="padding: 12px; border: 1px solid #cccccc; font-size: 14px; color: #000000;">
-                          <ul style="margin: 0; padding: 0; list-style: none;">
-                            ${drawingFiles.map(f => `<li style="margin: 4px 0;">${f.name}</li>`).join('')}
-                          </ul>
-                        </td>
-                      </tr>` : ''}
-                    </table>
-
-                    <div style="font-size: 14px; line-height: 1.6; color: #000000; margin-bottom: 30px;">
-                      If you have any questions or need to make changes to your request, please reply to this email and reference your quote number.
-                    </div>
-
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #cccccc; font-size: 12px; color: #666666;">
-                      Thank you for choosing Vectis Manufacturing.
-                    </div>
-                  </div>
-                </body>
-              </html>
-            `
+            html: customerEmailHtml
           })
         ]);
 
