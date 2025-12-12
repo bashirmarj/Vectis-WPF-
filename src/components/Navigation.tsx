@@ -70,29 +70,6 @@ const Navigation = () => {
       path: "/services/turnkey-solutions"
     }]
   }, {
-    name: "Capabilities",
-    path: "/capabilities",
-    subItems: [{
-      name: "CNC Machining",
-      path: "/capabilities#cnc"
-    }, {
-      name: "Precision Engineering",
-      path: "/capabilities#precision"
-    }, {
-      name: "Quality Control",
-      path: "/capabilities#quality"
-    }]
-  }, {
-    name: "Projects",
-    path: "/projects",
-    subItems: [{
-      name: "Case Studies",
-      path: "/projects#case-studies"
-    }, {
-      name: "Portfolio",
-      path: "/projects#portfolio"
-    }]
-  }, {
     name: "Contact",
     path: "/contact"
   }];

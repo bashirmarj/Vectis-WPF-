@@ -12,8 +12,6 @@ import PrototypeDesign from "./pages/services/PrototypeDesign";
 import CustomParts from "./pages/services/CustomParts";
 import PrototypingServices from "./pages/services/PrototypingServices";
 import TurnkeySolutions from "./pages/services/TurnkeySolutions";
-import Capabilities from "./pages/Capabilities";
-import Projects from "./pages/Projects";
 import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
@@ -40,8 +38,6 @@ const App = () => (
             <Route path="/services/custom-parts" element={<CustomParts />} />
             <Route path="/services/prototyping" element={<PrototypingServices />} />
             <Route path="/services/turnkey-solutions" element={<TurnkeySolutions />} />
-            <Route path="/capabilities" element={<Capabilities />} />
-            <Route path="/projects" element={<Projects />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
