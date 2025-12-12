@@ -317,37 +317,36 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                 </div>
               </div>
 
-              {/* Row 3: Notes + Submit */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                <div className="md:col-span-2 space-y-1">
-                  <Label htmlFor="message" className="text-xs">Additional Notes</Label>
-                  <Textarea
-                    id="message"
-                    value={contactInfo.message}
-                    onChange={(e) => handleContactInfoChange("message", e.target.value)}
-                    placeholder="Any special requirements or notes..."
-                    rows={2}
-                    className="resize-none"
-                  />
-                </div>
+              {/* Row 3: Notes - Full Width */}
+              <div className="space-y-1">
+                <Label htmlFor="message" className="text-xs">Additional Notes</Label>
+                <Textarea
+                  id="message"
+                  value={contactInfo.message}
+                  onChange={(e) => handleContactInfoChange("message", e.target.value)}
+                  placeholder="Any special requirements or notes..."
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
 
-                <div className="flex justify-end">
-                  <Button 
-                    onClick={handleSubmit} 
-                    disabled={!isFormValid() || isSubmitting} 
-                    className="w-full md:w-auto min-w-[180px]" 
-                    size="default"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      "Submit Quote Request"
-                    )}
-                  </Button>
-                </div>
+              {/* Submit Button */}
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={!isFormValid() || isSubmitting} 
+                  className="w-full md:w-auto min-w-[180px]" 
+                  size="default"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Quote Request"
+                  )}
+                </Button>
               </div>
             </div>
           </CardContent>
