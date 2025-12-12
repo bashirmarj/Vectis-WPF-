@@ -6,15 +6,15 @@ gunicorn==21.2.0
 # Database client
 supabase==2.7.4
 
-# ML dependencies (PyTorch installed separately in Dockerfile)
-pytorch-lightning==2.1.0
-onnxruntime==1.16.3
+# ML dependencies - DISABLED (SKIP_FEATURE_RECOGNITION=True)
+# pytorch-lightning==2.1.0
+# onnxruntime==1.16.3
 
-# Scientific computing
+# Scientific computing - KEEP (used by volume_decomposer, occwl)
 numpy==1.24.4
 
-# Graph operations
-networkx==3.2.1
+# Graph operations - DISABLED (not used when feature recognition skipped)
+# networkx==3.2.1
 
 # NOTE: occwl is a local folder in geometry-service, not a pip package
 
@@ -24,6 +24,6 @@ psutil==5.9.6
 # OCCWL dependency
 deprecate==1.0.5
 
-# NOTE: torch installed separately in Dockerfile (CPU-only for smaller size)
+# NOTE: PyTorch DISABLED - not needed when SKIP_FEATURE_RECOGNITION=True
 # NOTE: pythonocc-core installed via conda
 # NOTE: occwl is a local folder, imported via PYTHONPATH
