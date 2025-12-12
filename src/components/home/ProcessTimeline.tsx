@@ -18,7 +18,7 @@ const ProcessTimeline: React.FC<{ className?: string }> = ({ className }) => {
     <div ref={ref} className={cn('w-full', className)}>
       <div className="relative">
         {/* Connection line */}
-        <div className="absolute top-8 left-0 right-0 h-0.5 bg-white/20 hidden md:block">
+        <div className="absolute top-8 left-[10%] right-[10%] h-0.5 bg-white/20 hidden md:block">
           <div
             className={cn(
               'h-full bg-primary transition-all duration-1000 ease-out',
