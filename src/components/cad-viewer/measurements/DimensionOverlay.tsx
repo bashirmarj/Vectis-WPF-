@@ -1,25 +1,31 @@
 import React from "react";
 import { useMeasurementStore, Measurement } from "@/stores/measurementStore";
-import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { LinearDimension } from "./LinearDimension";
 import { RadialDimension } from "./RadialDimension";
 import { AngularDimension } from "./AngularDimension";
 
+interface DimensionOverlayProps {
+    camera: THREE.Camera | null;
+    canvasWidth: number;
+    canvasHeight: number;
+}
+
 /**
  * DimensionOverlay - Professional SVG overlay for SolidWorks-style dimension rendering
- * Projects 3D measurements to 2D screen space for crisp dimension lines and callouts
+ * Renders as DOM element positioned over Canvas, not inside React Three Fiber
  */
-export function DimensionOverlay() {
+export function DimensionOverlay({ camera, canvasWidth, canvasHeight }: DimensionOverlayProps) {
     const { measurements } = useMeasurementStore();
-    const { camera, size } = useThree();
+
+    if (!camera) return null;
 
     // Project 3D point to 2D screen coordinates
     const project3DTo2D = (point: THREE.Vector3): { x: number; y: number } => {
         const vector = point.clone().project(camera);
         return {
-            x: ((vector.x + 1) / 2) * size.width,
-            y: ((-vector.y + 1) / 2) * size.height,
+            x: ((vector.x + 1) / 2) * canvasWidth,
+            y: ((-vector.y + 1) / 2) * canvasHeight,
         };
     };
 
@@ -153,8 +159,8 @@ export function DimensionOverlay() {
                 position: "absolute",
                 top: 0,
                 left: 0,
-                width: "100%",
-                height: "100%",
+                width: `${canvasWidth}px`,
+                height: `${canvasHeight}px`,
                 pointerEvents: "none",
                 zIndex: 10,
             }}

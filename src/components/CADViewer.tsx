@@ -105,6 +105,7 @@ export function CADViewer({
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
 
@@ -499,7 +500,10 @@ export function CADViewer({
                 preserveDrawingBuffer: true,
                 powerPreference: "high-performance",
               }}
-              onCreated={({ gl }) => {
+              onCreated={({ gl, size }) => {
+                // Capture canvas size for overlay
+                setCanvasSize({ width: size.width, height: size.height });
+
                 const handleContextLost = (e: Event) => {
                   e.preventDefault();
                   console.warn("⚠️ WebGL context lost - browser will auto-recover");
@@ -549,9 +553,6 @@ export function CADViewer({
                   }}
                 />
 
-                {/* ✅ NEW: Professional dimension overlay with arrows and callouts */}
-                <DimensionOverlay />
-
                 <TrackballControls
                   ref={controlsRef}
                   makeDefault
@@ -587,6 +588,13 @@ export function CADViewer({
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
+
+            {/* ✅ NEW: Professional dimension overlay with arrows and callouts (DOM overlay) */}
+            <DimensionOverlay
+              camera={cameraRef.current}
+              canvasWidth={canvasSize.width}
+              canvasHeight={canvasSize.height}
+            />
           </div>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
