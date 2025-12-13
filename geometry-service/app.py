@@ -41,11 +41,11 @@ from OCC.Core.GeomAbs import (
     GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
 )
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop, brepgprop_LinearProperties
+from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.GCPnts import GCPnts_QuasiUniformAbscissa
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
-from OCC.Core.TopExp import topexp_MapShapesAndAncestors
+from OCC.Core.TopExp import topexp
 from OCC.Core.GeomLProp import GeomLProp_SLProps
 import math
 
@@ -947,34 +947,23 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
     edges_data = []
     processed_edge_hashes = set()
 
-    # Build Edge -> Face map using pure Python dictionary (avoids C++ memory issues)
-    # Key: edge hash code, Value: list of faces adjacent to that edge
-    edge_to_faces = {}
-    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-    while face_explorer.More():
-        face = face_explorer.Current()
-        edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
-        while edge_exp.More():
-            edge = edge_exp.Current()
-            edge_hash = edge.HashCode(2147483647)
-            if edge_hash not in edge_to_faces:
-                edge_to_faces[edge_hash] = []
-            # Only add face if not already in list (avoid duplicates from seam edges)
-            face_already_added = False
-            for existing_face in edge_to_faces[edge_hash]:
-                if existing_face.IsSame(face):
-                    face_already_added = True
-                    break
-            if not face_already_added:
-                edge_to_faces[edge_hash] = edge_to_faces[edge_hash] + [face]
-            edge_exp.Next()
-        face_explorer.Next()
+    # Pre-compute Edge -> Face topology map
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp_MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
 
     # Helper to get normal of a face at a specific parameter along an edge
     def get_face_normal_at_param(face, edge, param):
         try:
+            # Validate edge before processing to prevent C++ crashes
+            if not is_edge_valid_for_curve_extraction(edge, face):
+                return [0.0, 0.0, 0.0]
+            
             # Get 2D curve of edge on face
             curve2d, first, last = BRep_Tool.CurveOnSurface(edge, face)
+            
+            # CurveOnSurface can return None for some edges - handle gracefully
+            if curve2d is None:
+                return [0.0, 0.0, 0.0]
             
             # Evaluate 2D point (u, v) on surface
             p2d = curve2d.Value(param)
@@ -982,8 +971,14 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
             
             # Evaluate surface properties to get normal
             surf_adaptor = BRepAdaptor_Surface(face)
+            
+            # Get the underlying Geom_Surface - can be None for some faces
+            geom_surface = surf_adaptor.Surface().Surface()
+            if geom_surface is None:
+                return [0.0, 0.0, 0.0]
+            
             # Note: 1 = degree of continuity, 1e-6 = tolerance
-            props = GeomLProp_SLProps(surf_adaptor.Surface().Surface(), u, v, 1, 1e-6)
+            props = GeomLProp_SLProps(geom_surface, u, v, 1, 1e-6)
             
             if props.IsNormalDefined():
                 n = props.Normal()
@@ -1030,7 +1025,7 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
 
             # Compute edge length (convert to mm for display)
             props = GProp_GProps()
-            brepgprop_LinearProperties(edge, props)
+            brepgprop.LinearProperties(edge, props)
             length_mm = props.Mass() * 1000  # meters to mm
 
             # Determine curve type string
