@@ -22,6 +22,7 @@ interface MeshData {
     end: [number, number, number];
     type: string;
     iso_type?: string;
+    snap_points?: [number, number, number][]; // For curved edges (circles, arcs)
   }>;
 }
 
@@ -282,8 +283,16 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
         const featureEdgePositions: number[] = [];
 
         meshData.tagged_edges.forEach((edge) => {
-          if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
-            // Backend handles edge-level deduplication - render all segments
+          // Use snap_points for curved edges (circles, arcs) - creates polyline segments
+          if (edge.snap_points && Array.isArray(edge.snap_points) && edge.snap_points.length >= 2) {
+            for (let i = 0; i < edge.snap_points.length - 1; i++) {
+              const p1 = edge.snap_points[i];
+              const p2 = edge.snap_points[i + 1];
+              featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+            }
+          }
+          // Fallback to start/end for straight edges
+          else if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
             featureEdgePositions.push(
               edge.start[0],
               edge.start[1],
