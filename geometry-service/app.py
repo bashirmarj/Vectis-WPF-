@@ -947,9 +947,28 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
     edges_data = []
     processed_edge_hashes = set()
 
-    # Pre-compute Edge -> Face topology map
-    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp_MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    # Build Edge -> Face map using pure Python dictionary (avoids C++ memory issues)
+    # Key: edge hash code, Value: list of faces adjacent to that edge
+    edge_to_faces = {}
+    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+    while face_explorer.More():
+        face = face_explorer.Current()
+        edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
+        while edge_exp.More():
+            edge = edge_exp.Current()
+            edge_hash = edge.HashCode(2147483647)
+            if edge_hash not in edge_to_faces:
+                edge_to_faces[edge_hash] = []
+            # Only add face if not already in list (avoid duplicates from seam edges)
+            face_already_added = False
+            for existing_face in edge_to_faces[edge_hash]:
+                if existing_face.IsSame(face):
+                    face_already_added = True
+                    break
+            if not face_already_added:
+                edge_to_faces[edge_hash] = edge_to_faces[edge_hash] + [face]
+            edge_exp.Next()
+        face_explorer.Next()
 
     # Helper to get normal of a face at a specific parameter along an edge
     def get_face_normal_at_param(face, edge, param):
@@ -1049,14 +1068,8 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
             }
 
             # === ADJACENT FACES & NORMALS ===
-            adjacent_faces = []
-            if edge_face_map.Contains(edge):
-                # Iterate over shapes
-                faces_list = edge_face_map.FindFromKey(edge)
-                it = TopTools_ListIteratorOfListOfShape(faces_list)
-                while it.More():
-                    adjacent_faces.append(it.Value())
-                    it.Next()
+            # Lookup adjacent faces from our Python dictionary
+            adjacent_faces = edge_to_faces.get(edge_hash, [])
 
             # Only process if we have faces (boundary=1, manifold=2)
             has_faces = len(adjacent_faces) > 0
