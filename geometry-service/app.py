@@ -34,9 +34,17 @@ from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
+from OCC.Core.GeomAbs import (
+    GeomAbs_Cylinder, GeomAbs_Plane,
+    GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse,
+    GeomAbs_Hyperbola, GeomAbs_Parabola, GeomAbs_BezierCurve,
+    GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
+)
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop
+from OCC.Core.BRepGProp import brepgprop, brepgprop_LinearProperties
+from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
+from OCC.Core.GCPnts import GCPnts_QuasiUniformAbscissa
+import math
 
 # ========== TEMPORARY: Skip feature recognition for faster processing ==========
 # Set to False to re-enable feature recognition (AAG, geometric recognition, volume decomposition)
@@ -438,7 +446,17 @@ def analyze_cad():
             # Extract geometric data
             logger.info(f"[{correlation_id}] Tessellating mesh")
             mesh_data = tessellate_shape(shape)
-            
+
+            # Extract measurement edges for SolidWorks-style measurements
+            logger.info(f"[{correlation_id}] 📐 Extracting measurement edges")
+            try:
+                measurement_edges = extract_measurement_edges(shape)
+                mesh_data['tagged_edges'] = measurement_edges
+                logger.info(f"[{correlation_id}] ✅ Extracted {len(measurement_edges)} measurement edges")
+            except Exception as edge_error:
+                logger.warning(f"[{correlation_id}] ⚠️ Measurement edge extraction failed: {edge_error}")
+                mesh_data['tagged_edges'] = []
+
             logger.info(f"[{correlation_id}] Computing bounding box")
             bbox = extract_bounding_box(shape)
             
@@ -649,7 +667,17 @@ def analyze_aag():
             # === STEP 2: Tessellate with face mapping ===
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
-            
+
+            # Extract measurement edges for SolidWorks-style measurements
+            logger.info(f"[{correlation_id}] 📐 Extracting measurement edges")
+            try:
+                measurement_edges = extract_measurement_edges(shape)
+                mesh_data['tagged_edges'] = measurement_edges
+                logger.info(f"[{correlation_id}] ✅ Extracted {len(measurement_edges)} measurement edges")
+            except Exception as edge_error:
+                logger.warning(f"[{correlation_id}] ⚠️ Measurement edge extraction failed: {edge_error}")
+                mesh_data['tagged_edges'] = []
+
             # === STEP 3 & 4: Feature Recognition (conditionally skipped) ===
             if SKIP_FEATURE_RECOGNITION:
                 logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
@@ -882,6 +910,204 @@ def analyze_aag():
             logger.info(f"[{correlation_id}] ⚠️ Returning mesh despite error")
         
         return jsonify(response), 206 if mesh_data else 500
+
+
+# =============================================================================
+# MEASUREMENT EDGE EXTRACTION - SolidWorks-style analytical edge data
+# This function extracts B-Rep edge geometry for precise measurements
+# Added: December 2024
+# =============================================================================
+
+def extract_measurement_edges(shape, num_discretization_points: int = 24) -> List[Dict]:
+    """
+    Extract B-Rep edges with analytical geometry data for SolidWorks-style measurements.
+
+    This provides:
+    - Edge type classification (line, circle, arc, ellipse, etc.)
+    - Analytical properties (center, radius, diameter for circles)
+    - Discretized points for rendering curved edges
+    - Length measurements
+
+    Coordinates are in METERS to match mesh vertices from tessellate_shape().
+    Measurement values (length, radius, diameter) are in MM for display.
+
+    Args:
+        shape: OpenCascade TopoDS_Shape
+        num_discretization_points: Number of points for curve discretization (default 24)
+
+    Returns:
+        List of edge dictionaries with analytical and rendering data
+    """
+    extraction_start = time.time()
+    edges_data = []
+    processed_edge_hashes = set()
+
+    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+    edge_index = 0
+
+    while edge_explorer.More():
+        edge = edge_explorer.Current()
+
+        # Deduplicate edges (shared edges between faces)
+        edge_hash = edge.HashCode(2147483647)
+        if edge_hash in processed_edge_hashes:
+            edge_explorer.Next()
+            continue
+        processed_edge_hashes.add(edge_hash)
+
+        try:
+            # Create curve adaptor for edge analysis
+            curve_adaptor = BRepAdaptor_Curve(edge)
+
+            # Get curve parameters
+            first_param = curve_adaptor.FirstParameter()
+            last_param = curve_adaptor.LastParameter()
+
+            # Skip degenerate edges
+            if abs(last_param - first_param) < 1e-10:
+                edge_explorer.Next()
+                continue
+
+            # Get curve type
+            curve_type = curve_adaptor.GetType()
+
+            # Get start and end points (in meters)
+            start_pnt = curve_adaptor.Value(first_param)
+            end_pnt = curve_adaptor.Value(last_param)
+
+            # Compute edge length (convert to mm for display)
+            props = GProp_GProps()
+            brepgprop_LinearProperties(edge, props)
+            length_mm = props.Mass() * 1000  # meters to mm
+
+            # Determine curve type string
+            type_map = {
+                GeomAbs_Line: "line",
+                GeomAbs_Circle: "circle",
+                GeomAbs_Ellipse: "ellipse",
+                GeomAbs_Hyperbola: "hyperbola",
+                GeomAbs_Parabola: "parabola",
+                GeomAbs_BezierCurve: "bezier",
+                GeomAbs_BSplineCurve: "bspline",
+                GeomAbs_OffsetCurve: "offset",
+            }
+            type_str = type_map.get(curve_type, "other")
+
+            # Check if edge is closed
+            is_closed = start_pnt.Distance(end_pnt) < 1e-6
+
+            # Build edge data (coordinates in METERS to match mesh)
+            edge_data = {
+                'feature_id': edge_index,
+                'type': type_str,
+                'length': round(length_mm, 4),  # mm for display
+                'is_closed': is_closed,
+                'start': [
+                    round(start_pnt.X(), 8),  # meters
+                    round(start_pnt.Y(), 8),
+                    round(start_pnt.Z(), 8)
+                ],
+                'end': [
+                    round(end_pnt.X(), 8),  # meters
+                    round(end_pnt.Y(), 8),
+                    round(end_pnt.Z(), 8)
+                ]
+            }
+
+            # === ANALYTICAL DATA FOR SPECIFIC CURVE TYPES ===
+
+            if curve_type == GeomAbs_Circle:
+                circle = curve_adaptor.Circle()
+                center = circle.Location()
+                axis = circle.Axis().Direction()
+                radius_m = circle.Radius()
+                radius_mm = radius_m * 1000
+
+                edge_data['center'] = [
+                    round(center.X(), 8),  # meters
+                    round(center.Y(), 8),
+                    round(center.Z(), 8)
+                ]
+                edge_data['radius'] = round(radius_mm, 4)  # mm
+                edge_data['diameter'] = round(radius_mm * 2, 4)  # mm
+                edge_data['normal'] = [
+                    round(axis.X(), 6),
+                    round(axis.Y(), 6),
+                    round(axis.Z(), 6)
+                ]
+
+                # Check if full circle (2π sweep)
+                sweep_angle = abs(last_param - first_param)
+                edge_data['is_full_circle'] = sweep_angle >= (2 * math.pi - 0.01)
+                edge_data['sweep_angle'] = round(sweep_angle, 6)
+
+                if not edge_data['is_full_circle']:
+                    # Arc - compute arc length
+                    edge_data['arc_length'] = round(radius_mm * sweep_angle, 4)
+
+            elif curve_type == GeomAbs_Ellipse:
+                ellipse = curve_adaptor.Ellipse()
+                center = ellipse.Location()
+
+                edge_data['center'] = [
+                    round(center.X(), 8),
+                    round(center.Y(), 8),
+                    round(center.Z(), 8)
+                ]
+                edge_data['major_radius'] = round(ellipse.MajorRadius() * 1000, 4)  # mm
+                edge_data['minor_radius'] = round(ellipse.MinorRadius() * 1000, 4)  # mm
+
+            elif curve_type == GeomAbs_Line:
+                line = curve_adaptor.Line()
+                direction = line.Direction()
+
+                edge_data['direction'] = [
+                    round(direction.X(), 6),
+                    round(direction.Y(), 6),
+                    round(direction.Z(), 6)
+                ]
+
+            # === DISCRETIZED POINTS FOR RENDERING ===
+            # Generate points along the curve for proper visualization
+
+            try:
+                # For lines, just use start and end
+                if curve_type == GeomAbs_Line:
+                    edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
+                else:
+                    # For curves, discretize with uniform spacing
+                    discretizer = GCPnts_QuasiUniformAbscissa(curve_adaptor, num_discretization_points)
+
+                    if discretizer.IsDone() and discretizer.NbPoints() >= 2:
+                        snap_points = []
+                        for i in range(1, discretizer.NbPoints() + 1):
+                            param = discretizer.Parameter(i)
+                            pnt = curve_adaptor.Value(param)
+                            snap_points.append([
+                                round(pnt.X(), 8),  # meters
+                                round(pnt.Y(), 8),
+                                round(pnt.Z(), 8)
+                            ])
+                        edge_data['snap_points'] = snap_points
+                    else:
+                        # Fallback to start/end
+                        edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
+            except Exception as disc_error:
+                logger.warning(f"Edge {edge_index} discretization failed: {disc_error}")
+                edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
+
+            edges_data.append(edge_data)
+            edge_index += 1
+
+        except Exception as edge_error:
+            logger.warning(f"Failed to process edge {edge_index}: {edge_error}")
+
+        edge_explorer.Next()
+
+    elapsed_ms = (time.time() - extraction_start) * 1000
+    logger.info(f"📐 Extracted {len(edges_data)} measurement edges in {elapsed_ms:.1f}ms")
+
+    return edges_data
 
 
 if __name__ == '__main__':
