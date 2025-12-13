@@ -147,8 +147,8 @@ export function SilhouetteEdges({
 
   return (
     <group>
-      {/* Static feature edges - show ALL when showHiddenEdges=true */}
-      {displayMode === "wireframe" && showHiddenEdges && staticFeatureEdges?.attributes?.position && (
+      {/* Static feature edges - show ALL when showHiddenEdges=true (any display mode) */}
+      {showHiddenEdges && staticFeatureEdges?.attributes?.position && (
         <lineSegments
           geometry={staticFeatureEdges}
           frustumCulled={true}
@@ -163,12 +163,28 @@ export function SilhouetteEdges({
         </lineSegments>
       )}
 
-      {/* Visible feature edges - computed per-frame based on backend normals */}
-      {displayMode === "wireframe" && !showHiddenEdges && visibleFeatureGeometry && (
+      {/* Visible feature edges - computed per-frame based on backend normals (any display mode) */}
+      {!showHiddenEdges && visibleFeatureGeometry && (
         <lineSegments
           geometry={visibleFeatureGeometry}
           frustumCulled={true}
           key="visible-feature-edges"
+        >
+          <lineBasicMaterial
+            color="#000000"
+            toneMapped={false}
+            depthTest={false}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
+
+      {/* Fallback: Show all edges if no normals computed yet */}
+      {!showHiddenEdges && !visibleFeatureGeometry && staticFeatureEdges?.attributes?.position && (
+        <lineSegments
+          geometry={staticFeatureEdges}
+          frustumCulled={true}
+          key="fallback-edges"
         >
           <lineBasicMaterial
             color="#000000"
@@ -199,11 +215,10 @@ function computeVisibleFeatureEdges(
   const n1Attr = staticFeatureEdges.attributes.faceNormal1;
   const n2Attr = staticFeatureEdges.attributes.faceNormal2;
 
-  // STRICT PRODUCTION REQUIREMENT: 
-  // If no backend normals are provided, we return empty.
-  // We do NOT guess or compute connectivity on the frontend.
+  // FALLBACK: If no backend normals, return ALL edges as visible
+  // This ensures edges always render even if normal data isn't available
   if (!n1Attr || !n2Attr) {
-    return new Float32Array(0);
+    return positions.slice(); // Return copy of all positions
   }
 
   const n1Array = n1Attr.array as Float32Array;
