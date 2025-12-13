@@ -3,7 +3,7 @@ import { useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useMeasurementStore } from "@/stores/measurementStore";
-import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils";
+import { formatMeasurement, generateMeasurementId, calculateXYZDeltas } from "@/lib/measurementUtils";
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { FaceCrosshairMarker } from "./measurements/FaceCrosshairMarker";
 import { toast } from "@/hooks/use-toast";
@@ -44,7 +44,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
   boundingSphere,
 }) => {
   const { camera, gl, raycaster } = useThree();
-  
+
   // Edge detection state
   const [hoverInfo, setHoverInfo] = useState<{
     position: THREE.Vector3;
@@ -68,7 +68,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
     if (!featureEdgesGeometry) return [];
     const lines: THREE.Line3[] = [];
     const positions = featureEdgesGeometry.attributes.position;
-    
+
     for (let i = 0; i < positions.count; i += 2) {
       lines.push(
         new THREE.Line3(
@@ -410,20 +410,24 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
               });
             }
           } else if (taggedEdge.type === "line" && taggedEdge.length) {
-            // Straight line → show length
+            // Straight line → show length with XYZ deltas
+            const startPoint = new THREE.Vector3(...taggedEdge.start);
+            const endPoint = new THREE.Vector3(...taggedEdge.end);
+            const xyzDeltas = calculateXYZDeltas(startPoint, endPoint);
+
             addMeasurement({
               id: generateMeasurementId(),
               type: "measure",
               points: [
                 {
                   id: generateMeasurementId(),
-                  position: new THREE.Vector3(...taggedEdge.start),
+                  position: startPoint,
                   normal: new THREE.Vector3(0, 1, 0),
                   surfaceType: "edge",
                 },
                 {
                   id: generateMeasurementId(),
-                  position: new THREE.Vector3(...taggedEdge.end),
+                  position: endPoint,
                   normal: new THREE.Vector3(0, 1, 0),
                   surfaceType: "edge",
                 },
@@ -438,6 +442,10 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 measurementSubtype: "edge",
                 edgeType: "line",
                 backendMatch: true,
+                // NEW: Add XYZ deltas
+                deltaX: xyzDeltas.dX,
+                deltaY: xyzDeltas.dY,
+                deltaZ: xyzDeltas.dZ,
               },
             });
 
@@ -512,6 +520,8 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
           const edge = hoverInfo.edge;
 
           if (simpleEdge.length && edge) {
+            const xyzDeltas = calculateXYZDeltas(edge.start, edge.end);
+
             addMeasurement({
               id: generateMeasurementId(),
               type: "measure",
@@ -539,6 +549,10 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 measurementSubtype: "edge",
                 edgeType: "line",
                 backendMatch: false, // From geometry, not backend
+                // NEW: Add XYZ deltas
+                deltaX: xyzDeltas.dX,
+                deltaY: xyzDeltas.dY,
+                deltaZ: xyzDeltas.dZ,
               },
             });
 
@@ -577,7 +591,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
         };
 
         const values = calculateMarkerValues(marker1.intersection, marker2.intersection);
-        
+
         const label = values.parallelFacesDistance !== null
           ? `${values.pointsDistance.toFixed(2)} mm (${(values.facesAngle * RadDeg).toFixed(1)}°, ⊥${values.parallelFacesDistance.toFixed(2)} mm)`
           : `${values.pointsDistance.toFixed(2)} mm (${(values.facesAngle * RadDeg).toFixed(1)}°)`;
@@ -615,7 +629,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
         setMarkers([]);
         setTempMarker(null);
-        
+
         toast({
           title: "Measurement Created",
           description: label,
@@ -657,7 +671,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
             ]);
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            
+
             return (
               <primitive key={idx} object={new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: "#ff8800", linewidth: 3 }))} />
             );

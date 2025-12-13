@@ -18,6 +18,7 @@ import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLigh
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
+import { DimensionOverlay } from "./cad-viewer/measurements/DimensionOverlay";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 // FeatureTree import removed - feature recognition disabled for faster processing
@@ -547,6 +548,9 @@ export function CADViewer({
                     radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
                   }}
                 />
+
+                {/* ✅ NEW: Professional dimension overlay with arrows and callouts */}
+                <DimensionOverlay />
 
                 <TrackballControls
                   ref={controlsRef}

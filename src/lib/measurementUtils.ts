@@ -308,7 +308,7 @@ function fitCircleToPoints(points: THREE.Vector3[]): { center: THREE.Vector3; ra
   }
   distances.sort((a, b) => a - b);
   const medianDist = distances[Math.floor(distances.length / 2)];
-  
+
   const filteredPoints = points.filter((p, i) => {
     if (i === 0 || i === points.length - 1) return true;
     const dist = p.distanceTo(points[i - 1]);
@@ -859,6 +859,39 @@ export function calculateDeltas(
 }
 
 /**
+ * Calculate XYZ deltas for SolidWorks-style measurements
+ * Returns SIGNED deltas (positive or negative) in millimeters
+ * @param point1 First point (from)
+ * @param point2 Second point (to)
+ * @returns Object with dX, d
+
+Y, dZ in mm
+ */
+export function calculateXYZDeltas(
+  point1: THREE.Vector3,
+  point2: THREE.Vector3
+): {
+  dX: number;
+  dY: number;
+  dZ: number;
+  distance: number;
+} {
+  // Points are already in meters, convert to mm
+  const dX = (point2.x - point1.x) * 1000;
+  const dY = (point2.y - point1.y) * 1000;
+  const dZ = (point2.z - point1.z) * 1000;
+  const distance = point1.distanceTo(point2) * 1000;
+
+  return {
+    dX,
+    dY,
+    dZ,
+    distance
+  };
+}
+
+
+/**
  * Detect if two points lie on a cylindrical surface
  * @param p1 First point
  * @param p2 Second point
@@ -943,4 +976,170 @@ export function detectCylindricalSurface(
   }
 
   return null;
+}
+
+/**
+ * Calculate face perimeter from boundary edges
+ * @param faceId Face ID to calculate perimeter for
+ * @param meshData Mesh data containing vertices and face mapping
+ * @returns Perimeter in mm, or null if cannot calculate
+ */
+export function calculateFacePerimeter(
+  faceId: number,
+  meshData: MeshData
+): number | null {
+  if (!meshData.vertex_face_ids || !meshData.vertices || !meshData.indices) {
+    return null;
+  }
+
+  // Find all triangles belonging to this face
+  const faceTriangles: number[] = [];
+  for (let i = 0; i < meshData.indices.length; i += 3) {
+    const idx0 = meshData.indices[i];
+    const idx1 = meshData.indices[i + 1];
+    const idx2 = meshData.indices[i + 2];
+
+    // Check if all vertices belong to this face
+    if (
+      meshData.vertex_face_ids[idx0] === faceId ||
+      meshData.vertex_face_ids[idx1] === faceId ||
+      meshData.vertex_face_ids[idx2] === faceId
+    ) {
+      faceTriangles.push(i / 3);
+    }
+  }
+
+  if (faceTriangles.length === 0) return null;
+
+  // Extract boundary edges (edges that appear only once)
+  const edgeMap = new Map<string, number>();
+
+  for (const triIdx of faceTriangles) {
+    const i = triIdx * 3;
+    const idx0 = meshData.indices[i];
+    const idx1 = meshData.indices[i + 1];
+    const idx2 = meshData.indices[i + 2];
+
+    // Three edges per triangle
+    const edges = [
+      [idx0, idx1],
+      [idx1, idx2],
+      [idx2, idx0],
+    ];
+
+    for (const [a, b] of edges) {
+      const key = a < b ? `${a}-${b}` : `${b}-${a}`;
+      edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+    }
+  }
+
+  // Boundary edges appear only once
+  let perimeter = 0;
+  for (const [key, count] of edgeMap.entries()) {
+    if (count === 1) {
+      const [a, b] = key.split('-').map(Number);
+      const v1 = new THREE.Vector3(
+        meshData.vertices[a * 3],
+        meshData.vertices[a * 3 + 1],
+        meshData.vertices[a * 3 + 2]
+      );
+      const v2 = new THREE.Vector3(
+        meshData.vertices[b * 3],
+        meshData.vertices[b * 3 + 1],
+        meshData.vertices[b * 3 + 2]
+      );
+      perimeter += v1.distanceTo(v2);
+    }
+  }
+
+  return perimeter * 1000; // Convert to mm
+}
+
+/**
+ * Format vertex coordinates for display
+ * @param position Vertex position
+ * @param precision Decimal places (0-5)
+ * @returns Formatted coordinate string
+ */
+export function formatVertexCoordinates(
+  position: THREE.Vector3,
+  precision: number = 2
+): string {
+  // Convert from meters to mm
+  const x = (position.x * 1000).toFixed(precision);
+  const y = (position.y * 1000).toFixed(precision);
+  const z = (position.z * 1000).toFixed(precision);
+
+  return `(${x}, ${y}, ${z}) mm`;
+}
+
+/**
+ * Calculate edge-to-edge distance with min, max, and center-to-center options
+ * @param edge1Start First edge start point
+ * @param edge1End First edge end point
+ * @param edge2Start Second edge start point
+ * @param edge2End Second edge end point
+ * @returns Object with min, max, centerToCenter distances and closest points
+ */
+export function calculateEdgeToEdgeDistances(
+  edge1Start: THREE.Vector3,
+  edge1End: THREE.Vector3,
+  edge2Start: THREE.Vector3,
+  edge2End: THREE.Vector3
+): {
+  min: number;
+  max: number;
+  centerToCenter: number;
+  minPoint1: THREE.Vector3;
+  minPoint2: THREE.Vector3;
+} {
+  const line1 = new THREE.Line3(edge1Start, edge1End);
+  const line2 = new THREE.Line3(edge2Start, edge2End);
+
+  // Find minimum distance
+  let minDist = Infinity;
+  let minP1 = edge1Start.clone();
+  let minP2 = edge2Start.clone();
+
+  const samples = 20;
+  for (let i = 0; i <= samples; i++) {
+    const t1 = i / samples;
+    const p1 = new THREE.Vector3();
+    line1.at(t1, p1);
+
+    for (let j = 0; j <= samples; j++) {
+      const t2 = j / samples;
+      const p2 = new THREE.Vector3();
+      line2.at(t2, p2);
+
+      const dist = p1.distanceTo(p2);
+      if (dist < minDist) {
+        minDist = dist;
+        minP1 = p1.clone();
+        minP2 = p2.clone();
+      }
+    }
+  }
+
+  // Calculate maximum distance (between endpoints)
+  const distances = [
+    edge1Start.distanceTo(edge2Start),
+    edge1Start.distanceTo(edge2End),
+    edge1End.distanceTo(edge2Start),
+    edge1End.distanceTo(edge2End),
+  ];
+  const maxDist = Math.max(...distances);
+
+  // Center-to-center distance
+  const center1 = new THREE.Vector3().addVectors(edge1Start, edge1End).multiplyScalar(0.5);
+  const center2 = new THREE.Vector3().addVectors(edge2Start, edge2End).multiplyScalar(0.5);
+  const centerDist = center1.distanceTo(center2);
+
+  return {
+    min: minDist * 1000, // Convert to mm
+    max: maxDist * 1000,
+    centerToCenter: centerDist * 1000,
+    minPoint1: minP1,
+    minPoint2: minP2,
+  };
 }
