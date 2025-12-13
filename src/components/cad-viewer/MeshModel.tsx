@@ -290,6 +290,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               const p2 = edge.snap_points[i + 1];
               featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
             }
+
+            // Add closing segment for closed edges (circles, full ellipses)
+            if (edge.is_closed && edge.snap_points.length > 2) {
+              const first = edge.snap_points[0];
+              const last = edge.snap_points[edge.snap_points.length - 1];
+              featureEdgePositions.push(last[0], last[1], last[2], first[0], first[1], first[2]);
+            }
           }
           // Fallback to start/end for straight edges
           else if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
