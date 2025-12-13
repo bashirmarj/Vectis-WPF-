@@ -309,15 +309,6 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               edge.end[2],
             );
           }
-        })
-
-          ;
-
-        console.log("🔍 Feature Edges Debug:", {
-          totalTaggedEdges: meshData.tagged_edges.length,
-          edgesWithSnapPoints: meshData.tagged_edges.filter(e => e.snap_points?.length >= 2).length,
-          edgesWithStartEnd: meshData.tagged_edges.filter(e => e.start && e.end).length,
-          totalEdgeSegments: featureEdgePositions.length / 6
         });
 
         if (featureEdgePositions.length > 0) {

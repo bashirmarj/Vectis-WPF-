@@ -187,8 +187,8 @@ export function SilhouetteEdges({
             color="#000000"
             toneMapped={false}
             polygonOffset={true}
-            polygonOffsetFactor={-2}
-            polygonOffsetUnits={-2}
+            polygonOffsetFactor={-10}
+            polygonOffsetUnits={-10}
             depthTest={!showHiddenEdges}
             depthWrite={false}
           />
@@ -206,8 +206,8 @@ export function SilhouetteEdges({
             color="#000000"
             toneMapped={false}
             polygonOffset={true}
-            polygonOffsetFactor={-2}
-            polygonOffsetUnits={-2}
+            polygonOffsetFactor={-10}
+            polygonOffsetUnits={-10}
             depthTest={!showHiddenEdges}
             depthWrite={false}
           />
