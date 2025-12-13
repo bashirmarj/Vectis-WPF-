@@ -250,10 +250,11 @@ export const PartUploadForm = () => {
           normals: result.mesh_data.normals || result.mesh_data.normal_array,
           vertex_colors: result.mesh_data.vertex_colors || result.mesh_data.colors,
           tagged_edges: result.mesh_data.tagged_edges,
+          feature_edges: result.mesh_data.feature_edges,
           edge_classifications: result.mesh_data.edge_classifications,
           triangle_count: result.mesh_data.triangle_count || (result.mesh_data.indices?.length / 3),
-          face_mapping: result.mesh_data.face_mapping, // ✅ Added for feature highlighting
-          vertex_face_ids: result.mesh_data.vertex_face_ids, // ✅ Added for face identification
+          face_mapping: result.mesh_data.face_mapping,
+          vertex_face_ids: result.mesh_data.vertex_face_ids,
         };
       }
       // Priority 2: Check top-level
@@ -264,10 +265,11 @@ export const PartUploadForm = () => {
           normals: result.normals || result.normal_array,
           vertex_colors: result.vertex_colors || result.colors,
           tagged_edges: result.tagged_edges,
+          feature_edges: result.feature_edges,
           edge_classifications: result.edge_classifications,
           triangle_count: result.triangle_count || (result.indices?.length / 3),
-          face_mapping: result.face_mapping, // ✅ Added for feature highlighting
-          vertex_face_ids: result.vertex_face_ids, // ✅ Added for face identification
+          face_mapping: result.face_mapping,
+          vertex_face_ids: result.vertex_face_ids,
         };
       }
       // Priority 3: Check geometry object
