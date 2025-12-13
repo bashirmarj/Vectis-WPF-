@@ -153,8 +153,10 @@ export function DimensionOverlay({ camera, canvasWidth, canvasHeight }: Dimensio
         return null;
     };
 
+    // Use Html from drei to render SVG outside THREE.js context but positioned over the canvas
     return (
-        <svg
+        <Html
+            fullscreen
             style={{
                 position: "absolute",
                 top: 0,
@@ -165,7 +167,18 @@ export function DimensionOverlay({ camera, canvasWidth, canvasHeight }: Dimensio
                 zIndex: 10,
             }}
         >
-            {measurements.map(renderDimension)}
-        </svg>
+            <svg
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                }}
+            >
+                {measurements.map(renderDimension)}
+            </svg>
+        </Html>
     );
 }
