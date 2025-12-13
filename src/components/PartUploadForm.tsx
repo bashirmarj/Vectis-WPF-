@@ -278,8 +278,10 @@ export const PartUploadForm = () => {
           normals: result.geometry.normals,
           vertex_colors: result.geometry.vertex_colors,
           triangle_count: result.geometry.triangle_count,
-          face_mapping: result.geometry.face_mapping, // ✅ Added for feature highlighting
-          vertex_face_ids: result.geometry.vertex_face_ids, // ✅ Added for face identification
+          face_mapping: result.geometry.face_mapping,
+          vertex_face_ids: result.geometry.vertex_face_ids,
+          tagged_edges: result.geometry.tagged_edges || [],
+          feature_edges: result.geometry.feature_edges || [],
         };
       }
 
