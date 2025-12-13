@@ -137,7 +137,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             colors[vertexIdx * 3 + 2] = color.b;
           }
         }
-        
+
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else {
@@ -147,7 +147,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           colors[i * 3 + 1] = baseColor.g;
           colors[i * 3 + 2] = baseColor.b;
         }
-        
+
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
@@ -176,22 +176,22 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
       // Collect triangle indices for highlighted faces
       const highlightTriIndices = new Set<number>();
-      
+
       highlightedFaceIds.forEach(brepFaceId => {
         const mapping = meshData.face_mapping![brepFaceId];
-        
+
         if (!mapping) {
           console.warn(`⚠️ No mapping for BREP face ${brepFaceId}`);
           return;
         }
-        
+
         // Prioritize triangle_range for efficiency
         if (mapping.triangle_range) {
           const [start, end] = mapping.triangle_range;
           for (let i = start; i <= end; i++) {
             highlightTriIndices.add(i);
           }
-        } 
+        }
         // Fallback to triangle_indices
         else if (mapping.triangle_indices) {
           mapping.triangle_indices.forEach(idx => highlightTriIndices.add(idx));
@@ -212,17 +212,17 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       // Build non-indexed geometry from highlighted triangles
       const positions: number[] = [];
       const normals: number[] = [];
-      
+
       highlightTriIndices.forEach(triIdx => {
         for (let i = 0; i < 3; i++) {
           const vIdx = meshData.indices![triIdx * 3 + i];
-          
+
           // Safety check: Vertex index in bounds
           if (vIdx * 3 + 2 >= meshData.vertices!.length) {
             console.warn(`⚠️ Vertex index out of bounds: ${vIdx}`);
             return;
           }
-          
+
           positions.push(
             meshData.vertices![vIdx * 3 + 0],
             meshData.vertices![vIdx * 3 + 1],
@@ -251,7 +251,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
       geo.computeBoundingSphere();
-      
+
       return geo;
     }, [highlightedFaceIds, meshData.face_mapping, meshData.indices, meshData.vertices, meshData.normals]);
 
@@ -445,11 +445,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       if (cleanEdgesRef.current) {
         cleanEdgesRef.current.dispose();
       }
-      
+
       cleanEdgesRef.current = geometry?.attributes?.position
         ? new THREE.EdgesGeometry(geometry, 1)
         : new THREE.BufferGeometry();
-      
+
       prevGeometryRef.current = geometry;
     }
 
@@ -578,7 +578,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* 🔥 HIGHLIGHT OVERLAY - Separate non-indexed mesh for precise feature highlighting */}
         {highlightGeometry && (
-          <mesh 
+          <mesh
             geometry={highlightGeometry}
             renderOrder={1}
             castShadow={false}
@@ -629,7 +629,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </lineSegments>
         )}
 
-        {/* Wireframe mode - use clean edges that show ALL mesh structure */}
+        {/* Wireframe mode - use feature edges for continuous curve rendering */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
             <SilhouetteEdges
@@ -640,8 +640,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               controlsRef={controlsRef}
               displayMode={displayStyle}
             />
+          ) : featureEdgesGeometry ? (
+            <lineSegments geometry={featureEdgesGeometry} key={`wireframe-edges-${showHiddenEdges}`}>
+              <lineBasicMaterial color="#000000" toneMapped={false} depthTest={!showHiddenEdges} depthWrite={false} />
+            </lineSegments>
           ) : (
-            <lineSegments geometry={cleanEdgesGeometry} key={`wireframe-edges-${showHiddenEdges}`}>
+            <lineSegments geometry={cleanEdgesGeometry} key={`wireframe-fallback-${showHiddenEdges}`}>
               <lineBasicMaterial color="#000000" toneMapped={false} depthTest={!showHiddenEdges} depthWrite={false} />
             </lineSegments>
           ))}
