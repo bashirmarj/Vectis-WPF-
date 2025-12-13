@@ -482,7 +482,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
             toast({
               title: "Line Measured",
-              description: `Length: ${formatMeasurement(taggedEdge.length * 1000, "mm")}`,,
+              description: `Length: ${formatMeasurement(taggedEdge.length * 1000, "mm")}`,
             });
           } else if (taggedEdge.type === "ellipse" && taggedEdge.major_radius && taggedEdge.minor_radius) {
             // Ellipse → show major/minor radii
