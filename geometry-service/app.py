@@ -693,6 +693,20 @@ def analyze_cad():
             mesh_data['tagged_edges'] = tagged_edges
             logger.info(f"[{correlation_id}] ✅ Extracted {len(tagged_edges)} tagged edges")
 
+            # Generate feature_edges from snap_points for frontend rendering
+            # This maintains backward compatibility with MeshModel.tsx polyline rendering
+            feature_edges = []
+            for edge in tagged_edges:
+                if 'snap_points' in edge and len(edge['snap_points']) >= 2:
+                    # Use snap_points as the polyline (same format as legacy feature_edges)
+                    feature_edges.append(edge['snap_points'])
+                elif 'start' in edge and 'end' in edge:
+                    # Fallback for edges without snap_points - create 2-point polyline
+                    feature_edges.append([edge['start'], edge['end']])
+            
+            mesh_data['feature_edges'] = feature_edges
+            logger.info(f"[{correlation_id}] ✅ Generated {len(feature_edges)} feature edges for rendering")
+
             logger.info(f"[{correlation_id}] Computing bounding box")
             bbox = extract_bounding_box(shape)
             
