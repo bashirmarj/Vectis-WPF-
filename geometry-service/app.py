@@ -34,19 +34,9 @@ from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.GeomAbs import (
-    GeomAbs_Cylinder, GeomAbs_Plane,
-    GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse,
-    GeomAbs_Hyperbola, GeomAbs_Parabola, GeomAbs_BezierCurve,
-    GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
-)
+from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop, brepgprop_LinearProperties
-from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
-from OCC.Core.ShapeAnalysis import ShapeAnalysis_Edge
-from OCC.Core.GCPnts import GCPnts_QuasiUniformDeflection
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
-from OCC.Core.TopExp import topexp
+from OCC.Core.BRepGProp import brepgprop
 
 # ========== TEMPORARY: Skip feature recognition for faster processing ==========
 # Set to False to re-enable feature recognition (AAG, geometric recognition, volume decomposition)
@@ -292,244 +282,6 @@ def compute_vertex_normals(vertices: List[float], indices: List[int], vertex_cou
     return normals.flatten().tolist()
 
 
-def extract_tagged_edges(shape, max_snap_points: int = 12) -> List[Dict]:
-    """
-    Extract all B-Rep edges with analytical geometry data (SolidWorks-level precision)
-
-    This function provides:
-    - Analytical curve data (exact center, radius, angles) for precise measurements
-    - Sparse snap points for efficient mouse interaction
-    - Edge topology (adjacent faces)
-
-    Args:
-        shape: OpenCascade TopoDS_Shape
-        max_snap_points: Maximum points per edge for snapping (default 12)
-
-    Returns:
-        List of edge dictionaries with analytical and snap data
-    """
-    start = time.time()
-    edges = []
-
-    # Build edge-to-face adjacency map
-    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
-
-    # Track unique edges (avoid duplicates from shared edges between faces)
-    processed_edges = set()
-    edge_analyzer = ShapeAnalysis_Edge()
-
-    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    feature_id = 0
-
-    while edge_explorer.More():
-        edge = edge_explorer.Current()
-
-        # Get edge hash for deduplication
-        edge_hash = edge.HashCode(2147483647)  # Max int for hash
-        if edge_hash in processed_edges:
-            edge_explorer.Next()
-            continue
-        processed_edges.add(edge_hash)
-
-        try:
-            # Create curve adaptor for edge analysis
-            curve_adaptor = BRepAdaptor_Curve(edge)
-
-            # Skip degenerate edges (no valid curve)
-            if not curve_adaptor.Is3DCurve():
-                edge_explorer.Next()
-                continue
-
-            curve_type = curve_adaptor.GetType()
-            first_param = curve_adaptor.FirstParameter()
-            last_param = curve_adaptor.LastParameter()
-
-            # Get start and end points
-            start_pnt = curve_adaptor.Value(first_param)
-            end_pnt = curve_adaptor.Value(last_param)
-
-            # Compute edge length
-            props = GProp_GProps()
-            brepgprop_LinearProperties(edge, props)
-            length = props.Mass() * 1000  # Convert to mm
-
-            # Determine curve type string
-            if curve_type == GeomAbs_Line:
-                type_str = "line"
-            elif curve_type == GeomAbs_Circle:
-                type_str = "circle"
-            elif curve_type == GeomAbs_Ellipse:
-                type_str = "ellipse"
-            elif curve_type == GeomAbs_Hyperbola:
-                type_str = "hyperbola"
-            elif curve_type == GeomAbs_Parabola:
-                type_str = "parabola"
-            elif curve_type == GeomAbs_BezierCurve:
-                type_str = "bezier"
-            elif curve_type == GeomAbs_BSplineCurve:
-                type_str = "bspline"
-            elif curve_type == GeomAbs_OffsetCurve:
-                type_str = "offset"
-            else:
-                type_str = "other"
-
-            # Check if edge is closed (full circle)
-            is_closed = BRep_Tool.IsClosed(edge)
-
-            # Build base edge data
-            edge_data = {
-                'feature_id': feature_id,
-                'type': type_str,
-                'length': round(length, 6),
-                'is_closed': is_closed,
-                'start': [
-                    round(start_pnt.X() * 1000, 6),  # Convert to mm
-                    round(start_pnt.Y() * 1000, 6),
-                    round(start_pnt.Z() * 1000, 6)
-                ],
-                'end': [
-                    round(end_pnt.X() * 1000, 6),
-                    round(end_pnt.Y() * 1000, 6),
-                    round(end_pnt.Z() * 1000, 6)
-                ]
-            }
-
-            # === ANALYTICAL DATA EXTRACTION (curve-type specific) ===
-
-            if curve_type == GeomAbs_Circle:
-                circle = curve_adaptor.Circle()
-                center = circle.Location()
-                axis = circle.Axis().Direction()
-                radius = circle.Radius() * 1000  # Convert to mm
-
-                edge_data['center'] = [
-                    round(center.X() * 1000, 6),
-                    round(center.Y() * 1000, 6),
-                    round(center.Z() * 1000, 6)
-                ]
-                edge_data['radius'] = round(radius, 6)
-                edge_data['diameter'] = round(radius * 2, 6)
-                edge_data['normal'] = [
-                    round(axis.X(), 6),
-                    round(axis.Y(), 6),
-                    round(axis.Z(), 6)
-                ]
-
-                # Arc angles (for partial circles / arcs)
-                edge_data['start_angle'] = round(first_param, 6)
-                edge_data['end_angle'] = round(last_param, 6)
-                edge_data['sweep_angle'] = round(last_param - first_param, 6)
-
-                # Determine if it's a full circle or arc
-                import math
-                if abs((last_param - first_param) - 2 * math.pi) < 0.001:
-                    edge_data['is_full_circle'] = True
-                else:
-                    edge_data['is_full_circle'] = False
-                    edge_data['arc_length'] = round(radius * (last_param - first_param), 6)
-
-            elif curve_type == GeomAbs_Ellipse:
-                ellipse = curve_adaptor.Ellipse()
-                center = ellipse.Location()
-
-                edge_data['center'] = [
-                    round(center.X() * 1000, 6),
-                    round(center.Y() * 1000, 6),
-                    round(center.Z() * 1000, 6)
-                ]
-                edge_data['major_radius'] = round(ellipse.MajorRadius() * 1000, 6)
-                edge_data['minor_radius'] = round(ellipse.MinorRadius() * 1000, 6)
-
-            elif curve_type == GeomAbs_Line:
-                line = curve_adaptor.Line()
-                direction = line.Direction()
-
-                edge_data['direction'] = [
-                    round(direction.X(), 6),
-                    round(direction.Y(), 6),
-                    round(direction.Z(), 6)
-                ]
-
-            # === SPARSE SNAP POINTS (for efficient mouse interaction) ===
-
-            try:
-                discretizer = GCPnts_QuasiUniformDeflection()
-                # Use adaptive deflection based on edge length
-                deflection = max(0.001, length / 1000 / 100)  # 1% of length, min 0.001m
-                discretizer.Initialize(curve_adaptor, deflection, first_param, last_param)
-
-                if discretizer.IsDone() and discretizer.NbPoints() > 0:
-                    # Sample points, limiting to max_snap_points
-                    total_points = discretizer.NbPoints()
-                    if total_points <= max_snap_points:
-                        step = 1
-                    else:
-                        step = total_points // max_snap_points
-
-                    snap_points = []
-                    for i in range(1, total_points + 1, step):
-                        if len(snap_points) >= max_snap_points:
-                            break
-                        param = discretizer.Parameter(i)
-                        pnt = curve_adaptor.Value(param)
-                        snap_points.append([
-                            round(pnt.X() * 1000, 6),
-                            round(pnt.Y() * 1000, 6),
-                            round(pnt.Z() * 1000, 6)
-                        ])
-
-                    # Always include the end point
-                    end_snap = [
-                        round(end_pnt.X() * 1000, 6),
-                        round(end_pnt.Y() * 1000, 6),
-                        round(end_pnt.Z() * 1000, 6)
-                    ]
-                    if snap_points and snap_points[-1] != end_snap:
-                        if len(snap_points) >= max_snap_points:
-                            snap_points[-1] = end_snap
-                        else:
-                            snap_points.append(end_snap)
-
-                    edge_data['snap_points'] = snap_points
-                else:
-                    # Fallback: just use start and end
-                    edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
-
-            except Exception as e:
-                logger.warning(f"Failed to generate snap points for edge {feature_id}: {e}")
-                edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
-
-            # === ADJACENT FACES (for topology) ===
-
-            try:
-                if edge_face_map.Contains(edge):
-                    face_list = edge_face_map.FindFromKey(edge)
-                    adjacent_faces = []
-                    it = face_list.begin()
-                    while it != face_list.end():
-                        # Get face index by searching through faces
-                        # For now, just count adjacent faces
-                        adjacent_faces.append(len(adjacent_faces))
-                        it.Next()
-                    edge_data['adjacent_face_count'] = len(adjacent_faces)
-            except Exception:
-                edge_data['adjacent_face_count'] = 0
-
-            edges.append(edge_data)
-            feature_id += 1
-
-        except Exception as e:
-            logger.warning(f"Failed to process edge: {e}")
-
-        edge_explorer.Next()
-
-    elapsed = (time.time() - start) * 1000
-    logger.info(f"Extracted {len(edges)} tagged edges in {elapsed:.1f}ms")
-
-    return edges
-
-
 def extract_bounding_box(shape) -> Dict:
     """Extract axis-aligned bounding box"""
     bbox = Bnd_Box()
@@ -686,27 +438,7 @@ def analyze_cad():
             # Extract geometric data
             logger.info(f"[{correlation_id}] Tessellating mesh")
             mesh_data = tessellate_shape(shape)
-
-            # Extract tagged edges with analytical data for measurement tool
-            logger.info(f"[{correlation_id}] Extracting tagged edges")
-            tagged_edges = extract_tagged_edges(shape)
-            mesh_data['tagged_edges'] = tagged_edges
-            logger.info(f"[{correlation_id}] ✅ Extracted {len(tagged_edges)} tagged edges")
-
-            # Generate feature_edges from snap_points for frontend rendering
-            # This maintains backward compatibility with MeshModel.tsx polyline rendering
-            feature_edges = []
-            for edge in tagged_edges:
-                if 'snap_points' in edge and len(edge['snap_points']) >= 2:
-                    # Use snap_points as the polyline (same format as legacy feature_edges)
-                    feature_edges.append(edge['snap_points'])
-                elif 'start' in edge and 'end' in edge:
-                    # Fallback for edges without snap_points - create 2-point polyline
-                    feature_edges.append([edge['start'], edge['end']])
             
-            mesh_data['feature_edges'] = feature_edges
-            logger.info(f"[{correlation_id}] ✅ Generated {len(feature_edges)} feature edges for rendering")
-
             logger.info(f"[{correlation_id}] Computing bounding box")
             bbox = extract_bounding_box(shape)
             
@@ -917,27 +649,7 @@ def analyze_aag():
             # === STEP 2: Tessellate with face mapping ===
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
-
-            # === STEP 2.5: Extract tagged edges with analytical data ===
-            logger.info(f"[{correlation_id}] 📐 Extracting tagged edges")
-            tagged_edges = extract_tagged_edges(shape)
-            mesh_data['tagged_edges'] = tagged_edges
-            logger.info(f"[{correlation_id}] ✅ Extracted {len(tagged_edges)} tagged edges")
-
-            # Generate feature_edges from snap_points for frontend rendering
-            # This maintains backward compatibility with MeshModel.tsx polyline rendering
-            feature_edges = []
-            for edge in tagged_edges:
-                if 'snap_points' in edge and len(edge['snap_points']) >= 2:
-                    # Use snap_points as the polyline (same format as legacy feature_edges)
-                    feature_edges.append(edge['snap_points'])
-                elif 'start' in edge and 'end' in edge:
-                    # Fallback for edges without snap_points - create 2-point polyline
-                    feature_edges.append([edge['start'], edge['end']])
-
-            mesh_data['feature_edges'] = feature_edges
-            logger.info(f"[{correlation_id}] ✅ Generated {len(feature_edges)} feature edges for rendering")
-
+            
             # === STEP 3 & 4: Feature Recognition (conditionally skipped) ===
             if SKIP_FEATURE_RECOGNITION:
                 logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")

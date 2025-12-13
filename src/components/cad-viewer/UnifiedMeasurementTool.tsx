@@ -122,7 +122,8 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
         const point = intersects[0].point;
 
         // Find closest tagged edge using snap_points (SolidWorks-level precision)
-        const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 2.0);
+        // Threshold is 0.002m = 2mm (coordinates from backend are in meters)
+        const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 0.002);
 
         if (taggedEdge) {
           // Build highlight segments from snap_points

@@ -60,13 +60,13 @@ export interface TaggedFeatureEdge {
  *
  * @param point - The 3D point to find the closest edge to
  * @param taggedEdges - Array of tagged edges from backend
- * @param maxDistance - Maximum distance threshold (default 2.0mm)
+ * @param maxDistance - Maximum distance threshold in METERS (default 0.002 = 2mm)
  * @returns Tagged edge if found within threshold, undefined otherwise
  */
 export function findClosestTaggedEdge(
   point: THREE.Vector3,
   taggedEdges?: TaggedFeatureEdge[],
-  maxDistance: number = 2.0,
+  maxDistance: number = 0.002, // 2mm in meters - coordinates from backend are in meters
 ): TaggedFeatureEdge | undefined {
   if (!taggedEdges || taggedEdges.length === 0) {
     return undefined;
@@ -155,8 +155,8 @@ export function findEdgeByFeatureId(
     .addVectors(clickedEdge.start, clickedEdge.end)
     .multiplyScalar(0.5);
 
-  // Use the new findClosestTaggedEdge function
-  return findClosestTaggedEdge(clickedMidpoint, taggedEdges, 2.0);
+  // Use the new findClosestTaggedEdge function (0.002m = 2mm threshold)
+  return findClosestTaggedEdge(clickedMidpoint, taggedEdges, 0.002);
 }
 
 /**
