@@ -110,8 +110,19 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
     const hasTaggedEdges = taggedEdges && taggedEdges.length > 0;
     const hasEdgeLines = edgeLines.length > 0;
 
+    // DEBUG: Log what data we have
+    console.log("🔍 Edge Detection Debug:", {
+      measurementMode,
+      hasTaggedEdges,
+      taggedEdgesCount: taggedEdges?.length || 0,
+      hasEdgeLines,
+      edgeLinesCount: edgeLines.length,
+      featureEdgesGeometry: featureEdgesGeometry !== null,
+    });
+
     if (!hasTaggedEdges && !hasEdgeLines) {
       // No edge data available at all
+      console.warn("⚠️ No edge data available for measurement!");
       return;
     }
 
