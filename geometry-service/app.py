@@ -44,7 +44,7 @@ from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop, brepgprop_LinearProperties
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.GCPnts import GCPnts_QuasiUniformAbscissa
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.TopExp import topexp_MapShapesAndAncestors
 from OCC.Core.GeomLProp import GeomLProp_SLProps
 import math
@@ -1053,7 +1053,7 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
             if edge_face_map.Contains(edge):
                 # Iterate over shapes
                 faces_list = edge_face_map.FindFromKey(edge)
-                it = faces_list.Iterator()
+                it = TopTools_ListIteratorOfListOfShape(faces_list)
                 while it.More():
                     adjacent_faces.append(it.Value())
                     it.Next()
