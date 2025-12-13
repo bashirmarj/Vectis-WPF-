@@ -54,10 +54,16 @@ interface MeshData {
     feature_id: number;
     start: [number, number, number];
     end: [number, number, number];
-    type: "line" | "circle" | "arc";
+    type: "line" | "circle" | "arc" | "ellipse" | "bezier" | "bspline" | "hyperbola" | "parabola" | "offset" | "other";
+    is_closed?: boolean;
     diameter?: number;
     radius?: number;
     length?: number;
+    center?: [number, number, number];
+    axis?: [number, number, number];
+    arc_angle?: number;
+    snap_points?: Array<[number, number, number]>;
+    iso_type?: string;
   }>;
   vertex_face_ids?: number[];
   face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>;

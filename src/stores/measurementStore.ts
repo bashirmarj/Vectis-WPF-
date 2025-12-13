@@ -39,7 +39,9 @@ export interface Measurement {
     deltaX?: number;
     deltaY?: number;
     deltaZ?: number;
-    edgeType?: "line" | "arc" | "circle";
+    edgeType?: "line" | "arc" | "circle" | "ellipse" | "bezier" | "bspline" | "hyperbola" | "parabola" | "offset" | "other";
+    isFullCircle?: boolean;
+    arcLength?: number;
     arcRadius?: number;
     arcCenter?: THREE.Vector3;
     edgeStart?: THREE.Vector3;
