@@ -24,6 +24,7 @@ export interface SnapResult {
   metadata?: {
     edgeType?: "line" | "arc" | "circle";
     radius?: number;
+    diameter?: number;
     center?: THREE.Vector3;
     startPoint?: THREE.Vector3;
     endPoint?: THREE.Vector3;
@@ -31,6 +32,9 @@ export interface SnapResult {
     backendLength?: number;
     backendDiameter?: number;
     backendMatch?: boolean;
+    isFullCircle?: boolean;
+    sweepAngle?: number;
+    arcLength?: number;
   };
 }
 
@@ -59,14 +63,50 @@ export interface BackendEdgeClassification {
   segment_count: number;
 }
 
+export type EdgeType =
+  | "line"
+  | "circle"
+  | "ellipse"
+  | "hyperbola"
+  | "parabola"
+  | "bezier"
+  | "bspline"
+  | "offset"
+  | "other";
+
 export interface BackendTaggedEdge {
   feature_id: number;
+  type: EdgeType;
+  length: number;
+  is_closed: boolean;
   start: [number, number, number];
   end: [number, number, number];
-  type: "line" | "arc" | "circle";
-  diameter?: number;
+
+  // Analytical data for circles/arcs
+  center?: [number, number, number];
   radius?: number;
-  length?: number;
+  diameter?: number;
+  normal?: [number, number, number];
+  start_angle?: number;
+  end_angle?: number;
+  sweep_angle?: number;
+  is_full_circle?: boolean;
+  arc_length?: number;
+
+  // Analytical data for ellipses
+  major_radius?: number;
+  minor_radius?: number;
+
+  // Analytical data for lines
+  direction?: [number, number, number];
+
+  // Sparse snap points for mouse interaction
+  snap_points?: [number, number, number][];
+
+  // Topology
+  adjacent_face_count?: number;
+
+  // Legacy compatibility
   iso_type?: string;
 }
 
@@ -408,7 +448,12 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
 
 /**
  * Snap to backend-provided tagged edges (exact CAD geometry)
- * This uses BREP edges from backend, not mesh approximation
+ * This uses BREP edges from backend with analytical data (SolidWorks-level precision)
+ *
+ * Priority:
+ * 1. Use snap_points for efficient distance calculation
+ * 2. Use analytical center/radius for circles/arcs (exact, not reconstructed)
+ * 3. Fall back to start/end for simple lines
  */
 export function snapToBackendEdge(
   point: THREE.Vector3,
@@ -419,20 +464,62 @@ export function snapToBackendEdge(
   let minDistance = snapDistance;
   let closestEdge: BackendTaggedEdge | null = null;
 
-  // Find closest tagged edge segment
+  // Find closest tagged edge using snap_points (sparse polyline for efficiency)
   for (const edge of taggedEdges) {
-    const start = new THREE.Vector3(edge.start[0], edge.start[1], edge.start[2]);
-    const end = new THREE.Vector3(edge.end[0], edge.end[1], edge.end[2]);
-    const line = new THREE.Line3(start, end);
+    // Use snap_points if available (preferred - optimized for interaction)
+    if (edge.snap_points && edge.snap_points.length >= 2) {
+      // Check distance to each segment in the polyline
+      for (let i = 0; i < edge.snap_points.length - 1; i++) {
+        const p1 = edge.snap_points[i];
+        const p2 = edge.snap_points[i + 1];
+        const start = new THREE.Vector3(p1[0], p1[1], p1[2]);
+        const end = new THREE.Vector3(p2[0], p2[1], p2[2]);
+        const line = new THREE.Line3(start, end);
 
-    const closestOnEdge = new THREE.Vector3();
-    line.closestPointToPoint(point, true, closestOnEdge);
+        const closestOnSegment = new THREE.Vector3();
+        line.closestPointToPoint(point, true, closestOnSegment);
 
-    const distance = point.distanceTo(closestOnEdge);
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestPoint = closestOnEdge;
-      closestEdge = edge;
+        const distance = point.distanceTo(closestOnSegment);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = closestOnSegment;
+          closestEdge = edge;
+        }
+      }
+
+      // For closed edges (full circles), also check the closing segment
+      if (edge.is_closed && edge.snap_points.length > 2) {
+        const firstPt = edge.snap_points[0];
+        const lastPt = edge.snap_points[edge.snap_points.length - 1];
+        const start = new THREE.Vector3(firstPt[0], firstPt[1], firstPt[2]);
+        const end = new THREE.Vector3(lastPt[0], lastPt[1], lastPt[2]);
+        const line = new THREE.Line3(start, end);
+
+        const closestOnSegment = new THREE.Vector3();
+        line.closestPointToPoint(point, true, closestOnSegment);
+
+        const distance = point.distanceTo(closestOnSegment);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = closestOnSegment;
+          closestEdge = edge;
+        }
+      }
+    } else {
+      // Fallback: use start/end points only
+      const start = new THREE.Vector3(edge.start[0], edge.start[1], edge.start[2]);
+      const end = new THREE.Vector3(edge.end[0], edge.end[1], edge.end[2]);
+      const line = new THREE.Line3(start, end);
+
+      const closestOnEdge = new THREE.Vector3();
+      line.closestPointToPoint(point, true, closestOnEdge);
+
+      const distance = point.distanceTo(closestOnEdge);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = closestOnEdge;
+        closestEdge = edge;
+      }
     }
   }
 
@@ -440,30 +527,33 @@ export function snapToBackendEdge(
     const start = new THREE.Vector3(closestEdge.start[0], closestEdge.start[1], closestEdge.start[2]);
     const end = new THREE.Vector3(closestEdge.end[0], closestEdge.end[1], closestEdge.end[2]);
 
-    // Calculate center for arcs/circles
+    // Use analytical center from backend (exact, not reconstructed)
     let center: THREE.Vector3 | undefined;
-    if ((closestEdge.type === "arc" || closestEdge.type === "circle") && closestEdge.radius) {
-      // Estimate center (midpoint perpendicular to chord)
-      const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-      const direction = new THREE.Vector3().subVectors(end, start).normalize();
+    if (closestEdge.center) {
+      center = new THREE.Vector3(
+        closestEdge.center[0],
+        closestEdge.center[1],
+        closestEdge.center[2]
+      );
+    }
 
-      // Perpendicular vector (simplified - assumes planar arc)
-      const perpendicular = new THREE.Vector3(-direction.y, direction.x, 0).normalize();
-
-      // For shallow arcs, center is approximately at midpoint + radius*perpendicular
-      const chordLength = start.distanceTo(end);
-      const sagitta = closestEdge.radius - Math.sqrt(closestEdge.radius**2 - (chordLength/2)**2);
-      center = midpoint.clone().add(perpendicular.multiplyScalar(sagitta));
+    // Determine edge type for display
+    let displayType: "line" | "arc" | "circle" = "line";
+    if (closestEdge.type === "circle") {
+      displayType = closestEdge.is_full_circle ? "circle" : "arc";
     }
 
     return {
       position: closestPoint,
-      normal: new THREE.Vector3(0, 1, 0),
+      normal: closestEdge.normal
+        ? new THREE.Vector3(closestEdge.normal[0], closestEdge.normal[1], closestEdge.normal[2])
+        : new THREE.Vector3(0, 1, 0),
       surfaceType: "edge",
       confidence: 1 - minDistance / snapDistance,
       metadata: {
-        edgeType: closestEdge.type,
+        edgeType: displayType,
         radius: closestEdge.radius,
+        diameter: closestEdge.diameter,
         center: center,
         startPoint: start,
         endPoint: end,
@@ -471,6 +561,9 @@ export function snapToBackendEdge(
         backendLength: closestEdge.length,
         backendDiameter: closestEdge.diameter,
         backendMatch: true,
+        isFullCircle: closestEdge.is_full_circle,
+        sweepAngle: closestEdge.sweep_angle,
+        arcLength: closestEdge.arc_length,
       },
     };
   }

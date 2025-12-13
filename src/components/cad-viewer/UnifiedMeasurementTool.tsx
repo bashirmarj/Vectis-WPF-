@@ -7,7 +7,7 @@ import { formatMeasurement, generateMeasurementId } from "@/lib/measurementUtils
 import { MeasurementRenderer } from "./MeasurementRenderer";
 import { FaceCrosshairMarker } from "./measurements/FaceCrosshairMarker";
 import { toast } from "@/hooks/use-toast";
-import { findEdgeByFeatureId, getFeatureSegments, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
+import { findClosestTaggedEdge, TaggedFeatureEdge } from "@/lib/featureIdMatcher";
 import { calculateMarkerValues, RadDeg } from "@/lib/faceMeasurementUtils";
 
 interface MarkerData {
@@ -92,11 +92,18 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
     }
   }, [enabled]);
 
-  // Handle hover detection for edges
+  // Handle hover detection for edges - uses backend tagged_edges with snap_points
   useEffect(() => {
-    if (!enabled || !meshRef || edgeLines.length === 0) {
+    if (!enabled || !meshRef) {
       setHoverInfo(null);
       setLabelText("");
+      return;
+    }
+
+    // Check if we have tagged edges from backend
+    const taggedEdges = meshData?.tagged_edges;
+    if (!taggedEdges || taggedEdges.length === 0) {
+      // No tagged edges - edge snapping won't work
       return;
     }
 
@@ -114,60 +121,79 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
       if (intersects.length > 0) {
         const point = intersects[0].point;
 
-        let closestEdge: THREE.Line3 | null = null;
-        let minDist = 1.5; // Detection threshold in mm
+        // Find closest tagged edge using snap_points (SolidWorks-level precision)
+        const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 2.0);
 
-        edgeLines.forEach((edge) => {
-          const closestPoint = new THREE.Vector3();
-          edge.closestPointToPoint(point, true, closestPoint);
-          const dist = point.distanceTo(closestPoint);
-
-          if (dist <= minDist) {
-            minDist = dist;
-            closestEdge = edge;
-          }
-        });
-
-        if (closestEdge) {
-          // Check if this edge has backend classification
-          const taggedEdge = findEdgeByFeatureId(closestEdge, meshData?.tagged_edges);
-
-          if (taggedEdge) {
-            // Get all segments belonging to this feature
-            const allFeatureSegments = getFeatureSegments(
-              taggedEdge.feature_id,
-              meshData?.tagged_edges
-            );
-            
-            const allSegmentLines = allFeatureSegments.map(seg => 
+        if (taggedEdge) {
+          // Build highlight segments from snap_points
+          const allSegmentLines: THREE.Line3[] = [];
+          if (taggedEdge.snap_points && taggedEdge.snap_points.length >= 2) {
+            for (let i = 0; i < taggedEdge.snap_points.length - 1; i++) {
+              const p1 = taggedEdge.snap_points[i];
+              const p2 = taggedEdge.snap_points[i + 1];
+              allSegmentLines.push(
+                new THREE.Line3(
+                  new THREE.Vector3(p1[0], p1[1], p1[2]),
+                  new THREE.Vector3(p2[0], p2[1], p2[2])
+                )
+              );
+            }
+            // For closed edges, add the closing segment
+            if (taggedEdge.is_closed && taggedEdge.snap_points.length > 2) {
+              const first = taggedEdge.snap_points[0];
+              const last = taggedEdge.snap_points[taggedEdge.snap_points.length - 1];
+              allSegmentLines.push(
+                new THREE.Line3(
+                  new THREE.Vector3(last[0], last[1], last[2]),
+                  new THREE.Vector3(first[0], first[1], first[2])
+                )
+              );
+            }
+          } else {
+            // Fallback to start/end
+            allSegmentLines.push(
               new THREE.Line3(
-                new THREE.Vector3(...seg.start),
-                new THREE.Vector3(...seg.end)
+                new THREE.Vector3(...taggedEdge.start),
+                new THREE.Vector3(...taggedEdge.end)
               )
             );
-
-            let label = "";
-            if (taggedEdge.type === "circle" && taggedEdge.diameter) {
-              label = `⊙ Diameter: ø${taggedEdge.diameter.toFixed(2)} mm`;
-            } else if (taggedEdge.type === "arc" && taggedEdge.radius) {
-              label = `⌒ Radius: R${taggedEdge.radius.toFixed(2)} mm`;
-            } else if (taggedEdge.type === "line" && taggedEdge.length) {
-              label = `📏 Length: ${taggedEdge.length.toFixed(2)} mm`;
-            } else {
-              label = "Feature detected";
-            }
-
-            setLabelText(label);
-            setHoverInfo({
-              position: point,
-              classification: taggedEdge,
-              edge: closestEdge,
-              allSegments: allSegmentLines,
-            });
-          } else {
-            setHoverInfo(null);
-            setLabelText("");
           }
+
+          // Generate context-aware label based on edge type
+          let label = "";
+          if (taggedEdge.type === "circle") {
+            if (taggedEdge.is_full_circle && taggedEdge.diameter) {
+              label = `⊙ Diameter: Ø${taggedEdge.diameter.toFixed(2)} mm`;
+            } else if (taggedEdge.radius) {
+              // Arc (partial circle)
+              label = `⌒ Radius: R${taggedEdge.radius.toFixed(2)} mm`;
+              if (taggedEdge.arc_length) {
+                label += ` | Arc: ${taggedEdge.arc_length.toFixed(2)} mm`;
+              }
+            }
+          } else if (taggedEdge.type === "line" && taggedEdge.length) {
+            label = `— Length: ${taggedEdge.length.toFixed(2)} mm`;
+          } else if (taggedEdge.type === "ellipse") {
+            if (taggedEdge.major_radius && taggedEdge.minor_radius) {
+              label = `⬭ Ellipse: ${taggedEdge.major_radius.toFixed(2)} × ${taggedEdge.minor_radius.toFixed(2)} mm`;
+            }
+          } else if (taggedEdge.length) {
+            // Generic edge with length
+            label = `Edge: ${taggedEdge.length.toFixed(2)} mm`;
+          } else {
+            label = `Edge (${taggedEdge.type})`;
+          }
+
+          setLabelText(label);
+          setHoverInfo({
+            position: point,
+            classification: taggedEdge,
+            edge: new THREE.Line3(
+              new THREE.Vector3(...taggedEdge.start),
+              new THREE.Vector3(...taggedEdge.end)
+            ),
+            allSegments: allSegmentLines,
+          });
         } else {
           setHoverInfo(null);
           setLabelText("");
@@ -180,7 +206,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
     gl.domElement.addEventListener("pointermove", handlePointerMove);
     return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
-  }, [enabled, meshRef, edgeLines, meshData?.tagged_edges, camera, gl, raycaster]);
+  }, [enabled, meshRef, meshData?.tagged_edges, camera, gl, raycaster]);
 
   // Face point-to-point: Temporary marker preview on pointer move
   useEffect(() => {
@@ -254,81 +280,108 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
       // Priority 1: Check if clicking on an edge
       if (hoverInfo && hoverInfo.classification) {
         const taggedEdge = hoverInfo.classification as TaggedFeatureEdge;
-        
-        // Create edge measurement
-        if (taggedEdge.type === "circle" && taggedEdge.diameter) {
-          addMeasurement({
-            id: generateMeasurementId(),
-            type: "measure",
-            points: [
-              {
-                id: generateMeasurementId(),
-                position: hoverInfo.edge.start,
-                normal: new THREE.Vector3(0, 1, 0),
-                surfaceType: "edge",
+
+        // Get center point for the measurement display
+        const centerPoint = taggedEdge.center
+          ? new THREE.Vector3(taggedEdge.center[0], taggedEdge.center[1], taggedEdge.center[2])
+          : hoverInfo.position;
+
+        // Create context-aware edge measurement based on edge type
+        if (taggedEdge.type === "circle") {
+          if (taggedEdge.is_full_circle && taggedEdge.diameter) {
+            // Full circle → show diameter
+            addMeasurement({
+              id: generateMeasurementId(),
+              type: "measure",
+              points: [
+                {
+                  id: generateMeasurementId(),
+                  position: centerPoint,
+                  normal: taggedEdge.normal
+                    ? new THREE.Vector3(...taggedEdge.normal)
+                    : new THREE.Vector3(0, 1, 0),
+                  surfaceType: "edge",
+                },
+              ],
+              value: taggedEdge.diameter,
+              unit: "mm",
+              label: `Ø ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+              color: "#0066CC",
+              visible: true,
+              createdAt: new Date(),
+              metadata: {
+                measurementSubtype: "edge",
+                edgeType: "circle",
+                backendMatch: true,
+                isFullCircle: true,
               },
-            ],
-            value: taggedEdge.diameter,
-            unit: "mm",
-            label: `Ø ${formatMeasurement(taggedEdge.diameter, "mm")}`,
-            color: "#0066CC",
-            visible: true,
-            createdAt: new Date(),
-            metadata: {
-              measurementSubtype: "edge",
-              edgeType: "circle",
-              backendMatch: true,
-            },
-          });
-          
-          toast({
-            title: "Edge Measured",
-            description: `Circle diameter: ${formatMeasurement(taggedEdge.diameter, "mm")}`,
-          });
-        } else if (taggedEdge.type === "arc" && taggedEdge.radius) {
-          addMeasurement({
-            id: generateMeasurementId(),
-            type: "measure",
-            points: [
-              {
-                id: generateMeasurementId(),
-                position: hoverInfo.edge.start,
-                normal: new THREE.Vector3(0, 1, 0),
-                surfaceType: "edge",
+            });
+
+            toast({
+              title: "Circle Measured",
+              description: `Diameter: ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+            });
+          } else if (taggedEdge.radius) {
+            // Arc (partial circle) → show radius
+            const label = taggedEdge.arc_length
+              ? `R ${formatMeasurement(taggedEdge.radius, "mm")} | Arc: ${formatMeasurement(taggedEdge.arc_length, "mm")}`
+              : `R ${formatMeasurement(taggedEdge.radius, "mm")}`;
+
+            addMeasurement({
+              id: generateMeasurementId(),
+              type: "measure",
+              points: [
+                {
+                  id: generateMeasurementId(),
+                  position: centerPoint,
+                  normal: taggedEdge.normal
+                    ? new THREE.Vector3(...taggedEdge.normal)
+                    : new THREE.Vector3(0, 1, 0),
+                  surfaceType: "edge",
+                },
+              ],
+              value: taggedEdge.radius,
+              unit: "mm",
+              label: label,
+              color: "#00AACC",
+              visible: true,
+              createdAt: new Date(),
+              metadata: {
+                measurementSubtype: "edge",
+                edgeType: "arc",
+                backendMatch: true,
+                isFullCircle: false,
+                arcLength: taggedEdge.arc_length,
               },
-            ],
-            value: taggedEdge.radius,
-            unit: "mm",
-            label: `R ${formatMeasurement(taggedEdge.radius, "mm")}`,
-            color: "#0066CC",
-            visible: true,
-            createdAt: new Date(),
-            metadata: {
-              measurementSubtype: "edge",
-              edgeType: "arc",
-              backendMatch: true,
-            },
-          });
-          
-          toast({
-            title: "Edge Measured",
-            description: `Arc radius: ${formatMeasurement(taggedEdge.radius, "mm")}`,
-          });
+            });
+
+            toast({
+              title: "Arc Measured",
+              description: `Radius: ${formatMeasurement(taggedEdge.radius, "mm")}`,
+            });
+          }
         } else if (taggedEdge.type === "line" && taggedEdge.length) {
+          // Straight line → show length
           addMeasurement({
             id: generateMeasurementId(),
             type: "measure",
             points: [
               {
                 id: generateMeasurementId(),
-                position: hoverInfo.edge.start,
+                position: new THREE.Vector3(...taggedEdge.start),
+                normal: new THREE.Vector3(0, 1, 0),
+                surfaceType: "edge",
+              },
+              {
+                id: generateMeasurementId(),
+                position: new THREE.Vector3(...taggedEdge.end),
                 normal: new THREE.Vector3(0, 1, 0),
                 surfaceType: "edge",
               },
             ],
             value: taggedEdge.length,
             unit: "mm",
-            label: `📏 ${formatMeasurement(taggedEdge.length, "mm")}`,
+            label: `${formatMeasurement(taggedEdge.length, "mm")}`,
             color: "#0066CC",
             visible: true,
             createdAt: new Date(),
@@ -338,10 +391,70 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
               backendMatch: true,
             },
           });
-          
+
+          toast({
+            title: "Line Measured",
+            description: `Length: ${formatMeasurement(taggedEdge.length, "mm")}`,
+          });
+        } else if (taggedEdge.type === "ellipse" && taggedEdge.major_radius && taggedEdge.minor_radius) {
+          // Ellipse → show major/minor radii
+          addMeasurement({
+            id: generateMeasurementId(),
+            type: "measure",
+            points: [
+              {
+                id: generateMeasurementId(),
+                position: centerPoint,
+                normal: new THREE.Vector3(0, 1, 0),
+                surfaceType: "edge",
+              },
+            ],
+            value: taggedEdge.major_radius,
+            unit: "mm",
+            label: `Ellipse: ${formatMeasurement(taggedEdge.major_radius, "mm")} × ${formatMeasurement(taggedEdge.minor_radius, "mm")}`,
+            color: "#9900CC",
+            visible: true,
+            createdAt: new Date(),
+            metadata: {
+              measurementSubtype: "edge",
+              edgeType: "ellipse",
+              backendMatch: true,
+            },
+          });
+
+          toast({
+            title: "Ellipse Measured",
+            description: `Major: ${formatMeasurement(taggedEdge.major_radius, "mm")}, Minor: ${formatMeasurement(taggedEdge.minor_radius, "mm")}`,
+          });
+        } else if (taggedEdge.length) {
+          // Generic edge with length
+          addMeasurement({
+            id: generateMeasurementId(),
+            type: "measure",
+            points: [
+              {
+                id: generateMeasurementId(),
+                position: hoverInfo.position,
+                normal: new THREE.Vector3(0, 1, 0),
+                surfaceType: "edge",
+              },
+            ],
+            value: taggedEdge.length,
+            unit: "mm",
+            label: `${formatMeasurement(taggedEdge.length, "mm")}`,
+            color: "#666666",
+            visible: true,
+            createdAt: new Date(),
+            metadata: {
+              measurementSubtype: "edge",
+              edgeType: taggedEdge.type,
+              backendMatch: true,
+            },
+          });
+
           toast({
             title: "Edge Measured",
-            description: `Line length: ${formatMeasurement(taggedEdge.length, "mm")}`,
+            description: `Length: ${formatMeasurement(taggedEdge.length, "mm")}`,
           });
         }
 
