@@ -21,7 +21,7 @@ interface SilhouetteEdgesProps {
   displayMode?: "solid" | "wireframe" | "translucent";
 }
 
-export function SilhouetteEdges({ 
+export function SilhouetteEdges({
   geometry,
   mesh,
   updateThreshold = 0.5,
@@ -36,7 +36,7 @@ export function SilhouetteEdges({
   const [silhouettePositions, setSilhouettePositions] = useState<Float32Array>(
     new Float32Array(0)
   );
-  
+
   // Performance optimizations
   const frameCount = useRef(0);
   const isDragging = useRef(false);
@@ -51,7 +51,7 @@ export function SilhouetteEdges({
         pauseOnDrag: false      // Keep updating
       };
     }
-    
+
     // Solid mode (default)
     return {
       frameSkip: 3,            // Update every 3 frames
@@ -75,7 +75,7 @@ export function SilhouetteEdges({
     const keys = new Set<string>();
     // Add null safety check for staticFeatureEdges
     const positions = staticFeatureEdges?.attributes?.position?.array as Float32Array;
-    
+
     if (positions) {
       // staticFeatureEdges is a LineSegments geometry (pairs of vertices)
       for (let i = 0; i < positions.length; i += 6) {
@@ -84,7 +84,7 @@ export function SilhouetteEdges({
         keys.add(makeEdgeKey(v1, v2));
       }
     }
-    
+
     return keys;
   }, [staticFeatureEdges]);
 
@@ -92,19 +92,19 @@ export function SilhouetteEdges({
   useEffect(() => {
     if (controlsRef?.current) {
       const controls = controlsRef.current;
-      
+
       const handleStart = () => {
         isDragging.current = true;
       };
-      
+
       const handleEnd = () => {
         isDragging.current = false;
         frameCount.current = 0; // Force immediate update
       };
-      
+
       controls.addEventListener('start', handleStart);
       controls.addEventListener('end', handleEnd);
-      
+
       return () => {
         controls.removeEventListener('start', handleStart);
         controls.removeEventListener('end', handleEnd);
@@ -139,10 +139,10 @@ export function SilhouetteEdges({
         const worldToLocal = mesh.matrixWorld.clone().invert();
         localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
       }
-      
+
       const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
       setSilhouettePositions(silhouettes);
-      
+
       lastCameraPos.current.copy(currentPos);
       lastCameraQuat.current.copy(currentQuat);
     }
@@ -151,11 +151,11 @@ export function SilhouetteEdges({
   // Create proper geometry with bounding sphere for dynamic silhouettes
   const dynamicSilhouetteGeometry = useMemo(() => {
     if (silhouettePositions.length === 0) return null;
-    
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(silhouettePositions, 3));
     geo.computeBoundingSphere(); // CRITICAL: Needed for proper rendering
-    
+
     return geo;
   }, [silhouettePositions]);
 
@@ -178,37 +178,37 @@ export function SilhouetteEdges({
     <group>
       {/* Static feature edges - ONLY in wireframe mode (solid mode uses MeshModel edges) */}
       {displayMode === "wireframe" && staticFeatureEdges?.attributes?.position && (
-        <lineSegments 
-          geometry={staticFeatureEdges} 
+        <lineSegments
+          geometry={staticFeatureEdges}
           frustumCulled={true}
           key={`static-edges-${showHiddenEdges}`}
         >
-          <lineBasicMaterial 
-            color="#000000" 
+          <lineBasicMaterial
+            color="#000000"
             toneMapped={false}
             polygonOffset={true}
             polygonOffsetFactor={-2}
             polygonOffsetUnits={-2}
-            depthTest={!showHiddenEdges}
+            depthTest={false}
             depthWrite={false}
           />
         </lineSegments>
       )}
-      
+
       {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
       {dynamicSilhouetteGeometry && (
-        <lineSegments 
+        <lineSegments
           geometry={dynamicSilhouetteGeometry}
           frustumCulled={true}
           key={`dynamic-edges-${showHiddenEdges}`}
         >
-          <lineBasicMaterial 
-            color="#000000" 
+          <lineBasicMaterial
+            color="#000000"
             toneMapped={false}
             polygonOffset={true}
             polygonOffsetFactor={-2}
             polygonOffsetUnits={-2}
-            depthTest={!showHiddenEdges}
+            depthTest={false}
             depthWrite={false}
           />
         </lineSegments>
@@ -226,12 +226,12 @@ export function SilhouetteEdges({
  */
 function buildEdgeMap(geometry: THREE.BufferGeometry): Map<string, EdgeData> {
   const edgeMap = new Map<string, EdgeData>();
-  
+
   if (!geometry?.attributes?.position) {
     console.warn("SilhouetteEdges: No position attribute found in geometry");
     return edgeMap;
   }
-  
+
   const positions = geometry.attributes.position.array as Float32Array;
   const indices = geometry.index?.array;
 
@@ -294,14 +294,14 @@ function addEdgeToMap(
   triangleData: { normal: THREE.Vector3; centroid: THREE.Vector3 }
 ) {
   const key = makeEdgeKey(v1, v2);
-  
+
   if (!edgeMap.has(key)) {
     edgeMap.set(key, {
       vertices: [v1.clone(), v2.clone()],
       triangles: [],
     });
   }
-  
+
   edgeMap.get(key)!.triangles.push(triangleData);
 }
 
@@ -333,7 +333,7 @@ function computeSilhouetteEdges(
   const estimatedSize = Math.floor(edgeMap.size * 0.3) * 6;
   const positions = new Float32Array(estimatedSize);
   let posIndex = 0;
-  
+
   // Reusable vectors (avoid allocations)
   const edgeMidpoint = new THREE.Vector3();
   const viewDir = new THREE.Vector3();
@@ -355,20 +355,20 @@ function computeSilhouetteEdges(
     if (edgeData.angle !== undefined && edgeData.angle >= 30) {
       return;
     }
-    
+
     const tri1 = triangles[0];
     const tri2 = triangles[1];
 
     // Inline midpoint calculation (reuse vector)
     edgeMidpoint.addVectors(vertices[0], vertices[1]).multiplyScalar(0.5);
-    
+
     // Inline view direction (reuse vector)
     viewDir.subVectors(cameraPos, edgeMidpoint).normalize();
 
     // Dot products
     const dot1 = tri1.normal.dot(viewDir);
     const dot2 = tri2.normal.dot(viewDir);
-    
+
     const threshold = 0.01;
     const isFrontFacing1 = dot1 > threshold;
     const isFrontFacing2 = dot2 > threshold;
