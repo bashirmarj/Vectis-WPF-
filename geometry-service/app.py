@@ -951,9 +951,27 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
     topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
 
+    # Helper to check if edge is valid for CurveOnSurface call (prevents C++ crashes)
+    def is_edge_valid_for_curve_extraction(edge, face):
+        """Check if edge is valid for CurveOnSurface call - prevents C++-level crashes"""
+        try:
+            # Skip degenerate edges (zero-length edges)
+            if BRep_Tool.Degenerated(edge):
+                return False
+            # Skip seam edges which can cause issues with CurveOnSurface
+            if BRep_Tool.IsClosed(edge, face):
+                return False
+            return True
+        except:
+            return False
+
     # Helper to get normal of a face at a specific parameter along an edge
     def get_face_normal_at_param(face, edge, param):
         try:
+            # Validate edge before processing to prevent C++ crashes
+            if not is_edge_valid_for_curve_extraction(edge, face):
+                return [0.0, 0.0, 0.0]
+            
             # Get 2D curve of edge on face
             curve2d, first, last = BRep_Tool.CurveOnSurface(edge, face)
             
@@ -967,8 +985,14 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
             
             # Evaluate surface properties to get normal
             surf_adaptor = BRepAdaptor_Surface(face)
+            
+            # Get the underlying Geom_Surface - can be None for some faces
+            geom_surface = surf_adaptor.Surface().Surface()
+            if geom_surface is None:
+                return [0.0, 0.0, 0.0]
+            
             # Note: 1 = degree of continuity, 1e-6 = tolerance
-            props = GeomLProp_SLProps(surf_adaptor.Surface().Surface(), u, v, 1, 1e-6)
+            props = GeomLProp_SLProps(geom_surface, u, v, 1, 1e-6)
             
             if props.IsNormalDefined():
                 n = props.Normal()
