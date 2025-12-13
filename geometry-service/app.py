@@ -41,11 +41,11 @@ from OCC.Core.GeomAbs import (
     GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
 )
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop, brepgprop_LinearProperties
+from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
 from OCC.Core.GCPnts import GCPnts_QuasiUniformAbscissa
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
-from OCC.Core.TopExp import topexp_MapShapesAndAncestors
+from OCC.Core.TopExp import topexp
 from OCC.Core.GeomLProp import GeomLProp_SLProps
 import math
 
@@ -949,13 +949,17 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
 
     # Pre-compute Edge -> Face topology map
     edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
-    topexp_MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
 
     # Helper to get normal of a face at a specific parameter along an edge
     def get_face_normal_at_param(face, edge, param):
         try:
             # Get 2D curve of edge on face
             curve2d, first, last = BRep_Tool.CurveOnSurface(edge, face)
+            
+            # CurveOnSurface can return None for some edges - handle gracefully
+            if curve2d is None:
+                return [0.0, 0.0, 0.0]
             
             # Evaluate 2D point (u, v) on surface
             p2d = curve2d.Value(param)
@@ -1011,7 +1015,7 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
 
             # Compute edge length (convert to mm for display)
             props = GProp_GProps()
-            brepgprop_LinearProperties(edge, props)
+            brepgprop.LinearProperties(edge, props)
             length_mm = props.Mass() * 1000  # meters to mm
 
             # Determine curve type string
