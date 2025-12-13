@@ -23,6 +23,11 @@ interface MeshData {
     type: string;
     iso_type?: string;
     snap_points?: [number, number, number][]; // For curved edges (circles, arcs)
+    // OPTIONAL: Backend can send adjacent face normals to skip expensive frontend computation
+    adjacent_face_normals?: [
+      [number, number, number], // Normal of face 1
+      [number, number, number]  // Normal of face 2 (if exists)
+    ];
   }>;
 }
 
@@ -281,14 +286,27 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       // PRIORITY: Use tagged_edges - backend handles all deduplication and filtering
       if (meshData?.tagged_edges && Array.isArray(meshData.tagged_edges) && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
+        const featureEdgeNormal1: number[] = [];
+        const featureEdgeNormal2: number[] = [];
 
         meshData.tagged_edges.forEach((edge) => {
+          // Get backend normals if available, otherwise use zero (fallback to frontend calc)
+          const n1 = edge.adjacent_face_normals?.[0] || [0, 0, 0];
+          const n2 = edge.adjacent_face_normals?.[1] || [0, 0, 0];
+          const hasNormals = !!edge.adjacent_face_normals;
+
+          const addNormals = () => {
+            featureEdgeNormal1.push(n1[0], n1[1], n1[2], n1[0], n1[1], n1[2]);
+            featureEdgeNormal2.push(n2[0], n2[1], n2[2], n2[0], n2[1], n2[2]);
+          };
+
           // Use snap_points for curved edges (circles, arcs) - creates polyline segments
           if (edge.snap_points && Array.isArray(edge.snap_points) && edge.snap_points.length >= 2) {
             for (let i = 0; i < edge.snap_points.length - 1; i++) {
               const p1 = edge.snap_points[i];
               const p2 = edge.snap_points[i + 1];
               featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
+              addNormals();
             }
 
             // Add closing segment for closed edges (circles, full ellipses)
@@ -296,6 +314,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               const first = edge.snap_points[0];
               const last = edge.snap_points[edge.snap_points.length - 1];
               featureEdgePositions.push(last[0], last[1], last[2], first[0], first[1], first[2]);
+              addNormals();
             }
           }
           // Fallback to start/end for straight edges
@@ -308,12 +327,20 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               edge.end[1],
               edge.end[2],
             );
+            addNormals();
           }
         });
 
         if (featureEdgePositions.length > 0) {
           const geo = new THREE.BufferGeometry();
           geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
+
+          // Only add normal attributes if we actually have some data
+          if (featureEdgeNormal1.length > 0) {
+            geo.setAttribute("faceNormal1", new THREE.Float32BufferAttribute(featureEdgeNormal1, 3));
+            geo.setAttribute("faceNormal2", new THREE.Float32BufferAttribute(featureEdgeNormal2, 3));
+          }
+
           geo.computeBoundingSphere();
           featureEdgesRef.current = geo;
         }
@@ -605,20 +632,13 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* Invisible depth-writing mesh for wireframe occlusion */}
-        {displayStyle === "wireframe" && !showHiddenEdges && (
-          <mesh geometry={geometry} key={`depth-mesh-${showHiddenEdges}`}>
-            <meshBasicMaterial
-              colorWrite={false}
-              depthWrite={true}
-              depthTest={true}
-              transparent={false}
-              polygonOffset={true}
-              polygonOffsetFactor={4}
-              polygonOffsetUnits={4}
-            />
-          </mesh>
-        )}
+        {/* 
+          NOTE: No depth-writing mesh for wireframe mode.
+          SilhouetteEdges now uses normal-based visibility computation:
+          - Edges are visible if ANY adjacent face is front-facing toward camera
+          - Computed per-frame as camera moves
+          - This eliminates Z-fighting and provides accurate hidden edge toggle
+        */}
 
         {/* Solid mode: ONLY backend feature edges (SilhouetteEdges never active in solid) */}
         {displayStyle === "solid" && showEdges && featureEdgesGeometry && (

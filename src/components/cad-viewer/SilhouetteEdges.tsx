@@ -2,15 +2,6 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-interface EdgeData {
-  vertices: [THREE.Vector3, THREE.Vector3];
-  triangles: Array<{
-    normal: THREE.Vector3;
-    centroid: THREE.Vector3;
-  }>;
-  angle?: number; // Angle between faces (in degrees)
-}
-
 interface SilhouetteEdgesProps {
   geometry: THREE.BufferGeometry;
   mesh?: THREE.Mesh | null;
@@ -33,7 +24,9 @@ export function SilhouetteEdges({
   const { camera } = useThree();
   const lastCameraPos = useRef<THREE.Vector3>(new THREE.Vector3());
   const lastCameraQuat = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const [silhouettePositions, setSilhouettePositions] = useState<Float32Array>(
+
+  // NEW: State for visible feature edges (computed per-frame based on face normals)
+  const [visibleFeaturePositions, setVisibleFeaturePositions] = useState<Float32Array>(
     new Float32Array(0)
   );
 
@@ -61,33 +54,6 @@ export function SilhouetteEdges({
     };
   }, [displayMode]);
 
-  // Build edge-to-triangle adjacency map (computed once)
-  // Add null safety check for geometry
-  const edgeMap = useMemo(() => {
-    if (!geometry?.attributes?.position) {
-      return new Map();
-    }
-    return buildEdgeMap(geometry);
-  }, [geometry]);
-
-  // Build a Set of all static feature edge keys for fast duplicate detection
-  const staticEdgeKeys = useMemo(() => {
-    const keys = new Set<string>();
-    // Add null safety check for staticFeatureEdges
-    const positions = staticFeatureEdges?.attributes?.position?.array as Float32Array;
-
-    if (positions) {
-      // staticFeatureEdges is a LineSegments geometry (pairs of vertices)
-      for (let i = 0; i < positions.length; i += 6) {
-        const v1 = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
-        const v2 = new THREE.Vector3(positions[i + 3], positions[i + 4], positions[i + 5]);
-        keys.add(makeEdgeKey(v1, v2));
-      }
-    }
-
-    return keys;
-  }, [staticFeatureEdges]);
-
   // Listen to controls drag events
   useEffect(() => {
     if (controlsRef?.current) {
@@ -112,14 +78,14 @@ export function SilhouetteEdges({
     }
   }, [controlsRef]);
 
-  // Update silhouette edges when camera moves (optimized)
+  // Update edges when camera moves
   useFrame(() => {
     // Skip if actively dragging (only in solid mode)
     if (isDragging.current && performanceConfig.pauseOnDrag) {
       return;
     }
 
-    // Frame skipping: based on mode
+    // Frame skipping
     frameCount.current++;
     if (frameCount.current % performanceConfig.frameSkip !== 0) {
       return;
@@ -128,7 +94,7 @@ export function SilhouetteEdges({
     const currentPos = camera.position;
     const currentQuat = camera.quaternion;
 
-    // Check if camera moved or rotated (mode-aware thresholds)
+    // Check if camera moved or rotated
     const posChanged = currentPos.distanceTo(lastCameraPos.current) > performanceConfig.positionThreshold;
     const rotChanged = currentQuat.angleTo(lastCameraQuat.current) > performanceConfig.rotationThreshold;
 
@@ -140,75 +106,74 @@ export function SilhouetteEdges({
         localCameraPos = currentPos.clone().applyMatrix4(worldToLocal);
       }
 
-      const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos, staticEdgeKeys);
-      setSilhouettePositions(silhouettes);
+      // Compute visible feature edges based on backend normals
+      if (!showHiddenEdges && staticFeatureEdges?.attributes?.position) {
+        const visibleEdges = computeVisibleFeatureEdges(
+          staticFeatureEdges,
+          localCameraPos
+        );
+        setVisibleFeaturePositions(visibleEdges);
+      }
 
       lastCameraPos.current.copy(currentPos);
       lastCameraQuat.current.copy(currentQuat);
     }
   });
 
-  // Create proper geometry with bounding sphere for dynamic silhouettes
-  const dynamicSilhouetteGeometry = useMemo(() => {
-    if (silhouettePositions.length === 0) return null;
+  // Create geometry for visible feature edges
+  const visibleFeatureGeometry = useMemo(() => {
+    if (visibleFeaturePositions.length === 0) return null;
 
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(silhouettePositions, 3));
-    geo.computeBoundingSphere(); // CRITICAL: Needed for proper rendering
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(visibleFeaturePositions, 3));
+    geo.computeBoundingSphere();
 
     return geo;
-  }, [silhouettePositions]);
+  }, [visibleFeaturePositions]);
 
-  // Cleanup effect for geometry disposal
+  // Cleanup effect
   useEffect(() => {
     return () => {
-      if (dynamicSilhouetteGeometry) {
-        dynamicSilhouetteGeometry.dispose();
+      if (visibleFeatureGeometry) {
+        visibleFeatureGeometry.dispose();
       }
     };
-  }, [dynamicSilhouetteGeometry]);
+  }, [visibleFeatureGeometry]);
 
-  // Null safety check - don't render if no valid data
+  // Null safety check
   if (!geometry?.attributes?.position) {
-    console.warn("⚠️ SilhouetteEdges: No valid geometry data available");
     return null;
   }
 
   return (
     <group>
-      {/* Static feature edges - ONLY in wireframe mode (solid mode uses MeshModel edges) */}
-      {displayMode === "wireframe" && staticFeatureEdges?.attributes?.position && (
+      {/* Static feature edges - show ALL when showHiddenEdges=true */}
+      {displayMode === "wireframe" && showHiddenEdges && staticFeatureEdges?.attributes?.position && (
         <lineSegments
           geometry={staticFeatureEdges}
           frustumCulled={true}
-          key={`static-edges-${showHiddenEdges}`}
+          key="static-edges-all"
         >
           <lineBasicMaterial
             color="#000000"
             toneMapped={false}
-            polygonOffset={true}
-            polygonOffsetFactor={-10}
-            polygonOffsetUnits={-10}
-            depthTest={!showHiddenEdges}
+            depthTest={false}
             depthWrite={false}
           />
         </lineSegments>
       )}
 
-      {/* Dynamic silhouette edges (smooth surfaces only) - VIEW DEPENDENT */}
-      {dynamicSilhouetteGeometry && (
+      {/* Visible feature edges - computed per-frame based on backend normals */}
+      {displayMode === "wireframe" && !showHiddenEdges && visibleFeatureGeometry && (
         <lineSegments
-          geometry={dynamicSilhouetteGeometry}
+          geometry={visibleFeatureGeometry}
           frustumCulled={true}
-          key={`dynamic-edges-${showHiddenEdges}`}
+          key="visible-feature-edges"
         >
           <lineBasicMaterial
             color="#000000"
             toneMapped={false}
-            polygonOffset={true}
-            polygonOffsetFactor={-10}
-            polygonOffsetUnits={-10}
-            depthTest={!showHiddenEdges}
+            depthTest={false}
             depthWrite={false}
           />
         </lineSegments>
@@ -220,173 +185,83 @@ export function SilhouetteEdges({
 // ============= Helper Functions =============
 
 /**
- * Build a map of edges to their adjacent triangles
- * Key: "x1,y1,z1|x2,y2,z2" (sorted vertices)
- * Value: Array of triangles sharing this edge
+ * Compute which feature edges are visible based on BACKEND PROVIDED normals.
+ * An edge is visible if AT LEAST ONE of its adjacent faces is front-facing.
+ * This checks the "faceNormal1" and "faceNormal2" attributes directly.
  */
-function buildEdgeMap(geometry: THREE.BufferGeometry): Map<string, EdgeData> {
-  const edgeMap = new Map<string, EdgeData>();
-
-  if (!geometry?.attributes?.position) {
-    console.warn("SilhouetteEdges: No position attribute found in geometry");
-    return edgeMap;
-  }
-
-  const positions = geometry.attributes.position.array as Float32Array;
-  const indices = geometry.index?.array;
-
-  if (!indices) {
-    console.warn("SilhouetteEdges: No indices found in geometry");
-    return edgeMap;
-  }
-
-  // Process each triangle
-  for (let i = 0; i < indices.length; i += 3) {
-    const i0 = indices[i] * 3;
-    const i1 = indices[i + 1] * 3;
-    const i2 = indices[i + 2] * 3;
-
-    const v0 = new THREE.Vector3(positions[i0], positions[i0 + 1], positions[i0 + 2]);
-    const v1 = new THREE.Vector3(positions[i1], positions[i1 + 1], positions[i1 + 2]);
-    const v2 = new THREE.Vector3(positions[i2], positions[i2 + 1], positions[i2 + 2]);
-
-    // Compute triangle normal
-    const edge1 = new THREE.Vector3().subVectors(v1, v0);
-    const edge2 = new THREE.Vector3().subVectors(v2, v0);
-    const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
-
-    // Compute centroid
-    const centroid = new THREE.Vector3()
-      .add(v0)
-      .add(v1)
-      .add(v2)
-      .multiplyScalar(1 / 3);
-
-    const triangleData = { normal, centroid };
-
-    // Add all three edges of this triangle
-    addEdgeToMap(edgeMap, v0, v1, triangleData);
-    addEdgeToMap(edgeMap, v1, v2, triangleData);
-    addEdgeToMap(edgeMap, v2, v0, triangleData);
-  }
-
-  // Pre-compute angles for edges with 2 triangles (feature edge detection)
-  edgeMap.forEach((edgeData) => {
-    if (edgeData.triangles.length === 2) {
-      const tri1 = edgeData.triangles[0];
-      const tri2 = edgeData.triangles[1];
-      const dotProduct = Math.max(-1, Math.min(1, tri1.normal.dot(tri2.normal)));
-      const angle = Math.acos(dotProduct);
-      edgeData.angle = angle * (180 / Math.PI);
-    }
-  });
-
-  return edgeMap;
-}
-
-/**
- * Add an edge to the edge map
- */
-function addEdgeToMap(
-  edgeMap: Map<string, EdgeData>,
-  v1: THREE.Vector3,
-  v2: THREE.Vector3,
-  triangleData: { normal: THREE.Vector3; centroid: THREE.Vector3 }
-) {
-  const key = makeEdgeKey(v1, v2);
-
-  if (!edgeMap.has(key)) {
-    edgeMap.set(key, {
-      vertices: [v1.clone(), v2.clone()],
-      triangles: [],
-    });
-  }
-
-  edgeMap.get(key)!.triangles.push(triangleData);
-}
-
-/**
- * Create a unique key for an edge (order-independent)
- */
-function makeEdgeKey(v1: THREE.Vector3, v2: THREE.Vector3): string {
-  // Sort vertices to ensure consistent key regardless of order
-  const vertices = [v1, v2].sort((a, b) => {
-    if (a.x !== b.x) return a.x - b.x;
-    if (a.y !== b.y) return a.y - b.y;
-    return a.z - b.z;
-  });
-
-  return `${vertices[0].x.toFixed(6)},${vertices[0].y.toFixed(6)},${vertices[0].z.toFixed(6)}|${vertices[1].x.toFixed(6)},${vertices[1].y.toFixed(6)},${vertices[1].z.toFixed(6)}`;
-}
-
-/**
- * Compute silhouette edges based on camera position
- * A silhouette edge is one where one adjacent face is front-facing
- * and the other is back-facing (or it's a boundary edge)
- */
-function computeSilhouetteEdges(
-  edgeMap: Map<string, EdgeData>,
-  cameraPos: THREE.Vector3,
-  staticEdgeKeys: Set<string>
+function computeVisibleFeatureEdges(
+  staticFeatureEdges: THREE.BufferGeometry,
+  cameraPos: THREE.Vector3
 ): Float32Array {
-  // Pre-allocate array (30% of edges are typically silhouettes)
-  const estimatedSize = Math.floor(edgeMap.size * 0.3) * 6;
-  const positions = new Float32Array(estimatedSize);
+  const positions = staticFeatureEdges.attributes.position.array as Float32Array;
+
+  // Backend provided normals (set in MeshModel)
+  const n1Attr = staticFeatureEdges.attributes.faceNormal1;
+  const n2Attr = staticFeatureEdges.attributes.faceNormal2;
+
+  // STRICT PRODUCTION REQUIREMENT: 
+  // If no backend normals are provided, we return empty.
+  // We do NOT guess or compute connectivity on the frontend.
+  if (!n1Attr || !n2Attr) {
+    return new Float32Array(0);
+  }
+
+  const n1Array = n1Attr.array as Float32Array;
+  const n2Array = n2Attr.array as Float32Array;
+  const numSegments = positions.length / 6;
+
+  // Pre-allocate (most edges will be visible)
+  const visiblePositions = new Float32Array(positions.length);
   let posIndex = 0;
 
-  // Reusable vectors (avoid allocations)
+  // Reusable vectors
   const edgeMidpoint = new THREE.Vector3();
   const viewDir = new THREE.Vector3();
+  const normal1 = new THREE.Vector3();
+  const normal2 = new THREE.Vector3();
 
-  edgeMap.forEach((edgeData, edgeKey) => {
-    const { vertices, triangles } = edgeData;
+  for (let i = 0; i < numSegments; i++) {
+    const offset = i * 6;
 
-    // Skip if already in static edges (fast Set lookup)
-    if (staticEdgeKeys.has(edgeKey)) {
-      return;
-    }
+    // Vertex 1
+    const v1x = positions[offset];
+    const v1y = positions[offset + 1];
+    const v1z = positions[offset + 2];
 
-    // Skip boundary edges (in static features)
-    if (triangles.length !== 2) {
-      return;
-    }
+    // Vertex 2
+    const v2x = positions[offset + 3];
+    const v2y = positions[offset + 4];
+    const v2z = positions[offset + 5];
 
-    // Skip feature edges (already in static)
-    if (edgeData.angle !== undefined && edgeData.angle >= 30) {
-      return;
-    }
-
-    const tri1 = triangles[0];
-    const tri2 = triangles[1];
-
-    // Inline midpoint calculation (reuse vector)
-    edgeMidpoint.addVectors(vertices[0], vertices[1]).multiplyScalar(0.5);
-
-    // Inline view direction (reuse vector)
+    // Compute view direction
+    edgeMidpoint.set(v1x + v2x, v1y + v2y, v1z + v2z).multiplyScalar(0.5);
     viewDir.subVectors(cameraPos, edgeMidpoint).normalize();
 
-    // Dot products
-    const dot1 = tri1.normal.dot(viewDir);
-    const dot2 = tri2.normal.dot(viewDir);
+    // Get Backend Normals for this segment
+    // Note: We stored them per-vertex (MeshModel.tsx), so we can just grab from the first vertex of the segment
+    normal1.set(n1Array[offset], n1Array[offset + 1], n1Array[offset + 2]);
+    normal2.set(n2Array[offset], n2Array[offset + 1], n2Array[offset + 2]);
 
-    const threshold = 0.01;
-    const isFrontFacing1 = dot1 > threshold;
-    const isFrontFacing2 = dot2 > threshold;
+    // Check visibility
+    // Visible if ANY adjacent face is front-facing (dot > 0)
+    // Using a small epsilon 0.01 to avoid flickering on exactly 90-degree edges
+    const isFace1Visible = normal1.dot(viewDir) > 0.01;
+    const isFace2Visible = normal2.dot(viewDir) > 0.01;
 
-    // Silhouette edge: one front, one back
-    if (isFrontFacing1 !== isFrontFacing2) {
-      // Direct array assignment (faster than push)
-      if (posIndex + 5 < positions.length) {
-        positions[posIndex++] = vertices[0].x;
-        positions[posIndex++] = vertices[0].y;
-        positions[posIndex++] = vertices[0].z;
-        positions[posIndex++] = vertices[1].x;
-        positions[posIndex++] = vertices[1].y;
-        positions[posIndex++] = vertices[1].z;
-      }
+    // Check if this is a "boundary" edge (only 1 face)
+    // If n2 is zero-length, it implies only 1 adjacent face provided
+    const isBoundary = normal2.lengthSq() < 0.001;
+
+    if (isFace1Visible || isFace2Visible || (isBoundary && isFace1Visible)) {
+      visiblePositions[posIndex++] = v1x;
+      visiblePositions[posIndex++] = v1y;
+      visiblePositions[posIndex++] = v1z;
+      visiblePositions[posIndex++] = v2x;
+      visiblePositions[posIndex++] = v2y;
+      visiblePositions[posIndex++] = v2z;
     }
-  });
+  }
 
   // Trim to actual size
-  return positions.slice(0, posIndex);
+  return visiblePositions.slice(0, posIndex);
 }
