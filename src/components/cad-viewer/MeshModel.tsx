@@ -292,7 +292,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             }
 
             // Add closing segment for closed edges (circles, full ellipses)
-            if (edge.is_closed && edge.snap_points.length > 2) {
+            if ((edge as any).is_closed && edge.snap_points.length > 2) {
               const first = edge.snap_points[0];
               const last = edge.snap_points[edge.snap_points.length - 1];
               featureEdgePositions.push(last[0], last[1], last[2], first[0], first[1], first[2]);
