@@ -62,6 +62,8 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
   const addMeasurement = useMeasurementStore((state) => state.addMeasurement);
   const activeTool = useMeasurementStore((state) => state.activeTool);
+  const measurementMode = useMeasurementStore((state) => state.measurementMode);
+
 
   // Convert feature edges to Line3 array
   const edgeLines = React.useMemo(() => {
@@ -95,8 +97,9 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
   // Handle hover detection for edges
   // Priority 1: Use backend tagged_edges if available (analytical data)
   // Priority 2: Use featureEdgesGeometry (rendered edge lines) as fallback
+  // ONLY ACTIVE IN SINGLE MODE
   useEffect(() => {
-    if (!enabled || !meshRef) {
+    if (!enabled || !meshRef || measurementMode !== "single") {
       setHoverInfo(null);
       setLabelText("");
       return;
@@ -248,7 +251,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
     gl.domElement.addEventListener("pointermove", handlePointerMove);
     return () => gl.domElement.removeEventListener("pointermove", handlePointerMove);
-  }, [enabled, meshRef, meshData?.tagged_edges, edgeLines, camera, gl, raycaster]);
+  }, [enabled, meshRef, meshData?.tagged_edges, edgeLines, camera, gl, raycaster, measurementMode]);
 
   // Face point-to-point: Temporary marker preview on pointer move
   useEffect(() => {
