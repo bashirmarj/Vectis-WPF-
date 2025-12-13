@@ -6,6 +6,7 @@ import * as THREE from "three";
 export type EdgeType =
   | "line"
   | "circle"
+  | "arc"
   | "ellipse"
   | "hyperbola"
   | "parabola"
@@ -20,8 +21,8 @@ export type EdgeType =
 export interface TaggedFeatureEdge {
   feature_id: number;
   type: EdgeType;
-  length: number;
-  is_closed: boolean;
+  length?: number;
+  is_closed?: boolean;
   start: [number, number, number];
   end: [number, number, number];
 
