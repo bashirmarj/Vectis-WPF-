@@ -152,7 +152,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
         // Priority 1: Try backend tagged_edges first (has analytical data)
         if (hasTaggedEdges) {
-          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 0.050); // Increased to 50mm for easy hovering
+          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 0.05); // 50mm threshold
 
           if (taggedEdge) {
             // Build highlight segments from snap_points
@@ -191,23 +191,30 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
             // Generate context-aware label based on edge type
             let label = "";
+            const diameterMM = taggedEdge.diameter ? taggedEdge.diameter * 1000 : undefined;
+            const radiusMM = taggedEdge.radius ? taggedEdge.radius * 1000 : undefined;
+            const arcLengthMM = taggedEdge.arc_length ? taggedEdge.arc_length * 1000 : undefined;
+            const lengthMM = taggedEdge.length ? taggedEdge.length * 1000 : undefined;
+            const majorRadiusMM = taggedEdge.major_radius ? taggedEdge.major_radius * 1000 : undefined;
+            const minorRadiusMM = taggedEdge.minor_radius ? taggedEdge.minor_radius * 1000 : undefined;
+
             if (taggedEdge.type === "circle") {
-              if (taggedEdge.is_full_circle && taggedEdge.diameter) {
-                label = `⊙ Diameter: Ø${taggedEdge.diameter.toFixed(2)} mm`;
-              } else if (taggedEdge.radius) {
-                label = `⌒ Radius: R${taggedEdge.radius.toFixed(2)} mm`;
-                if (taggedEdge.arc_length) {
-                  label += ` | Arc: ${taggedEdge.arc_length.toFixed(2)} mm`;
+              if (taggedEdge.is_full_circle && diameterMM) {
+                label = `⊙ Diameter: Ø${diameterMM.toFixed(2)} mm`;
+              } else if (radiusMM) {
+                label = `⌒ Radius: R${radiusMM.toFixed(2)} mm`;
+                if (arcLengthMM) {
+                  label += ` | Arc: ${arcLengthMM.toFixed(2)} mm`;
                 }
               }
-            } else if (taggedEdge.type === "line" && taggedEdge.length) {
-              label = `— Length: ${taggedEdge.length.toFixed(2)} mm`;
+            } else if (taggedEdge.type === "line" && lengthMM) {
+              label = `— Length: ${lengthMM.toFixed(2)} mm`;
             } else if (taggedEdge.type === "ellipse") {
-              if (taggedEdge.major_radius && taggedEdge.minor_radius) {
-                label = `⬭ Ellipse: ${taggedEdge.major_radius.toFixed(2)} × ${taggedEdge.minor_radius.toFixed(2)} mm`;
+              if (majorRadiusMM && minorRadiusMM) {
+                label = `⬭ Ellipse: ${majorRadiusMM.toFixed(2)} × ${minorRadiusMM.toFixed(2)} mm`;
               }
-            } else if (taggedEdge.length) {
-              label = `Edge: ${taggedEdge.length.toFixed(2)} mm`;
+            } else if (lengthMM) {
+              label = `Edge: ${lengthMM.toFixed(2)} mm`;
             } else {
               label = `Edge (${taggedEdge.type})`;
             }
@@ -230,7 +237,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
         if (hasEdgeLines) {
           // Find the closest edge line segment to the click point
           let closestEdge: THREE.Line3 | null = null;
-          let minDistance = 0.050; // Increased to 50mm for easy hovering)
+          let minDistance = 0.05; // 50mm threshold
           let closestPoint = new THREE.Vector3();
 
           for (const line of edgeLines) {
@@ -376,9 +383,9 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                     surfaceType: "edge",
                   },
                 ],
-                value: taggedEdge.diameter,
+                value: taggedEdge.diameter * 1000,
                 unit: "mm",
-                label: `Ø ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+                label: `Ø ${formatMeasurement(taggedEdge.diameter * 1000, "mm")}`,
                 color: "#0066CC",
                 visible: true,
                 createdAt: new Date(),
@@ -392,13 +399,13 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
               toast({
                 title: "Circle Measured",
-                description: `Diameter: ${formatMeasurement(taggedEdge.diameter, "mm")}`,
+                description: `Diameter: ${formatMeasurement(taggedEdge.diameter * 1000, "mm")}`,
               });
             } else if (taggedEdge.radius) {
               // Arc (partial circle) → show radius
               const label = taggedEdge.arc_length
-                ? `R ${formatMeasurement(taggedEdge.radius, "mm")} | Arc: ${formatMeasurement(taggedEdge.arc_length, "mm")}`
-                : `R ${formatMeasurement(taggedEdge.radius, "mm")}`;
+                ? `R ${formatMeasurement(taggedEdge.radius * 1000, "mm")} | Arc: ${formatMeasurement(taggedEdge.arc_length * 1000, "mm")}`
+                : `R ${formatMeasurement(taggedEdge.radius * 1000, "mm")}`;
 
               addMeasurement({
                 id: generateMeasurementId(),
@@ -413,7 +420,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                     surfaceType: "edge",
                   },
                 ],
-                value: taggedEdge.radius,
+                value: taggedEdge.radius * 1000,
                 unit: "mm",
                 label: label,
                 color: "#00AACC",
@@ -475,7 +482,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
             toast({
               title: "Line Measured",
-              description: `Length: ${formatMeasurement(taggedEdge.length, "mm")}`,
+              description: `Length: ${formatMeasurement(taggedEdge.length * 1000, "mm")}`,,
             });
           } else if (taggedEdge.type === "ellipse" && taggedEdge.major_radius && taggedEdge.minor_radius) {
             // Ellipse → show major/minor radii
@@ -490,9 +497,9 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                   surfaceType: "edge",
                 },
               ],
-              value: taggedEdge.major_radius,
+              value: taggedEdge.major_radius * 1000,
               unit: "mm",
-              label: `Ellipse: ${formatMeasurement(taggedEdge.major_radius, "mm")} × ${formatMeasurement(taggedEdge.minor_radius, "mm")}`,
+              label: `Ellipse: ${formatMeasurement(taggedEdge.major_radius * 1000, "mm")} × ${formatMeasurement(taggedEdge.minor_radius * 1000, "mm")}`,
               color: "#9900CC",
               visible: true,
               createdAt: new Date(),
