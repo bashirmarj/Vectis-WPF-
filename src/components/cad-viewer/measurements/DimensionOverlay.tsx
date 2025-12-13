@@ -1,6 +1,7 @@
 import React from "react";
 import { useMeasurementStore, Measurement } from "@/stores/measurementStore";
-import { useThree } from "@react-three/fiber";
+import { useThree, useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { LinearDimension } from "./LinearDimension";
 import { RadialDimension } from "./RadialDimension";
@@ -9,10 +10,17 @@ import { AngularDimension } from "./AngularDimension";
 /**
  * DimensionOverlay - Professional SVG overlay for SolidWorks-style dimension rendering
  * Projects 3D measurements to 2D screen space for crisp dimension lines and callouts
+ * Uses Html portal from drei to render SVG overlay properly within R3F Canvas
  */
 export function DimensionOverlay() {
     const { measurements } = useMeasurementStore();
     const { camera, size } = useThree();
+    const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+
+    // Force re-render on camera changes to update projected positions
+    useFrame(() => {
+        forceUpdate();
+    });
 
     // Project 3D point to 2D screen coordinates
     const project3DTo2D = (point: THREE.Vector3): { x: number; y: number } => {
@@ -147,19 +155,27 @@ export function DimensionOverlay() {
         return null;
     };
 
+    // Use Html from drei to render SVG outside THREE.js context but positioned over the canvas
     return (
-        <svg
+        <Html
+            fullscreen
             style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
                 pointerEvents: "none",
                 zIndex: 10,
             }}
         >
-            {measurements.map(renderDimension)}
-        </svg>
+            <svg
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                }}
+            >
+                {measurements.map(renderDimension)}
+            </svg>
+        </Html>
     );
 }
