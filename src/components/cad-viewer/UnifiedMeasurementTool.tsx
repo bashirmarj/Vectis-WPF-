@@ -64,6 +64,16 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
   const activeTool = useMeasurementStore((state) => state.activeTool);
   const measurementMode = useMeasurementStore((state) => state.measurementMode);
 
+  // DEBUG: Log on every render to see if component is active
+  console.log("🎯 UnifiedMeasurementTool Render:", {
+    enabled,
+    activeTool,
+    measurementMode,
+    hasMeshRef: meshRef !== null,
+    hasFeatureEdges: featureEdgesGeometry !== null,
+    hasTaggedEdges: (meshData?.tagged_edges?.length || 0) > 0,
+  });
+
 
   // Convert feature edges to Line3 array
   const edgeLines = React.useMemo(() => {
