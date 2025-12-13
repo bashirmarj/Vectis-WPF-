@@ -128,7 +128,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
         // Priority 1: Try backend tagged_edges first (has analytical data)
         if (hasTaggedEdges) {
-          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 0.002);
+          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 0.020); // Increased from 0.002 for better detectability
 
           if (taggedEdge) {
             // Build highlight segments from snap_points
@@ -206,7 +206,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
         if (hasEdgeLines) {
           // Find the closest edge line segment to the click point
           let closestEdge: THREE.Line3 | null = null;
-          let minDistance = 0.003; // 3mm threshold in meters
+          let minDistance = 0.020; // Increased from 0.003 (20mm threshold for better detectability)
           let closestPoint = new THREE.Vector3();
 
           for (const line of edgeLines) {
