@@ -34,21 +34,42 @@ from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
+from OCC.Core.GeomAbs import (
+    GeomAbs_Cylinder, GeomAbs_Plane,
+    GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse,
+    GeomAbs_Hyperbola, GeomAbs_Parabola, GeomAbs_BezierCurve,
+    GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
+)
 from OCC.Core.GProp import GProp_GProps
-from OCC.Core.BRepGProp import brepgprop
+from OCC.Core.BRepGProp import brepgprop, brepgprop_LinearProperties
+from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
+from OCC.Core.ShapeAnalysis import ShapeAnalysis_Edge
+from OCC.Core.GCPnts import GCPnts_QuasiUniformDeflection
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+from OCC.Core.TopExp import topexp
 
-# Local modules
-from brepnet_wrapper import BRepNetRecognizer, FeatureType
-from geometric_fallback import TurningFeatureDetector
+# ========== TEMPORARY: Skip feature recognition for faster processing ==========
+# Set to False to re-enable feature recognition (AAG, geometric recognition, volume decomposition)
+# When True: Only tessellation + basic metrics run (5-15 seconds)
+# When False: Full feature recognition runs (60+ seconds)
+SKIP_FEATURE_RECOGNITION = True
+# ================================================================================
+
+# Local modules - always needed
 from volume_decomposer import VolumeDecomposer
 from lump_classifier import LumpClassifier
 from feature_mapper import FeatureMapper
-from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletRecognizer
+
+# Heavy ML modules - conditional import to avoid loading BRepNet when skipped
+if not SKIP_FEATURE_RECOGNITION:
+    from brepnet_wrapper import BRepNetRecognizer, FeatureType
+    from geometric_fallback import TurningFeatureDetector
+    from aag_pattern_engine.recognizers.fillet_chamfer_recognizer import FilletRecognizer
 
 # === Configuration ===
 app = Flask(__name__)
 CORS(app)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s'
@@ -71,33 +92,36 @@ if SUPABASE_URL and SUPABASE_KEY:
 brepnet_recognizer = None
 turning_detector = None
 
-try:
-    # Load BRepNet with pre-trained PyTorch Lightning checkpoint
-    model_path = "models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt"
-    logger.info(f"🔄 Loading BRepNet from {model_path}...")
-    
-    brepnet_recognizer = BRepNetRecognizer(
-        model_path=model_path,
-        device="cpu",  # Use CPU for production
-        confidence_threshold=0.30  # Lowered from 0.70 to capture more features
-    )
-    logger.info("✅ BRepNet recognizer loaded successfully")
-except FileNotFoundError as e:
-    logger.error(f"❌ BRepNet model file not found: {e}")
-    brepnet_recognizer = None
-except ImportError as e:
-    logger.error(f"❌ BRepNet dependencies missing: {e}")
-    brepnet_recognizer = None
-except Exception as e:
-    logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
-    brepnet_recognizer = None
+if not SKIP_FEATURE_RECOGNITION:
+    try:
+        # Load BRepNet with pre-trained PyTorch Lightning checkpoint
+        model_path = "models/pretrained_s2.0.0_extended_step_uv_net_features_0816_183419.ckpt"
+        logger.info(f"🔄 Loading BRepNet from {model_path}...")
+        
+        brepnet_recognizer = BRepNetRecognizer(
+            model_path=model_path,
+            device="cpu",  # Use CPU for production
+            confidence_threshold=0.30  # Lowered from 0.70 to capture more features
+        )
+        logger.info("✅ BRepNet recognizer loaded successfully")
+    except FileNotFoundError as e:
+        logger.error(f"❌ BRepNet model file not found: {e}")
+        brepnet_recognizer = None
+    except ImportError as e:
+        logger.error(f"❌ BRepNet dependencies missing: {e}")
+        brepnet_recognizer = None
+    except Exception as e:
+        logger.error(f"❌ BRepNet loading failed: {e}", exc_info=True)
+        brepnet_recognizer = None
 
-try:
-    # Geometric fallback for turning features
-    turning_detector = TurningFeatureDetector(tolerance=0.001)
-    logger.info("✅ Turning feature detector loaded")
-except Exception as e:
-    logger.error(f"❌ Turning detector failed: {e}")
+    try:
+        # Geometric fallback for turning features
+        turning_detector = TurningFeatureDetector(tolerance=0.001)
+        logger.info("✅ Turning feature detector loaded")
+    except Exception as e:
+        logger.error(f"❌ Turning detector failed: {e}")
+else:
+    logger.info("⏭️ SKIP_FEATURE_RECOGNITION=True - Skipping BRepNet and ML model loading")
 
 
 @dataclass
@@ -268,6 +292,244 @@ def compute_vertex_normals(vertices: List[float], indices: List[int], vertex_cou
     return normals.flatten().tolist()
 
 
+def extract_tagged_edges(shape, max_snap_points: int = 12) -> List[Dict]:
+    """
+    Extract all B-Rep edges with analytical geometry data (SolidWorks-level precision)
+
+    This function provides:
+    - Analytical curve data (exact center, radius, angles) for precise measurements
+    - Sparse snap points for efficient mouse interaction
+    - Edge topology (adjacent faces)
+
+    Args:
+        shape: OpenCascade TopoDS_Shape
+        max_snap_points: Maximum points per edge for snapping (default 12)
+
+    Returns:
+        List of edge dictionaries with analytical and snap data
+    """
+    start = time.time()
+    edges = []
+
+    # Build edge-to-face adjacency map
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+
+    # Track unique edges (avoid duplicates from shared edges between faces)
+    processed_edges = set()
+    edge_analyzer = ShapeAnalysis_Edge()
+
+    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+    feature_id = 0
+
+    while edge_explorer.More():
+        edge = edge_explorer.Current()
+
+        # Get edge hash for deduplication
+        edge_hash = edge.HashCode(2147483647)  # Max int for hash
+        if edge_hash in processed_edges:
+            edge_explorer.Next()
+            continue
+        processed_edges.add(edge_hash)
+
+        try:
+            # Create curve adaptor for edge analysis
+            curve_adaptor = BRepAdaptor_Curve(edge)
+
+            # Skip degenerate edges (no valid curve)
+            if not curve_adaptor.Is3DCurve():
+                edge_explorer.Next()
+                continue
+
+            curve_type = curve_adaptor.GetType()
+            first_param = curve_adaptor.FirstParameter()
+            last_param = curve_adaptor.LastParameter()
+
+            # Get start and end points
+            start_pnt = curve_adaptor.Value(first_param)
+            end_pnt = curve_adaptor.Value(last_param)
+
+            # Compute edge length
+            props = GProp_GProps()
+            brepgprop_LinearProperties(edge, props)
+            length = props.Mass() * 1000  # Convert to mm
+
+            # Determine curve type string
+            if curve_type == GeomAbs_Line:
+                type_str = "line"
+            elif curve_type == GeomAbs_Circle:
+                type_str = "circle"
+            elif curve_type == GeomAbs_Ellipse:
+                type_str = "ellipse"
+            elif curve_type == GeomAbs_Hyperbola:
+                type_str = "hyperbola"
+            elif curve_type == GeomAbs_Parabola:
+                type_str = "parabola"
+            elif curve_type == GeomAbs_BezierCurve:
+                type_str = "bezier"
+            elif curve_type == GeomAbs_BSplineCurve:
+                type_str = "bspline"
+            elif curve_type == GeomAbs_OffsetCurve:
+                type_str = "offset"
+            else:
+                type_str = "other"
+
+            # Check if edge is closed (full circle)
+            is_closed = BRep_Tool.IsClosed(edge)
+
+            # Build base edge data
+            edge_data = {
+                'feature_id': feature_id,
+                'type': type_str,
+                'length': round(length, 6),
+                'is_closed': is_closed,
+                'start': [
+                    round(start_pnt.X() * 1000, 6),  # Convert to mm
+                    round(start_pnt.Y() * 1000, 6),
+                    round(start_pnt.Z() * 1000, 6)
+                ],
+                'end': [
+                    round(end_pnt.X() * 1000, 6),
+                    round(end_pnt.Y() * 1000, 6),
+                    round(end_pnt.Z() * 1000, 6)
+                ]
+            }
+
+            # === ANALYTICAL DATA EXTRACTION (curve-type specific) ===
+
+            if curve_type == GeomAbs_Circle:
+                circle = curve_adaptor.Circle()
+                center = circle.Location()
+                axis = circle.Axis().Direction()
+                radius = circle.Radius() * 1000  # Convert to mm
+
+                edge_data['center'] = [
+                    round(center.X() * 1000, 6),
+                    round(center.Y() * 1000, 6),
+                    round(center.Z() * 1000, 6)
+                ]
+                edge_data['radius'] = round(radius, 6)
+                edge_data['diameter'] = round(radius * 2, 6)
+                edge_data['normal'] = [
+                    round(axis.X(), 6),
+                    round(axis.Y(), 6),
+                    round(axis.Z(), 6)
+                ]
+
+                # Arc angles (for partial circles / arcs)
+                edge_data['start_angle'] = round(first_param, 6)
+                edge_data['end_angle'] = round(last_param, 6)
+                edge_data['sweep_angle'] = round(last_param - first_param, 6)
+
+                # Determine if it's a full circle or arc
+                import math
+                if abs((last_param - first_param) - 2 * math.pi) < 0.001:
+                    edge_data['is_full_circle'] = True
+                else:
+                    edge_data['is_full_circle'] = False
+                    edge_data['arc_length'] = round(radius * (last_param - first_param), 6)
+
+            elif curve_type == GeomAbs_Ellipse:
+                ellipse = curve_adaptor.Ellipse()
+                center = ellipse.Location()
+
+                edge_data['center'] = [
+                    round(center.X() * 1000, 6),
+                    round(center.Y() * 1000, 6),
+                    round(center.Z() * 1000, 6)
+                ]
+                edge_data['major_radius'] = round(ellipse.MajorRadius() * 1000, 6)
+                edge_data['minor_radius'] = round(ellipse.MinorRadius() * 1000, 6)
+
+            elif curve_type == GeomAbs_Line:
+                line = curve_adaptor.Line()
+                direction = line.Direction()
+
+                edge_data['direction'] = [
+                    round(direction.X(), 6),
+                    round(direction.Y(), 6),
+                    round(direction.Z(), 6)
+                ]
+
+            # === SPARSE SNAP POINTS (for efficient mouse interaction) ===
+
+            try:
+                discretizer = GCPnts_QuasiUniformDeflection()
+                # Use adaptive deflection based on edge length
+                deflection = max(0.001, length / 1000 / 100)  # 1% of length, min 0.001m
+                discretizer.Initialize(curve_adaptor, deflection, first_param, last_param)
+
+                if discretizer.IsDone() and discretizer.NbPoints() > 0:
+                    # Sample points, limiting to max_snap_points
+                    total_points = discretizer.NbPoints()
+                    if total_points <= max_snap_points:
+                        step = 1
+                    else:
+                        step = total_points // max_snap_points
+
+                    snap_points = []
+                    for i in range(1, total_points + 1, step):
+                        if len(snap_points) >= max_snap_points:
+                            break
+                        param = discretizer.Parameter(i)
+                        pnt = curve_adaptor.Value(param)
+                        snap_points.append([
+                            round(pnt.X() * 1000, 6),
+                            round(pnt.Y() * 1000, 6),
+                            round(pnt.Z() * 1000, 6)
+                        ])
+
+                    # Always include the end point
+                    end_snap = [
+                        round(end_pnt.X() * 1000, 6),
+                        round(end_pnt.Y() * 1000, 6),
+                        round(end_pnt.Z() * 1000, 6)
+                    ]
+                    if snap_points and snap_points[-1] != end_snap:
+                        if len(snap_points) >= max_snap_points:
+                            snap_points[-1] = end_snap
+                        else:
+                            snap_points.append(end_snap)
+
+                    edge_data['snap_points'] = snap_points
+                else:
+                    # Fallback: just use start and end
+                    edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
+
+            except Exception as e:
+                logger.warning(f"Failed to generate snap points for edge {feature_id}: {e}")
+                edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
+
+            # === ADJACENT FACES (for topology) ===
+
+            try:
+                if edge_face_map.Contains(edge):
+                    face_list = edge_face_map.FindFromKey(edge)
+                    adjacent_faces = []
+                    it = face_list.begin()
+                    while it != face_list.end():
+                        # Get face index by searching through faces
+                        # For now, just count adjacent faces
+                        adjacent_faces.append(len(adjacent_faces))
+                        it.Next()
+                    edge_data['adjacent_face_count'] = len(adjacent_faces)
+            except Exception:
+                edge_data['adjacent_face_count'] = 0
+
+            edges.append(edge_data)
+            feature_id += 1
+
+        except Exception as e:
+            logger.warning(f"Failed to process edge: {e}")
+
+        edge_explorer.Next()
+
+    elapsed = (time.time() - start) * 1000
+    logger.info(f"Extracted {len(edges)} tagged edges in {elapsed:.1f}ms")
+
+    return edges
+
+
 def extract_bounding_box(shape) -> Dict:
     """Extract axis-aligned bounding box"""
     bbox = Bnd_Box()
@@ -424,7 +686,27 @@ def analyze_cad():
             # Extract geometric data
             logger.info(f"[{correlation_id}] Tessellating mesh")
             mesh_data = tessellate_shape(shape)
+
+            # Extract tagged edges with analytical data for measurement tool
+            logger.info(f"[{correlation_id}] Extracting tagged edges")
+            tagged_edges = extract_tagged_edges(shape)
+            mesh_data['tagged_edges'] = tagged_edges
+            logger.info(f"[{correlation_id}] ✅ Extracted {len(tagged_edges)} tagged edges")
+
+            # Generate feature_edges from snap_points for frontend rendering
+            # This maintains backward compatibility with MeshModel.tsx polyline rendering
+            feature_edges = []
+            for edge in tagged_edges:
+                if 'snap_points' in edge and len(edge['snap_points']) >= 2:
+                    # Use snap_points as the polyline (same format as legacy feature_edges)
+                    feature_edges.append(edge['snap_points'])
+                elif 'start' in edge and 'end' in edge:
+                    # Fallback for edges without snap_points - create 2-point polyline
+                    feature_edges.append([edge['start'], edge['end']])
             
+            mesh_data['feature_edges'] = feature_edges
+            logger.info(f"[{correlation_id}] ✅ Generated {len(feature_edges)} feature edges for rendering")
+
             logger.info(f"[{correlation_id}] Computing bounding box")
             bbox = extract_bounding_box(shape)
             
@@ -439,7 +721,10 @@ def analyze_cad():
             features = []
             recognition_methods = []
             
-            if part_type in ["prismatic", "mixed"] and brepnet_recognizer:
+            if SKIP_FEATURE_RECOGNITION:
+                logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
+                recognition_methods.append("Skipped (SKIP_FEATURE_RECOGNITION=True)")
+            elif part_type in ["prismatic", "mixed"] and brepnet_recognizer:
                 logger.info(f"[{correlation_id}] 🤖 Running BRepNet ML feature recognition")
                 try:
                     brepnet_start = time.time()
@@ -499,7 +784,7 @@ def analyze_cad():
                 from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
                 features = [standardize_feature_output(f) for f in features]
             
-            if part_type in ["turning", "mixed"] and turning_detector:
+            if not SKIP_FEATURE_RECOGNITION and part_type in ["turning", "mixed"] and turning_detector:
                 logger.info(f"[{correlation_id}] Running geometric turning feature detection")
                 try:
                     turning_features = turning_detector.detect_features(shape)
@@ -632,131 +917,142 @@ def analyze_aag():
             # === STEP 2: Tessellate with face mapping ===
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
-            
-            # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
-            logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
-            from aag_pattern_engine.graph_builder import AAGGraphBuilder
-            builder = AAGGraphBuilder(shape)
-            aag = builder.build()
-            
-            # === STEP 4: Feature Recognition ===
-            
-            # Initialize results
-            decomposition_results = {}
-            
-            # BLOCK 1: Geometric Recognition (Holes & Fillets & Countersinks & Tapered Holes)
-            try:
-                logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition")
-                from aag_pattern_engine.geometric_recognizer import recognize_simple_features
-                
-                holes_geo, fillets_geo, countersinks_geo, tapered_geo = recognize_simple_features(shape)
-                
-                # Convert holes to feature format
-                for hole_info in holes_geo:
-                    features.append({
-                        'type': hole_info['type'],  # 'through_hole', 'blind_hole', or 'counterbore'
-                        'method': 'geometric',
-                        'face_ids': hole_info['face_ids'],
-                        'radius': hole_info['radius'],
-                        'confidence': 1.0
-                    })
-                
-                # Convert fillets to feature format
-                for fillet_info in fillets_geo:
-                    features.append({
-                        'type': 'fillet',
-                        'method': 'geometric',
-                        'face_ids': [fillet_info['face_id']],
-                        'radius': fillet_info['radius'],
-                        'confidence': 1.0
-                    })
-                
-                # Convert countersinks to feature format
-                for csink_info in countersinks_geo:
-                    features.append({
-                        'type': 'countersink',
-                        'method': 'geometric',
-                        'face_ids': csink_info['face_ids'],
-                        'cone_angle': csink_info['cone_angle'],
-                        'hole_radius': csink_info['hole_radius'],
-                        'confidence': 1.0
-                    })
-                
-                # Convert tapered holes to feature format
-                for tapered_info in tapered_geo:
-                    features.append({
-                        'type': 'tapered_hole',
-                        'method': 'geometric',
-                        'face_ids': tapered_info['face_ids'],
-                        'angle': tapered_info['angle'],
-                        'confidence': 1.0
-                    })
-                
-                logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(countersinks_geo)} countersinks, {len(tapered_geo)} tapered")
-                
-            except Exception as e:
-                logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
-                errors.append(f"Geometric recognition error: {str(e)}")
-            
-            # Track consumed face IDs to prevent duplicates
-            consumed_face_ids = set()
-            for hole_info in holes_geo:
-                consumed_face_ids.update(hole_info['face_ids'])
-            for fillet_info in fillets_geo:
-                consumed_face_ids.add(fillet_info['face_id'])
-            for csink_info in countersinks_geo:
-                consumed_face_ids.update(csink_info['face_ids'])
-            for tapered_info in tapered_geo:
-                consumed_face_ids.update(tapered_info['face_ids'])
-            
-            logger.info(f"[{correlation_id}] 🔒 Consumed {len(consumed_face_ids)} face IDs from geometric recognizer")
-            
-            # BLOCK 2: Volume Decomposition (Pockets/Cavities)
-            try:
-                from volume_decomposer import VolumeDecomposer
-                from lump_classifier import LumpClassifier
-                from feature_mapper import FeatureMapper
-                
-                decomposer = VolumeDecomposer()
-                decomposition_results = decomposer.decompose(shape, part_type="prismatic")
-                
-                if decomposition_results:
-                    classifier = LumpClassifier()
-                    mapper = FeatureMapper(shape, aag)
-                    
-                    classified_lumps = []
-                    for lump in decomposition_results:
-                        classification = classifier.classify(lump['shape'], lump['stock_bbox'])
-                        lump_data = lump.copy()
-                        lump_data.update(classification)
-                        classified_lumps.append(lump_data)
-                        
-                    volumetric_features = mapper.map_features(classified_lumps)
-                    
-                    # FILTER OUT FEATURES WITH CONSUMED FACES
-                    filtered_features = []
-                    skipped_count = 0
-                    for feature in volumetric_features:
-                        feature_face_ids = set(feature.get('face_ids', []))
-                        if feature_face_ids & consumed_face_ids:  # Intersection check
-                            skipped_count += 1
-                            logger.debug(f"[{correlation_id}] Skipping duplicate feature with face IDs: {feature_face_ids & consumed_face_ids}")
-                        else:
-                            filtered_features.append(feature)
-                    
-                    features.extend(filtered_features)
-                    
-                    logger.info(f"[{correlation_id}] ✅ Found {len(filtered_features)} volumetric features ({skipped_count} duplicates filtered)")
-                else:
-                    logger.warning(f"[{correlation_id}] Volume decomposition returned no features")
-                    
-            except Exception as e:
-                logger.error(f"[{correlation_id}] ❌ Volume decomposition failed: {e}", exc_info=True)
-                errors.append(f"Volume decomposition failed: {str(e)}")
 
-            # Standardize output
-            from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
-            features = [standardize_feature_output(f) for f in features]
+            # === STEP 2.5: Extract tagged edges with analytical data ===
+            logger.info(f"[{correlation_id}] 📐 Extracting tagged edges")
+            tagged_edges = extract_tagged_edges(shape)
+            mesh_data['tagged_edges'] = tagged_edges
+            logger.info(f"[{correlation_id}] ✅ Extracted {len(tagged_edges)} tagged edges")
+
+            # === STEP 3 & 4: Feature Recognition (conditionally skipped) ===
+            if SKIP_FEATURE_RECOGNITION:
+                logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
+                # No AAG building, no geometric recognition, no volume decomposition
+            else:
+                # === STEP 3: Build AAG (Required for Fillets & Mapping) ===
+                logger.info(f"[{correlation_id}] 🕸️ Building AAG Graph")
+                from aag_pattern_engine.graph_builder import AAGGraphBuilder
+                builder = AAGGraphBuilder(shape)
+                aag = builder.build()
+                
+                # === STEP 4: Feature Recognition ===
+                
+                # Initialize results
+                decomposition_results = {}
+                
+                # BLOCK 1: Geometric Recognition (Holes & Fillets & Countersinks & Tapered Holes)
+                try:
+                    logger.info(f"[{correlation_id}] 🔍 Block 1: Geometric Recognition")
+                    from aag_pattern_engine.geometric_recognizer import recognize_simple_features
+                    
+                    holes_geo, fillets_geo, countersinks_geo, tapered_geo = recognize_simple_features(shape)
+                    
+                    # Convert holes to feature format
+                    for hole_info in holes_geo:
+                        features.append({
+                            'type': hole_info['type'],
+                            'method': 'geometric',
+                            'face_ids': hole_info['face_ids'],
+                            'radius': hole_info['radius'],
+                            'confidence': 1.0
+                        })
+                    
+                    # Convert fillets to feature format
+                    for fillet_info in fillets_geo:
+                        features.append({
+                            'type': 'fillet',
+                            'method': 'geometric',
+                            'face_ids': [fillet_info['face_id']],
+                            'radius': fillet_info['radius'],
+                            'confidence': 1.0
+                        })
+                    
+                    # Convert countersinks to feature format
+                    for csink_info in countersinks_geo:
+                        features.append({
+                            'type': 'countersink',
+                            'method': 'geometric',
+                            'face_ids': csink_info['face_ids'],
+                            'cone_angle': csink_info['cone_angle'],
+                            'hole_radius': csink_info['hole_radius'],
+                            'confidence': 1.0
+                        })
+                    
+                    # Convert tapered holes to feature format
+                    for tapered_info in tapered_geo:
+                        features.append({
+                            'type': 'tapered_hole',
+                            'method': 'geometric',
+                            'face_ids': tapered_info['face_ids'],
+                            'angle': tapered_info['angle'],
+                            'confidence': 1.0
+                        })
+                    
+                    logger.info(f"[{correlation_id}] ✅ Block 1: {len(holes_geo)} holes, {len(fillets_geo)} fillets, {len(countersinks_geo)} countersinks, {len(tapered_geo)} tapered")
+                    
+                except Exception as e:
+                    logger.error(f"[{correlation_id}] ❌ Geometric recognition failed: {e}")
+                    errors.append(f"Geometric recognition error: {str(e)}")
+                
+                # Track consumed face IDs to prevent duplicates
+                consumed_face_ids = set()
+                for hole_info in holes_geo:
+                    consumed_face_ids.update(hole_info['face_ids'])
+                for fillet_info in fillets_geo:
+                    consumed_face_ids.add(fillet_info['face_id'])
+                for csink_info in countersinks_geo:
+                    consumed_face_ids.update(csink_info['face_ids'])
+                for tapered_info in tapered_geo:
+                    consumed_face_ids.update(tapered_info['face_ids'])
+                
+                logger.info(f"[{correlation_id}] 🔒 Consumed {len(consumed_face_ids)} face IDs from geometric recognizer")
+                
+                # BLOCK 2: Volume Decomposition (Pockets/Cavities)
+                try:
+                    from volume_decomposer import VolumeDecomposer
+                    from lump_classifier import LumpClassifier
+                    from feature_mapper import FeatureMapper
+                    
+                    decomposer = VolumeDecomposer()
+                    decomposition_results = decomposer.decompose(shape, part_type="prismatic")
+                    
+                    if decomposition_results:
+                        classifier = LumpClassifier()
+                        mapper = FeatureMapper(shape, aag)
+                        
+                        classified_lumps = []
+                        for lump in decomposition_results:
+                            classification = classifier.classify(lump['shape'], lump['stock_bbox'])
+                            lump_data = lump.copy()
+                            lump_data.update(classification)
+                            classified_lumps.append(lump_data)
+                            
+                        volumetric_features = mapper.map_features(classified_lumps)
+                        
+                        # FILTER OUT FEATURES WITH CONSUMED FACES
+                        filtered_features = []
+                        skipped_count = 0
+                        for feature in volumetric_features:
+                            feature_face_ids = set(feature.get('face_ids', []))
+                            if feature_face_ids & consumed_face_ids:
+                                skipped_count += 1
+                                logger.debug(f"[{correlation_id}] Skipping duplicate feature with face IDs: {feature_face_ids & consumed_face_ids}")
+                            else:
+                                filtered_features.append(feature)
+                        
+                        features.extend(filtered_features)
+                        
+                        logger.info(f"[{correlation_id}] ✅ Found {len(filtered_features)} volumetric features ({skipped_count} duplicates filtered)")
+                    else:
+                        logger.warning(f"[{correlation_id}] Volume decomposition returned no features")
+                        
+                except Exception as e:
+                    logger.error(f"[{correlation_id}] ❌ Volume decomposition failed: {e}", exc_info=True)
+                    errors.append(f"Volume decomposition failed: {str(e)}")
+
+                # Standardize output
+                from aag_pattern_engine.recognizers.recognizer_utils import standardize_feature_output
+                features = [standardize_feature_output(f) for f in features]
             
             # === STEP 5: Extract metadata ===
             try:
