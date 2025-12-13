@@ -1,5 +1,5 @@
 import React from "react";
-import { Ruler, ArrowsLeftRight, RotateCw, Move } from "lucide-react";
+import { Ruler, ArrowLeftRight, RotateCw, Move } from "lucide-react";
 import { useMeasurementStore, MeasurementMode } from "@/stores/measurementStore";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,7 @@ const modes: { value: MeasurementMode; icon: React.ReactNode; label: string; too
     },
     {
         value: "distance",
-        icon: <ArrowsLeftRight className="w-4 h-4" />,
+        icon: <ArrowLeftRight className="w-4 h-4" />,
         label: "Distance",
         tooltip: "Measure distance between two entities",
     },
