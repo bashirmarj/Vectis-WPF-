@@ -118,31 +118,86 @@ export const SolidWorksMeasurementTool: React.FC<SolidWorksMeasurementToolProps>
     return lines;
   }, [featureEdgesGeometry]);
 
-  // Find matching tagged edge for a given edge line
+  // Find matching tagged edge for a given tessellated edge line using proximity-based matching
   const findTaggedEdge = useCallback((
     edge: THREE.Line3,
     taggedEdges: NonNullable<MeshData['tagged_edges']>
   ) => {
     const tolerance = 0.5;
-
+    
+    // Calculate midpoint of the tessellated edge segment
+    const edgeMidpoint = new THREE.Vector3().lerpVectors(edge.start, edge.end, 0.5);
+    
+    let bestMatch: { tagged: typeof taggedEdges[0]; distance: number } | null = null;
+    
     for (const tagged of taggedEdges) {
       const taggedStart = new THREE.Vector3(...tagged.start);
       const taggedEnd = new THREE.Vector3(...tagged.end);
-
-      // Check if edge matches this tagged edge segment
-      const matchesForward =
-        edge.start.distanceTo(taggedStart) < tolerance &&
-        edge.end.distanceTo(taggedEnd) < tolerance;
-      const matchesReverse =
-        edge.start.distanceTo(taggedEnd) < tolerance &&
-        edge.end.distanceTo(taggedStart) < tolerance;
-
-      if (matchesForward || matchesReverse) {
-        return tagged;
+      
+      // For circles/arcs: check if midpoint is at the correct radius distance from center
+      if ((tagged.type === 'circle' || tagged.type === 'arc') && tagged.radius) {
+        // The center for a circle/arc should be derivable from the geometry
+        // For circles, the center is equidistant from all points on the edge
+        // We can approximate by checking if the segment lies on a circle of the given radius
+        
+        // Calculate center as the point equidistant from start and end at radius distance
+        // For a full circle, start === end, so we need a different approach
+        const midBetweenTagged = new THREE.Vector3().lerpVectors(taggedStart, taggedEnd, 0.5);
+        const chordLength = taggedStart.distanceTo(taggedEnd);
+        
+        if (chordLength < 0.01) {
+          // Full circle - start and end are same point
+          // Use the start point as reference - all points should be at radius distance
+          const distFromStart = edgeMidpoint.distanceTo(taggedStart);
+          // If the tessellated edge midpoint is roughly at radius distance from the tagged edge
+          // this could be a match (for circles in same plane)
+          if (distFromStart < tagged.radius * 2.5) {
+            const score = Math.abs(distFromStart - tagged.radius * 0.5);
+            if (!bestMatch || score < bestMatch.distance) {
+              bestMatch = { tagged, distance: score };
+            }
+          }
+        } else {
+          // Arc - check proximity to the arc's chord line
+          const taggedLine = new THREE.Line3(taggedStart, taggedEnd);
+          const closestPoint = new THREE.Vector3();
+          taggedLine.closestPointToPoint(edgeMidpoint, true, closestPoint);
+          const distToChord = edgeMidpoint.distanceTo(closestPoint);
+          
+          // For arcs, the tessellated edge midpoint should be close to the chord
+          // or within reasonable distance based on radius
+          if (distToChord < tagged.radius * 0.5) {
+            const score = distToChord;
+            if (!bestMatch || score < bestMatch.distance) {
+              bestMatch = { tagged, distance: score };
+            }
+          }
+        }
+        continue;
+      }
+      
+      // For lines: check if the edge midpoint lies on or near the tagged line segment
+      const taggedLine = new THREE.Line3(taggedStart, taggedEnd);
+      const closestPoint = new THREE.Vector3();
+      taggedLine.closestPointToPoint(edgeMidpoint, true, closestPoint);
+      const dist = edgeMidpoint.distanceTo(closestPoint);
+      
+      if (dist < tolerance) {
+        // Also check that the edge is roughly aligned with the tagged line
+        const edgeDir = new THREE.Vector3().subVectors(edge.end, edge.start).normalize();
+        const taggedDir = new THREE.Vector3().subVectors(taggedEnd, taggedStart).normalize();
+        const alignment = Math.abs(edgeDir.dot(taggedDir));
+        
+        if (alignment > 0.9) { // Within ~25 degrees
+          const score = dist * (2 - alignment); // Prefer better alignment
+          if (!bestMatch || score < bestMatch.distance) {
+            bestMatch = { tagged, distance: score };
+          }
+        }
       }
     }
-
-    return null;
+    
+    return bestMatch?.tagged || null;
   }, []);
 
   // Get all segments belonging to a feature
