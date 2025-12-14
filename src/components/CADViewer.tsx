@@ -19,6 +19,7 @@ import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { SolidWorksMeasurementTool, SolidWorksMeasurementRenderer } from "@/components/measurement-tool/SolidWorksMeasurementTool";
+import { SolidWorksMeasureTab } from "@/components/measurement-tool/SolidWorksMeasureTab";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 // FeatureTree import removed - feature recognition disabled for faster processing
@@ -607,6 +608,15 @@ export function CADViewer({
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
+
+            {/* ✅ SolidWorks-style Measurement Panel */}
+            {solidWorksMeasureEnabled && (
+              <SolidWorksMeasureTab
+                onClose={() => setSolidWorksMeasureEnabled(false)}
+                onMeasurementModeChange={setSolidWorksMeasureEnabled}
+                isMeasuring={solidWorksMeasureEnabled}
+              />
+            )}
           </div>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
