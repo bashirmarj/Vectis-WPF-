@@ -80,6 +80,19 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
     return lines;
   }, [featureEdgesGeometry]);
 
+  // Debug: Log tagged_edges availability
+  useEffect(() => {
+    if (enabled) {
+      console.log('📏 UnifiedMeasurementTool enabled:', {
+        hasTaggedEdges: !!meshData?.tagged_edges,
+        taggedEdgesCount: meshData?.tagged_edges?.length || 0,
+        hasFeatureEdgesGeometry: !!featureEdgesGeometry,
+        edgeLinesCount: edgeLines.length,
+        sampleTaggedEdge: meshData?.tagged_edges?.[0],
+      });
+    }
+  }, [enabled, meshData?.tagged_edges, featureEdgesGeometry, edgeLines.length]);
+
   // Reset when disabled
   useEffect(() => {
     if (!enabled) {
