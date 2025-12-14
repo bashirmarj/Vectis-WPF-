@@ -104,7 +104,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString(),
       level: 'INFO',
       correlation_id: correlationId,
-      message: 'Calling geometry service /analyze-measurement',
+      message: 'Calling geometry service /analyze-measurement-v2',
       context: { 
         serviceUrl: geometryServiceUrl,
         fileName: fileName,
@@ -115,7 +115,8 @@ serve(async (req) => {
     const serviceFormData = new FormData();
     serviceFormData.append('file', new Blob([fileData]), fileName);
 
-    const serviceResponse = await fetch(`${geometryServiceUrl}/analyze-measurement`, {
+    // Use the NEW v2 endpoint with proper edge extraction
+    const serviceResponse = await fetch(`${geometryServiceUrl}/analyze-measurement-v2`, {
       method: 'POST',
       body: serviceFormData,
       headers: {

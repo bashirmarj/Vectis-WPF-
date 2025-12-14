@@ -1399,6 +1399,406 @@ def analyze_measurement():
         }), 500
 
 
+# =============================================================================
+# NEW MEASUREMENT TOOL V2 - STANDALONE CLASSES (No modification to existing code)
+# =============================================================================
+
+@dataclass
+class MeasureTool_Point3D:
+    """3D point for measurement tool"""
+    x: float
+    y: float
+    z: float
+
+    def to_list(self) -> List[float]:
+        return [self.x, self.y, self.z]
+
+    @classmethod
+    def from_gp_pnt(cls, pnt) -> 'MeasureTool_Point3D':
+        return cls(pnt.X(), pnt.Y(), pnt.Z())
+
+
+@dataclass
+class MeasureTool_EdgeInfo:
+    """Edge geometry information for measurement tool"""
+    edge_id: int
+    edge_type: str  # "line", "circle", "arc", "ellipse", "spline"
+    start_point: List[float]
+    end_point: List[float]
+    length: Optional[float] = None
+    radius: Optional[float] = None
+    diameter: Optional[float] = None
+    center: Optional[List[float]] = None
+    axis: Optional[List[float]] = None
+    angle: Optional[float] = None
+
+
+@dataclass
+class MeasureTool_FaceInfo:
+    """Face geometry information for measurement tool"""
+    face_id: int
+    surface_type: str
+    center: List[float]
+    normal: List[float]
+    area: float
+    radius: Optional[float] = None
+    axis: Optional[List[float]] = None
+    plane_distance: Optional[float] = None
+    cylinder_axis: Optional[List[float]] = None
+    cylinder_radius: Optional[float] = None
+
+
+class MeasureTool_GeometryAnalyzer:
+    """Geometry analyzer for measurement tool - uses proper iterator pattern"""
+
+    def __init__(self, shape=None):
+        self.shape = shape
+        self.faces: Dict[int, Any] = {}
+        self.edges: Dict[int, Any] = {}
+        self.face_info: Dict[int, MeasureTool_FaceInfo] = {}
+        self.edge_info: Dict[int, MeasureTool_EdgeInfo] = {}
+
+        if shape:
+            self._index_geometry()
+
+    def _index_geometry(self):
+        """Index all faces and edges using proper iterator pattern"""
+        from OCC.Core.TopExp import TopExp_Explorer
+        from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
+        from OCC.Core.TopoDS import topods_Face, topods_Edge
+        
+        # Index faces
+        face_explorer = TopExp_Explorer(self.shape, TopAbs_FACE)
+        face_id = 0
+        while face_explorer.More():
+            face = topods_Face(face_explorer.Current())
+            self.faces[face_id] = face
+            self.face_info[face_id] = self._analyze_face(face, face_id)
+            face_id += 1
+            face_explorer.Next()
+
+        # Index edges using proper iterator pattern
+        edge_explorer = TopExp_Explorer(self.shape, TopAbs_EDGE)
+        edge_id = 0
+        while edge_explorer.More():
+            edge = topods_Edge(edge_explorer.Current())
+            self.edges[edge_id] = edge
+            self.edge_info[edge_id] = self._analyze_edge(edge, edge_id)
+            edge_id += 1
+            edge_explorer.Next()
+
+        logger.info(f"[MeasureToolV2] Indexed {len(self.faces)} faces and {len(self.edges)} edges")
+
+    def _analyze_face(self, face, face_id: int) -> MeasureTool_FaceInfo:
+        """Analyze a face and extract geometric properties"""
+        from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+        from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus
+        from OCC.Core.GProp import GProp_GProps
+        from OCC.Core.BRepGProp import brepgprop
+        from OCC.Core.gp import gp_Pnt, gp_Vec
+
+        adaptor = BRepAdaptor_Surface(face)
+        surface_type = adaptor.GetType()
+
+        # Compute area
+        props = GProp_GProps()
+        brepgprop.SurfaceProperties(face, props)
+        area = props.Mass() * 1000000  # Convert to mm^2
+
+        # Get center of mass
+        center_pnt = props.CentreOfMass()
+        center = [center_pnt.X(), center_pnt.Y(), center_pnt.Z()]
+
+        # Get surface normal at center
+        u_min, u_max = adaptor.FirstUParameter(), adaptor.LastUParameter()
+        v_min, v_max = adaptor.FirstVParameter(), adaptor.LastVParameter()
+        u_mid = (u_min + u_max) / 2
+        v_mid = (v_min + v_max) / 2
+
+        pnt = gp_Pnt()
+        normal_vec = gp_Vec()
+        adaptor.D1(u_mid, v_mid, pnt, gp_Vec(), normal_vec)
+
+        if normal_vec.Magnitude() > 1e-10:
+            normal_vec.Normalize()
+        normal = [normal_vec.X(), normal_vec.Y(), normal_vec.Z()]
+
+        # Determine surface type
+        if surface_type == GeomAbs_Plane:
+            plane = adaptor.Plane()
+            from OCC.Core.gp import gp_Pnt as gp_Pnt_origin
+            plane_dist = plane.Distance(gp_Pnt_origin(0, 0, 0))
+            return MeasureTool_FaceInfo(
+                face_id=face_id, surface_type="plane", center=center,
+                normal=normal, area=area, plane_distance=plane_dist
+            )
+        elif surface_type == GeomAbs_Cylinder:
+            cylinder = adaptor.Cylinder()
+            radius = cylinder.Radius()
+            axis = cylinder.Axis()
+            axis_dir = axis.Direction()
+            return MeasureTool_FaceInfo(
+                face_id=face_id, surface_type="cylinder", center=center,
+                normal=normal, area=area, radius=radius,
+                cylinder_axis=[axis_dir.X(), axis_dir.Y(), axis_dir.Z()],
+                cylinder_radius=radius
+            )
+        elif surface_type == GeomAbs_Sphere:
+            sphere = adaptor.Sphere()
+            return MeasureTool_FaceInfo(
+                face_id=face_id, surface_type="sphere", center=center,
+                normal=normal, area=area, radius=sphere.Radius()
+            )
+        elif surface_type == GeomAbs_Cone:
+            return MeasureTool_FaceInfo(
+                face_id=face_id, surface_type="cone", center=center,
+                normal=normal, area=area
+            )
+        elif surface_type == GeomAbs_Torus:
+            return MeasureTool_FaceInfo(
+                face_id=face_id, surface_type="torus", center=center,
+                normal=normal, area=area
+            )
+        else:
+            return MeasureTool_FaceInfo(
+                face_id=face_id, surface_type="other", center=center,
+                normal=normal, area=area
+            )
+
+    def _analyze_edge(self, edge, edge_id: int) -> MeasureTool_EdgeInfo:
+        """Analyze an edge and extract geometric properties"""
+        from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
+        from OCC.Core.GeomAbs import GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse
+        from OCC.Core.GCPnts import GCPnts_AbscissaPoint
+
+        adaptor = BRepAdaptor_Curve(edge)
+        curve_type = adaptor.GetType()
+
+        # Get start and end points
+        first = adaptor.FirstParameter()
+        last = adaptor.LastParameter()
+        start_pnt = adaptor.Value(first)
+        end_pnt = adaptor.Value(last)
+
+        start_point = [start_pnt.X(), start_pnt.Y(), start_pnt.Z()]
+        end_point = [end_pnt.X(), end_pnt.Y(), end_pnt.Z()]
+
+        # Compute length
+        length = GCPnts_AbscissaPoint.Length(adaptor)
+
+        if curve_type == GeomAbs_Line:
+            return MeasureTool_EdgeInfo(
+                edge_id=edge_id, edge_type="line",
+                start_point=start_point, end_point=end_point, length=length
+            )
+        elif curve_type == GeomAbs_Circle:
+            circle = adaptor.Circle()
+            radius = circle.Radius()
+            center = circle.Location()
+            axis = circle.Axis().Direction()
+
+            # Determine if full circle or arc
+            angle = last - first
+            is_full_circle = abs(angle - 2 * 3.14159265359) < 0.01
+
+            return MeasureTool_EdgeInfo(
+                edge_id=edge_id,
+                edge_type="circle" if is_full_circle else "arc",
+                start_point=start_point, end_point=end_point, length=length,
+                radius=radius, diameter=radius * 2,
+                center=[center.X(), center.Y(), center.Z()],
+                axis=[axis.X(), axis.Y(), axis.Z()],
+                angle=57.2957795131 * angle if not is_full_circle else 360.0  # degrees
+            )
+        elif curve_type == GeomAbs_Ellipse:
+            ellipse = adaptor.Ellipse()
+            return MeasureTool_EdgeInfo(
+                edge_id=edge_id, edge_type="ellipse",
+                start_point=start_point, end_point=end_point, length=length,
+                radius=ellipse.MinorRadius()
+            )
+        else:
+            return MeasureTool_EdgeInfo(
+                edge_id=edge_id, edge_type="spline",
+                start_point=start_point, end_point=end_point, length=length
+            )
+
+
+@app.route('/analyze-measurement-v2', methods=['POST'])
+def analyze_measurement_v2():
+    """
+    NEW Measurement Tool V2 Endpoint
+    Uses proper iterator pattern for edge extraction.
+    Does NOT modify any existing code.
+    """
+    start_time = time.time()
+    correlation_id = request.headers.get('X-Correlation-ID', generate_correlation_id())
+    
+    logger.info(f"[{correlation_id}] === ANALYZE-MEASUREMENT-V2 START ===")
+    
+    try:
+        # === File validation ===
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file provided',
+                'correlation_id': correlation_id
+            }), 400
+        
+        file = request.files['file']
+        if not file.filename:
+            return jsonify({
+                'success': False,
+                'error': 'Empty filename',
+                'correlation_id': correlation_id
+            }), 400
+        
+        file_content = file.read()
+        file_hash = hashlib.sha256(file_content).hexdigest()[:16]
+        
+        logger.info(f"[{correlation_id}] Processing file: {file.filename} ({len(file_content)} bytes)")
+        
+        # === Save to temp file ===
+        tmp_path = f"/tmp/{correlation_id}_{file.filename}"
+        with open(tmp_path, 'wb') as f:
+            f.write(file_content)
+        
+        try:
+            # === Parse STEP file ===
+            from OCC.Core.STEPControl import STEPControl_Reader
+            from OCC.Core.IFSelect import IFSelect_RetDone
+            
+            reader = STEPControl_Reader()
+            status = reader.ReadFile(tmp_path)
+            
+            if status != IFSelect_RetDone:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to parse STEP file: status {status}',
+                    'correlation_id': correlation_id
+                }), 400
+            
+            reader.TransferRoots()
+            shape = reader.OneShape()
+            
+            if shape.IsNull():
+                return jsonify({
+                    'success': False,
+                    'error': 'Empty shape from STEP file',
+                    'correlation_id': correlation_id
+                }), 400
+            
+            logger.info(f"[{correlation_id}] STEP parsed successfully")
+            
+            # === Tessellate mesh (reuse existing function) ===
+            mesh_data = tessellate_shape(shape)
+            logger.info(f"[{correlation_id}] Tessellation complete: {mesh_data['triangle_count']} triangles")
+            
+            # === Use NEW GeometryAnalyzer with proper iterator pattern ===
+            analyzer = MeasureTool_GeometryAnalyzer(shape)
+            
+            # === Build faces data ===
+            faces_data = []
+            for face_id, face_info in analyzer.face_info.items():
+                faces_data.append({
+                    'face_id': face_info.face_id,
+                    'surface_type': face_info.surface_type,
+                    'center': face_info.center,
+                    'normal': face_info.normal,
+                    'area': face_info.area,
+                    'radius': face_info.radius,
+                    'cylinder_axis': face_info.cylinder_axis,
+                    'cylinder_radius': face_info.cylinder_radius,
+                    'plane_distance': face_info.plane_distance
+                })
+            
+            # === Build edges data ===
+            edges_data = []
+            for edge_id, edge_info in analyzer.edge_info.items():
+                edges_data.append({
+                    'edge_id': edge_info.edge_id,
+                    'edge_type': edge_info.edge_type,
+                    'start_point': edge_info.start_point,
+                    'end_point': edge_info.end_point,
+                    'length': edge_info.length,
+                    'radius': edge_info.radius,
+                    'diameter': edge_info.diameter,
+                    'center': edge_info.center,
+                    'axis': edge_info.axis,
+                    'angle': edge_info.angle
+                })
+            
+            # === Build tagged_edges for frontend ===
+            tagged_edges = []
+            for edge_info in analyzer.edge_info.values():
+                tagged_edge = {
+                    'feature_id': edge_info.edge_id,
+                    'start': edge_info.start_point,
+                    'end': edge_info.end_point,
+                    'type': edge_info.edge_type
+                }
+                if edge_info.diameter is not None:
+                    tagged_edge['diameter'] = edge_info.diameter
+                if edge_info.radius is not None:
+                    tagged_edge['radius'] = edge_info.radius
+                if edge_info.length is not None:
+                    tagged_edge['length'] = edge_info.length
+                if edge_info.center is not None:
+                    tagged_edge['center'] = edge_info.center
+                tagged_edges.append(tagged_edge)
+            
+            # === Build response ===
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            
+            response = {
+                "success": True,
+                "correlation_id": correlation_id,
+                "processing_time_ms": processing_time_ms,
+                "mesh_data": {
+                    "vertices": mesh_data["vertices"],
+                    "indices": mesh_data["indices"],
+                    "normals": mesh_data["normals"],
+                    "face_mapping": mesh_data["face_mapping"],
+                    "vertex_face_ids": mesh_data["vertex_face_ids"],
+                    "face_count": mesh_data["face_count"],
+                    "triangle_count": mesh_data["triangle_count"],
+                    "vertex_count": mesh_data["vertex_count"]
+                },
+                "measurement_data": {
+                    "faces": faces_data,
+                    "edges": edges_data
+                },
+                "tagged_edges": tagged_edges,
+                "metadata": {
+                    "file_hash": file_hash,
+                    "file_name": file.filename,
+                    "face_count": len(faces_data),
+                    "edge_count": len(edges_data),
+                    "tagged_edge_count": len(tagged_edges)
+                }
+            }
+            
+            logger.info(f"[{correlation_id}] ✅ Measurement V2 complete in {processing_time_ms}ms")
+            logger.info(f"[{correlation_id}] 📊 {len(faces_data)} faces, {len(edges_data)} edges, {len(tagged_edges)} tagged_edges")
+            
+            return jsonify(response), 200
+            
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+    
+    except Exception as e:
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"[{correlation_id}] ❌ Measurement V2 error: {e}", exc_info=True)
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'correlation_id': correlation_id,
+            'processing_time_ms': processing_time_ms
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     logger.info(f"Starting Vectis Geometry Service on port {port}")
