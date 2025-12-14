@@ -947,60 +947,6 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
     edges_data = []
     processed_edge_hashes = set()
 
-    # Build Edge -> Face map using pure Python dictionary (avoids C++ memory crashes)
-    # Key: edge hash code, Value: list of faces adjacent to that edge
-    edge_to_faces = {}
-    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
-    while face_explorer.More():
-        face = face_explorer.Current()
-        edge_exp = TopExp_Explorer(face, TopAbs_EDGE)
-        while edge_exp.More():
-            e = edge_exp.Current()
-            e_hash = e.HashCode(2147483647)
-            if e_hash not in edge_to_faces:
-                edge_to_faces[e_hash] = []
-            # Only add face if not already in list (avoid duplicates from seam edges)
-            already_added = any(existing_face.IsSame(face) for existing_face in edge_to_faces[e_hash])
-            if not already_added:
-                edge_to_faces[e_hash].append(face)
-            edge_exp.Next()
-        face_explorer.Next()
-
-    # Helper to get normal of a face at a specific parameter along an edge
-    def get_face_normal_at_param(face, edge, param):
-        try:
-            # Get 2D curve of edge on face
-            curve2d, first, last = BRep_Tool.CurveOnSurface(edge, face)
-            
-            # CurveOnSurface can return None for some edges - handle gracefully
-            if curve2d is None:
-                return [0.0, 0.0, 0.0]
-            
-            # Evaluate 2D point (u, v) on surface
-            p2d = curve2d.Value(param)
-            u, v = p2d.X(), p2d.Y()
-            
-            # Evaluate surface properties to get normal
-            surf_adaptor = BRepAdaptor_Surface(face)
-            
-            # Get the underlying Geom_Surface - can be None for some faces
-            geom_surface = surf_adaptor.Surface().Surface()
-            if geom_surface is None:
-                return [0.0, 0.0, 0.0]
-            
-            # Note: 1 = degree of continuity, 1e-6 = tolerance
-            props = GeomLProp_SLProps(geom_surface, u, v, 1, 1e-6)
-            
-            if props.IsNormalDefined():
-                n = props.Normal()
-                # Check face orientation effectively reverses the normal
-                if face.Orientation() == 1: # TopAbs_REVERSED
-                    n.Reverse()
-                return [round(n.X(), 3), round(n.Y(), 3), round(n.Z(), 3)]
-        except Exception:
-            pass
-        return [0.0, 0.0, 0.0]
-
     edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
     edge_index = 0
 
@@ -1133,30 +1079,13 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
                     round(direction.Z(), 6)
                 ]
 
-            # === DISCRETIZED POINTS & NORMALS ===
+            # === DISCRETIZED POINTS ===
             # Generate points along the curve for proper visualization
-            
-            # Prepare to collect normals
-            edge_normals = [] 
 
             try:
                 # For lines, just use start and end
                 if curve_type == GeomAbs_Line:
                     edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
-                    
-                    # Compute normals at midpoint for lines is sufficient
-                    if has_faces:
-                        mid_param = (first_param + last_param) / 2
-                        normals_at_mid = []
-                        # Take first 2 faces (manifold)
-                        for face in adjacent_faces[:2]:
-                            normals_at_mid.append(get_face_normal_at_param(face, edge, mid_param))
-                        
-                        # Pad if boundary (only 1 face)
-                        if len(normals_at_mid) == 1:
-                            normals_at_mid.append([0,0,0])
-                            
-                        edge_data['adjacent_face_normals'] = normals_at_mid
 
                 else:
                     # For curves, discretize with uniform spacing
@@ -1164,7 +1093,6 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
 
                     if discretizer.IsDone() and discretizer.NbPoints() >= 2:
                         snap_points = []
-                        all_normals = []
                         
                         for i in range(1, discretizer.NbPoints() + 1):
                             param = discretizer.Parameter(i)
@@ -1174,22 +1102,8 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
                                 round(pnt.Y(), 8),
                                 round(pnt.Z(), 8)
                             ])
-                            
-                            # Calculate normals at this point for all adjacent faces
-                            if has_faces:
-                                point_normals = []
-                                for face in adjacent_faces[:2]: # Max 2 faces
-                                    point_normals.append(get_face_normal_at_param(face, edge, param))
-                                
-                                # Pad if boundary
-                                if len(point_normals) == 1:
-                                    point_normals.append([0,0,0])
-                                    
-                                all_normals.append(point_normals)
                         
                         edge_data['snap_points'] = snap_points
-                        if has_faces:
-                            edge_data['adjacent_face_normals'] = all_normals
                     else:
                         # Fallback to start/end
                         edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
