@@ -18,6 +18,7 @@ import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLigh
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
+import { SolidWorksMeasurementTool, SolidWorksMeasurementRenderer } from "@/components/measurement-tool/SolidWorksMeasurementTool";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 // FeatureTree import removed - feature recognition disabled for faster processing
@@ -98,6 +99,7 @@ export function CADViewer({
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
+  const [solidWorksMeasureEnabled, setSolidWorksMeasureEnabled] = useState(false);
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
 
@@ -417,8 +419,12 @@ export function CADViewer({
         case "m":
           setActiveTool(activeTool ? null : "measure");
           break;
+        case "n":
+          setSolidWorksMeasureEnabled(prev => !prev);
+          break;
         case "escape":
           setActiveTool(null);
+          setSolidWorksMeasureEnabled(false);
           break;
       }
     };
@@ -481,6 +487,8 @@ export function CADViewer({
               ssaoEnabled={ssaoEnabled}
               onToggleSSAO={() => setSSAOEnabled((prev) => !prev)}
               boundingBox={boundingBox}
+              solidWorksMeasureEnabled={solidWorksMeasureEnabled}
+              onSolidWorksMeasureToggle={() => setSolidWorksMeasureEnabled(prev => !prev)}
             />
 
             <Canvas
@@ -541,6 +549,28 @@ export function CADViewer({
                     radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
                   }}
                 />
+
+                {/* SolidWorks-style Measurement Tool */}
+                {solidWorksMeasureEnabled && (
+                  <>
+                    <SolidWorksMeasurementTool
+                      meshData={meshData}
+                      meshRef={meshRef.current?.mesh || null}
+                      featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                      enabled={solidWorksMeasureEnabled}
+                      boundingSphere={{
+                        center: boundingBox.center,
+                        radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                      }}
+                    />
+                    <SolidWorksMeasurementRenderer
+                      boundingSphere={{
+                        center: boundingBox.center,
+                        radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                      }}
+                    />
+                  </>
+                )}
 
                 <TrackballControls
                   ref={controlsRef}

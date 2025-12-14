@@ -12,6 +12,7 @@ import {
   Layers,
   X,
   Eye as EyeIcon,
+  Crosshair,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +48,10 @@ interface UnifiedCADToolbarProps {
   onMeasurementModeChange: (mode: "measure" | null) => void;
   measurementCount?: number;
   onClearMeasurements?: () => void;
+
+  // SolidWorks-style Measurement Tool
+  solidWorksMeasureEnabled?: boolean;
+  onSolidWorksMeasureToggle?: () => void;
 
   // Section Planes
   sectionPlane: "xy" | "xz" | "yz" | null;
@@ -86,6 +91,8 @@ export function UnifiedCADToolbar({
   onMeasurementModeChange,
   measurementCount = 0,
   onClearMeasurements,
+  solidWorksMeasureEnabled = false,
+  onSolidWorksMeasureToggle,
   sectionPlane,
   onSectionPlaneChange,
   sectionPosition = 0,
@@ -237,6 +244,19 @@ export function UnifiedCADToolbar({
               </Badge>
             )}
           </Button>
+
+          {/* SolidWorks-style Measurement Tool */}
+          {onSolidWorksMeasureToggle && (
+            <Button
+              variant={solidWorksMeasureEnabled ? "default" : "ghost"}
+              size="sm"
+              className="h-9 w-9 p-0"
+              title="SolidWorks Measure Tool (Click edges for diameter/radius)"
+              onClick={onSolidWorksMeasureToggle}
+            >
+              <Crosshair className="h-4 w-4" />
+            </Button>
+          )}
 
           <Separator orientation="vertical" className="h-6" />
 

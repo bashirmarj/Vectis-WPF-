@@ -534,7 +534,7 @@ interface MeasurementRendererProps {
   boundingSphere?: { center: THREE.Vector3; radius: number };
 }
 
-const SolidWorksMeasurementRenderer: React.FC<MeasurementRendererProps> = ({
+export const SolidWorksMeasurementRenderer: React.FC<MeasurementRendererProps> = ({
   boundingSphere,
 }) => {
   const { measurements, unitSystem } = useSolidWorksMeasureStore();
