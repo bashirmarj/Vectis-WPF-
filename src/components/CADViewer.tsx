@@ -21,6 +21,7 @@ import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { SolidWorksMeasurementTool, SolidWorksMeasurementRenderer } from "@/components/measurement-tool/SolidWorksMeasurementTool";
 import { SolidWorksMeasureTab } from "@/components/measurement-tool/SolidWorksMeasureTab";
 import { useMeasurementStore } from "@/stores/measurementStore";
+import { useMeasurementData } from "@/hooks/useMeasurementData";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 // FeatureTree import removed - feature recognition disabled for faster processing
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -103,6 +104,13 @@ export function CADViewer({
   const [solidWorksMeasureEnabled, setSolidWorksMeasureEnabled] = useState(false);
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
+
+  // Measurement data hook - fetches tagged edges from V2 endpoint for SolidWorks measurement tool
+  const { 
+    fetchMeasurementDataFromUrl, 
+    taggedEdges: measurementTaggedEdges,
+    isLoading: isMeasurementLoading 
+  } = useMeasurementData();
 
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
@@ -400,6 +408,14 @@ export function CADViewer({
     [], // ✅ CRITICAL FIX: Empty array - refs don't need dependencies
   );
 
+  // Fetch measurement data when SolidWorks measure tool is enabled
+  useEffect(() => {
+    if (solidWorksMeasureEnabled && fileUrl && fileName && measurementTaggedEdges.length === 0 && !isMeasurementLoading) {
+      console.log('📏 Fetching measurement data for SolidWorks tool...');
+      fetchMeasurementDataFromUrl(fileUrl, fileName);
+    }
+  }, [solidWorksMeasureEnabled, fileUrl, fileName, measurementTaggedEdges.length, isMeasurementLoading, fetchMeasurementDataFromUrl]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -555,7 +571,13 @@ export function CADViewer({
                 {solidWorksMeasureEnabled && (
                   <>
                     <SolidWorksMeasurementTool
-                      meshData={meshData}
+                      meshData={{
+                        ...meshData,
+                        // Use tagged edges from V2 endpoint if available, fallback to meshData
+                        tagged_edges: measurementTaggedEdges.length > 0 
+                          ? measurementTaggedEdges 
+                          : meshData.tagged_edges
+                      }}
                       meshRef={meshRef.current?.mesh || null}
                       featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
                       enabled={solidWorksMeasureEnabled}
