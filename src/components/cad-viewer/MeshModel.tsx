@@ -22,12 +22,6 @@ interface MeshData {
     end: [number, number, number];
     type: string;
     iso_type?: string;
-    snap_points?: [number, number, number][]; // For curved edges (circles, arcs)
-    // OPTIONAL: Backend can send adjacent face normals to skip expensive frontend computation
-    adjacent_face_normals?: [
-      [number, number, number], // Normal of face 1
-      [number, number, number]  // Normal of face 2 (if exists)
-    ];
   }>;
 }
 
@@ -142,7 +136,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
             colors[vertexIdx * 3 + 2] = color.b;
           }
         }
-
+        
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       } else {
@@ -152,7 +146,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           colors[i * 3 + 1] = baseColor.g;
           colors[i * 3 + 2] = baseColor.b;
         }
-
+        
         geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
         geometry.attributes.color.needsUpdate = true;
       }
@@ -181,22 +175,22 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
       // Collect triangle indices for highlighted faces
       const highlightTriIndices = new Set<number>();
-
+      
       highlightedFaceIds.forEach(brepFaceId => {
         const mapping = meshData.face_mapping![brepFaceId];
-
+        
         if (!mapping) {
           console.warn(`⚠️ No mapping for BREP face ${brepFaceId}`);
           return;
         }
-
+        
         // Prioritize triangle_range for efficiency
         if (mapping.triangle_range) {
           const [start, end] = mapping.triangle_range;
           for (let i = start; i <= end; i++) {
             highlightTriIndices.add(i);
           }
-        }
+        } 
         // Fallback to triangle_indices
         else if (mapping.triangle_indices) {
           mapping.triangle_indices.forEach(idx => highlightTriIndices.add(idx));
@@ -217,17 +211,17 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       // Build non-indexed geometry from highlighted triangles
       const positions: number[] = [];
       const normals: number[] = [];
-
+      
       highlightTriIndices.forEach(triIdx => {
         for (let i = 0; i < 3; i++) {
           const vIdx = meshData.indices![triIdx * 3 + i];
-
+          
           // Safety check: Vertex index in bounds
           if (vIdx * 3 + 2 >= meshData.vertices!.length) {
             console.warn(`⚠️ Vertex index out of bounds: ${vIdx}`);
             return;
           }
-
+          
           positions.push(
             meshData.vertices![vIdx * 3 + 0],
             meshData.vertices![vIdx * 3 + 1],
@@ -256,7 +250,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
       geo.computeBoundingSphere();
-
+      
       return geo;
     }, [highlightedFaceIds, meshData.face_mapping, meshData.indices, meshData.vertices, meshData.normals]);
 
@@ -286,39 +280,10 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       // PRIORITY: Use tagged_edges - backend handles all deduplication and filtering
       if (meshData?.tagged_edges && Array.isArray(meshData.tagged_edges) && meshData.tagged_edges.length > 0) {
         const featureEdgePositions: number[] = [];
-        const featureEdgeNormal1: number[] = [];
-        const featureEdgeNormal2: number[] = [];
 
         meshData.tagged_edges.forEach((edge) => {
-          // Get backend normals if available, otherwise use zero (fallback to frontend calc)
-          const n1 = edge.adjacent_face_normals?.[0] || [0, 0, 0];
-          const n2 = edge.adjacent_face_normals?.[1] || [0, 0, 0];
-          const hasNormals = !!edge.adjacent_face_normals;
-
-          const addNormals = () => {
-            featureEdgeNormal1.push(n1[0], n1[1], n1[2], n1[0], n1[1], n1[2]);
-            featureEdgeNormal2.push(n2[0], n2[1], n2[2], n2[0], n2[1], n2[2]);
-          };
-
-          // Use snap_points for curved edges (circles, arcs) - creates polyline segments
-          if (edge.snap_points && Array.isArray(edge.snap_points) && edge.snap_points.length >= 2) {
-            for (let i = 0; i < edge.snap_points.length - 1; i++) {
-              const p1 = edge.snap_points[i];
-              const p2 = edge.snap_points[i + 1];
-              featureEdgePositions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
-              addNormals();
-            }
-
-            // Add closing segment for closed edges (circles, full ellipses)
-            if ((edge as any).is_closed && edge.snap_points.length > 2) {
-              const first = edge.snap_points[0];
-              const last = edge.snap_points[edge.snap_points.length - 1];
-              featureEdgePositions.push(last[0], last[1], last[2], first[0], first[1], first[2]);
-              addNormals();
-            }
-          }
-          // Fallback to start/end for straight edges
-          else if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
+          if (edge.start && edge.end && Array.isArray(edge.start) && Array.isArray(edge.end)) {
+            // Backend handles edge-level deduplication - render all segments
             featureEdgePositions.push(
               edge.start[0],
               edge.start[1],
@@ -327,20 +292,12 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               edge.end[1],
               edge.end[2],
             );
-            addNormals();
           }
         });
 
         if (featureEdgePositions.length > 0) {
           const geo = new THREE.BufferGeometry();
           geo.setAttribute("position", new THREE.Float32BufferAttribute(featureEdgePositions, 3));
-
-          // Only add normal attributes if we actually have some data
-          if (featureEdgeNormal1.length > 0) {
-            geo.setAttribute("faceNormal1", new THREE.Float32BufferAttribute(featureEdgeNormal1, 3));
-            geo.setAttribute("faceNormal2", new THREE.Float32BufferAttribute(featureEdgeNormal2, 3));
-          }
-
           geo.computeBoundingSphere();
           featureEdgesRef.current = geo;
         }
@@ -479,11 +436,11 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
       if (cleanEdgesRef.current) {
         cleanEdgesRef.current.dispose();
       }
-
+      
       cleanEdgesRef.current = geometry?.attributes?.position
         ? new THREE.EdgesGeometry(geometry, 1)
         : new THREE.BufferGeometry();
-
+      
       prevGeometryRef.current = geometry;
     }
 
@@ -612,7 +569,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
 
         {/* 🔥 HIGHLIGHT OVERLAY - Separate non-indexed mesh for precise feature highlighting */}
         {highlightGeometry && (
-          <mesh
+          <mesh 
             geometry={highlightGeometry}
             renderOrder={1}
             castShadow={false}
@@ -632,13 +589,20 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </mesh>
         )}
 
-        {/* 
-          NOTE: No depth-writing mesh for wireframe mode.
-          SilhouetteEdges now uses normal-based visibility computation:
-          - Edges are visible if ANY adjacent face is front-facing toward camera
-          - Computed per-frame as camera moves
-          - This eliminates Z-fighting and provides accurate hidden edge toggle
-        */}
+        {/* Invisible depth-writing mesh for wireframe occlusion */}
+        {displayStyle === "wireframe" && !showHiddenEdges && (
+          <mesh geometry={geometry} key={`depth-mesh-${showHiddenEdges}`}>
+            <meshBasicMaterial
+              colorWrite={false}
+              depthWrite={true}
+              depthTest={true}
+              transparent={false}
+              polygonOffset={true}
+              polygonOffsetFactor={1}
+              polygonOffsetUnits={1}
+            />
+          </mesh>
+        )}
 
         {/* Solid mode: ONLY backend feature edges (SilhouetteEdges never active in solid) */}
         {displayStyle === "solid" && showEdges && featureEdgesGeometry && (
@@ -656,7 +620,7 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
           </lineSegments>
         )}
 
-        {/* Wireframe mode - use feature edges for continuous curve rendering */}
+        {/* Wireframe mode - use clean edges that show ALL mesh structure */}
         {displayStyle === "wireframe" &&
           (useSilhouetteEdges ? (
             <SilhouetteEdges
@@ -667,12 +631,8 @@ export const MeshModel = forwardRef<MeshModelHandle, MeshModelProps>(
               controlsRef={controlsRef}
               displayMode={displayStyle}
             />
-          ) : featureEdgesGeometry ? (
-            <lineSegments geometry={featureEdgesGeometry} key={`wireframe-edges-${showHiddenEdges}`}>
-              <lineBasicMaterial color="#000000" toneMapped={false} depthTest={!showHiddenEdges} depthWrite={false} />
-            </lineSegments>
           ) : (
-            <lineSegments geometry={cleanEdgesGeometry} key={`wireframe-fallback-${showHiddenEdges}`}>
+            <lineSegments geometry={cleanEdgesGeometry} key={`wireframe-edges-${showHiddenEdges}`}>
               <lineBasicMaterial color="#000000" toneMapped={false} depthTest={!showHiddenEdges} depthWrite={false} />
             </lineSegments>
           ))}

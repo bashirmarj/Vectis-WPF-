@@ -548,8 +548,6 @@ serve(async (req) => {
                 normals: preservedMeshData.normals || [],
                 vertex_face_ids: preservedMeshData.vertex_face_ids || [],
                 face_mapping: preservedMeshData.face_mapping || {},
-                tagged_edges: preservedMeshData.tagged_edges || [],
-                feature_edges: preservedMeshData.feature_edges || [],
                 hasVertices: !!(preservedMeshData.vertices?.length),
                 hasIndices: !!(preservedMeshData.indices?.length),
                 hasNormals: !!(preservedMeshData.normals?.length)

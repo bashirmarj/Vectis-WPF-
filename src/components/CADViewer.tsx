@@ -17,9 +17,7 @@ import { AxisTriadInCanvas } from "./cad-viewer/AxisTriadInCanvas";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
-import { SolidWorksMeasureTool } from "./cad-viewer/SolidWorksMeasureTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
-import { DimensionOverlay } from "./cad-viewer/measurements/DimensionOverlay";
 import { useMeasurementStore } from "@/stores/measurementStore";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 // FeatureTree import removed - feature recognition disabled for faster processing
@@ -56,16 +54,10 @@ interface MeshData {
     feature_id: number;
     start: [number, number, number];
     end: [number, number, number];
-    type: "line" | "circle" | "arc" | "ellipse" | "bezier" | "bspline" | "hyperbola" | "parabola" | "offset" | "other";
-    is_closed?: boolean;
+    type: "line" | "circle" | "arc";
     diameter?: number;
     radius?: number;
     length?: number;
-    center?: [number, number, number];
-    axis?: [number, number, number];
-    arc_angle?: number;
-    snap_points?: Array<[number, number, number]>;
-    iso_type?: string;
   }>;
   vertex_face_ids?: number[];
   face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>;
@@ -106,15 +98,8 @@ export function CADViewer({
   const [ssaoEnabled, setSSAOEnabled] = useState(false);
   const [sectionPlane, setSectionPlane] = useState<"xy" | "xz" | "yz" | null>(null);
   const [sectionPosition, setSectionPosition] = useState(0);
-  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
-
-  // Toggle between old and new measurement tool
-  const [useNewMeasureTool, setUseNewMeasureTool] = useState(true); // Default to new tool
-
-  // DEBUG: Log which tool is active
-  console.log("🔧 Measure Tool:", useNewMeasureTool ? "NEW SolidWorksMeasureTool" : "OLD UnifiedMeasurementTool");
 
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
@@ -507,10 +492,7 @@ export function CADViewer({
                 preserveDrawingBuffer: true,
                 powerPreference: "high-performance",
               }}
-              onCreated={({ gl, size }) => {
-                // Capture canvas size for overlay
-                setCanvasSize({ width: size.width, height: size.height });
-
+              onCreated={({ gl }) => {
                 const handleContextLost = (e: Event) => {
                   e.preventDefault();
                   console.warn("⚠️ WebGL context lost - browser will auto-recover");
@@ -548,29 +530,17 @@ export function CADViewer({
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* Measurement Tool - Toggle between new SolidWorks-style and legacy */}
-                {useNewMeasureTool ? (
-                  <SolidWorksMeasureTool
-                    meshData={meshData}
-                    meshRef={meshRef.current?.mesh || null}
-                    enabled={activeTool === "measure"}
-                    boundingSphere={{
-                      center: boundingBox.center,
-                      radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
-                    }}
-                  />
-                ) : (
-                  <UnifiedMeasurementTool
-                    meshData={meshData}
-                    meshRef={meshRef.current?.mesh || null}
-                    featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                    enabled={activeTool === "measure"}
-                    boundingSphere={{
-                      center: boundingBox.center,
-                      radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
-                    }}
-                  />
-                )}
+                {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
+                <UnifiedMeasurementTool
+                  meshData={meshData}
+                  meshRef={meshRef.current?.mesh || null}
+                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                  enabled={activeTool === "measure"}
+                  boundingSphere={{
+                    center: boundingBox.center,
+                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                  }}
+                />
 
                 <TrackballControls
                   ref={controlsRef}
@@ -607,13 +577,6 @@ export function CADViewer({
 
             {/* ✅ Measurement Panel - Shows measurement list and controls */}
             <MeasurementPanel />
-
-            {/* ✅ NEW: Professional dimension overlay with arrows and callouts (DOM overlay) */}
-            <DimensionOverlay
-              camera={cameraRef.current}
-              canvasWidth={canvasSize.width}
-              canvasHeight={canvasSize.height}
-            />
           </div>
         ) : isRenderableFormat ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">

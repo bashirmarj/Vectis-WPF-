@@ -34,21 +34,9 @@ from OCC.Core.TopLoc import TopLoc_Location
 from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib
 from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
-from OCC.Core.GeomAbs import (
-    GeomAbs_Cylinder, GeomAbs_Plane,
-    GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse,
-    GeomAbs_Hyperbola, GeomAbs_Parabola, GeomAbs_BezierCurve,
-    GeomAbs_BSplineCurve, GeomAbs_OffsetCurve, GeomAbs_OtherCurve
-)
+from OCC.Core.GeomAbs import GeomAbs_Cylinder, GeomAbs_Plane
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
-from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
-from OCC.Core.GCPnts import GCPnts_QuasiUniformAbscissa
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
-from OCC.Core.TopExp import topexp
-from OCC.Core.GeomLProp import GeomLProp_SLProps
-from OCC.Core.Interface import Interface_Static
-import math
 
 # ========== TEMPORARY: Skip feature recognition for faster processing ==========
 # Set to False to re-enable feature recognition (AAG, geometric recognition, volume decomposition)
@@ -71,11 +59,6 @@ if not SKIP_FEATURE_RECOGNITION:
 # === Configuration ===
 app = Flask(__name__)
 CORS(app)
-
-# Register measurement API blueprint
-from measure_api import measure_blueprint
-app.register_blueprint(measure_blueprint, url_prefix='/api')
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -152,65 +135,6 @@ def compute_file_hash(file_content: bytes) -> str:
     """Compute SHA-256 hash for caching"""
     return hashlib.sha256(file_content).hexdigest()
 
-
-def detect_step_units(step_file_path: str) -> dict:
-    """
-    Detect the unit system used in a STEP file.
-    
-    OpenCASCADE reads STEP files and can convert to its internal unit system.
-    By default, OpenCASCADE uses millimeters (MM) as internal units.
-    
-    Args:
-        step_file_path: Path to the STEP file
-        
-    Returns:
-        dict with 'source_unit', 'target_unit', and 'scale_to_mm' keys
-    """
-    # Get current cascade unit setting (default is MM)
-    try:
-        cascade_unit = Interface_Static.CVal("xstep.cascade.unit")
-    except:
-        cascade_unit = "MM"
-    
-    # Common STEP unit codes and their scale to MM
-    unit_scales_to_mm = {
-        "MM": 1.0,           # Millimeters
-        "M": 1000.0,         # Meters -> multiply by 1000 to get MM
-        "CM": 10.0,          # Centimeters -> multiply by 10 to get MM
-        "IN": 25.4,          # Inches -> multiply by 25.4 to get MM
-        "FT": 304.8,         # Feet -> multiply by 304.8 to get MM
-        "MICRON": 0.001,     # Micrometers -> multiply by 0.001 to get MM
-    }
-    
-    scale = unit_scales_to_mm.get(cascade_unit.upper(), 1.0)
-    
-    return {
-        "source_unit": cascade_unit,
-        "target_unit": "MM",
-        "scale_to_mm": scale
-    }
-
-
-def get_unit_scale_to_mm(unit_code: str) -> float:
-    """
-    Get the scale factor to convert from a given unit to millimeters.
-    
-    Args:
-        unit_code: Unit code string (MM, M, CM, IN, FT, etc.)
-        
-    Returns:
-        Scale factor to multiply values to get millimeters
-    """
-    unit_scales = {
-        "MM": 1.0,
-        "M": 1000.0,
-        "CM": 10.0,
-        "IN": 25.4,
-        "FT": 304.8,
-        "MICRON": 0.001,
-        "UM": 0.001,
-    }
-    return unit_scales.get(unit_code.upper(), 1.0)
 
 def tessellate_shape(shape, linear_deflection=0.005, angular_deflection=12.0) -> Dict:
     """
@@ -511,27 +435,10 @@ def analyze_cad():
             if shape.IsNull():
                 raise ValueError("Failed to extract shape from STEP file")
             
-            # Detect units from STEP file
-            unit_info = detect_step_units(tmp_path)
-            logger.info(f"[{correlation_id}] 📏 Units detected: {unit_info['source_unit']} (scale to mm: {unit_info['scale_to_mm']})")
-            
             # Extract geometric data
             logger.info(f"[{correlation_id}] Tessellating mesh")
             mesh_data = tessellate_shape(shape)
             
-            # Add unit information to mesh_data
-            mesh_data['unit_info'] = unit_info
-
-            # Extract measurement edges for SolidWorks-style measurements
-            logger.info(f"[{correlation_id}] 📐 Extracting measurement edges")
-            try:
-                measurement_edges = extract_measurement_edges(shape)
-                mesh_data['tagged_edges'] = measurement_edges
-                logger.info(f"[{correlation_id}] ✅ Extracted {len(measurement_edges)} measurement edges")
-            except Exception as edge_error:
-                logger.warning(f"[{correlation_id}] ⚠️ Measurement edge extraction failed: {edge_error}")
-                mesh_data['tagged_edges'] = []
-
             logger.info(f"[{correlation_id}] Computing bounding box")
             bbox = extract_bounding_box(shape)
             
@@ -742,17 +649,7 @@ def analyze_aag():
             # === STEP 2: Tessellate with face mapping ===
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
-
-            # Extract measurement edges for SolidWorks-style measurements
-            logger.info(f"[{correlation_id}] 📐 Extracting measurement edges")
-            try:
-                measurement_edges = extract_measurement_edges(shape)
-                mesh_data['tagged_edges'] = measurement_edges
-                logger.info(f"[{correlation_id}] ✅ Extracted {len(measurement_edges)} measurement edges")
-            except Exception as edge_error:
-                logger.warning(f"[{correlation_id}] ⚠️ Measurement edge extraction failed: {edge_error}")
-                mesh_data['tagged_edges'] = []
-
+            
             # === STEP 3 & 4: Feature Recognition (conditionally skipped) ===
             if SKIP_FEATURE_RECOGNITION:
                 logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
@@ -985,211 +882,6 @@ def analyze_aag():
             logger.info(f"[{correlation_id}] ⚠️ Returning mesh despite error")
         
         return jsonify(response), 206 if mesh_data else 500
-
-
-# =============================================================================
-# MEASUREMENT EDGE EXTRACTION - SolidWorks-style analytical edge data
-# This function extracts B-Rep edge geometry for precise measurements
-# Added: December 2024
-# =============================================================================
-
-def extract_measurement_edges(shape, num_discretization_points: int = 24) -> List[Dict]:
-    """
-    Extract B-Rep edges with analytical geometry data for SolidWorks-style measurements.
-    Includes adjacent face normals for visibility analysis.
-
-    This provides:
-    - Edge type classification (line, circle, arc, ellipse, etc.)
-    - Analytical properties (center, radius, diameter for circles)
-    - Discretized points for rendering curved edges
-    - Length measurements
-    - Adjacent face normals (for visibility culling)
-
-    Coordinates are in METERS to match mesh vertices from tessellate_shape().
-    Measurement values (length, radius, diameter) are in MM for display.
-
-    Args:
-        shape: OpenCascade TopoDS_Shape
-        num_discretization_points: Number of points for curve discretization (default 24)
-
-    Returns:
-        List of edge dictionaries with analytical and rendering data
-    """
-    extraction_start = time.time()
-    edges_data = []
-    processed_edge_hashes = set()
-
-    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    edge_index = 0
-
-    while edge_explorer.More():
-        edge = edge_explorer.Current()
-
-        # Deduplicate edges (shared edges between faces)
-        edge_hash = edge.HashCode(2147483647)
-        if edge_hash in processed_edge_hashes:
-            edge_explorer.Next()
-            continue
-        processed_edge_hashes.add(edge_hash)
-
-        try:
-            # Create curve adaptor for edge analysis
-            curve_adaptor = BRepAdaptor_Curve(edge)
-
-            # Get curve parameters
-            first_param = curve_adaptor.FirstParameter()
-            last_param = curve_adaptor.LastParameter()
-
-            # Skip degenerate edges
-            if abs(last_param - first_param) < 1e-10:
-                edge_explorer.Next()
-                continue
-
-            # Get curve type
-            curve_type = curve_adaptor.GetType()
-
-            # Get start and end points
-            # Note: OpenCASCADE uses millimeters (MM) as default internal units
-            start_pnt = curve_adaptor.Value(first_param)
-            end_pnt = curve_adaptor.Value(last_param)
-
-            # Compute edge length (OpenCASCADE uses MM internally)
-            props = GProp_GProps()
-            brepgprop.LinearProperties(edge, props)
-            length_mm = props.Mass()  # Already in mm (OpenCASCADE default unit)
-
-            # Determine curve type string
-            type_map = {
-                GeomAbs_Line: "line",
-                GeomAbs_Circle: "circle",
-                GeomAbs_Ellipse: "ellipse",
-                GeomAbs_Hyperbola: "hyperbola",
-                GeomAbs_Parabola: "parabola",
-                GeomAbs_BezierCurve: "bezier",
-                GeomAbs_BSplineCurve: "bspline",
-                GeomAbs_OffsetCurve: "offset",
-            }
-            type_str = type_map.get(curve_type, "other")
-
-            # Check if edge is closed
-            is_closed = start_pnt.Distance(end_pnt) < 1e-6
-
-            # Build edge data (coordinates in METERS to match mesh)
-            edge_data = {
-                'feature_id': edge_index,
-                'type': type_str,
-                'length': round(length_mm, 4),  # mm for display
-                'is_closed': is_closed,
-                'start': [
-                    round(start_pnt.X(), 8),  # mm (OpenCASCADE default unit)
-                    round(start_pnt.Y(), 8),
-                    round(start_pnt.Z(), 8)
-                ],
-                'end': [
-                    round(end_pnt.X(), 8),  # mm (OpenCASCADE default unit)
-                    round(end_pnt.Y(), 8),
-                    round(end_pnt.Z(), 8)
-                ]
-            }
-
-            # === ANALYTICAL DATA FOR SPECIFIC CURVE TYPES ===
-
-            if curve_type == GeomAbs_Circle:
-                circle = curve_adaptor.Circle()
-                center = circle.Location()
-                axis = circle.Axis().Direction()
-                radius_mm = circle.Radius()  # Already in mm (OpenCASCADE default unit)
-
-                edge_data['center'] = [
-                    round(center.X(), 8),  # mm
-                    round(center.Y(), 8),
-                    round(center.Z(), 8)
-                ]
-                edge_data['radius'] = round(radius_mm, 4)  # mm
-                edge_data['diameter'] = round(radius_mm * 2, 4)  # mm
-                edge_data['normal'] = [
-                    round(axis.X(), 6),
-                    round(axis.Y(), 6),
-                    round(axis.Z(), 6)
-                ]
-
-                # Check if full circle (2π sweep)
-                sweep_angle = abs(last_param - first_param)
-                edge_data['is_full_circle'] = sweep_angle >= (2 * math.pi - 0.01)
-                edge_data['sweep_angle'] = round(sweep_angle, 6)
-
-                if not edge_data['is_full_circle']:
-                    # Arc - compute arc length
-                    edge_data['arc_length'] = round(radius_mm * sweep_angle, 4)
-
-            elif curve_type == GeomAbs_Ellipse:
-                ellipse = curve_adaptor.Ellipse()
-                center = ellipse.Location()
-
-                edge_data['center'] = [
-                    round(center.X(), 8),
-                    round(center.Y(), 8),
-                    round(center.Z(), 8)
-                ]
-                edge_data['major_radius'] = round(ellipse.MajorRadius(), 4)  # mm (OpenCASCADE default unit)
-                edge_data['minor_radius'] = round(ellipse.MinorRadius(), 4)  # mm (OpenCASCADE default unit)
-
-            elif curve_type == GeomAbs_Line:
-                line = curve_adaptor.Line()
-                direction = line.Direction()
-
-                edge_data['direction'] = [
-                    round(direction.X(), 6),
-                    round(direction.Y(), 6),
-                    round(direction.Z(), 6)
-                ]
-
-            # === DISCRETIZED POINTS ===
-            # Generate points along the curve for proper visualization
-
-            try:
-                # For lines, just use start and end
-                if curve_type == GeomAbs_Line:
-                    edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
-
-                else:
-                    # For curves, discretize with uniform spacing
-                    discretizer = GCPnts_QuasiUniformAbscissa(curve_adaptor, num_discretization_points)
-
-                    if discretizer.IsDone() and discretizer.NbPoints() >= 2:
-                        snap_points = []
-                        
-                        for i in range(1, discretizer.NbPoints() + 1):
-                            param = discretizer.Parameter(i)
-                            pnt = curve_adaptor.Value(param)
-                            snap_points.append([
-                                round(pnt.X(), 8),
-                                round(pnt.Y(), 8),
-                                round(pnt.Z(), 8)
-                            ])
-                        
-                        edge_data['snap_points'] = snap_points
-                    else:
-                        # Fallback to start/end
-                        edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
-                        
-            except Exception as disc_error:
-                logger.warning(f"Edge {edge_index} discretization failed: {disc_error}")
-                edge_data['snap_points'] = [edge_data['start'], edge_data['end']]
-
-            edges_data.append(edge_data)
-            edge_index += 1
-
-        except Exception as edge_error:
-            logger.warning(f"Failed to process edge {edge_index}: {edge_error}")
-
-        edge_explorer.Next()
-
-    elapsed_ms = (time.time() - extraction_start) * 1000
-
-    logger.info(f"📐 Extracted {len(edges_data)} measurement edges in {elapsed_ms:.1f}ms")
-
-    return edges_data
 
 
 if __name__ == '__main__':

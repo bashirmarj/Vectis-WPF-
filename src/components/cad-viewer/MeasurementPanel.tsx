@@ -21,10 +21,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import { MeasurementOptions } from "./measurements/MeasurementOptions";
-import { SelectionDisplay } from "./measurements/SelectionDisplay";
-import { MeasurementModeSelector } from "./measurements/MeasurementModeSelector";
-
 
 
 /**
@@ -117,7 +113,7 @@ export function MeasurementPanel() {
   // Minimized view - just a button (TOP-LEFT)
   if (isMinimized) {
     return (
-      <div
+      <div 
         className="absolute z-30"
         style={{ left: `${position.x}px`, top: `${position.y}px` }}
       >
@@ -130,23 +126,32 @@ export function MeasurementPanel() {
   }
 
   return (
-    <div
-      className="absolute z-30 bg-[#f0f0f0] backdrop-blur-sm rounded-lg shadow-2xl border border-[#c8c8c8]"
-      style={{
-        width: '280px', // Increased from 240px for SolidWorks-style spaciousness
-        left: `${position.x}px`,
+    <div 
+      className="absolute z-30 w-60 bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200"
+      style={{ 
+        left: `${position.x}px`, 
         top: `${position.y}px`,
         cursor: isDragging ? 'grabbing' : 'default'
       }}
       onMouseDown={handleMouseDown}
     >
-      {/* Header - SolidWorks style */}
-      <div className="px-4 py-2.5 border-b border-[#c8c8c8] bg-[#e5e5e5] drag-handle cursor-grab active:cursor-grabbing rounded-t-lg">
+      {/* Header */}
+      <div className="p-3 border-b border-gray-200 drag-handle cursor-grab active:cursor-grabbing">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Ruler className="w-5 h-5 text-[#0066cc]" />
-            <h3 className="text-sm font-semibold text-[#222222]">Measure</h3>
-            <Badge variant="secondary" className="text-xs h-5 bg-[#0066cc] text-white border-none">
+            <div className="flex flex-col gap-0.5">
+              <div className="flex gap-0.5">
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+              </div>
+              <div className="flex gap-0.5">
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+              </div>
+            </div>
+            <Ruler className="w-4 h-4 text-gray-600" />
+            <h3 className="text-xs font-semibold text-gray-900">Measurements</h3>
+            <Badge variant="secondary" className="text-xs h-5">
               {measurements.length}
             </Badge>
           </div>
@@ -175,26 +180,20 @@ export function MeasurementPanel() {
 
       {isExpanded && (
         <>
-          {/* Measurement Mode Selector */}
-          <MeasurementModeSelector />
-
-          {/* Selection Display */}
-          <SelectionDisplay />
-
           {/* Measurements List Header */}
           {measurements.length > 0 && (
-            <div className="px-4 py-2 border-b border-[#c8c8c8] bg-[#f5f5f5]">
+            <div className="px-3 py-2 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => setShowList(!showList)}
-                  className="flex items-center gap-1 text-xs font-medium text-[#222222] hover:text-[#0066cc]"
+                  className="flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900"
                 >
                   {showList ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
                   List ({measurements.length})
                 </button>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-[#e0e0e0]" onClick={exportToCSV} title="Export CSV">
-                    <Download className="w-3 h-3 text-[#666666]" />
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={exportToCSV} title="Export CSV">
+                    <Download className="w-3 h-3" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -213,53 +212,45 @@ export function MeasurementPanel() {
           {/* Measurements List */}
           {showList && measurements.length > 0 && (
             <ScrollArea className="h-64">
-              <div className="p-3 space-y-2">
+              <div className="p-2 space-y-1.5">
                 {measurements.map((measurement, index) => (
                   <div
                     key={measurement.id}
-                    className="p-2.5 bg-white rounded border border-[#d0d0d0] hover:border-[#0066cc] transition-colors shadow-sm"
+                    className="p-2 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs font-medium text-[#666666]">#{index + 1}</span>
-                          <Badge variant="outline" className="text-xs h-4 px-1 capitalize border-[#c8c8c8] text-[#666666]">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span className="text-xs font-medium text-gray-500">#{index + 1}</span>
+                          <Badge variant="outline" className="text-xs h-4 px-1 capitalize">
                             {measurement.type}
                           </Badge>
                         </div>
-                        {/* Primary Value - Large and Bold like SolidWorks */}
-                        <div className="text-base font-bold text-[#0066cc] truncate mb-0.5">{measurement.label}</div>
+                        <div className="text-xs font-bold text-gray-900 truncate">{measurement.label}</div>
 
                         {/* Backend source indicator */}
                         {measurement.metadata?.backendMatch && (
                           <div className="mt-1">
-                            <Badge variant="default" className="text-[10px] h-4 px-1 bg-green-600 hover:bg-green-600">
+                            <Badge variant="default" className="text-[10px] h-4 px-1">
                               <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
-                              CAD Data
+                              Backend
                             </Badge>
                           </div>
                         )}
 
                         {/* Show edge type or face-point metadata */}
                         {measurement.type === "measure" && measurement.metadata?.measurementSubtype === "edge" && measurement.metadata?.edgeType && (
-                          <div className="text-xs text-[#666666] mt-1">
+                          <div className="text-xs text-muted-foreground mt-1">
                             Type: {measurement.metadata.edgeType.toUpperCase()}
                             {measurement.metadata.arcRadius && ` | R: ${measurement.metadata.arcRadius.toFixed(2)}mm`}
                           </div>
                         )}
-
+                        
                         {measurement.type === "measure" && measurement.metadata?.measurementSubtype === "face-point" && (
                           <div className="text-xs text-muted-foreground mt-1">
                             Angle: {measurement.metadata.facesAngle?.toFixed(1)}°
-                            {measurement.metadata.parallelFacesDistance !== null && measurement.metadata.parallelFacesDistance !== undefined &&
+                            {measurement.metadata.parallelFacesDistance !== null && measurement.metadata.parallelFacesDistance !== undefined && 
                               ` | ⊥: ${measurement.metadata.parallelFacesDistance.toFixed(2)}mm`}
-                          </div>
-                        )}
-
-                        {/* NEW: Show XYZ deltas when enabled and available */}
-                        {measurement.metadata?.deltaX !== undefined && measurement.metadata?.deltaY !== undefined && measurement.metadata?.deltaZ !== undefined && (
-                          <div className="text-xs text-muted-foreground mt-1 font-mono">
-                            dX: {measurement.metadata.deltaX.toFixed(2)}mm | dY: {measurement.metadata.deltaY.toFixed(2)}mm | dZ: {measurement.metadata.deltaZ.toFixed(2)}mm
                           </div>
                         )}
                       </div>
@@ -302,9 +293,6 @@ export function MeasurementPanel() {
               <p className="text-xs text-gray-400 mt-0.5">Select a tool above</p>
             </div>
           )}
-
-          {/* Measurement Options */}
-          <MeasurementOptions />
         </>
       )}
     </div>

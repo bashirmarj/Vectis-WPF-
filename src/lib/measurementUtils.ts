@@ -24,7 +24,6 @@ export interface SnapResult {
   metadata?: {
     edgeType?: "line" | "arc" | "circle";
     radius?: number;
-    diameter?: number;
     center?: THREE.Vector3;
     startPoint?: THREE.Vector3;
     endPoint?: THREE.Vector3;
@@ -32,9 +31,6 @@ export interface SnapResult {
     backendLength?: number;
     backendDiameter?: number;
     backendMatch?: boolean;
-    isFullCircle?: boolean;
-    sweepAngle?: number;
-    arcLength?: number;
   };
 }
 
@@ -63,50 +59,14 @@ export interface BackendEdgeClassification {
   segment_count: number;
 }
 
-export type EdgeType =
-  | "line"
-  | "circle"
-  | "ellipse"
-  | "hyperbola"
-  | "parabola"
-  | "bezier"
-  | "bspline"
-  | "offset"
-  | "other";
-
 export interface BackendTaggedEdge {
   feature_id: number;
-  type: EdgeType;
-  length: number;
-  is_closed: boolean;
   start: [number, number, number];
   end: [number, number, number];
-
-  // Analytical data for circles/arcs
-  center?: [number, number, number];
-  radius?: number;
+  type: "line" | "arc" | "circle";
   diameter?: number;
-  normal?: [number, number, number];
-  start_angle?: number;
-  end_angle?: number;
-  sweep_angle?: number;
-  is_full_circle?: boolean;
-  arc_length?: number;
-
-  // Analytical data for ellipses
-  major_radius?: number;
-  minor_radius?: number;
-
-  // Analytical data for lines
-  direction?: [number, number, number];
-
-  // Sparse snap points for mouse interaction
-  snap_points?: [number, number, number][];
-
-  // Topology
-  adjacent_face_count?: number;
-
-  // Legacy compatibility
+  radius?: number;
+  length?: number;
   iso_type?: string;
 }
 
@@ -308,7 +268,7 @@ function fitCircleToPoints(points: THREE.Vector3[]): { center: THREE.Vector3; ra
   }
   distances.sort((a, b) => a - b);
   const medianDist = distances[Math.floor(distances.length / 2)];
-
+  
   const filteredPoints = points.filter((p, i) => {
     if (i === 0 || i === points.length - 1) return true;
     const dist = p.distanceTo(points[i - 1]);
@@ -448,12 +408,7 @@ export function classifyEdge(edge: THREE.Line3, meshData: MeshData): EdgeClassif
 
 /**
  * Snap to backend-provided tagged edges (exact CAD geometry)
- * This uses BREP edges from backend with analytical data (SolidWorks-level precision)
- *
- * Priority:
- * 1. Use snap_points for efficient distance calculation
- * 2. Use analytical center/radius for circles/arcs (exact, not reconstructed)
- * 3. Fall back to start/end for simple lines
+ * This uses BREP edges from backend, not mesh approximation
  */
 export function snapToBackendEdge(
   point: THREE.Vector3,
@@ -464,62 +419,20 @@ export function snapToBackendEdge(
   let minDistance = snapDistance;
   let closestEdge: BackendTaggedEdge | null = null;
 
-  // Find closest tagged edge using snap_points (sparse polyline for efficiency)
+  // Find closest tagged edge segment
   for (const edge of taggedEdges) {
-    // Use snap_points if available (preferred - optimized for interaction)
-    if (edge.snap_points && edge.snap_points.length >= 2) {
-      // Check distance to each segment in the polyline
-      for (let i = 0; i < edge.snap_points.length - 1; i++) {
-        const p1 = edge.snap_points[i];
-        const p2 = edge.snap_points[i + 1];
-        const start = new THREE.Vector3(p1[0], p1[1], p1[2]);
-        const end = new THREE.Vector3(p2[0], p2[1], p2[2]);
-        const line = new THREE.Line3(start, end);
+    const start = new THREE.Vector3(edge.start[0], edge.start[1], edge.start[2]);
+    const end = new THREE.Vector3(edge.end[0], edge.end[1], edge.end[2]);
+    const line = new THREE.Line3(start, end);
 
-        const closestOnSegment = new THREE.Vector3();
-        line.closestPointToPoint(point, true, closestOnSegment);
+    const closestOnEdge = new THREE.Vector3();
+    line.closestPointToPoint(point, true, closestOnEdge);
 
-        const distance = point.distanceTo(closestOnSegment);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPoint = closestOnSegment;
-          closestEdge = edge;
-        }
-      }
-
-      // For closed edges (full circles), also check the closing segment
-      if (edge.is_closed && edge.snap_points.length > 2) {
-        const firstPt = edge.snap_points[0];
-        const lastPt = edge.snap_points[edge.snap_points.length - 1];
-        const start = new THREE.Vector3(firstPt[0], firstPt[1], firstPt[2]);
-        const end = new THREE.Vector3(lastPt[0], lastPt[1], lastPt[2]);
-        const line = new THREE.Line3(start, end);
-
-        const closestOnSegment = new THREE.Vector3();
-        line.closestPointToPoint(point, true, closestOnSegment);
-
-        const distance = point.distanceTo(closestOnSegment);
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestPoint = closestOnSegment;
-          closestEdge = edge;
-        }
-      }
-    } else {
-      // Fallback: use start/end points only
-      const start = new THREE.Vector3(edge.start[0], edge.start[1], edge.start[2]);
-      const end = new THREE.Vector3(edge.end[0], edge.end[1], edge.end[2]);
-      const line = new THREE.Line3(start, end);
-
-      const closestOnEdge = new THREE.Vector3();
-      line.closestPointToPoint(point, true, closestOnEdge);
-
-      const distance = point.distanceTo(closestOnEdge);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestPoint = closestOnEdge;
-        closestEdge = edge;
-      }
+    const distance = point.distanceTo(closestOnEdge);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestPoint = closestOnEdge;
+      closestEdge = edge;
     }
   }
 
@@ -527,33 +440,30 @@ export function snapToBackendEdge(
     const start = new THREE.Vector3(closestEdge.start[0], closestEdge.start[1], closestEdge.start[2]);
     const end = new THREE.Vector3(closestEdge.end[0], closestEdge.end[1], closestEdge.end[2]);
 
-    // Use analytical center from backend (exact, not reconstructed)
+    // Calculate center for arcs/circles
     let center: THREE.Vector3 | undefined;
-    if (closestEdge.center) {
-      center = new THREE.Vector3(
-        closestEdge.center[0],
-        closestEdge.center[1],
-        closestEdge.center[2]
-      );
-    }
+    if ((closestEdge.type === "arc" || closestEdge.type === "circle") && closestEdge.radius) {
+      // Estimate center (midpoint perpendicular to chord)
+      const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+      const direction = new THREE.Vector3().subVectors(end, start).normalize();
 
-    // Determine edge type for display
-    let displayType: "line" | "arc" | "circle" = "line";
-    if (closestEdge.type === "circle") {
-      displayType = closestEdge.is_full_circle ? "circle" : "arc";
+      // Perpendicular vector (simplified - assumes planar arc)
+      const perpendicular = new THREE.Vector3(-direction.y, direction.x, 0).normalize();
+
+      // For shallow arcs, center is approximately at midpoint + radius*perpendicular
+      const chordLength = start.distanceTo(end);
+      const sagitta = closestEdge.radius - Math.sqrt(closestEdge.radius**2 - (chordLength/2)**2);
+      center = midpoint.clone().add(perpendicular.multiplyScalar(sagitta));
     }
 
     return {
       position: closestPoint,
-      normal: closestEdge.normal
-        ? new THREE.Vector3(closestEdge.normal[0], closestEdge.normal[1], closestEdge.normal[2])
-        : new THREE.Vector3(0, 1, 0),
+      normal: new THREE.Vector3(0, 1, 0),
       surfaceType: "edge",
       confidence: 1 - minDistance / snapDistance,
       metadata: {
-        edgeType: displayType,
+        edgeType: closestEdge.type,
         radius: closestEdge.radius,
-        diameter: closestEdge.diameter,
         center: center,
         startPoint: start,
         endPoint: end,
@@ -561,9 +471,6 @@ export function snapToBackendEdge(
         backendLength: closestEdge.length,
         backendDiameter: closestEdge.diameter,
         backendMatch: true,
-        isFullCircle: closestEdge.is_full_circle,
-        sweepAngle: closestEdge.sweep_angle,
-        arcLength: closestEdge.arc_length,
       },
     };
   }
@@ -859,39 +766,6 @@ export function calculateDeltas(
 }
 
 /**
- * Calculate XYZ deltas for SolidWorks-style measurements
- * Returns SIGNED deltas (positive or negative) in millimeters
- * @param point1 First point (from)
- * @param point2 Second point (to)
- * @returns Object with dX, d
-
-Y, dZ in mm
- */
-export function calculateXYZDeltas(
-  point1: THREE.Vector3,
-  point2: THREE.Vector3
-): {
-  dX: number;
-  dY: number;
-  dZ: number;
-  distance: number;
-} {
-  // Points are already in meters, convert to mm
-  const dX = (point2.x - point1.x) * 1000;
-  const dY = (point2.y - point1.y) * 1000;
-  const dZ = (point2.z - point1.z) * 1000;
-  const distance = point1.distanceTo(point2) * 1000;
-
-  return {
-    dX,
-    dY,
-    dZ,
-    distance
-  };
-}
-
-
-/**
  * Detect if two points lie on a cylindrical surface
  * @param p1 First point
  * @param p2 Second point
@@ -976,170 +850,4 @@ export function detectCylindricalSurface(
   }
 
   return null;
-}
-
-/**
- * Calculate face perimeter from boundary edges
- * @param faceId Face ID to calculate perimeter for
- * @param meshData Mesh data containing vertices and face mapping
- * @returns Perimeter in mm, or null if cannot calculate
- */
-export function calculateFacePerimeter(
-  faceId: number,
-  meshData: MeshData
-): number | null {
-  if (!meshData.vertex_face_ids || !meshData.vertices || !meshData.indices) {
-    return null;
-  }
-
-  // Find all triangles belonging to this face
-  const faceTriangles: number[] = [];
-  for (let i = 0; i < meshData.indices.length; i += 3) {
-    const idx0 = meshData.indices[i];
-    const idx1 = meshData.indices[i + 1];
-    const idx2 = meshData.indices[i + 2];
-
-    // Check if all vertices belong to this face
-    if (
-      meshData.vertex_face_ids[idx0] === faceId ||
-      meshData.vertex_face_ids[idx1] === faceId ||
-      meshData.vertex_face_ids[idx2] === faceId
-    ) {
-      faceTriangles.push(i / 3);
-    }
-  }
-
-  if (faceTriangles.length === 0) return null;
-
-  // Extract boundary edges (edges that appear only once)
-  const edgeMap = new Map<string, number>();
-
-  for (const triIdx of faceTriangles) {
-    const i = triIdx * 3;
-    const idx0 = meshData.indices[i];
-    const idx1 = meshData.indices[i + 1];
-    const idx2 = meshData.indices[i + 2];
-
-    // Three edges per triangle
-    const edges = [
-      [idx0, idx1],
-      [idx1, idx2],
-      [idx2, idx0],
-    ];
-
-    for (const [a, b] of edges) {
-      const key = a < b ? `${a}-${b}` : `${b}-${a}`;
-      edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
-    }
-  }
-
-  // Boundary edges appear only once
-  let perimeter = 0;
-  for (const [key, count] of edgeMap.entries()) {
-    if (count === 1) {
-      const [a, b] = key.split('-').map(Number);
-      const v1 = new THREE.Vector3(
-        meshData.vertices[a * 3],
-        meshData.vertices[a * 3 + 1],
-        meshData.vertices[a * 3 + 2]
-      );
-      const v2 = new THREE.Vector3(
-        meshData.vertices[b * 3],
-        meshData.vertices[b * 3 + 1],
-        meshData.vertices[b * 3 + 2]
-      );
-      perimeter += v1.distanceTo(v2);
-    }
-  }
-
-  return perimeter * 1000; // Convert to mm
-}
-
-/**
- * Format vertex coordinates for display
- * @param position Vertex position
- * @param precision Decimal places (0-5)
- * @returns Formatted coordinate string
- */
-export function formatVertexCoordinates(
-  position: THREE.Vector3,
-  precision: number = 2
-): string {
-  // Convert from meters to mm
-  const x = (position.x * 1000).toFixed(precision);
-  const y = (position.y * 1000).toFixed(precision);
-  const z = (position.z * 1000).toFixed(precision);
-
-  return `(${x}, ${y}, ${z}) mm`;
-}
-
-/**
- * Calculate edge-to-edge distance with min, max, and center-to-center options
- * @param edge1Start First edge start point
- * @param edge1End First edge end point
- * @param edge2Start Second edge start point
- * @param edge2End Second edge end point
- * @returns Object with min, max, centerToCenter distances and closest points
- */
-export function calculateEdgeToEdgeDistances(
-  edge1Start: THREE.Vector3,
-  edge1End: THREE.Vector3,
-  edge2Start: THREE.Vector3,
-  edge2End: THREE.Vector3
-): {
-  min: number;
-  max: number;
-  centerToCenter: number;
-  minPoint1: THREE.Vector3;
-  minPoint2: THREE.Vector3;
-} {
-  const line1 = new THREE.Line3(edge1Start, edge1End);
-  const line2 = new THREE.Line3(edge2Start, edge2End);
-
-  // Find minimum distance
-  let minDist = Infinity;
-  let minP1 = edge1Start.clone();
-  let minP2 = edge2Start.clone();
-
-  const samples = 20;
-  for (let i = 0; i <= samples; i++) {
-    const t1 = i / samples;
-    const p1 = new THREE.Vector3();
-    line1.at(t1, p1);
-
-    for (let j = 0; j <= samples; j++) {
-      const t2 = j / samples;
-      const p2 = new THREE.Vector3();
-      line2.at(t2, p2);
-
-      const dist = p1.distanceTo(p2);
-      if (dist < minDist) {
-        minDist = dist;
-        minP1 = p1.clone();
-        minP2 = p2.clone();
-      }
-    }
-  }
-
-  // Calculate maximum distance (between endpoints)
-  const distances = [
-    edge1Start.distanceTo(edge2Start),
-    edge1Start.distanceTo(edge2End),
-    edge1End.distanceTo(edge2Start),
-    edge1End.distanceTo(edge2End),
-  ];
-  const maxDist = Math.max(...distances);
-
-  // Center-to-center distance
-  const center1 = new THREE.Vector3().addVectors(edge1Start, edge1End).multiplyScalar(0.5);
-  const center2 = new THREE.Vector3().addVectors(edge2Start, edge2End).multiplyScalar(0.5);
-  const centerDist = center1.distanceTo(center2);
-
-  return {
-    min: minDist * 1000, // Convert to mm
-    max: maxDist * 1000,
-    centerToCenter: centerDist * 1000,
-    minPoint1: minP1,
-    minPoint2: minP2,
-  };
 }

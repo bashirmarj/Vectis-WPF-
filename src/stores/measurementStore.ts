@@ -3,9 +3,6 @@ import * as THREE from "three";
 
 export type MeasurementType = "measure"; // Unified measurement: Edge dimensions OR face point-to-point with angle
 
-// NEW: Measurement modes for SolidWorks-style interaction
-export type MeasurementMode = "single" | "distance" | "angle" | "point-to-point";
-
 export type SnapType = "vertex" | "edge" | "midpoint" | "center" | "intersection" | "face";
 
 export interface BackendFaceClassification {
@@ -42,9 +39,7 @@ export interface Measurement {
     deltaX?: number;
     deltaY?: number;
     deltaZ?: number;
-    edgeType?: "line" | "arc" | "circle" | "ellipse" | "bezier" | "bspline" | "hyperbola" | "parabola" | "offset" | "other";
-    isFullCircle?: boolean;
-    arcLength?: number;
+    edgeType?: "line" | "arc" | "circle";
     arcRadius?: number;
     arcCenter?: THREE.Vector3;
     edgeStart?: THREE.Vector3;
@@ -91,13 +86,6 @@ interface MeasurementStore {
   undoStack: MeasurementCommand[];
   redoStack: MeasurementCommand[];
 
-  // NEW: Measurement modes and UI settings
-  measurementMode: MeasurementMode;
-  showXYZ: boolean;
-  selectedUnits: 'mm' | 'inch' | 'dual';
-  precision: number; // 0-5 decimal places
-  currentSelections: MeasurementPoint[];
-
   // Actions
   setActiveTool: (tool: MeasurementType | null) => void;
   addTempPoint: (point: MeasurementPoint) => void;
@@ -114,15 +102,6 @@ interface MeasurementStore {
   setHoverPoint: (point: MeasurementPoint | null) => void;
   setSelectedFaces: (faces: BackendFaceClassification[]) => void;
   clearSelectedFaces: () => void;
-
-  // NEW: Measurement mode and settings actions
-  setMeasurementMode: (mode: MeasurementMode) => void;
-  toggleShowXYZ: () => void;
-  setUnits: (units: 'mm' | 'inch' | 'dual') => void;
-  setPrecision: (precision: number) => void;
-  addSelection: (point: MeasurementPoint) => void;
-  removeSelection: (id: string) => void;
-  clearSelections: () => void;
 
   // Command pattern methods
   executeCommand: (command: MeasurementCommand) => void;
@@ -144,13 +123,6 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
-  // NEW: Initial values for measurement modes and UI settings
-  measurementMode: "single", // Default to single entity measurement
-  showXYZ: false, // XYZ deltas hidden by default
-  selectedUnits: 'mm', // Default to millimeters
-  precision: 2, // 2 decimal places by default
-  currentSelections: [], // Track currently selected entities
-
   setActiveTool: (tool) => set({ activeTool: tool, tempPoints: [] }),
 
   addTempPoint: (point) =>
@@ -161,18 +133,12 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
   clearTempPoints: () => set({ tempPoints: [] }),
 
   addMeasurement: (measurement) => {
-    console.log("📊 STORE: Adding measurement:", measurement.id, measurement.label);
     const command: MeasurementCommand = {
       execute: () =>
-        set((state) => {
-          console.log("📊 STORE: Before add, count:", state.measurements.length);
-          const newState = {
-            measurements: [...state.measurements, measurement],
-            tempPoints: [],
-          };
-          console.log("📊 STORE: After add, count:", newState.measurements.length);
-          return newState;
-        }),
+        set((state) => ({
+          measurements: [...state.measurements, measurement],
+          tempPoints: [],
+        })),
       undo: () =>
         set((state) => ({
           measurements: state.measurements.filter((m) => m.id !== measurement.id),
@@ -286,28 +252,4 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
   canUndo: () => get().undoStack.length > 0,
 
   canRedo: () => get().redoStack.length > 0,
-
-  // NEW: Measurement mode and settings actions
-  setMeasurementMode: (mode) => set({ measurementMode: mode, currentSelections: [] }),
-
-  toggleShowXYZ: () => set((state) => ({ showXYZ: !state.showXYZ })),
-
-  setUnits: (units) => set({ selectedUnits: units }),
-
-  setPrecision: (precision) => set({ precision: Math.max(0, Math.min(5, precision)) }),
-
-  addSelection: (point) => set((state) => {
-    // Limit selections based on measurement mode
-    const maxSelections = state.measurementMode === "angle" ? 3 : 2;
-    const newSelections = [...state.currentSelections, point];
-    return {
-      currentSelections: newSelections.slice(-maxSelections) // Keep only last N selections
-    };
-  }),
-
-  removeSelection: (id) => set((state) => ({
-    currentSelections: state.currentSelections.filter((s) => s.id !== id)
-  })),
-
-  clearSelections: () => set({ currentSelections: [] }),
 }));
