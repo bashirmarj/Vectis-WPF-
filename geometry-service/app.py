@@ -47,6 +47,7 @@ from OCC.Core.GCPnts import GCPnts_QuasiUniformAbscissa
 from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
 from OCC.Core.TopExp import topexp
 from OCC.Core.GeomLProp import GeomLProp_SLProps
+from OCC.Core.Interface import Interface_Static
 import math
 
 # ========== TEMPORARY: Skip feature recognition for faster processing ==========
@@ -146,6 +147,65 @@ def compute_file_hash(file_content: bytes) -> str:
     """Compute SHA-256 hash for caching"""
     return hashlib.sha256(file_content).hexdigest()
 
+
+def detect_step_units(step_file_path: str) -> dict:
+    """
+    Detect the unit system used in a STEP file.
+    
+    OpenCASCADE reads STEP files and can convert to its internal unit system.
+    By default, OpenCASCADE uses millimeters (MM) as internal units.
+    
+    Args:
+        step_file_path: Path to the STEP file
+        
+    Returns:
+        dict with 'source_unit', 'target_unit', and 'scale_to_mm' keys
+    """
+    # Get current cascade unit setting (default is MM)
+    try:
+        cascade_unit = Interface_Static.CVal("xstep.cascade.unit")
+    except:
+        cascade_unit = "MM"
+    
+    # Common STEP unit codes and their scale to MM
+    unit_scales_to_mm = {
+        "MM": 1.0,           # Millimeters
+        "M": 1000.0,         # Meters -> multiply by 1000 to get MM
+        "CM": 10.0,          # Centimeters -> multiply by 10 to get MM
+        "IN": 25.4,          # Inches -> multiply by 25.4 to get MM
+        "FT": 304.8,         # Feet -> multiply by 304.8 to get MM
+        "MICRON": 0.001,     # Micrometers -> multiply by 0.001 to get MM
+    }
+    
+    scale = unit_scales_to_mm.get(cascade_unit.upper(), 1.0)
+    
+    return {
+        "source_unit": cascade_unit,
+        "target_unit": "MM",
+        "scale_to_mm": scale
+    }
+
+
+def get_unit_scale_to_mm(unit_code: str) -> float:
+    """
+    Get the scale factor to convert from a given unit to millimeters.
+    
+    Args:
+        unit_code: Unit code string (MM, M, CM, IN, FT, etc.)
+        
+    Returns:
+        Scale factor to multiply values to get millimeters
+    """
+    unit_scales = {
+        "MM": 1.0,
+        "M": 1000.0,
+        "CM": 10.0,
+        "IN": 25.4,
+        "FT": 304.8,
+        "MICRON": 0.001,
+        "UM": 0.001,
+    }
+    return unit_scales.get(unit_code.upper(), 1.0)
 
 def tessellate_shape(shape, linear_deflection=0.005, angular_deflection=12.0) -> Dict:
     """
@@ -446,9 +506,16 @@ def analyze_cad():
             if shape.IsNull():
                 raise ValueError("Failed to extract shape from STEP file")
             
+            # Detect units from STEP file
+            unit_info = detect_step_units(tmp_path)
+            logger.info(f"[{correlation_id}] 📏 Units detected: {unit_info['source_unit']} (scale to mm: {unit_info['scale_to_mm']})")
+            
             # Extract geometric data
             logger.info(f"[{correlation_id}] Tessellating mesh")
             mesh_data = tessellate_shape(shape)
+            
+            # Add unit information to mesh_data
+            mesh_data['unit_info'] = unit_info
 
             # Extract measurement edges for SolidWorks-style measurements
             logger.info(f"[{correlation_id}] 📐 Extracting measurement edges")
@@ -976,14 +1043,15 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
             # Get curve type
             curve_type = curve_adaptor.GetType()
 
-            # Get start and end points (in meters)
+            # Get start and end points
+            # Note: OpenCASCADE uses millimeters (MM) as default internal units
             start_pnt = curve_adaptor.Value(first_param)
             end_pnt = curve_adaptor.Value(last_param)
 
-            # Compute edge length (convert to mm for display)
+            # Compute edge length (OpenCASCADE uses MM internally)
             props = GProp_GProps()
             brepgprop.LinearProperties(edge, props)
-            length_mm = props.Mass() * 1000  # meters to mm
+            length_mm = props.Mass()  # Already in mm (OpenCASCADE default unit)
 
             # Determine curve type string
             type_map = {
@@ -1008,23 +1076,16 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
                 'length': round(length_mm, 4),  # mm for display
                 'is_closed': is_closed,
                 'start': [
-                    round(start_pnt.X(), 8),  # meters
+                    round(start_pnt.X(), 8),  # mm (OpenCASCADE default unit)
                     round(start_pnt.Y(), 8),
                     round(start_pnt.Z(), 8)
                 ],
                 'end': [
-                    round(end_pnt.X(), 8),  # meters
+                    round(end_pnt.X(), 8),  # mm (OpenCASCADE default unit)
                     round(end_pnt.Y(), 8),
                     round(end_pnt.Z(), 8)
                 ]
             }
-
-            # === ADJACENT FACES & NORMALS ===
-            # Lookup adjacent faces from our Python dictionary
-            adjacent_faces = edge_to_faces.get(edge_hash, [])
-
-            # Only process if we have faces (boundary=1, manifold=2)
-            has_faces = len(adjacent_faces) > 0
 
             # === ANALYTICAL DATA FOR SPECIFIC CURVE TYPES ===
 
@@ -1032,11 +1093,10 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
                 circle = curve_adaptor.Circle()
                 center = circle.Location()
                 axis = circle.Axis().Direction()
-                radius_m = circle.Radius()
-                radius_mm = radius_m * 1000
+                radius_mm = circle.Radius()  # Already in mm (OpenCASCADE default unit)
 
                 edge_data['center'] = [
-                    round(center.X(), 8),  # meters
+                    round(center.X(), 8),  # mm
                     round(center.Y(), 8),
                     round(center.Z(), 8)
                 ]
@@ -1066,8 +1126,8 @@ def extract_measurement_edges(shape, num_discretization_points: int = 24) -> Lis
                     round(center.Y(), 8),
                     round(center.Z(), 8)
                 ]
-                edge_data['major_radius'] = round(ellipse.MajorRadius() * 1000, 4)  # mm
-                edge_data['minor_radius'] = round(ellipse.MinorRadius() * 1000, 4)  # mm
+                edge_data['major_radius'] = round(ellipse.MajorRadius(), 4)  # mm (OpenCASCADE default unit)
+                edge_data['minor_radius'] = round(ellipse.MinorRadius(), 4)  # mm (OpenCASCADE default unit)
 
             elif curve_type == GeomAbs_Line:
                 line = curve_adaptor.Line()
