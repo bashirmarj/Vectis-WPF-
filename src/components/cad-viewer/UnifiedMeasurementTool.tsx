@@ -414,8 +414,10 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 title: "Circle Measured",
                 description: `Diameter: ${formatMeasurement(taggedEdge.diameter, "mm")}`,
               });
+              console.log("✅ Added CIRCLE measurement");
             } else if (taggedEdge.radius) {
               // Arc (partial circle) → show radius
+              console.log("🔵 Arc branch hit - has radius:", taggedEdge.radius);
               const label = taggedEdge.arc_length
                 ? `R ${formatMeasurement(taggedEdge.radius, "mm")} | Arc: ${formatMeasurement(taggedEdge.arc_length, "mm")}`
                 : `R ${formatMeasurement(taggedEdge.radius, "mm")}`;
@@ -452,6 +454,10 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 title: "Arc Measured",
                 description: `Radius: ${formatMeasurement(taggedEdge.radius, "mm")}`,
               });
+              console.log("✅ Added ARC measurement");
+            } else {
+              // Circle with neither full diameter nor radius
+              console.log("❌ Circle type but no matching condition - no full circle with diameter, no radius");
             }
           } else if (taggedEdge.type === "line" && taggedEdge.length) {
             // Straight line → show length with XYZ deltas
