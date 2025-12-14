@@ -33,3 +33,7 @@ verify_jwt = false
 
 [functions.engineering-chat]
 verify_jwt = false
+
+[functions.analyze-measurement]
+verify_jwt = false
+memory_limit_mb = 512

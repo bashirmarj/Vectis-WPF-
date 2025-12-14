@@ -650,6 +650,52 @@ def analyze_aag():
             logger.info(f"[{correlation_id}] 🔺 Tessellating with face mapping")
             mesh_data = tessellate_shape(shape)
             
+            # === STEP 2.5: Extract tagged_edges for measurement tool ===
+            logger.info(f"[{correlation_id}] 📏 Extracting tagged edges for measurement tool")
+            try:
+                edge_to_faces, _ = build_edge_face_adjacency(shape)
+                tagged_edges = []
+                edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+                processed_edges = set()
+                edge_id = 0
+                
+                while edge_explorer.More():
+                    edge = edge_explorer.Current()
+                    edge_hash = edge.__hash__()
+                    
+                    if edge_hash not in processed_edges:
+                        processed_edges.add(edge_hash)
+                        edge_data = extract_measurement_edge_data(edge, edge_id, edge_to_faces)
+                        
+                        # Convert to tagged_edges format expected by frontend
+                        tagged_edge = {
+                            "feature_id": edge_id,
+                            "start": edge_data["start_point"],
+                            "end": edge_data["end_point"],
+                            "type": edge_data["edge_type"],
+                        }
+                        
+                        # Add measurements based on edge type
+                        if edge_data.get("diameter_mm"):
+                            tagged_edge["diameter"] = edge_data["diameter_mm"]
+                        if edge_data.get("radius_mm"):
+                            tagged_edge["radius"] = edge_data["radius_mm"]
+                        if edge_data.get("length_mm"):
+                            tagged_edge["length"] = edge_data["length_mm"]
+                        if edge_data.get("center"):
+                            tagged_edge["center"] = edge_data["center"]
+                        
+                        tagged_edges.append(tagged_edge)
+                        edge_id += 1
+                    
+                    edge_explorer.Next()
+                
+                mesh_data["tagged_edges"] = tagged_edges
+                logger.info(f"[{correlation_id}] ✅ Extracted {len(tagged_edges)} tagged edges")
+            except Exception as e:
+                logger.warning(f"[{correlation_id}] ⚠️ Tagged edge extraction failed: {e}")
+                mesh_data["tagged_edges"] = []
+            
             # === STEP 3 & 4: Feature Recognition (conditionally skipped) ===
             if SKIP_FEATURE_RECOGNITION:
                 logger.info(f"[{correlation_id}] ⏭️ Feature recognition SKIPPED (SKIP_FEATURE_RECOGNITION=True)")
