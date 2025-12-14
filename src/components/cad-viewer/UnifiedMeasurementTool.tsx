@@ -141,7 +141,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
         // Priority 1: Try backend tagged_edges first (has analytical data)
         if (hasTaggedEdges) {
-          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 0.05); // 50mm threshold
+          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 50); // 5mm threshold (coordinates are in mm)
 
           if (taggedEdge) {
             // Build highlight segments from snap_points
