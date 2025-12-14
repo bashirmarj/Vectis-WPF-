@@ -884,6 +884,475 @@ def analyze_aag():
         return jsonify(response), 206 if mesh_data else 500
 
 
+# =============================================================================
+# MEASUREMENT TOOL ENDPOINT - INDEPENDENT DATA EXTRACTION
+# This endpoint provides comprehensive geometry data for the measurement tool.
+# It is completely independent from /analyze and /analyze-aag endpoints.
+# =============================================================================
+
+def extract_measurement_face_data(face, face_id: int) -> Dict:
+    """
+    Extract comprehensive face data for measurement tool.
+    Returns surface type, normal, center, radius, area, etc.
+    """
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Surface
+    from OCC.Core.GeomAbs import (
+        GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, 
+        GeomAbs_Sphere, GeomAbs_Torus, GeomAbs_BSplineSurface,
+        GeomAbs_BezierSurface, GeomAbs_SurfaceOfRevolution,
+        GeomAbs_SurfaceOfExtrusion, GeomAbs_OffsetSurface
+    )
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop
+    from OCC.Core.gp import gp_Pnt, gp_Dir
+    
+    surface_adaptor = BRepAdaptor_Surface(face)
+    surface_type_enum = surface_adaptor.GetType()
+    
+    # Map surface type to string
+    surface_type_map = {
+        GeomAbs_Plane: "plane",
+        GeomAbs_Cylinder: "cylinder",
+        GeomAbs_Cone: "cone",
+        GeomAbs_Sphere: "sphere",
+        GeomAbs_Torus: "torus",
+        GeomAbs_BSplineSurface: "bspline",
+        GeomAbs_BezierSurface: "bezier",
+        GeomAbs_SurfaceOfRevolution: "revolution",
+        GeomAbs_SurfaceOfExtrusion: "extrusion",
+        GeomAbs_OffsetSurface: "offset"
+    }
+    surface_type = surface_type_map.get(surface_type_enum, "other")
+    
+    # Compute face area
+    props = GProp_GProps()
+    brepgprop.SurfaceProperties(face, props)
+    area_mm2 = props.Mass() * 1000000  # Convert m² to mm²
+    
+    # Get center of mass
+    center_of_mass = props.CentreOfMass()
+    center = [center_of_mass.X() * 1000, center_of_mass.Y() * 1000, center_of_mass.Z() * 1000]  # Convert to mm
+    
+    # Initialize result
+    face_data = {
+        "face_id": face_id,
+        "surface_type": surface_type,
+        "center": center,
+        "area_mm2": area_mm2,
+        "normal": None,
+        "axis": None,
+        "radius": None,
+        "radius_mm": None,
+        "plane_distance": None,
+        "cone_angle": None,
+        "major_radius": None,
+        "minor_radius": None
+    }
+    
+    try:
+        # Get UV parameter bounds
+        u_min, u_max, v_min, v_max = surface_adaptor.FirstUParameter(), surface_adaptor.LastUParameter(), \
+                                      surface_adaptor.FirstVParameter(), surface_adaptor.LastVParameter()
+        u_mid = (u_min + u_max) / 2
+        v_mid = (v_min + v_max) / 2
+        
+        # Get point and normal at center of parameter space
+        from OCC.Core.BRepLProp import BRepLProp_SLProps
+        sl_props = BRepLProp_SLProps(surface_adaptor, u_mid, v_mid, 1, 0.001)
+        
+        if sl_props.IsNormalDefined():
+            normal = sl_props.Normal()
+            # Account for face orientation
+            if face.Orientation() == 1:  # REVERSED
+                face_data["normal"] = [-normal.X(), -normal.Y(), -normal.Z()]
+            else:
+                face_data["normal"] = [normal.X(), normal.Y(), normal.Z()]
+        
+        # Extract surface-specific parameters
+        if surface_type == "plane":
+            plane = surface_adaptor.Plane()
+            ax3 = plane.Position()
+            direction = ax3.Direction()
+            location = ax3.Location()
+            face_data["normal"] = [direction.X(), direction.Y(), direction.Z()]
+            # Distance from origin along normal
+            face_data["plane_distance"] = location.X() * direction.X() + \
+                                          location.Y() * direction.Y() + \
+                                          location.Z() * direction.Z()
+            face_data["plane_distance"] *= 1000  # Convert to mm
+            
+        elif surface_type == "cylinder":
+            cylinder = surface_adaptor.Cylinder()
+            axis = cylinder.Axis()
+            direction = axis.Direction()
+            location = axis.Location()
+            radius = cylinder.Radius()
+            face_data["axis"] = [direction.X(), direction.Y(), direction.Z()]
+            face_data["center"] = [location.X() * 1000, location.Y() * 1000, location.Z() * 1000]
+            face_data["radius"] = radius
+            face_data["radius_mm"] = radius * 1000
+            face_data["diameter_mm"] = radius * 2000
+            
+        elif surface_type == "cone":
+            cone = surface_adaptor.Cone()
+            axis = cone.Axis()
+            direction = axis.Direction()
+            location = axis.Location()
+            semi_angle = cone.SemiAngle()
+            face_data["axis"] = [direction.X(), direction.Y(), direction.Z()]
+            face_data["center"] = [location.X() * 1000, location.Y() * 1000, location.Z() * 1000]
+            face_data["cone_angle"] = np.degrees(semi_angle) * 2  # Full cone angle in degrees
+            
+        elif surface_type == "sphere":
+            sphere = surface_adaptor.Sphere()
+            location = sphere.Location()
+            radius = sphere.Radius()
+            face_data["center"] = [location.X() * 1000, location.Y() * 1000, location.Z() * 1000]
+            face_data["radius"] = radius
+            face_data["radius_mm"] = radius * 1000
+            
+        elif surface_type == "torus":
+            torus = surface_adaptor.Torus()
+            axis = torus.Axis()
+            direction = axis.Direction()
+            location = axis.Location()
+            major_radius = torus.MajorRadius()
+            minor_radius = torus.MinorRadius()
+            face_data["axis"] = [direction.X(), direction.Y(), direction.Z()]
+            face_data["center"] = [location.X() * 1000, location.Y() * 1000, location.Z() * 1000]
+            face_data["major_radius"] = major_radius * 1000
+            face_data["minor_radius"] = minor_radius * 1000
+            
+    except Exception as e:
+        logger.debug(f"Error extracting face {face_id} parameters: {e}")
+    
+    return face_data
+
+
+def extract_measurement_edge_data(edge, edge_id: int, edge_face_map: Dict[int, List[int]]) -> Dict:
+    """
+    Extract comprehensive edge data for measurement tool.
+    Returns edge type, endpoints, length, radius, etc.
+    """
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Curve
+    from OCC.Core.GeomAbs import (
+        GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse,
+        GeomAbs_Hyperbola, GeomAbs_Parabola, GeomAbs_BSplineCurve,
+        GeomAbs_BezierCurve, GeomAbs_OtherCurve
+    )
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.TopExp import TopExp
+    from OCC.Core.TopoDS import topods
+    
+    curve_adaptor = BRepAdaptor_Curve(edge)
+    curve_type_enum = curve_adaptor.GetType()
+    
+    # Map curve type to string
+    curve_type_map = {
+        GeomAbs_Line: "line",
+        GeomAbs_Circle: "circle",
+        GeomAbs_Ellipse: "ellipse",
+        GeomAbs_Hyperbola: "hyperbola",
+        GeomAbs_Parabola: "parabola",
+        GeomAbs_BSplineCurve: "bspline",
+        GeomAbs_BezierCurve: "bezier",
+        GeomAbs_OtherCurve: "other"
+    }
+    edge_type = curve_type_map.get(curve_type_enum, "other")
+    
+    # Compute edge length
+    props = GProp_GProps()
+    brepgprop.LinearProperties(edge, props)
+    length_mm = props.Mass() * 1000  # Convert m to mm
+    
+    # Get endpoints
+    first_param = curve_adaptor.FirstParameter()
+    last_param = curve_adaptor.LastParameter()
+    start_pnt = curve_adaptor.Value(first_param)
+    end_pnt = curve_adaptor.Value(last_param)
+    
+    edge_data = {
+        "edge_id": edge_id,
+        "edge_type": edge_type,
+        "start_point": [start_pnt.X() * 1000, start_pnt.Y() * 1000, start_pnt.Z() * 1000],
+        "end_point": [end_pnt.X() * 1000, end_pnt.Y() * 1000, end_pnt.Z() * 1000],
+        "length_mm": length_mm,
+        "adjacent_faces": edge_face_map.get(edge_id, []),
+        "radius": None,
+        "radius_mm": None,
+        "diameter_mm": None,
+        "center": None,
+        "axis": None,
+        "is_closed": abs(start_pnt.Distance(end_pnt)) < 0.0001
+    }
+    
+    try:
+        if edge_type == "circle":
+            circle = curve_adaptor.Circle()
+            axis = circle.Axis()
+            direction = axis.Direction()
+            location = circle.Location()
+            radius = circle.Radius()
+            edge_data["center"] = [location.X() * 1000, location.Y() * 1000, location.Z() * 1000]
+            edge_data["axis"] = [direction.X(), direction.Y(), direction.Z()]
+            edge_data["radius"] = radius
+            edge_data["radius_mm"] = radius * 1000
+            edge_data["diameter_mm"] = radius * 2000
+            
+        elif edge_type == "ellipse":
+            ellipse = curve_adaptor.Ellipse()
+            location = ellipse.Location()
+            major_radius = ellipse.MajorRadius()
+            minor_radius = ellipse.MinorRadius()
+            edge_data["center"] = [location.X() * 1000, location.Y() * 1000, location.Z() * 1000]
+            edge_data["major_radius_mm"] = major_radius * 1000
+            edge_data["minor_radius_mm"] = minor_radius * 1000
+            
+        elif edge_type == "line":
+            line = curve_adaptor.Line()
+            direction = line.Direction()
+            edge_data["direction"] = [direction.X(), direction.Y(), direction.Z()]
+            
+    except Exception as e:
+        logger.debug(f"Error extracting edge {edge_id} parameters: {e}")
+    
+    return edge_data
+
+
+def build_edge_face_adjacency(shape) -> Tuple[Dict[int, List[int]], Dict[int, List[int]]]:
+    """
+    Build edge-to-face and face adjacency maps.
+    Returns (edge_to_faces, face_adjacency)
+    """
+    from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape
+    from OCC.Core.TopExp import topexp, TopExp_Explorer
+    from OCC.Core.TopAbs import TopAbs_FACE, TopAbs_EDGE
+    
+    # Build edge-to-face map using OCC
+    edge_face_map = TopTools_IndexedDataMapOfShapeListOfShape()
+    topexp.MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edge_face_map)
+    
+    # Create face index map
+    face_indices = {}
+    face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+    face_id = 0
+    while face_explorer.More():
+        face = face_explorer.Current()
+        face_indices[face.__hash__()] = face_id
+        face_id += 1
+        face_explorer.Next()
+    
+    # Create edge index map
+    edge_indices = {}
+    edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+    edge_id = 0
+    while edge_explorer.More():
+        edge = edge_explorer.Current()
+        if edge.__hash__() not in edge_indices:
+            edge_indices[edge.__hash__()] = edge_id
+            edge_id += 1
+        edge_explorer.Next()
+    
+    # Build edge-to-face dictionary
+    edge_to_faces = {}
+    face_adjacency = {}
+    
+    for i in range(1, edge_face_map.Extent() + 1):
+        edge = edge_face_map.FindKey(i)
+        edge_hash = edge.__hash__()
+        
+        if edge_hash in edge_indices:
+            edge_idx = edge_indices[edge_hash]
+            face_list = edge_face_map.FindFromIndex(i)
+            
+            adjacent_face_ids = []
+            for j in range(1, face_list.Extent() + 1):
+                face = face_list.Value(j)
+                face_hash = face.__hash__()
+                if face_hash in face_indices:
+                    adjacent_face_ids.append(face_indices[face_hash])
+            
+            edge_to_faces[edge_idx] = adjacent_face_ids
+            
+            # Build face adjacency (faces that share this edge)
+            for fid in adjacent_face_ids:
+                if fid not in face_adjacency:
+                    face_adjacency[fid] = set()
+                for other_fid in adjacent_face_ids:
+                    if other_fid != fid:
+                        face_adjacency[fid].add(other_fid)
+    
+    # Convert sets to lists
+    face_adjacency = {k: list(v) for k, v in face_adjacency.items()}
+    
+    return edge_to_faces, face_adjacency
+
+
+@app.route('/analyze-measurement', methods=['POST'])
+def analyze_measurement():
+    """
+    Independent measurement data extraction endpoint.
+    Returns comprehensive geometry data for the measurement tool.
+    
+    This endpoint is completely separate from /analyze and /analyze-aag.
+    It provides all data needed for measurement calculations.
+    """
+    correlation_id = request.headers.get('X-Correlation-ID', generate_correlation_id())
+    start_time = time.time()
+    
+    logger.info(f"[{correlation_id}] 📏 Measurement analysis request received")
+    
+    try:
+        # Validate request
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No file provided',
+                'correlation_id': correlation_id
+            }), 400
+        
+        file = request.files['file']
+        if not file.filename or not file.filename.lower().endswith(('.step', '.stp')):
+            return jsonify({
+                'success': False,
+                'error': 'Only STEP files supported (.step, .stp)',
+                'correlation_id': correlation_id
+            }), 400
+        
+        # Read file content
+        file_content = file.read()
+        file_hash = compute_file_hash(file_content)
+        logger.info(f"[{correlation_id}] 📁 File: {file.filename}, Hash: {file_hash[:16]}...")
+        
+        # Write to temporary file
+        with tempfile.NamedTemporaryFile(suffix='.step', delete=False) as tmp_file:
+            tmp_file.write(file_content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Parse STEP file
+            logger.info(f"[{correlation_id}] 📂 Loading STEP file")
+            reader = STEPControl_Reader()
+            read_status = reader.ReadFile(tmp_path)
+            
+            if read_status != 1:
+                raise ValueError(f"STEP read failed with status {read_status}")
+            
+            reader.TransferRoots()
+            shape = reader.OneShape()
+            
+            if shape.IsNull():
+                raise ValueError("Failed to extract shape from STEP file")
+            
+            # === STEP 1: Tessellate mesh ===
+            logger.info(f"[{correlation_id}] 🔺 Tessellating mesh")
+            mesh_data = tessellate_shape(shape)
+            
+            # === STEP 2: Build edge-face adjacency ===
+            logger.info(f"[{correlation_id}] 🔗 Building edge-face adjacency")
+            edge_to_faces, face_adjacency = build_edge_face_adjacency(shape)
+            
+            # === STEP 3: Extract face data ===
+            logger.info(f"[{correlation_id}] 📐 Extracting face measurement data")
+            faces_data = []
+            face_explorer = TopExp_Explorer(shape, TopAbs_FACE)
+            face_id = 0
+            
+            while face_explorer.More():
+                face = face_explorer.Current()
+                face_data = extract_measurement_face_data(face, face_id)
+                faces_data.append(face_data)
+                face_id += 1
+                face_explorer.Next()
+            
+            # === STEP 4: Extract edge data ===
+            logger.info(f"[{correlation_id}] 📏 Extracting edge measurement data")
+            edges_data = []
+            edge_explorer = TopExp_Explorer(shape, TopAbs_EDGE)
+            processed_edges = set()
+            edge_id = 0
+            
+            while edge_explorer.More():
+                edge = edge_explorer.Current()
+                edge_hash = edge.__hash__()
+                
+                if edge_hash not in processed_edges:
+                    processed_edges.add(edge_hash)
+                    edge_data = extract_measurement_edge_data(edge, edge_id, edge_to_faces)
+                    edges_data.append(edge_data)
+                    edge_id += 1
+                
+                edge_explorer.Next()
+            
+            # === STEP 5: Extract metadata ===
+            bbox = extract_bounding_box(shape)
+            volume, surface_area = extract_volume_and_surface_area(shape)
+            
+            metadata = {
+                "file_hash": file_hash,
+                "filename": file.filename,
+                "bounding_box": {
+                    "min_mm": [bbox["min"][0] * 1000, bbox["min"][1] * 1000, bbox["min"][2] * 1000],
+                    "max_mm": [bbox["max"][0] * 1000, bbox["max"][1] * 1000, bbox["max"][2] * 1000],
+                    "dimensions_mm": [bbox["dimensions"][0] * 1000, bbox["dimensions"][1] * 1000, bbox["dimensions"][2] * 1000],
+                    "center_mm": [bbox["center"][0] * 1000, bbox["center"][1] * 1000, bbox["center"][2] * 1000]
+                },
+                "volume_mm3": volume * 1e9,  # m³ to mm³
+                "surface_area_mm2": surface_area * 1e6,  # m² to mm²
+                "face_count": len(faces_data),
+                "edge_count": len(edges_data)
+            }
+            
+            # === Build response ===
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            
+            response = {
+                "success": True,
+                "correlation_id": correlation_id,
+                "processing_time_ms": processing_time_ms,
+                "mesh_data": {
+                    "vertices": mesh_data["vertices"],
+                    "indices": mesh_data["indices"],
+                    "normals": mesh_data["normals"],
+                    "face_mapping": mesh_data["face_mapping"],
+                    "vertex_face_ids": mesh_data["vertex_face_ids"],
+                    "face_count": mesh_data["face_count"],
+                    "triangle_count": mesh_data["triangle_count"],
+                    "vertex_count": mesh_data["vertex_count"]
+                },
+                "measurement_data": {
+                    "faces": faces_data,
+                    "edges": edges_data,
+                    "edge_to_face_map": edge_to_faces,
+                    "face_adjacency": face_adjacency
+                },
+                "metadata": metadata
+            }
+            
+            logger.info(f"[{correlation_id}] ✅ Measurement analysis complete in {processing_time_ms}ms")
+            logger.info(f"[{correlation_id}] 📊 {len(faces_data)} faces, {len(edges_data)} edges")
+            
+            return jsonify(response), 200
+            
+        finally:
+            # Cleanup temp file
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+    
+    except Exception as e:
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"[{correlation_id}] ❌ Measurement analysis error: {e}", exc_info=True)
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'correlation_id': correlation_id,
+            'processing_time_ms': processing_time_ms
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     logger.info(f"Starting Vectis Geometry Service on port {port}")
