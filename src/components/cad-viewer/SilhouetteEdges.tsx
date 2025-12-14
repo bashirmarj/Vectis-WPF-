@@ -78,6 +78,17 @@ export function SilhouetteEdges({
     }
   }, [controlsRef]);
 
+  // Build edge map from mesh geometry (once, memoized)
+  const edgeMap = useMemo(() => {
+    if (!geometry?.attributes?.position) return null;
+    return buildEdgeMap(geometry);
+  }, [geometry]);
+
+  // State for silhouette edges (view-dependent outlines on smooth surfaces)
+  const [silhouettePositions, setSilhouettePositions] = useState<Float32Array>(
+    new Float32Array(0)
+  );
+
   // Update edges when camera moves
   useFrame(() => {
     // Skip if actively dragging (only in solid mode)
@@ -115,6 +126,12 @@ export function SilhouetteEdges({
         setVisibleFeaturePositions(visibleEdges);
       }
 
+      // Compute silhouette edges from mesh geometry (outline on smooth surfaces)
+      if (!showHiddenEdges && edgeMap) {
+        const silhouettes = computeSilhouetteEdges(edgeMap, localCameraPos);
+        setSilhouettePositions(silhouettes);
+      }
+
       lastCameraPos.current.copy(currentPos);
       lastCameraQuat.current.copy(currentQuat);
     }
@@ -131,14 +148,28 @@ export function SilhouetteEdges({
     return geo;
   }, [visibleFeaturePositions]);
 
+  // Create geometry for silhouette edges
+  const silhouetteGeometry = useMemo(() => {
+    if (silhouettePositions.length === 0) return null;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(silhouettePositions, 3));
+    geo.computeBoundingSphere();
+
+    return geo;
+  }, [silhouettePositions]);
+
   // Cleanup effect
   useEffect(() => {
     return () => {
       if (visibleFeatureGeometry) {
         visibleFeatureGeometry.dispose();
       }
+      if (silhouetteGeometry) {
+        silhouetteGeometry.dispose();
+      }
     };
-  }, [visibleFeatureGeometry]);
+  }, [visibleFeatureGeometry, silhouetteGeometry]);
 
   // Null safety check
   if (!geometry?.attributes?.position) {
@@ -163,12 +194,28 @@ export function SilhouetteEdges({
         </lineSegments>
       )}
 
-      {/* Visible feature edges - computed per-frame based on backend normals (any display mode) */}
+      {/* Visible feature edges - computed per-frame based on backend data (any display mode) */}
       {!showHiddenEdges && visibleFeatureGeometry && (
         <lineSegments
           geometry={visibleFeatureGeometry}
           frustumCulled={true}
           key="visible-feature-edges"
+        >
+          <lineBasicMaterial
+            color="#000000"
+            toneMapped={false}
+            depthTest={false}
+            depthWrite={false}
+          />
+        </lineSegments>
+      )}
+
+      {/* Silhouette edges - outline on smooth curved surfaces (cylinders, etc.) */}
+      {!showHiddenEdges && silhouetteGeometry && (
+        <lineSegments
+          geometry={silhouetteGeometry}
+          frustumCulled={true}
+          key="silhouette-edges"
         >
           <lineBasicMaterial
             color="#000000"
@@ -280,3 +327,100 @@ function computeVisibleFeatureEdges(
   // Trim to actual size
   return visiblePositions.slice(0, posIndex);
 }
+
+/**
+ * Build an edge map from mesh geometry for silhouette edge computation.
+ * Maps each edge (by vertex pair key) to its adjacent triangle normals.
+ */
+function buildEdgeMap(geometry: THREE.BufferGeometry): Map<string, { normal1: THREE.Vector3; normal2: THREE.Vector3 | null; v1: THREE.Vector3; v2: THREE.Vector3 }> {
+  const positions = geometry.attributes.position.array as Float32Array;
+  const indices = geometry.index?.array;
+  const edgeMap = new Map<string, { normal1: THREE.Vector3; normal2: THREE.Vector3 | null; v1: THREE.Vector3; v2: THREE.Vector3 }>();
+
+  const getVertex = (index: number) => {
+    const i = index * 3;
+    return new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+  };
+
+  const makeEdgeKey = (i1: number, i2: number) => {
+    return i1 < i2 ? `${i1}_${i2}` : `${i2}_${i1}`;
+  };
+
+  const computeTriangleNormal = (v0: THREE.Vector3, v1: THREE.Vector3, v2: THREE.Vector3) => {
+    const edge1 = new THREE.Vector3().subVectors(v1, v0);
+    const edge2 = new THREE.Vector3().subVectors(v2, v0);
+    return new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+  };
+
+  const processTriangle = (i0: number, i1: number, i2: number) => {
+    const v0 = getVertex(i0);
+    const v1 = getVertex(i1);
+    const v2 = getVertex(i2);
+    const normal = computeTriangleNormal(v0, v1, v2);
+
+    // Process each edge of the triangle
+    const edges = [[i0, i1, v0, v1], [i1, i2, v1, v2], [i2, i0, v2, v0]] as const;
+    for (const [idx1, idx2, vert1, vert2] of edges) {
+      const key = makeEdgeKey(idx1, idx2);
+      const existing = edgeMap.get(key);
+      if (existing) {
+        existing.normal2 = normal.clone();
+      } else {
+        edgeMap.set(key, { normal1: normal.clone(), normal2: null, v1: vert1.clone(), v2: vert2.clone() });
+      }
+    }
+  };
+
+  if (indices) {
+    for (let i = 0; i < indices.length; i += 3) {
+      processTriangle(indices[i], indices[i + 1], indices[i + 2]);
+    }
+  } else {
+    const numVertices = positions.length / 3;
+    for (let i = 0; i < numVertices; i += 3) {
+      processTriangle(i, i + 1, i + 2);
+    }
+  }
+
+  return edgeMap;
+}
+
+/**
+ * Compute silhouette edges from mesh geometry.
+ * Silhouette edges are where one adjacent triangle is front-facing and the other is back-facing.
+ * These are the "outline" edges visible on smooth curved surfaces like cylinders.
+ */
+function computeSilhouetteEdges(
+  edgeMap: Map<string, { normal1: THREE.Vector3; normal2: THREE.Vector3 | null; v1: THREE.Vector3; v2: THREE.Vector3 }>,
+  cameraPos: THREE.Vector3
+): Float32Array {
+  const silhouetteEdges: number[] = [];
+  const viewDir = new THREE.Vector3();
+
+  edgeMap.forEach((edge) => {
+    // Skip boundary edges (only 1 adjacent face) - these are already feature edges
+    if (!edge.normal2) return;
+
+    // Compute view direction from edge midpoint
+    const midpoint = new THREE.Vector3().addVectors(edge.v1, edge.v2).multiplyScalar(0.5);
+    viewDir.subVectors(cameraPos, midpoint).normalize();
+
+    // Check if the two adjacent faces have opposite facing
+    const dot1 = edge.normal1.dot(viewDir);
+    const dot2 = edge.normal2.dot(viewDir);
+
+    // Silhouette edge: one face front-facing, one back-facing
+    // Using small threshold to avoid flickering
+    const isSilhouette = (dot1 > 0.001 && dot2 < -0.001) || (dot1 < -0.001 && dot2 > 0.001);
+
+    if (isSilhouette) {
+      silhouetteEdges.push(
+        edge.v1.x, edge.v1.y, edge.v1.z,
+        edge.v2.x, edge.v2.y, edge.v2.z
+      );
+    }
+  });
+
+  return new Float32Array(silhouetteEdges);
+}
+
