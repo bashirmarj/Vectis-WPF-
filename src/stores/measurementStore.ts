@@ -161,12 +161,18 @@ export const useMeasurementStore = create<MeasurementStore>((set, get) => ({
   clearTempPoints: () => set({ tempPoints: [] }),
 
   addMeasurement: (measurement) => {
+    console.log("📊 STORE: Adding measurement:", measurement.id, measurement.label);
     const command: MeasurementCommand = {
       execute: () =>
-        set((state) => ({
-          measurements: [...state.measurements, measurement],
-          tempPoints: [],
-        })),
+        set((state) => {
+          console.log("📊 STORE: Before add, count:", state.measurements.length);
+          const newState = {
+            measurements: [...state.measurements, measurement],
+            tempPoints: [],
+          };
+          console.log("📊 STORE: After add, count:", newState.measurements.length);
+          return newState;
+        }),
       undo: () =>
         set((state) => ({
           measurements: state.measurements.filter((m) => m.id !== measurement.id),
