@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParallaxSection from "@/components/home/ParallaxSection";
-import ProcessTimeline from "@/components/home/ProcessTimeline";
+import ProcessSectionGemini from "@/components/home/ProcessSectionGemini";
 import ScrollIndicator from "@/components/home/ScrollIndicator";
 import heroImage from "@/assets/hero-cnc-turbine.png";
 import customPartsImg from "@/assets/custom-parts-cnc.png";
@@ -315,40 +315,58 @@ const Index = () => {
               {capabilities.map((capability, index) => (
                 <div
                   key={`first-${index}`}
-                  className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
+                  className="w-[350px] md:w-[450px] h-[380px] md:h-[420px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 hover:border-primary/50 shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.2)] transition-all duration-500 group/card cursor-pointer"
                 >
                   <div
-                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-100 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
+                    className={`absolute inset-0 bg-no-repeat grayscale brightness-75 group-hover/card:grayscale-0 group-hover/card:brightness-100 transition-[filter,transform] duration-700 scale-100 group-hover/card:scale-110 ${capability.imageStyle || "bg-cover bg-center"}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-5">
-                    <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
-                      Capability
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 group-hover/card:opacity-80 transition-opacity duration-500" />
+                  
+                  {/* Capability badge */}
+                  <div className="absolute top-4 left-4 opacity-0 group-hover/card:opacity-100 transition-all duration-500 transform -translate-y-2 group-hover/card:translate-y-0">
+                    <span className="text-xs font-mono tracking-wider text-primary bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-primary/30">
+                      CAPABILITY
                     </span>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">{capability.title}</h3>
-                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">{capability.description}</p>
                   </div>
+                  
+                  {/* Content - slides up on hover */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 transform transition-transform duration-500 group-hover/card:-translate-y-2">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-3 group-hover/card:text-primary transition-colors duration-300">{capability.title}</h3>
+                    <p className="text-sm text-gray-400 whitespace-normal opacity-60 group-hover/card:opacity-100 transition-opacity duration-500 line-clamp-3">{capability.description}</p>
+                  </div>
+                  
+                  {/* Red bottom bar */}
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover/card:scale-x-100 transition-transform duration-500 origin-left" />
                 </div>
               ))}
               {/* Duplicate set for seamless loop */}
               {capabilities.map((capability, index) => (
                 <div
                   key={`second-${index}`}
-                  className="w-[350px] md:w-[450px] h-[280px] md:h-[320px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.08)] hover:border-white/40 hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all duration-500 group/card cursor-pointer"
+                  className="w-[350px] md:w-[450px] h-[380px] md:h-[420px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 hover:border-primary/50 shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.2)] transition-all duration-500 group/card cursor-pointer"
                 >
                   <div
-                    className={`absolute inset-0 bg-no-repeat grayscale brightness-90 group-hover/card:grayscale-0 group-hover/card:brightness-110 transition-[filter,transform] duration-500 scale-100 group-hover/card:scale-105 ${capability.imageStyle || "bg-cover bg-center"}`}
+                    className={`absolute inset-0 bg-no-repeat grayscale brightness-75 group-hover/card:grayscale-0 group-hover/card:brightness-100 transition-[filter,transform] duration-700 scale-100 group-hover/card:scale-110 ${capability.imageStyle || "bg-cover bg-center"}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-5">
-                    <span className="text-xs font-mono tracking-wider text-primary/80 uppercase mb-2 block">
-                      Capability
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 group-hover/card:opacity-80 transition-opacity duration-500" />
+                  
+                  {/* Capability badge */}
+                  <div className="absolute top-4 left-4 opacity-0 group-hover/card:opacity-100 transition-all duration-500 transform -translate-y-2 group-hover/card:translate-y-0">
+                    <span className="text-xs font-mono tracking-wider text-primary bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-primary/30">
+                      CAPABILITY
                     </span>
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">{capability.title}</h3>
-                    <p className="text-sm text-gray-400 whitespace-normal line-clamp-2">{capability.description}</p>
                   </div>
+                  
+                  {/* Content - slides up on hover */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 transform transition-transform duration-500 group-hover/card:-translate-y-2">
+                    <h3 className="text-xl md:text-2xl font-bold text-white mb-3 group-hover/card:text-primary transition-colors duration-300">{capability.title}</h3>
+                    <p className="text-sm text-gray-400 whitespace-normal opacity-60 group-hover/card:opacity-100 transition-opacity duration-500 line-clamp-3">{capability.description}</p>
+                  </div>
+                  
+                  {/* Red bottom bar */}
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover/card:scale-x-100 transition-transform duration-500 origin-left" />
                 </div>
               ))}
             </div>
@@ -367,12 +385,8 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Process Timeline */}
-        <ParallaxSection
-          backgroundImage={qualityInspectionBg}
-          overlayOpacity={0.7}
-          className="py-20 md:py-32"
-        >
+        {/* Process Section - Gemini Design */}
+        <section className="py-20 md:py-32 border-t border-white/10">
           <div className="container-custom">
             <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
               <p className="text-primary font-semibold text-sm uppercase tracking-[0.2em] mb-4">How It Works</p>
@@ -382,9 +396,9 @@ const Index = () => {
               </p>
             </AnimatedSection>
 
-            <ProcessTimeline className="max-w-5xl mx-auto" />
+            <ProcessSectionGemini className="max-w-6xl mx-auto" />
           </div>
-        </ParallaxSection>
+        </section>
 
         {/* CTA Section */}
         <section className="py-20 md:py-32 border-b border-white/10">
