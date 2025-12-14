@@ -334,6 +334,14 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObject(meshRef, false);
 
+      // DEBUG: Log click state
+      console.log("🖱️ CLICK DETECTED:", {
+        hasIntersects: intersects.length > 0,
+        hoverInfo: hoverInfo ? "exists" : "null",
+        hoverClassification: hoverInfo?.classification ? "exists" : "null",
+        measurementMode,
+      });
+
       if (intersects.length === 0) {
         dragStartRef.current = null;
         setIsDragging(false);
@@ -343,6 +351,8 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
       // Priority 1: Check if clicking on an edge (from hover detection)
       if (hoverInfo && hoverInfo.classification) {
         const classification = hoverInfo.classification;
+
+        console.log("✅ Edge click detected, classification:", classification);
 
         // Check if this is a TaggedFeatureEdge (from backend) or simple edge (from geometry)
         const isTaggedEdge = 'feature_id' in classification || 'start' in classification;
