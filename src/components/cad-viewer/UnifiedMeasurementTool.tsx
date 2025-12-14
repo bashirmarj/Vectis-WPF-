@@ -497,9 +497,9 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                   surfaceType: "edge",
                 },
               ],
-              value: taggedEdge.major_radius * 1000,
+              value: taggedEdge.major_radius,
               unit: "mm",
-              label: `Ellipse: ${formatMeasurement(taggedEdge.major_radius * 1000, "mm")} × ${formatMeasurement(taggedEdge.minor_radius * 1000, "mm")}`,
+              label: `Ellipse: ${formatMeasurement(taggedEdge.major_radius, "mm")} × ${formatMeasurement(taggedEdge.minor_radius, "mm")}`,
               color: "#9900CC",
               visible: true,
               createdAt: new Date(),
@@ -543,6 +543,14 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
             toast({
               title: "Edge Measured",
               description: `Length: ${formatMeasurement(taggedEdge.length, "mm")}`,
+            });
+          } else {
+            // Edge exists but has no measurable properties - log for debugging
+            console.warn("⚠️ Edge has no measurable properties:", taggedEdge);
+            toast({
+              title: "Edge Not Measurable",
+              description: `Edge type "${taggedEdge.type}" has no dimension data`,
+              variant: "destructive",
             });
           }
         } else {
