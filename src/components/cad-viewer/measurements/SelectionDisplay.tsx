@@ -48,7 +48,7 @@ export function SelectionDisplay() {
                             </Badge>
                             <span className="text-xs text-[#666666] truncate font-mono">
                                 {selection.surfaceType === "vertex"
-                                    ? `(${(selection.position.x * 1000).toFixed(1)}, ${(selection.position.y * 1000).toFixed(1)}, ${(selection.position.z * 1000).toFixed(1)})`
+                                    ? `(${selection.position.x.toFixed(1)}, ${selection.position.y.toFixed(1)}, ${selection.position.z.toFixed(1)})`
                                     : selection.surfaceType === "edge"
                                         ? "Line"
                                         : "Selected"}
