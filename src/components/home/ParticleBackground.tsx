@@ -120,37 +120,29 @@ export const ParticleBackground: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden">
+    <div className="fixed inset-0 z-0 pointer-events-none">
       {/* Layer 1: Fixed background image with grayscale and slow zoom */}
       <div 
-        className="absolute inset-0 bg-cover bg-center grayscale animate-slow-zoom scale-110"
+        className="absolute inset-0 bg-cover bg-center opacity-30 grayscale animate-slow-zoom"
         style={{ backgroundImage: `url(${heroBgImage})` }}
       />
       
-      {/* Layer 2: Dark overlay for better contrast */}
-      <div className="absolute inset-0 bg-black/60" />
-      
-      {/* Layer 3: Grid overlay */}
+      {/* Layer 2: Grid overlay */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-20"
+        className="absolute inset-0 opacity-20"
         style={{
           backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
           backgroundSize: '50px 50px'
         }}
       />
       
-      {/* Layer 4: Radial vignette */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{ 
-          background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.8) 100%)' 
-        }}
-      />
+      {/* Layer 3: Radial vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(5,5,5,0.4)_0%,rgba(5,5,5,1)_100%)]" />
       
-      {/* Layer 5: Interactive particles canvas */}
+      {/* Layer 4: Interactive particles canvas */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0"
       />
     </div>
   );

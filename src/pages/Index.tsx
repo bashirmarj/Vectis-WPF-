@@ -226,7 +226,7 @@ const Index = () => {
       </section>
 
       {/* Services Section - Transparent with glassmorphism cards */}
-      <section className="relative z-10 py-24">
+      <section className="relative z-10 py-24 bg-transparent backdrop-blur-sm border-t border-white/5">
         <div className="container-custom">
           <AnimatedSection animation="fadeUp" className="mb-16">
             <div className="flex items-center gap-3 mb-4">
@@ -262,7 +262,7 @@ const Index = () => {
       </section>
 
       {/* Capabilities Showcase - Horizontal Marquee */}
-      <section className="relative z-10 py-24 border-t border-white/10 overflow-hidden">
+      <section className="relative z-10 py-24 bg-transparent border-t border-white/5 overflow-hidden">
         {/* Section Header */}
         <div className="container-custom mb-12">
           <AnimatedSection animation="fadeUp">
@@ -366,7 +366,7 @@ const Index = () => {
       </section>
 
       {/* Process Section - Gemini Design */}
-      <section className="relative z-10 py-20 md:py-32 border-t border-white/10">
+      <section className="relative z-10 py-20 md:py-32 bg-transparent backdrop-blur-sm border-t border-white/5">
         <div className="container-custom">
           <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
             <div className="flex items-center justify-center gap-3 mb-4">
@@ -387,7 +387,7 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="relative z-10 py-20 md:py-32 border-t border-white/10">
+      <section className="relative z-10 py-20 md:py-32 bg-transparent backdrop-blur-sm border-t border-white/5">
         <div className="container-custom text-center">
           <AnimatedSection animation="fadeUp">
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
@@ -419,7 +419,7 @@ const Index = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="relative z-10 py-16 bg-black/60 backdrop-blur-md border-t border-white/10">
+      <section className="relative z-10 py-16 bg-transparent backdrop-blur-sm border-t border-white/5">
         <div className="container-custom">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {stats.map((stat, index) => (
