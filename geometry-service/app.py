@@ -72,6 +72,11 @@ if not SKIP_FEATURE_RECOGNITION:
 app = Flask(__name__)
 CORS(app)
 
+# Register measurement API blueprint
+from measure_api import measure_blueprint
+app.register_blueprint(measure_blueprint, url_prefix='/api')
+
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s'

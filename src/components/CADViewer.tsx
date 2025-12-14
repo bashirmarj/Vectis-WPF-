@@ -17,6 +17,7 @@ import { AxisTriadInCanvas } from "./cad-viewer/AxisTriadInCanvas";
 import { ProfessionalLighting } from "./cad-viewer/enhancements/ProfessionalLighting";
 import { UnifiedCADToolbar } from "./cad-viewer/UnifiedCADToolbar";
 import { UnifiedMeasurementTool } from "./cad-viewer/UnifiedMeasurementTool";
+import { SolidWorksMeasureTool } from "./cad-viewer/SolidWorksMeasureTool";
 import { MeasurementPanel } from "./cad-viewer/MeasurementPanel";
 import { DimensionOverlay } from "./cad-viewer/measurements/DimensionOverlay";
 import { useMeasurementStore } from "@/stores/measurementStore";
@@ -108,6 +109,9 @@ export function CADViewer({
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const { activeTool, setActiveTool, clearAllMeasurements, measurements } = useMeasurementStore();
+
+  // Toggle between old and new measurement tool
+  const [useNewMeasureTool, setUseNewMeasureTool] = useState(true); // Default to new tool
 
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
@@ -541,17 +545,29 @@ export function CADViewer({
 
                 <DimensionAnnotations boundingBox={boundingBox} />
 
-                {/* Unified Measurement Tool (Edge + Face Point-to-Point) */}
-                <UnifiedMeasurementTool
-                  meshData={meshData}
-                  meshRef={meshRef.current?.mesh || null}
-                  featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
-                  enabled={activeTool === "measure"}
-                  boundingSphere={{
-                    center: boundingBox.center,
-                    radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
-                  }}
-                />
+                {/* Measurement Tool - Toggle between new SolidWorks-style and legacy */}
+                {useNewMeasureTool ? (
+                  <SolidWorksMeasureTool
+                    meshData={meshData}
+                    meshRef={meshRef.current?.mesh || null}
+                    enabled={activeTool === "measure"}
+                    boundingSphere={{
+                      center: boundingBox.center,
+                      radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                    }}
+                  />
+                ) : (
+                  <UnifiedMeasurementTool
+                    meshData={meshData}
+                    meshRef={meshRef.current?.mesh || null}
+                    featureEdgesGeometry={meshRef.current?.featureEdgesGeometry || null}
+                    enabled={activeTool === "measure"}
+                    boundingSphere={{
+                      center: boundingBox.center,
+                      radius: Math.max(boundingBox.width, boundingBox.height, boundingBox.depth) / 2,
+                    }}
+                  />
+                )}
 
                 <TrackballControls
                   ref={controlsRef}
