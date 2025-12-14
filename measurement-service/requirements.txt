@@ -1,0 +1,23 @@
+# Measurement Service Requirements
+# Standalone Flask application for CAD measurement calculations
+
+# Web Framework
+Flask==2.3.3
+Flask-CORS==4.0.0
+
+# OpenCascade Python bindings (for CAD geometry processing)
+# Note: pythonocc-core requires conda installation for best results
+# conda install -c conda-forge pythonocc-core
+pythonocc-core>=7.7.0
+
+# Scientific computing
+numpy>=1.24.0
+
+# HTTP client (for testing)
+requests>=2.31.0
+
+# Production WSGI server
+gunicorn>=21.2.0
+
+# Optional: For async support
+# gevent>=23.9.0
