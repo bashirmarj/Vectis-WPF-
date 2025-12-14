@@ -141,7 +141,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
 
         // Priority 1: Try backend tagged_edges first (has analytical data)
         if (hasTaggedEdges) {
-          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 50); // 5mm threshold (coordinates are in mm)
+          const taggedEdge = findClosestTaggedEdge(point, taggedEdges, 50); // 10mm threshold (coordinates are in mm)
 
           if (taggedEdge) {
             // Build highlight segments from snap_points
@@ -700,7 +700,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
         </group>
       )}
 
-      {/* Edge hover label */}
+      {/* Edge hover label - offset below cursor */}
       {enabled && hoverInfo && labelText && (
         <group position={hoverInfo.position}>
           <Html>
@@ -713,6 +713,7 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
                 fontSize: "12px",
                 whiteSpace: "nowrap",
                 pointerEvents: "none",
+                transform: "translate(-50%, 25px)", // Center horizontally, 25px below cursor
               }}
             >
               {labelText}
