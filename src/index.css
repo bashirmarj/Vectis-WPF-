@@ -143,6 +143,10 @@ All colors MUST be HSL.
     background: linear-gradient(135deg, hsl(var(--industrial-gradient-start)) 0%, hsl(var(--industrial-gradient-end)) 100%);
   }
 
+  .text-outline-white {
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+    color: transparent;
+  }
 
   .section-spacing {
     @apply py-16 md:py-24 lg:py-32;
