@@ -6,7 +6,7 @@ export interface TaggedFeatureEdge {
   feature_id: number;
   start: [number, number, number];
   end: [number, number, number];
-  type: 'line' | 'circle' | 'arc' | 'ellipse' | 'spline';
+  type: 'line' | 'circle' | 'arc';
   diameter?: number;
   radius?: number;
   length?: number;
