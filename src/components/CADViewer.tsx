@@ -113,6 +113,9 @@ export function CADViewer({
   // Toggle between old and new measurement tool
   const [useNewMeasureTool, setUseNewMeasureTool] = useState(true); // Default to new tool
 
+  // DEBUG: Log which tool is active
+  console.log("🔧 Measure Tool:", useNewMeasureTool ? "NEW SolidWorksMeasureTool" : "OLD UnifiedMeasurementTool");
+
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const controlsRef = useRef<any>(null);
   const meshRef = useRef<MeshModelHandle>(null);
