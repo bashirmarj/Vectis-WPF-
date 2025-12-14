@@ -361,14 +361,27 @@ export const UnifiedMeasurementTool: React.FC<UnifiedMeasurementToolProps> = ({
           // Handle TaggedFeatureEdge from backend
           const taggedEdge = classification as TaggedFeatureEdge;
 
+          // DEBUG: Log all relevant properties
+          console.log("🔍 Edge properties:", {
+            type: taggedEdge.type,
+            is_full_circle: taggedEdge.is_full_circle,
+            is_closed: (taggedEdge as any).is_closed,
+            diameter: taggedEdge.diameter,
+            radius: taggedEdge.radius,
+            length: taggedEdge.length,
+          });
+
           // Get center point for the measurement display
           const centerPoint = taggedEdge.center
             ? new THREE.Vector3(taggedEdge.center[0], taggedEdge.center[1], taggedEdge.center[2])
             : hoverInfo.position;
 
           // Create context-aware edge measurement based on edge type
+          // Check both is_full_circle and is_closed for compatibility
+          const isFullCircle = taggedEdge.is_full_circle || (taggedEdge as any).is_closed;
+
           if (taggedEdge.type === "circle") {
-            if (taggedEdge.is_full_circle && taggedEdge.diameter) {
+            if (isFullCircle && taggedEdge.diameter) {
               // Full circle → show diameter
               addMeasurement({
                 id: generateMeasurementId(),
