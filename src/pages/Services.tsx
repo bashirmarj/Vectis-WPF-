@@ -7,10 +7,8 @@ import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import precisionManufacturingImg from "@/assets/precision-manufacturing.png";
 import { PartUploadForm } from "@/components/PartUploadForm";
-
 const Services = () => {
-  return (
-    <div className="min-h-screen bg-black">
+  return <div className="min-h-screen bg-black">
       <Navigation />
       <ParticleBackground />
 
@@ -18,12 +16,8 @@ const Services = () => {
       <section className="relative pt-32 pb-20 overflow-hidden z-10">
         <div className="container-custom relative z-10">
           <AnimatedSection animation="fadeUp">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-snug tracking-normal">
-              Custom Parts For Production and Prototyping
-            </h1>
-            <p className="text-xl text-gray-300 leading-relaxed max-w-3xl">
-              Precision-manufactured components and assemblies engineered to meet your exact specifications and quality standards.
-            </p>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-snug tracking-normal">Custom Parts For Production & Prototyping</h1>
+            <p className="text-xl text-gray-300 leading-relaxed max-w-3xl">Precision-manufactured components engineered to meet your exact specifications.</p>
           </AnimatedSection>
         </div>
       </section>
@@ -33,11 +27,7 @@ const Services = () => {
         <div className="container-custom section-spacing">
           <div className="grid md:grid-cols-2 gap-12 items-start mb-16">
             <AnimatedSection animation="fadeRight">
-              <img
-                src={precisionManufacturingImg}
-                alt="Precision Manufacturing"
-                className="rounded-lg shadow-2xl w-full mb-8 border border-white/10"
-              />
+              <img src={precisionManufacturingImg} alt="Precision Manufacturing" className="rounded-lg shadow-2xl w-full mb-8 border border-white/10" />
             </AnimatedSection>
             <AnimatedSection animation="fadeLeft" delay={100}>
               <div className="flex items-start gap-2 mb-4">
@@ -59,21 +49,12 @@ const Services = () => {
                 </h3>
               </div>
               <div className="space-y-3 mb-8">
-                {[
-                  "CNC machining capabilities",
-                  "Multi-axis manufacturing",
-                  "Tight tolerance production",
-                  "Material versatility",
-                  "Assembly and integration services",
-                  "Upload STEP files for instant quotation",
-                ].map((feature, idx) => (
-                  <AnimatedSection key={idx} animation="fadeLeft" delay={150 + idx * 50}>
+                {["CNC machining capabilities", "Multi-axis manufacturing", "Tight tolerance production", "Material versatility", "Assembly and integration services", "Upload STEP files for instant quotation"].map((feature, idx) => <AnimatedSection key={idx} animation="fadeLeft" delay={150 + idx * 50}>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                       <span className="text-gray-300">{feature}</span>
                     </div>
-                  </AnimatedSection>
-                ))}
+                  </AnimatedSection>)}
               </div>
 
               <Button size="lg" asChild>
@@ -94,8 +75,6 @@ const Services = () => {
       </section>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Services;
