@@ -125,7 +125,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
             Back to Upload
           </Button>
           <span className="text-sm font-medium text-white">
-            {selectedFile.file.name.replace(/\.[^/.]+$/, "")}
+            Part Name: {selectedFile.file.name.replace(/\.[^/.]+$/, "")}
           </span>
         </div>
 
