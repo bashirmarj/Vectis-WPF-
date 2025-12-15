@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import AnimatedSection from "@/components/home/AnimatedSection";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -129,14 +131,20 @@ const Contact = () => {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 bg-accent text-accent-foreground">
-        <div className="container-custom">
-          <div className="max-w-3xl">
-            <h1 className="text-white mb-6">Contact Us</h1>
-            <p className="text-xl text-gray-200 leading-relaxed">
-              Get in touch to discuss your manufacturing project. Our team is ready to provide expert guidance and competitive quotes.
-            </p>
-          </div>
+      <section className="relative pt-32 pb-20 bg-accent text-accent-foreground overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-15 bg-cover bg-center"
+          style={{ backgroundImage: `url(${capabilitiesImg})` }}
+        ></div>
+        <div className="container-custom relative z-10">
+          <AnimatedSection animation="fadeUp">
+            <div className="max-w-3xl">
+              <h1 className="text-white mb-6">Contact Us</h1>
+              <p className="text-xl text-gray-200 leading-relaxed">
+                Get in touch to discuss your manufacturing project. Our team is ready to provide expert guidance and competitive quotes.
+              </p>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
@@ -146,87 +154,89 @@ const Contact = () => {
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <Card className="border-2" id="send-message">
-                <CardContent className="p-8">
-                  <h2 className="text-3xl font-bold mb-6">Send Us a Message</h2>
-                  {isRateLimited && rateLimitRemaining && (
-                    <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
-                      <p className="text-destructive font-semibold">
-                        ⏱️ Please wait {formatTimeRemaining(rateLimitRemaining)} before submitting another message.
-                      </p>
-                    </div>
-                  )}
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
+              <AnimatedSection animation="fadeRight">
+                <Card className="border-2" id="send-message">
+                  <CardContent className="p-8">
+                    <h2 className="text-3xl font-bold mb-6">Send Us a Message</h2>
+                    {isRateLimited && rateLimitRemaining && (
+                      <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
+                        <p className="text-destructive font-semibold">
+                          ⏱️ Please wait {formatTimeRemaining(rateLimitRemaining)} before submitting another message.
+                        </p>
+                      </div>
+                    )}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label htmlFor="name" className="block text-sm font-semibold mb-2">
+                            Name *
+                          </label>
+                          <Input
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            placeholder="John Doe"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="email" className="block text-sm font-semibold mb-2">
+                            Email *
+                          </label>
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            placeholder="john@company.com"
+                          />
+                        </div>
+                      </div>
+
                       <div>
-                        <label htmlFor="name" className="block text-sm font-semibold mb-2">
-                          Name *
+                        <label htmlFor="phone" className="block text-sm font-semibold mb-2">
+                          Phone
                         </label>
                         <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          value={formData.phone}
                           onChange={handleChange}
-                          required
-                          placeholder="John Doe"
+                          placeholder="(123) 456-7890"
                         />
                       </div>
+
                       <div>
-                        <label htmlFor="email" className="block text-sm font-semibold mb-2">
-                          Email *
+                        <label htmlFor="message" className="block text-sm font-semibold mb-2">
+                          Message *
                         </label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
+                        <Textarea
+                          id="message"
+                          name="message"
+                          value={formData.message}
                           onChange={handleChange}
                           required
-                          placeholder="john@company.com"
+                          rows={6}
+                          placeholder="Please provide details about your inquiry..."
                         />
                       </div>
-                    </div>
 
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-semibold mb-2">
-                        Phone
-                      </label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="(123) 456-7890"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-semibold mb-2">
-                        Message *
-                      </label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        value={formData.message}
-                        onChange={handleChange}
-                        required
-                        rows={6}
-                        placeholder="Please provide details about your inquiry..."
-                      />
-                    </div>
-
-                    <Button 
-                      type="submit" 
-                      size="lg" 
-                      className="w-full md:w-auto"
-                      disabled={loading || isRateLimited}
-                    >
-                      {loading ? 'Sending...' : isRateLimited && rateLimitRemaining ? `Please wait ${formatTimeRemaining(rateLimitRemaining)}` : 'Send Message'}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                      <Button 
+                        type="submit" 
+                        size="lg" 
+                        className="w-full md:w-auto"
+                        disabled={loading || isRateLimited}
+                      >
+                        {loading ? 'Sending...' : isRateLimited && rateLimitRemaining ? `Please wait ${formatTimeRemaining(rateLimitRemaining)}` : 'Send Message'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </AnimatedSection>
             </div>
 
             {/* Contact Information */}
@@ -234,37 +244,41 @@ const Contact = () => {
               {contactInfo.map((info, index) => {
                 const Icon = info.icon;
                 return (
-                  <Card key={index} className="border-2">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Icon className="h-6 w-6 text-primary-foreground" />
+                  <AnimatedSection key={index} animation="fadeLeft" delay={index * 100}>
+                    <Card className="border-2">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Icon className="h-6 w-6 text-primary-foreground" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-lg mb-2">{info.title}</h3>
+                            {info.details.map((detail, idx) => (
+                              <p key={idx} className="text-muted-foreground text-sm">
+                                {detail}
+                              </p>
+                            ))}
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-lg mb-2">{info.title}</h3>
-                          {info.details.map((detail, idx) => (
-                            <p key={idx} className="text-muted-foreground text-sm">
-                              {detail}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </AnimatedSection>
                 );
               })}
 
-              <Card className="border-2 bg-accent text-accent-foreground">
-                <CardContent className="p-6">
-                  <h3 className="font-bold text-lg mb-2 text-white">Emergency Services</h3>
-                  <p className="text-gray-200 text-sm mb-2">
-                    Need urgent manufacturing support?
-                  </p>
-                  <p className="text-gray-200 text-sm">
-                    24/7 Emergency: <span className="font-bold text-primary">(800) 911-MACH</span>
-                  </p>
-                </CardContent>
-              </Card>
+              <AnimatedSection animation="fadeLeft" delay={400}>
+                <Card className="border-2 bg-accent text-accent-foreground">
+                  <CardContent className="p-6">
+                    <h3 className="font-bold text-lg mb-2 text-white">Emergency Services</h3>
+                    <p className="text-gray-200 text-sm mb-2">
+                      Need urgent manufacturing support?
+                    </p>
+                    <p className="text-gray-200 text-sm">
+                      24/7 Emergency: <span className="font-bold text-primary">(800) 911-MACH</span>
+                    </p>
+                  </CardContent>
+                </Card>
+              </AnimatedSection>
             </div>
           </div>
         </div>
