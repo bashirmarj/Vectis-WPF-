@@ -423,7 +423,7 @@ const Index = () => {
               className="bg-primary text-white hover:bg-primary/90 uppercase tracking-widest shadow-xl"
               asChild
             >
-              <Link to="/contact">Get a Quote</Link>
+              <Link to="/contact#send-message">Get a Quote</Link>
             </Button>
           </AnimatedSection>
         </div>
