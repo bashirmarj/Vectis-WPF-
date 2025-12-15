@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import heroBgImage from '@/assets/hero-bg-cnc.png';
+import cncBackgroundClean from '@/assets/cnc-background-clean.png';
 
 interface Particle {
   x: number;
@@ -124,7 +124,7 @@ export const ParticleBackground: React.FC = () => {
       {/* Layer 1: Fixed background image with grayscale and slow zoom */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-30 grayscale animate-slow-zoom"
-        style={{ backgroundImage: `url(${heroBgImage})` }}
+        style={{ backgroundImage: `url(${cncBackgroundClean})` }}
       />
       
       {/* Layer 2: Grid overlay */}
