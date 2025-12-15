@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
@@ -172,9 +172,46 @@ const Index = () => {
       {/* Navigation */}
       <Navigation />
 
-      {/* Hero Section - Background Only (content will be added later) */}
-      <section className="relative min-h-screen z-10">
-        {/* Empty - ParticleBackground shows through with image, grid, vignette, and particles */}
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-start pt-20 pb-20 z-10">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-1 bg-primary"></div>
+              <span className="text-primary font-semibold tracking-[0.2em] uppercase text-sm">
+                Advanced Manufacturing Solutions
+              </span>
+            </div>
+
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-8 uppercase tracking-tight">
+              Custom <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
+                Manufacturing
+              </span> <br />
+              <span style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }} className="text-transparent">
+                From Concept
+              </span> <br />
+              To Completion
+            </h1>
+
+            <p className="text-gray-400 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light">
+              Precision engineering and turnkey manufacturing solutions. We combine traditional craftsmanship with AI-driven automation to deliver parts faster.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link to="/services">
+                <button className="group bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-sm font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2">
+                  Request A Quote
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </Link>
+              <button className="group bg-transparent border border-white/20 hover:bg-white/5 text-white px-8 py-4 rounded-sm font-bold uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2">
+                Explore Capabilities
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Services Section */}
