@@ -328,16 +328,20 @@ const Validation = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL for secure access
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('cad-files')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        throw new Error('Failed to create signed URL for file');
+      }
 
       // Call analyze-cad edge function with validation mode
       const { data, error } = await supabase.functions.invoke('analyze-cad', {
         body: {
           fileName: state.stepFile.name,
-          fileUrl: publicUrl,
+          fileUrl: signedUrlData.signedUrl,
           as_ground_truth: asGroundTruth,
           validation_mode: true,
         },
