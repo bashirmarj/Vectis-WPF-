@@ -37,12 +37,13 @@ const Index = () => {
       title: "CNC MACHINING",
       description: "5-axis precision milling and turning for complex geometries.",
       image: cncMachiningImg,
+      imageStyle: "bg-[length:60%] bg-center",
     },
     {
       title: "WIRE EDM",
       description: "Complex geometries with tight tolerances in hardened materials.",
       image: wireEdmImg,
-      imageStyle: "bg-[length:70%] bg-center",
+      imageStyle: "bg-[length:60%] bg-center",
     },
     {
       title: "SHEET METAL",
