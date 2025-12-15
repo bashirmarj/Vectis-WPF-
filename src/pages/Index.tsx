@@ -6,8 +6,6 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import AnimatedCounter from "@/components/home/AnimatedCounter";
-import ProcessSectionGemini from "@/components/home/ProcessSectionGemini";
-import ScrollIndicator from "@/components/home/ScrollIndicator";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
 import sheetMetalImg from "@/assets/sheet-metal-new.png";
@@ -167,15 +165,15 @@ const Index = () => {
       {/* Navigation */}
       <Navigation />
 
-      {/* Hero Section - Enhanced Gemini Style */}
-      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden -mt-16 pt-16">
-        <div className="container-custom relative z-10 flex-1 flex items-center">
+      {/* Hero Section - Matches Reference Exactly */}
+      <section className="relative min-h-screen flex items-center justify-start pt-20 pb-20 z-10">
+        <div className="container mx-auto px-6">
           <div className="max-w-4xl">
             {/* Red accent bar */}
             <AnimatedSection animation="fadeUp" delay={0}>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-1 bg-primary rounded-full"></div>
-                <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">
+                <div className="w-8 h-1 bg-primary"></div>
+                <span className="text-primary font-semibold tracking-[0.2em] uppercase text-sm">
                   Advanced Manufacturing Solutions
                 </span>
               </div>
@@ -183,42 +181,37 @@ const Index = () => {
 
             <AnimatedSection animation="fadeUp" delay={100}>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-8 uppercase tracking-tight">
-                CUSTOM <br />
+                Custom <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
-                  MANUFACTURING
+                  Manufacturing
                 </span> <br />
                 <span className="text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }}>
-                  FROM CONCEPT
+                  From Concept
                 </span> <br />
-                TO COMPLETION
+                To Completion
               </h1>
             </AnimatedSection>
 
             <AnimatedSection animation="fadeUp" delay={300}>
-              <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-lg leading-relaxed">
-                Precision engineering and turnkey manufacturing solutions for complex parts and assemblies.
+              <p className="text-gray-400 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light">
+                Precision engineering and turnkey manufacturing solutions. We combine traditional craftsmanship with AI-driven automation to deliver parts faster.
               </p>
             </AnimatedSection>
 
             <AnimatedSection animation="fadeUp" delay={400}>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="group uppercase tracking-wider" asChild>
+                <Button size="lg" className="group uppercase tracking-widest text-sm" asChild>
                   <Link to="/contact">
-                    Request a Quote
-                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    Request A Quote
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline-light" className="uppercase tracking-wider" asChild>
+                <Button size="lg" variant="outline-light" className="uppercase tracking-widest text-sm" asChild>
                   <Link to="/capabilities">Explore Capabilities</Link>
                 </Button>
               </div>
             </AnimatedSection>
           </div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20">
-          <ScrollIndicator />
         </div>
       </section>
 
@@ -285,65 +278,59 @@ const Index = () => {
         >
           <div
             ref={containerRef}
-            className="flex whitespace-nowrap select-none"
-            style={{ transform: 'translateX(0px)' }}
+            className="flex gap-6 w-max px-6"
+            style={{ transform: 'translateX(0px)', backfaceVisibility: 'hidden', perspective: '1000px', willChange: 'transform' }}
           >
             {/* First set of items */}
             {capabilities.map((capability, index) => (
               <div
                 key={`first-${index}`}
-                className="w-[350px] md:w-[450px] h-[380px] md:h-[420px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 hover:border-primary/50 shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.2)] transition-all duration-500 group/card cursor-pointer"
+                className="relative h-[400px] w-[350px] flex-shrink-0 overflow-hidden rounded-sm border border-white/10 select-none backdrop-blur-sm transition-colors duration-300 group/card cursor-pointer"
+                style={{ backgroundColor: 'rgba(5, 5, 5, 0.4)' }}
               >
                 <div
-                  className={`absolute inset-0 bg-no-repeat grayscale brightness-75 group-hover/card:grayscale-0 group-hover/card:brightness-100 transition-[filter,transform] duration-700 scale-100 group-hover/card:scale-110 ${capability.imageStyle || "bg-cover bg-center"}`}
+                  className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none grayscale group-hover/card:grayscale-0 group-hover/card:scale-110 ${capability.imageStyle || ""}`}
                   style={{ backgroundImage: `url(${capability.image})` }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 group-hover/card:opacity-80 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover/card:opacity-70 transition-opacity duration-300 pointer-events-none" />
                 
-                {/* Capability badge */}
-                <div className="absolute top-4 left-4 opacity-0 group-hover/card:opacity-100 transition-all duration-500 transform -translate-y-2 group-hover/card:translate-y-0">
-                  <span className="text-xs font-mono tracking-wider text-primary bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-primary/30">
-                    CAPABILITY
+                <div className="absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none group-hover/card:-translate-y-0 translate-y-2">
+                  <span className="text-primary text-xs font-bold uppercase tracking-widest mb-2 block opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                    Capability
                   </span>
+                  <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed whitespace-normal opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                    {capability.description}
+                  </p>
                 </div>
-                
-                {/* Content - slides up on hover */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 transform transition-transform duration-500 group-hover/card:-translate-y-2">
-                  <h3 className="text-xl md:text-2xl font-bold text-white mb-3 group-hover/card:text-primary transition-colors duration-300">{capability.title}</h3>
-                  <p className="text-sm text-gray-400 whitespace-normal opacity-60 group-hover/card:opacity-100 transition-opacity duration-500 line-clamp-3">{capability.description}</p>
-                </div>
-                
-                {/* Red bottom bar */}
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover/card:scale-x-100 transition-transform duration-500 origin-left" />
+
+                <div className="absolute inset-0 border-2 border-primary opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none rounded-sm" />
               </div>
             ))}
             {/* Duplicate set for seamless loop */}
             {capabilities.map((capability, index) => (
               <div
                 key={`second-${index}`}
-                className="w-[350px] md:w-[450px] h-[380px] md:h-[420px] mx-3 md:mx-4 relative shrink-0 rounded-lg overflow-hidden border border-white/10 hover:border-primary/50 shadow-[0_0_20px_rgba(0,0,0,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.2)] transition-all duration-500 group/card cursor-pointer"
+                className="relative h-[400px] w-[350px] flex-shrink-0 overflow-hidden rounded-sm border border-white/10 select-none backdrop-blur-sm transition-colors duration-300 group/card cursor-pointer"
+                style={{ backgroundColor: 'rgba(5, 5, 5, 0.4)' }}
               >
                 <div
-                  className={`absolute inset-0 bg-no-repeat grayscale brightness-75 group-hover/card:grayscale-0 group-hover/card:brightness-100 transition-[filter,transform] duration-700 scale-100 group-hover/card:scale-110 ${capability.imageStyle || "bg-cover bg-center"}`}
+                  className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none grayscale group-hover/card:grayscale-0 group-hover/card:scale-110 ${capability.imageStyle || ""}`}
                   style={{ backgroundImage: `url(${capability.image})` }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-90 group-hover/card:opacity-80 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover/card:opacity-70 transition-opacity duration-300 pointer-events-none" />
                 
-                {/* Capability badge */}
-                <div className="absolute top-4 left-4 opacity-0 group-hover/card:opacity-100 transition-all duration-500 transform -translate-y-2 group-hover/card:translate-y-0">
-                  <span className="text-xs font-mono tracking-wider text-primary bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-primary/30">
-                    CAPABILITY
+                <div className="absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none group-hover/card:-translate-y-0 translate-y-2">
+                  <span className="text-primary text-xs font-bold uppercase tracking-widest mb-2 block opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                    Capability
                   </span>
+                  <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed whitespace-normal opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                    {capability.description}
+                  </p>
                 </div>
-                
-                {/* Content - slides up on hover */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 transform transition-transform duration-500 group-hover/card:-translate-y-2">
-                  <h3 className="text-xl md:text-2xl font-bold text-white mb-3 group-hover/card:text-primary transition-colors duration-300">{capability.title}</h3>
-                  <p className="text-sm text-gray-400 whitespace-normal opacity-60 group-hover/card:opacity-100 transition-opacity duration-500 line-clamp-3">{capability.description}</p>
-                </div>
-                
-                {/* Red bottom bar */}
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover/card:scale-x-100 transition-transform duration-500 origin-left" />
+
+                <div className="absolute inset-0 border-2 border-primary opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none rounded-sm" />
               </div>
             ))}
           </div>
@@ -362,24 +349,38 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Process Section - Gemini Design */}
-      <section className="relative z-10 py-20 md:py-32 bg-transparent backdrop-blur-sm border-t border-white/5">
-        <div className="container-custom">
-          <AnimatedSection className="text-center max-w-3xl mx-auto mb-16">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-8 h-1 bg-primary rounded-full"></div>
-              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">
-                How It Works
-              </span>
-              <div className="w-8 h-1 bg-primary rounded-full"></div>
-            </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">Our Process</h2>
-            <p className="text-lg text-gray-400">
-              From initial upload to final delivery, we streamline every step of your manufacturing journey.
-            </p>
-          </AnimatedSection>
+      {/* Process Section - Reference Design with Big Numbers */}
+      <section className="relative z-10 py-24 bg-transparent border-t border-white/5 backdrop-blur-sm">
+        <div className="container mx-auto px-6">
+          <div className="mb-16 max-w-2xl">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Streamlined Workflow</h2>
+            <p className="text-gray-400 font-light">From digital file to physical part in record time.</p>
+          </div>
 
-          <ProcessSectionGemini className="max-w-6xl mx-auto" />
+          <div className="flex flex-col md:flex-row border-t border-white/10 bg-black/40 backdrop-blur-md rounded-sm">
+            {[
+              { id: '01', title: 'Upload', text: 'Submit your CAD files securely to our portal for instant parsing.' },
+              { id: '02', title: 'Quote', text: 'Get detailed pricing and lead time within 24 hours.' },
+              { id: '03', title: 'Manufacture', text: 'Production begins using high-speed 5-axis CNC centers.' },
+              { id: '04', title: 'Quality', text: 'Rigorous inspection ensures every part meets specifications.' },
+              { id: '05', title: 'Deliver', text: 'Parts are packed and shipped directly to your facility.' },
+            ].map((step, index) => (
+              <AnimatedSection
+                key={step.id}
+                animation="fadeUp"
+                delay={index * 100}
+                className="flex-1 p-8 border-l border-white/10 first:border-l-0 border-b md:border-b-0 border-white/10 hover:bg-white/5 transition-colors group cursor-default relative"
+              >
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+
+                <span className="block text-5xl font-bold text-white/10 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 mb-6">
+                  {step.id}
+                </span>
+                <h3 className="text-xl font-bold text-white mb-3 uppercase tracking-wide">{step.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed font-light">{step.text}</p>
+              </AnimatedSection>
+            ))}
+          </div>
         </div>
       </section>
 
