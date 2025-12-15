@@ -32,7 +32,7 @@ export const FileUploadScreen = ({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Dark themed card - matches capabilities cards styling */}
-      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
+      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.3)] hover:shadow-[0_0_40px_rgba(220,38,38,0.4)] transition-shadow duration-300" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
         {/* Header */}
         <div className="p-6 pb-2">
           <h2 className="text-2xl font-bold text-white">Upload Your Parts</h2>
