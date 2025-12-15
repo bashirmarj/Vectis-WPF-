@@ -132,6 +132,42 @@ function compareWithGroundTruth(aagFeatures: any[], asGroundTruth: any, correlat
   };
 }
 
+// Input validation helpers
+const MAX_FILENAME_LENGTH = 255;
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_EXTENSIONS = ['step', 'stp', 'iges', 'igs', 'stl', 'obj'];
+const MAX_MATERIAL_LENGTH = 100;
+const MAX_QUANTITY = 10000;
+
+function validateCADInput(fileName: string, fileSize: number, material?: string, quantity?: number): { valid: boolean; error?: string } {
+  if (!fileName || typeof fileName !== 'string' || fileName.trim().length === 0) {
+    return { valid: false, error: 'File name is required' };
+  }
+  
+  if (fileName.length > MAX_FILENAME_LENGTH) {
+    return { valid: false, error: `File name must be less than ${MAX_FILENAME_LENGTH} characters` };
+  }
+  
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+    return { valid: false, error: `File type .${ext} is not allowed. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
+  }
+  
+  if (fileSize && fileSize > MAX_FILE_SIZE) {
+    return { valid: false, error: `File exceeds maximum size of 100MB` };
+  }
+  
+  if (material && material.length > MAX_MATERIAL_LENGTH) {
+    return { valid: false, error: `Material must be less than ${MAX_MATERIAL_LENGTH} characters` };
+  }
+  
+  if (quantity !== undefined && (quantity < 1 || quantity > MAX_QUANTITY || !Number.isInteger(quantity))) {
+    return { valid: false, error: `Quantity must be between 1 and ${MAX_QUANTITY}` };
+  }
+  
+  return { valid: true };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -226,11 +262,30 @@ serve(async (req) => {
       }
     }
 
+    // Validate input after parsing
+    const inputValidation = validateCADInput(fileName, fileSize, material, quantity);
+    if (!inputValidation.valid) {
+      console.warn(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'WARN',
+        correlation_id: correlationId,
+        message: 'Input validation failed',
+        context: { error: inputValidation.error }
+      }));
+      return new Response(
+        JSON.stringify({ 
+          error: inputValidation.error,
+          correlation_id: correlationId
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(JSON.stringify({
       timestamp: new Date().toISOString(),
       level: 'INFO',
       correlation_id: correlationId,
-      message: 'Parameters parsed successfully',
+      message: 'Parameters parsed and validated successfully',
       context: { 
         fileName, 
         fileSize, 

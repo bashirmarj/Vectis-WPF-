@@ -414,6 +414,85 @@ function generateFileList(files: FileInfo[], drawingFiles?: FileInfo[]): string 
   `;
 }
 
+// Input validation helpers
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_NAME_LENGTH = 100;
+const MAX_EMAIL_LENGTH = 255;
+const MAX_PHONE_LENGTH = 30;
+const MAX_COMPANY_LENGTH = 200;
+const MAX_ADDRESS_LENGTH = 500;
+const MAX_MESSAGE_LENGTH = 5000;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per file
+const ALLOWED_EXTENSIONS = ['step', 'stp', 'iges', 'igs', 'stl', 'obj', 'pdf', 'dxf', 'dwg', 'png', 'jpg', 'jpeg'];
+
+function validateQuotationInput(data: any): { valid: boolean; error?: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+  
+  const { name, email, phone, files } = data;
+  
+  // Required fields
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return { valid: false, error: 'Name is required' };
+  }
+  if (!email || typeof email !== 'string' || email.trim().length === 0) {
+    return { valid: false, error: 'Email is required' };
+  }
+  if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
+    return { valid: false, error: 'Phone is required' };
+  }
+  if (!files || !Array.isArray(files) || files.length === 0) {
+    return { valid: false, error: 'At least one file is required' };
+  }
+  
+  // Length limits
+  if (name.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `Name must be less than ${MAX_NAME_LENGTH} characters` };
+  }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { valid: false, error: `Email must be less than ${MAX_EMAIL_LENGTH} characters` };
+  }
+  if (phone.length > MAX_PHONE_LENGTH) {
+    return { valid: false, error: `Phone must be less than ${MAX_PHONE_LENGTH} characters` };
+  }
+  if (data.company && data.company.length > MAX_COMPANY_LENGTH) {
+    return { valid: false, error: `Company must be less than ${MAX_COMPANY_LENGTH} characters` };
+  }
+  if (data.shippingAddress && data.shippingAddress.length > MAX_ADDRESS_LENGTH) {
+    return { valid: false, error: `Shipping address must be less than ${MAX_ADDRESS_LENGTH} characters` };
+  }
+  if (data.message && data.message.length > MAX_MESSAGE_LENGTH) {
+    return { valid: false, error: `Message must be less than ${MAX_MESSAGE_LENGTH} characters` };
+  }
+  
+  // Email format
+  if (!EMAIL_REGEX.test(email)) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  // Validate files
+  for (const file of files) {
+    if (!file.name || typeof file.name !== 'string') {
+      return { valid: false, error: 'Invalid file structure' };
+    }
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+      return { valid: false, error: `File type .${ext} is not allowed. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
+    }
+    if (file.size && file.size > MAX_FILE_SIZE) {
+      return { valid: false, error: `File ${file.name} exceeds maximum size of 50MB` };
+    }
+  }
+  
+  return { valid: true };
+}
+
+// Sanitize text to prevent XSS when displayed in admin UI
+function sanitizeText(text: string): string {
+  return text.replace(/[<>]/g, '').trim();
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -426,8 +505,27 @@ const handler = async (req: Request): Promise<Response> => {
 
     const ipHash = await hashIP(clientIP);
 
-    const { name, company, email, phone, shippingAddress, message, files, drawingFiles }: QuotationRequest =
-      await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validation = validateQuotationInput(rawBody);
+    
+    if (!validation.valid) {
+      console.warn("Input validation failed:", validation.error);
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    // Sanitize inputs
+    const name = sanitizeText(rawBody.name);
+    const company = rawBody.company ? sanitizeText(rawBody.company) : undefined;
+    const email = rawBody.email.trim().toLowerCase();
+    const phone = sanitizeText(rawBody.phone);
+    const shippingAddress = rawBody.shippingAddress ? sanitizeText(rawBody.shippingAddress) : '';
+    const message = rawBody.message ? sanitizeText(rawBody.message) : undefined;
+    const files: FileInfo[] = rawBody.files;
+    const drawingFiles: FileInfo[] | undefined = rawBody.drawingFiles;
 
     console.log("Processing quotation request:", {
       name,

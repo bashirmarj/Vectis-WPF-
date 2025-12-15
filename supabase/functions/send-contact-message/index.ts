@@ -236,6 +236,62 @@ function generateDetailRow(label: string, value: string, isMultiline: boolean = 
   `;
 }
 
+// Input validation helpers
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_NAME_LENGTH = 100;
+const MAX_EMAIL_LENGTH = 255;
+const MAX_PHONE_LENGTH = 30;
+const MAX_COMPANY_LENGTH = 200;
+const MAX_MESSAGE_LENGTH = 5000;
+
+function validateContactInput(data: any): { valid: boolean; error?: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+  
+  const { name, email, message } = data;
+  
+  // Required fields
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return { valid: false, error: 'Name is required' };
+  }
+  if (!email || typeof email !== 'string' || email.trim().length === 0) {
+    return { valid: false, error: 'Email is required' };
+  }
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    return { valid: false, error: 'Message is required' };
+  }
+  
+  // Length limits
+  if (name.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `Name must be less than ${MAX_NAME_LENGTH} characters` };
+  }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { valid: false, error: `Email must be less than ${MAX_EMAIL_LENGTH} characters` };
+  }
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return { valid: false, error: `Message must be less than ${MAX_MESSAGE_LENGTH} characters` };
+  }
+  if (data.phone && data.phone.length > MAX_PHONE_LENGTH) {
+    return { valid: false, error: `Phone must be less than ${MAX_PHONE_LENGTH} characters` };
+  }
+  if (data.company && data.company.length > MAX_COMPANY_LENGTH) {
+    return { valid: false, error: `Company must be less than ${MAX_COMPANY_LENGTH} characters` };
+  }
+  
+  // Email format
+  if (!EMAIL_REGEX.test(email)) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  return { valid: true };
+}
+
+// Sanitize text to prevent XSS when displayed in admin UI
+function sanitizeText(text: string): string {
+  return text.replace(/[<>]/g, '').trim();
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -252,8 +308,24 @@ const handler = async (req: Request): Promise<Response> => {
     // Hash the IP for privacy
     const ipHash = await hashIP(clientIp);
 
-    // Parse request body
-    const { name, email, phone, company, message }: ContactRequest = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validation = validateContactInput(rawBody);
+    
+    if (!validation.valid) {
+      console.warn("Input validation failed:", validation.error);
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    // Sanitize inputs
+    const name = sanitizeText(rawBody.name);
+    const email = rawBody.email.trim().toLowerCase();
+    const phone = rawBody.phone ? sanitizeText(rawBody.phone) : undefined;
+    const company = rawBody.company ? sanitizeText(rawBody.company) : undefined;
+    const message = sanitizeText(rawBody.message);
 
     console.log("Processing contact form from:", email);
 
