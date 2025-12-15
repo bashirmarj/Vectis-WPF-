@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -61,100 +61,107 @@ const Index = () => {
     },
   ];
 
+  // Marquee constants - EXACTLY as reference
+  const CARD_WIDTH = 350;
+  const GAP = 24;
+  const ITEM_WIDTH = CARD_WIDTH + GAP;
+  const SETS_TO_WRAP = 4;
+  const WRAP_WIDTH = SETS_TO_WRAP * capabilities.length * ITEM_WIDTH;
+  const AUTO_SPEED = 0.5;
+
+  // Create 8x duplicated array for smooth infinite scroll
+  const capabilitiesData = [
+    ...capabilities, ...capabilities, ...capabilities, ...capabilities,
+    ...capabilities, ...capabilities, ...capabilities, ...capabilities
+  ];
+
   // Drag to scroll state
   const marqueeRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const dragStartPositionRef = useRef(0);
-  const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Animation refs
   const positionRef = useRef(0);
   const animationRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number>(0);
 
-  const TOTAL_MARQUEE_WIDTH = 2410;
-  const ANIMATION_DURATION = 35;
-  const SPEED = TOTAL_MARQUEE_WIDTH / (ANIMATION_DURATION * 1000);
+  // Hover state with debouncing
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
 
-  const animate = useCallback((currentTime: number) => {
-    if (!containerRef.current) return;
-
-    if (lastTimeRef.current === 0) {
-      lastTimeRef.current = currentTime;
+  const handleMouseEnter = (id: string) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
     }
+    setHoveredId(id);
+  };
 
-    const deltaTime = currentTime - lastTimeRef.current;
-    lastTimeRef.current = currentTime;
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setHoveredId(null);
+    }, 100);
+  };
 
-    positionRef.current -= SPEED * deltaTime;
-
-    if (positionRef.current <= -TOTAL_MARQUEE_WIDTH) {
-      positionRef.current += TOTAL_MARQUEE_WIDTH;
-    }
-
-    containerRef.current.style.transform = `translateX(${positionRef.current}px)`;
-    animationRef.current = requestAnimationFrame(animate);
-  }, [SPEED, TOTAL_MARQUEE_WIDTH]);
-
-  const startAnimation = useCallback(() => {
-    lastTimeRef.current = 0;
-    animationRef.current = requestAnimationFrame(animate);
-  }, [animate]);
-
-  const stopAnimation = useCallback(() => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-  }, []);
-
+  // Animation loop - EXACTLY as reference
   useEffect(() => {
-    startAnimation();
-    return () => stopAnimation();
-  }, [startAnimation, stopAnimation]);
+    const animate = () => {
+      if (!isDragging) {
+        positionRef.current -= AUTO_SPEED;
+      }
+      
+      // Real-time position wrapping
+      if (positionRef.current <= -WRAP_WIDTH) {
+        positionRef.current += WRAP_WIDTH;
+      } else if (positionRef.current > 0) {
+        positionRef.current -= WRAP_WIDTH;
+      }
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!marqueeRef.current) return;
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translate3d(${positionRef.current}px, 0, 0)`;
+      }
 
-    if (resumeTimeoutRef.current) {
-      clearTimeout(resumeTimeoutRef.current);
-      resumeTimeoutRef.current = null;
-    }
+      animationRef.current = requestAnimationFrame(animate);
+    };
 
-    stopAnimation();
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, [isDragging, WRAP_WIDTH]);
+
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
-    setStartX(e.pageX);
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    setStartX(clientX);
     dragStartPositionRef.current = positionRef.current;
-    marqueeRef.current.style.cursor = "grabbing";
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    if (marqueeRef.current) {
-      marqueeRef.current.style.cursor = "grab";
-    }
-
-    positionRef.current = positionRef.current % TOTAL_MARQUEE_WIDTH;
-    if (positionRef.current > 0) {
-      positionRef.current -= TOTAL_MARQUEE_WIDTH;
-    }
-
-    resumeTimeoutRef.current = setTimeout(() => {
-      startAnimation();
-    }, 2000);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    e.preventDefault();
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging) return;
     
-    const dragDelta = (e.pageX - startX) * 0.8;
-    const newPosition = dragStartPositionRef.current + dragDelta;
-    
-    positionRef.current = newPosition;
-    containerRef.current.style.transform = `translateX(${newPosition}px)`;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const delta = clientX - startX;
+    positionRef.current = dragStartPositionRef.current + delta;
+
+    // Real-time position wrapping during drag
+    if (positionRef.current <= -WRAP_WIDTH) {
+      positionRef.current += WRAP_WIDTH;
+      dragStartPositionRef.current += WRAP_WIDTH;
+    } else if (positionRef.current > 0) {
+      positionRef.current -= WRAP_WIDTH;
+      dragStartPositionRef.current -= WRAP_WIDTH;
+    }
+
+    if (containerRef.current) {
+      containerRef.current.style.transform = `translate3d(${positionRef.current}px, 0, 0)`;
+    }
   };
 
   return (
@@ -269,70 +276,73 @@ const Index = () => {
         {/* Infinite Scroll Strip */}
         <div
           ref={marqueeRef}
-          className="relative w-full overflow-x-auto group cursor-grab select-none"
+          className="relative w-full overflow-hidden cursor-grab select-none"
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          onMouseMove={handleDragMove}
+          onTouchStart={handleMouseDown}
+          onTouchEnd={handleMouseUp}
+          onTouchMove={handleDragMove}
         >
           <div
             ref={containerRef}
-            className="flex gap-6 w-max px-6"
-            style={{ transform: 'translateX(0px)', backfaceVisibility: 'hidden', perspective: '1000px', willChange: 'transform' }}
+            className="flex w-max"
+            style={{ 
+              gap: `${GAP}px`,
+              transform: 'translate3d(0px, 0, 0)', 
+              backfaceVisibility: 'hidden', 
+              willChange: 'transform' 
+            }}
           >
-            {/* First set of items */}
-            {capabilities.map((capability, index) => (
-              <div
-                key={`first-${index}`}
-                className="relative h-[400px] w-[350px] flex-shrink-0 overflow-hidden rounded-sm border border-white/10 select-none backdrop-blur-sm transition-colors duration-300 group/card cursor-pointer"
-                style={{ backgroundColor: 'rgba(5, 5, 5, 0.4)' }}
-              >
+            {capabilitiesData.map((capability, index) => {
+              const isHovered = hoveredId === capability.title;
+              return (
                 <div
-                  className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none grayscale group-hover/card:grayscale-0 group-hover/card:scale-110 ${capability.imageStyle || ""}`}
-                  style={{ backgroundImage: `url(${capability.image})` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover/card:opacity-70 transition-opacity duration-300 pointer-events-none" />
-                
-                <div className="absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none group-hover/card:-translate-y-0 translate-y-2">
-                  <span className="text-primary text-xs font-bold uppercase tracking-widest mb-2 block opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
-                    Capability
-                  </span>
-                  <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed whitespace-normal opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
-                    {capability.description}
-                  </p>
-                </div>
+                  key={`${capability.title}-${index}`}
+                  onMouseEnter={() => handleMouseEnter(capability.title)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none backdrop-blur-sm transition-colors duration-300 cursor-pointer ${
+                    isHovered ? 'border-primary' : 'border-white/10'
+                  }`}
+                  style={{ 
+                    height: '400px', 
+                    width: `${CARD_WIDTH}px`,
+                    backgroundColor: 'rgba(5, 5, 5, 0.4)' 
+                  }}
+                >
+                  <div
+                    className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none ${
+                      isHovered ? 'grayscale-0 scale-110' : 'grayscale'
+                    } ${capability.imageStyle || ""}`}
+                    style={{ backgroundImage: `url(${capability.image})` }}
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
+                    isHovered ? 'opacity-70' : 'opacity-90'
+                  }`} />
+                  
+                  <div className={`absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none ${
+                    isHovered ? '-translate-y-0' : 'translate-y-2'
+                  }`}>
+                    <span className={`text-primary text-xs font-bold uppercase tracking-widest mb-2 block transition-opacity duration-300 ${
+                      isHovered ? 'opacity-100' : 'opacity-0'
+                    }`}>
+                      Capability
+                    </span>
+                    <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
+                    <p className={`text-gray-400 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
+                      isHovered ? 'opacity-100' : 'opacity-0'
+                    }`}>
+                      {capability.description}
+                    </p>
+                  </div>
 
-                <div className="absolute inset-0 border-2 border-primary opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none rounded-sm" />
-              </div>
-            ))}
-            {/* Duplicate set for seamless loop */}
-            {capabilities.map((capability, index) => (
-              <div
-                key={`second-${index}`}
-                className="relative h-[400px] w-[350px] flex-shrink-0 overflow-hidden rounded-sm border border-white/10 select-none backdrop-blur-sm transition-colors duration-300 group/card cursor-pointer"
-                style={{ backgroundColor: 'rgba(5, 5, 5, 0.4)' }}
-              >
-                <div
-                  className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none grayscale group-hover/card:grayscale-0 group-hover/card:scale-110 ${capability.imageStyle || ""}`}
-                  style={{ backgroundImage: `url(${capability.image})` }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-90 group-hover/card:opacity-70 transition-opacity duration-300 pointer-events-none" />
-                
-                <div className="absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none group-hover/card:-translate-y-0 translate-y-2">
-                  <span className="text-primary text-xs font-bold uppercase tracking-widest mb-2 block opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
-                    Capability
-                  </span>
-                  <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed whitespace-normal opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
-                    {capability.description}
-                  </p>
+                  <div className={`absolute inset-0 border-2 border-primary transition-opacity duration-300 pointer-events-none rounded-sm ${
+                    isHovered ? 'opacity-100' : 'opacity-0'
+                  }`} />
                 </div>
-
-                <div className="absolute inset-0 border-2 border-primary opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 pointer-events-none rounded-sm" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
