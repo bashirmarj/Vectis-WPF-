@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -15,10 +16,57 @@ const Services = () => {
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden z-10">
         <div className="container-custom relative z-10">
-          <AnimatedSection animation="fadeUp">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-snug tracking-normal">Custom Parts For Production & Prototyping</h1>
-            <p className="text-xl text-gray-300 leading-relaxed max-w-3xl">Precision-manufactured components engineered to meet your exact specifications.</p>
-          </AnimatedSection>
+          {/* Animated tagline bar */}
+          <motion.div 
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "auto", opacity: 1 }}
+            transition={{ duration: 0.8, ease: "circOut" }}
+            className="flex items-center gap-3 mb-6 overflow-hidden whitespace-nowrap"
+          >
+            <div className="w-8 h-1 bg-primary shrink-0"></div>
+            <motion.span 
+              initial={{ color: "hsl(var(--primary))" }}
+              animate={{ color: ["hsl(var(--primary))", "hsl(var(--foreground))", "hsl(var(--primary))"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="font-semibold tracking-[0.2em] uppercase text-sm"
+            >
+              Precision Engineering
+            </motion.span>
+          </motion.div>
+
+          {/* Animated title */}
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-snug tracking-normal uppercase"
+          >
+            Custom Parts For <br />
+            <motion.span 
+              className="relative inline-block text-transparent bg-clip-text"
+              style={{
+                backgroundImage: 'linear-gradient(90deg, hsl(var(--foreground)) 0%, hsl(var(--muted-foreground)) 5%, hsl(var(--primary)) 15%, hsl(var(--primary)) 35%, hsl(var(--muted-foreground)) 45%, hsl(var(--foreground)) 50%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 55%, hsl(var(--primary)) 65%, hsl(var(--primary)) 85%, hsl(var(--muted-foreground)) 95%, hsl(var(--foreground)) 100%)',
+                backgroundSize: '200% auto',
+              }}
+              animate={{ backgroundPositionX: ['0%', '-100%'] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            >
+              Production
+            </motion.span> <br />
+            <span className="text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.4)' }}>
+              & Prototyping
+            </span>
+          </motion.h1>
+
+          {/* Animated subtitle */}
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.6 }}
+            className="text-xl text-muted-foreground leading-relaxed max-w-3xl"
+          >
+            Precision-manufactured components engineered to meet your exact specifications.
+          </motion.p>
         </div>
       </section>
 
