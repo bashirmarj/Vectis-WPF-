@@ -67,9 +67,18 @@ function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: st
     .join("\r\n");
 
   // Convert to base64url (Gmail API requirement)
+  // Use chunked processing to avoid stack overflow with large HTML templates
   const encoder = new TextEncoder();
   const bytes = encoder.encode(messageParts);
-  const base64 = btoa(String.fromCharCode(...bytes));
+  
+  const chunkSize = 8192;
+  let binaryString = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binaryString += String.fromCharCode(...chunk);
+  }
+  
+  const base64 = btoa(binaryString);
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
