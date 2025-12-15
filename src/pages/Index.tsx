@@ -199,17 +199,11 @@ const Index = () => {
           <div className="grid md:grid-cols-2 gap-8">
             {services.map((service, index) => (
               <AnimatedSection key={index} animation="fadeUp" delay={index * 150}>
-                <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-8 hover:border-primary/50 transition-all duration-500 group">
+                <div className="h-full bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-8 hover:border-primary/50 transition-all duration-500 group flex flex-col">
                   <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 group-hover:text-primary transition-colors">
                     {service.title}
                   </h3>
-                  <p className="text-gray-400 text-lg leading-relaxed mb-6">{service.description}</p>
-                  <Button variant="outline-light" className="group/btn uppercase tracking-wider" asChild>
-                    <Link to="/services">
-                      Learn More
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                    </Link>
-                  </Button>
+                  <p className="text-gray-400 text-lg leading-relaxed flex-grow">{service.description}</p>
                   {/* Red bottom bar */}
                   <div className="mt-6 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
                 </div>
