@@ -1,12 +1,9 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import logo from "@/assets/logo.png";
-
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-
-  return (
-    <footer className="relative z-10 bg-transparent text-white border-t border-white/10">
+  return <footer className="relative z-10 bg-transparent text-white border-t border-white/10">
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
@@ -66,15 +63,15 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-start space-x-2 text-gray-400 text-sm">
                 <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>(123) 456-7890</span>
+                <span>437 433-6300</span>
               </li>
               <li className="flex items-start space-x-2 text-gray-400 text-sm">
                 <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>info@vectis-mfg.com</span>
+                <span>info@vectismanufacturing.com</span>
               </li>
               <li className="flex items-start space-x-2 text-gray-400 text-sm">
-                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>123 Industrial Way<br />Manufacturing City, ST 12345</span>
+                
+                
               </li>
             </ul>
           </div>
@@ -84,8 +81,6 @@ const Footer = () => {
           <p>&copy; {currentYear} Vectis Manufacturing. All rights reserved.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
