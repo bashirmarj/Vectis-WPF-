@@ -37,22 +37,12 @@ const Navigation = () => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
-  const navItems = [{
+  const navItems: { name: string; path: string; subItems?: { name: string; path: string }[] }[] = [{
     name: "Home",
     path: "/"
   }, {
     name: "About",
-    path: "/about",
-    subItems: [{
-      name: "Our Story",
-      path: "/about#story"
-    }, {
-      name: "Team",
-      path: "/about#team"
-    }, {
-      name: "Quality Standards",
-      path: "/about#quality"
-    }]
+    path: "/about"
   }, {
     name: "Services",
     path: "/services"
