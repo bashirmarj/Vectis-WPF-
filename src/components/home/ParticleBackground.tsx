@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import cncBackgroundClean from '@/assets/cnc-background-clean.png';
+import React, { useEffect, useRef } from "react";
+import cncBackgroundClean from "@/assets/cnc-background-clean.png";
 
 interface Particle {
   x: number;
@@ -19,7 +19,7 @@ export const ParticleBackground: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const resizeCanvas = () => {
@@ -28,7 +28,7 @@ export const ParticleBackground: React.FC = () => {
     };
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
 
     // Initialize particles
     const particleCount = 80;
@@ -45,7 +45,7 @@ export const ParticleBackground: React.FC = () => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove);
 
     let animationId: number;
 
@@ -61,7 +61,7 @@ export const ParticleBackground: React.FC = () => {
         const dx = particle.x - mouse.x;
         const dy = particle.y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (dist < 150) {
           const force = (150 - dist) / 150;
           particle.vx += (dx / dist) * force * 0.5;
@@ -113,8 +113,8 @@ export const ParticleBackground: React.FC = () => {
     animate();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationId);
     };
   }, []);
@@ -122,28 +122,26 @@ export const ParticleBackground: React.FC = () => {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
       {/* Layer 1: Fixed background image with grayscale and slow zoom */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center opacity-[0.65] animate-slow-zoom"
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-[0.75] animate-slow-zoom"
         style={{ backgroundImage: `url(${cncBackgroundClean})` }}
       />
-      
+
       {/* Layer 2: Grid overlay */}
-      <div 
+      <div
         className="absolute inset-0 opacity-20"
         style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '50px 50px'
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+          backgroundSize: "50px 50px",
         }}
       />
-      
+
       {/* Layer 3: Radial vignette */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(5,5,5,0.4)_0%,rgba(5,5,5,1)_100%)]" />
-      
+
       {/* Layer 4: Interactive particles canvas */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0"
-      />
+      <canvas ref={canvasRef} className="absolute inset-0" />
     </div>
   );
 };
