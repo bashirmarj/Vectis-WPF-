@@ -129,30 +129,34 @@ function generateContactEmailTemplate(options: {
             <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 22%; background-size: 80%;">
               <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
               
-                <!-- 1. Brand Header -->
-                <div style="background-color: #000000; padding: 30px 40px; text-align: center; position: relative; z-index: 2;">
+                <!-- 1. Brand Header - Table-based for mobile -->
+                <div style="background-color: #000000; padding: 20px 15px; text-align: center; position: relative; z-index: 2;">
                   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
-                      <td align="center" style="vertical-align: middle;">
-                        <img src="https://res.cloudinary.com/dbcfeio6b/image/upload/v1765508292/output-onlinepngtools-removebg-preview_1_kkhayz.png" alt="VM Logo" width="88" style="display: inline-block; vertical-align: middle; margin-right: 15px; height: auto; border: 0;">
-                        <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; display: inline-block; vertical-align: middle;">Vectis Manufacturing</span>
+                      <td align="center">
+                        <img src="https://res.cloudinary.com/dbcfeio6b/image/upload/v1765508292/output-onlinepngtools-removebg-preview_1_kkhayz.png" alt="VM Logo" width="70" style="display: block; margin: 0 auto 10px auto; height: auto; border: 0;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center">
+                        <span style="color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Vectis Manufacturing</span>
                       </td>
                     </tr>
                   </table>
                 </div>
 
                 <!-- 3. Hero Section -->
-                <div style="padding: 40px 40px 20px 40px; text-align: center; background-color: transparent;">
-                  <div style="display: inline-block; width: 64px; height: 64px; border-radius: 50%; background-color: rgba(224, 242, 254, 0.85); margin-bottom: 20px; line-height: 64px;">
-                    <span style="font-size: 32px; color: #0284c7; line-height: 64px; font-family: Arial, sans-serif;">&#9993;</span>
+                <div style="padding: 30px 20px 15px 20px; text-align: center; background-color: transparent;">
+                  <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: rgba(224, 242, 254, 0.85); margin-bottom: 15px; line-height: 56px;">
+                    <span style="font-size: 28px; color: #0284c7; line-height: 56px; font-family: Arial, sans-serif;">&#9993;</span>
                   </div>
                   
-                  <h2 style="color: #1e293b; font-size: 22px; font-weight: 700; margin: 0 0 10px 0;">${heroTitle}</h2>
-                  <p style="color: #64748b; font-size: 16px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
+                  <h2 style="color: #1e293b; font-size: 20px; font-weight: 700; margin: 0 0 8px 0;">${heroTitle}</h2>
+                  <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
                 </div>
 
                 <!-- 4. Content & Details -->
-                <div style="padding: 0 40px 40px 40px;">
+                <div style="padding: 0 20px 30px 20px;">
 
                   <!-- Details "Receipt" Card -->
                   <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 25px; overflow: hidden;">
@@ -169,6 +173,10 @@ function generateContactEmailTemplate(options: {
                       &#9201; Please respond within <strong>24-48 hours</strong>
                     </p>
                   </div>
+
+                  <p style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
+                    Reply directly to this email to respond to <strong>${footerText?.includes("from") ? "" : "the sender"}</strong>
+                  </p>
 
                 </div>
 
@@ -194,22 +202,27 @@ function generateContactEmailTemplate(options: {
   `;
 }
 
-// Helper to generate detail rows
+// Helper to generate detail rows - Table-based for mobile compatibility
 function generateDetailRow(label: string, value: string, isMultiline: boolean = false): string {
   if (isMultiline) {
     return `
-      <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
-        <span style="color: #64748b; font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">${label}</span>
-        <p style="color: #1e293b; font-size: 14px; margin: 0; line-height: 1.6; white-space: pre-line;">${value}</p>
-      </div>
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
+        <tr>
+          <td style="padding: 12px 15px;">
+            <span style="color: #64748b; font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">${label}</span>
+            <p style="color: #1e293b; font-size: 13px; margin: 0; line-height: 1.6; white-space: pre-line;">${value}</p>
+          </td>
+        </tr>
+      </table>
     `;
   }
   return `
-    <div style="padding: 12px 20px; border-bottom: 1px solid #e2e8f0;">
-      <span style="color: #64748b; font-size: 13px; font-weight: 600; float: left; width: 30%;">${label}</span>
-      <span style="color: #1e293b; font-size: 13px; font-weight: 600; float: right; width: 70%; text-align: right;">${value}</span>
-      <div style="clear: both;"></div>
-    </div>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
+      <tr>
+        <td style="padding: 10px 15px; width: 40%; color: #64748b; font-size: 12px; font-weight: 600; vertical-align: top;">${label}</td>
+        <td style="padding: 10px 15px; width: 60%; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right; vertical-align: top;">${value}</td>
+      </tr>
+    </table>
   `;
 }
 
