@@ -43,41 +43,42 @@ async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
   }
 }
 
-// Helper to encode email in base64url format
+// Helper to encode email in base64url format - simple MIME structure (same as quotation emails)
 function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: string): string {
   const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
-  const boundary = `boundary_${Date.now()}`;
 
-  const messageParts = [
+  let messageParts = [
     `From: "Vectis Manufacturing" <${gmailUser}>`,
     `To: ${to}`,
     `Subject: ${subject}`,
-    replyTo ? `Reply-To: ${replyTo}` : "",
     `MIME-Version: 1.0`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    "",
-    `--${boundary}`,
-    `Content-Type: text/html; charset=utf-8`,
-    `Content-Transfer-Encoding: base64`,
-    "",
-    btoa(unescape(encodeURIComponent(htmlBody))),
-    `--${boundary}--`,
-  ]
-    .filter(Boolean)
-    .join("\r\n");
+  ];
+  
+  // Add Reply-To if provided (for contact form replies)
+  if (replyTo) {
+    messageParts.push(`Reply-To: ${replyTo}`);
+  }
+  
+  // Simple email without attachments - same as quotation emails
+  messageParts.push(`Content-Type: text/html; charset=utf-8`);
+  messageParts.push("Content-Transfer-Encoding: base64");
+  messageParts.push("");
+  messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
+
+  const rawMessage = messageParts.join("\r\n");
 
   // Convert to base64url (Gmail API requirement)
-  // Use chunked processing to avoid stack overflow with large HTML templates
   const encoder = new TextEncoder();
-  const bytes = encoder.encode(messageParts);
-  
+  const bytes = encoder.encode(rawMessage);
+
+  // Process in chunks to avoid stack overflow with large templates
   const chunkSize = 8192;
   let binaryString = "";
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.slice(i, i + chunkSize);
     binaryString += String.fromCharCode(...chunk);
   }
-  
+
   const base64 = btoa(binaryString);
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
