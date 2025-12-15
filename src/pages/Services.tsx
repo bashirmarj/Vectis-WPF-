@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import customPartsImg from "@/assets/custom-parts.jpg";
+import precisionManufacturingImg from "@/assets/precision-manufacturing.png";
 import { PartUploadForm } from "@/components/PartUploadForm";
 
 const Services = () => {
@@ -44,8 +45,8 @@ const Services = () => {
           <div className="grid md:grid-cols-2 gap-12 items-start mb-16">
             <AnimatedSection animation="fadeRight">
               <img
-                src={customPartsImg}
-                alt="Custom Parts & Assemblies"
+                src={precisionManufacturingImg}
+                alt="Precision Manufacturing"
                 className="rounded-lg shadow-2xl w-full mb-8 border border-white/10"
               />
             </AnimatedSection>
