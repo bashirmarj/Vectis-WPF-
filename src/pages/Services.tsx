@@ -14,7 +14,7 @@ const Services = () => {
       <ParticleBackground />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden z-10">
+      <section className="relative pt-32 pb-8 overflow-hidden z-10">
         <div className="container-custom relative z-10">
           {/* Animated title */}
           <motion.h1 
@@ -51,7 +51,7 @@ const Services = () => {
 
       {/* Content Section */}
       <section className="relative z-10 border-t border-white/5">
-        <div className="container-custom section-spacing">
+        <div className="container-custom py-8 md:py-12">
           <div className="grid md:grid-cols-2 gap-12 items-start mb-16">
             <AnimatedSection animation="fadeRight">
               <img src={precisionManufacturingImg} alt="Precision Manufacturing" className="rounded-lg shadow-2xl w-full mb-8 border border-white/10" />
