@@ -176,24 +176,16 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         <Card>
           <CardContent className="p-4 space-y-4">
             {/* Configuration Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="material" className="text-xs font-medium">Material *</Label>
-                <Select
+                <Input
+                  id="material"
+                  className="h-9"
                   value={selectedFile.material || ""}
-                  onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
-                >
-                  <SelectTrigger id="material" className="h-9">
-                    <SelectValue placeholder="Select material" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materials.map((material) => (
-                      <SelectItem key={material} value={material}>
-                        {material}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => onUpdateFile(selectedFileIndex, { material: e.target.value })}
+                  placeholder="e.g., Aluminum 6061, Steel 304..."
+                />
               </div>
 
               <div className="space-y-1">
@@ -207,31 +199,6 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
                   onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
                 />
               </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="process" className="text-xs font-medium">Preferred Process</Label>
-                <Select
-                  value={selectedFile.process || "auto"}
-                  onValueChange={(value) =>
-                    onUpdateFile(selectedFileIndex, { process: value === "auto" ? undefined : value })
-                  }
-                >
-                  <SelectTrigger id="process" className="h-9">
-                    <SelectValue placeholder="Auto-select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto-select</SelectItem>
-                    {processes.map((process) => (
-                      <SelectItem key={process} value={process}>
-                        {process}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Spacer for alignment */}
-              <div className="hidden md:block" />
             </div>
 
             {/* Divider */}
