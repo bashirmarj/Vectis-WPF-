@@ -6,42 +6,33 @@ import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import aboutManufacturingImg from "@/assets/about-manufacturing.jpg";
 import capabilitiesImg from "@/assets/capabilities-bg.jpg";
-
 const About = () => {
-  const values = [
-    {
-      icon: Target,
-      title: "Precision First",
-      description: "Every component manufactured to exacting standards with rigorous quality control.",
-    },
-    {
-      icon: Award,
-      title: "Engineering Excellence",
-      description: "Decades of expertise combined with cutting-edge manufacturing technology.",
-    },
-    {
-      icon: Users,
-      title: "Customer Partnership",
-      description: "Collaborative approach ensuring your vision becomes reality on time and on budget.",
-    },
-    {
-      icon: TrendingUp,
-      title: "Continuous Innovation",
-      description: "Investing in the latest technology and techniques to deliver superior results.",
-    },
-  ];
-
-  return (
-    <div className="min-h-screen bg-black">
+  const values = [{
+    icon: Target,
+    title: "Precision First",
+    description: "Every component manufactured to exacting standards with rigorous quality control."
+  }, {
+    icon: Award,
+    title: "Engineering Excellence",
+    description: "Decades of expertise combined with cutting-edge manufacturing technology."
+  }, {
+    icon: Users,
+    title: "Customer Partnership",
+    description: "Collaborative approach ensuring your vision becomes reality on time and on budget."
+  }, {
+    icon: TrendingUp,
+    title: "Continuous Innovation",
+    description: "Investing in the latest technology and techniques to deliver superior results."
+  }];
+  return <div className="min-h-screen bg-black">
       <Navigation />
       <ParticleBackground />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden z-10">
-        <div
-          className="absolute inset-0 opacity-20 bg-cover bg-center"
-          style={{ backgroundImage: `url(${capabilitiesImg})` }}
-        ></div>
+        <div className="absolute inset-0 opacity-20 bg-cover bg-center" style={{
+        backgroundImage: `url(${capabilitiesImg})`
+      }}></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black"></div>
         <div className="container-custom relative z-10">
           <AnimatedSection animation="fadeUp">
@@ -70,11 +61,7 @@ const About = () => {
         <div className="container-custom section-spacing">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <AnimatedSection animation="fadeRight">
-              <img
-                src={aboutManufacturingImg}
-                alt="Precision manufacturing equipment at Vectis facility"
-                className="rounded-lg shadow-xl border border-white/10"
-              />
+              <img src={aboutManufacturingImg} alt="Precision manufacturing equipment at Vectis facility" className="rounded-lg shadow-xl border border-white/10" />
             </AnimatedSection>
             <AnimatedSection animation="fadeLeft" delay={100}>
               <div className="space-y-8">
@@ -119,9 +106,8 @@ const About = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((value, index) => {
-              const Icon = value.icon;
-              return (
-                <AnimatedSection key={index} animation="fadeUp" delay={index * 100}>
+            const Icon = value.icon;
+            return <AnimatedSection key={index} animation="fadeUp" delay={index * 100}>
                   <Card className="h-full bg-black/40 backdrop-blur-md border border-white/10 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
                     <CardContent className="p-6">
                       <div className="w-14 h-14 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
@@ -131,32 +117,15 @@ const About = () => {
                       <p className="text-gray-400">{value.description}</p>
                     </CardContent>
                   </Card>
-                </AnimatedSection>
-              );
-            })}
+                </AnimatedSection>;
+          })}
           </div>
         </div>
       </section>
 
       {/* Company Stats */}
       <section className="relative z-10 border-t border-white/5">
-        <div className="container-custom section-spacing">
-          <AnimatedSection animation="fadeUp">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {[
-                { value: "25+", label: "Years in Business" },
-                { value: "500+", label: "Projects Delivered" },
-                { value: "50+", label: "Expert Team Members" },
-                { value: "98%", label: "Client Satisfaction" },
-              ].map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-5xl font-bold text-primary mb-2">{stat.value}</div>
-                  <div className="text-gray-400">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </AnimatedSection>
-        </div>
+        
       </section>
 
       {/* Expertise Section */}
@@ -172,13 +141,11 @@ const About = () => {
                 Our diverse experience spans multiple sectors, giving us unique insights into the specific challenges and requirements of each industry we serve.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {["Aerospace", "Automotive", "Medical Devices", "Industrial Equipment", "Energy & Power", "Defense & Military"].map((industry, index) => (
-                  <AnimatedSection key={industry} animation="scaleIn" delay={index * 50}>
+                {["Aerospace", "Automotive", "Medical Devices", "Industrial Equipment", "Energy & Power", "Defense & Military"].map((industry, index) => <AnimatedSection key={industry} animation="scaleIn" delay={index * 50}>
                     <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-lg p-4 font-semibold text-center text-gray-300 hover:border-primary/50 hover:text-primary transition-colors">
                       {industry}
                     </div>
-                  </AnimatedSection>
-                ))}
+                  </AnimatedSection>)}
               </div>
             </div>
           </AnimatedSection>
@@ -186,8 +153,6 @@ const About = () => {
       </section>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default About;
