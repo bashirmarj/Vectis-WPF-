@@ -56,7 +56,7 @@ const Index = () => {
       title: "HEAT TREATMENT",
       description: "Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment",
       image: heatTreatmentImg,
-      imageStyle: "bg-[length:800%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
       title: "DIE CASTING",
