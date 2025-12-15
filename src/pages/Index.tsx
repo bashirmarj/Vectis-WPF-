@@ -190,13 +190,13 @@ const Index = () => {
               </span>
             </div>
 
-            <h1 className="font-heading text-3xl md:text-5xl lg:text-6xl font-semibold text-white leading-snug mb-8 uppercase tracking-normal">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-8 uppercase tracking-tight">
               Custom <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
                 Manufacturing
               </span>{" "}
               <br />
-              <span style={{ WebkitTextStroke: "1px rgba(255,255,255,0.25)" }} className="text-transparent">
+              <span style={{ WebkitTextStroke: "1px rgba(255,255,255,0.3)" }} className="text-transparent">
                 From Concept
               </span>{" "}
               <br />
