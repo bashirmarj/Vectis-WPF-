@@ -67,7 +67,7 @@ const Navigation = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
             <div className="bg-white rounded-lg px-2 py-1">
-              <img src={logo} alt="Vectis Manufacturing Logo" className="h-12 w-auto" />
+              <img src={logo} alt="Vectis Manufacturing Logo" className="h-10 w-auto" />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-primary-foreground leading-tight">VECTIS</span>

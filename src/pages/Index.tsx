@@ -225,7 +225,7 @@ const Index = () => {
       </section>
 
       {/* Services Section */}
-      <section className="relative z-10 py-24 bg-transparent backdrop-blur-sm border-t border-white/5">
+      <section className="relative z-10 py-24 bg-transparent border-t border-white/5">
         <div className="container-custom">
           <AnimatedSection animation="fadeUp" className="mb-16">
             <div className="flex items-center gap-3 mb-4">
@@ -368,7 +368,7 @@ const Index = () => {
       </section>
 
       {/* Process Section - Reference Design with Big Numbers */}
-      <section className="relative z-10 py-24 bg-transparent backdrop-blur-sm border-t border-white/5">
+      <section className="relative z-10 py-24 bg-transparent border-t border-white/5">
         <div className="container mx-auto px-6">
           <div className="mb-16 max-w-2xl">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Streamlined Workflow</h2>
