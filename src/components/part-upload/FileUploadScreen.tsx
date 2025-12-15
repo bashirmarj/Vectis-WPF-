@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, File, X, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +14,7 @@ interface FileUploadScreenProps {
     analysisStatus?: string;
   }>;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFileDrop?: (files: FileList) => void;
   onRemoveFile: (index: number) => void;
   onRetryFile?: (index: number) => void;
   onContinue: () => void;
@@ -22,17 +24,49 @@ interface FileUploadScreenProps {
 export const FileUploadScreen = ({
   files,
   onFileSelect,
+  onFileDrop,
   onRemoveFile,
   onRetryFile,
   onContinue,
   isAnalyzing
 }: FileUploadScreenProps) => {
+  const [isDragging, setIsDragging] = useState(false);
   const hasFailedFiles = files.some(f => !f.isAnalyzing && !f.analysis);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set isDragging to false if we're leaving the drop zone entirely
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const droppedFiles = e.dataTransfer.files;
+    if (droppedFiles.length > 0 && onFileDrop) {
+      onFileDrop(droppedFiles);
+    }
+  }, [onFileDrop]);
   
   return (
     <div className="max-w-4xl mx-auto">
       {/* Dark themed card - matches capabilities cards styling */}
-      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.3)] hover:shadow-[0_0_40px_rgba(220,38,38,0.4)] transition-shadow duration-300" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
+      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] transition-shadow duration-300" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
         {/* Header */}
         <div className="p-6 pb-2">
           <h2 className="text-2xl font-bold text-white">Upload Your Parts</h2>
@@ -43,10 +77,23 @@ export const FileUploadScreen = ({
 
         {/* Content */}
         <div className="p-6 pt-4 space-y-6">
-          {/* File Upload Area */}
-          <div className="border-2 border-dashed border-white/20 rounded-sm p-12 text-center hover:border-primary/50 transition-colors" style={{ backgroundColor: "rgba(50, 50, 50, 0.65)" }}>
-            <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-lg font-medium mb-2 text-white">Drop your CAD files here</p>
+          {/* File Upload Area - with drag-and-drop */}
+          <div 
+            className={`border-2 border-dashed rounded-sm p-12 text-center transition-all duration-200 ${
+              isDragging 
+                ? 'border-primary bg-primary/10 shadow-[0_0_20px_rgba(255,255,255,0.2)]' 
+                : 'border-white/20 hover:border-primary/50'
+            }`}
+            style={{ backgroundColor: isDragging ? "rgba(50, 50, 50, 0.85)" : "rgba(50, 50, 50, 0.65)" }}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <Upload className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
+            <p className="text-lg font-medium mb-2 text-white">
+              {isDragging ? 'Drop your files here' : 'Drop your CAD files here'}
+            </p>
             <p className="text-sm text-gray-400 mb-4">
               or click to browse (STEP, IGES files supported)
             </p>
