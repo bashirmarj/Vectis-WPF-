@@ -21,6 +21,18 @@ const Contact = () => {
   const [isRateLimited, setIsRateLimited] = useState(false);
 
   useEffect(() => {
+    // Scroll to send-message section if hash is present
+    if (window.location.hash === '#send-message') {
+      setTimeout(() => {
+        const element = document.getElementById('send-message');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, []);
+
+  useEffect(() => {
     let interval: NodeJS.Timeout;
     if (rateLimitRemaining !== null && rateLimitRemaining > 0) {
       interval = setInterval(() => {
@@ -134,7 +146,7 @@ const Contact = () => {
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <Card className="border-2">
+              <Card className="border-2" id="send-message">
                 <CardContent className="p-8">
                   <h2 className="text-3xl font-bold mb-6">Send Us a Message</h2>
                   {isRateLimited && rateLimitRemaining && (
@@ -253,35 +265,6 @@ const Contact = () => {
                   </p>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Map Section */}
-      <section className="section-spacing bg-muted">
-        <div className="container-custom">
-          <div className="text-center mb-12">
-            <h2 className="mb-4">Visit Our Facility</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Schedule a tour of our 40,000 sq. ft. manufacturing facility to see our capabilities firsthand.
-            </p>
-          </div>
-          <div className="bg-background rounded-lg overflow-hidden shadow-xl h-96 flex items-center justify-center border-2 border-border">
-            <div className="text-center p-8">
-              <MapPin className="h-16 w-16 text-primary mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">Vectis Manufacturing</h3>
-              <p className="text-muted-foreground">123 Industrial Way</p>
-              <p className="text-muted-foreground mb-4">Manufacturing City, ST 12345</p>
-              <Button asChild>
-                <a
-                  href="https://maps.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Get Directions
-                </a>
-              </Button>
             </div>
           </div>
         </div>
