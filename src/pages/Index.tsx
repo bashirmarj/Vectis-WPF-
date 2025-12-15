@@ -49,7 +49,7 @@ const Index = () => {
       title: "SHEET METAL",
       description: "Laser cutting, bending, and forming at any scale.",
       image: sheetMetalImg,
-      imageStyle: "bg-[length:100%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:100%] bg-top bg-no-repeat",
     },
     {
       title: "HEAT TREATMENT",
