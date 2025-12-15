@@ -44,13 +44,13 @@ const Index = () => {
       title: "WIRE EDM",
       description: "Complex geometries with tight tolerances in hardened materials.",
       image: wireEdmImg,
-      imageStyle: "bg-[length:75%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:55%] bg-center bg-no-repeat",
     },
     {
       title: "SHEET METAL",
       description: "Laser cutting, bending, and forming at any scale.",
       image: sheetMetalImg,
-      imageStyle: "bg-[length:100%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
       title: "HEAT TREATMENT",
