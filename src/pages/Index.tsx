@@ -386,8 +386,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section - Solid Red Background */}
-      <section className="relative z-10 py-20 bg-primary">
+      {/* CTA Section - Transparent Background */}
+      <section className="relative z-10 py-20 bg-transparent">
         <div className="container-custom text-center">
           <AnimatedSection animation="fadeUp">
             <h2 className="text-3xl md:text-5xl font-black text-white uppercase mb-6 tracking-tight">
@@ -402,7 +402,7 @@ const Index = () => {
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp" delay={300}>
-            <Button size="lg" className="bg-white text-primary hover:bg-black hover:text-white uppercase tracking-widest shadow-xl" asChild>
+            <Button size="lg" className="bg-primary text-white hover:bg-primary/90 uppercase tracking-widest shadow-xl" asChild>
               <Link to="/contact">
                 Get a Quote
               </Link>
