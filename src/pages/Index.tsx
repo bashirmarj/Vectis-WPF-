@@ -317,7 +317,7 @@ const Index = () => {
                   />
                   <div
                     className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
-                      isHovered ? "opacity-70" : "opacity-90"
+                      isHovered ? "opacity-0" : "opacity-90"
                     }`}
                   />
 
