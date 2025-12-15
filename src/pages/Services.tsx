@@ -31,7 +31,7 @@ const Services = () => {
                 backgroundSize: '200% auto',
               }}
               animate={{ backgroundPositionX: ['0%', '-100%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
             >
               Production & Prototyping
             </motion.span>
