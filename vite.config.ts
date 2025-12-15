@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ['occt-import-js'],
+    include: ['react', 'react-dom', 'framer-motion'],
     esbuildOptions: {
       target: 'esnext',
     }
