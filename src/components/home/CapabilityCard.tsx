@@ -41,7 +41,7 @@ const CapabilityCard: React.FC<CapabilityCardProps> = ({
           alt={title}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-accent via-accent/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-accent via-accent/50 to-transparent opacity-80 group-hover:opacity-0 transition-opacity duration-300" />
         
         {/* Icon badge */}
         <div className="absolute bottom-4 left-4 w-12 h-12 bg-primary rounded-lg flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
