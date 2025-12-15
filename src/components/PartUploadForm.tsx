@@ -447,6 +447,53 @@ export const PartUploadForm = () => {
     }
   };
 
+  // Handle files dropped via drag-and-drop
+  const handleFileDrop = async (droppedFiles: FileList) => {
+    const selectedFiles = Array.from(droppedFiles);
+    if (selectedFiles.length === 0) return;
+
+    const invalidFiles = selectedFiles.filter(file => !validateCADFile(file));
+
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "Invalid file type",
+        description: `Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}`,
+        variant: "destructive",
+      });
+      // Filter out invalid files and continue with valid ones
+      const validFiles = selectedFiles.filter(file => validateCADFile(file));
+      if (validFiles.length === 0) return;
+      
+      const filesWithQuantity = validFiles.map((file) => ({
+        file,
+        quantity: 1,
+      }));
+
+      const newFiles = [...files, ...filesWithQuantity];
+      setFiles(newFiles);
+
+      for (let idx = 0; idx < filesWithQuantity.length; idx++) {
+        const fileIndex = files.length + idx;
+        await analyzeFile(filesWithQuantity[idx], fileIndex);
+      }
+      return;
+    }
+
+    const filesWithQuantity = selectedFiles.map((file) => ({
+      file,
+      quantity: 1,
+    }));
+
+    const newFiles = [...files, ...filesWithQuantity];
+    setFiles(newFiles);
+
+    // Analyze files sequentially
+    for (let idx = 0; idx < filesWithQuantity.length; idx++) {
+      const fileIndex = files.length + idx;
+      await analyzeFile(filesWithQuantity[idx], fileIndex);
+    }
+  };
+
   const handleRemoveFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
     if (selectedFileIndex >= files.length - 1) {
@@ -619,6 +666,7 @@ export const PartUploadForm = () => {
       <FileUploadScreen
         files={files}
         onFileSelect={handleFileSelect}
+        onFileDrop={handleFileDrop}
         onRemoveFile={handleRemoveFile}
         onRetryFile={handleRetryAnalysis}
         onContinue={handleContinue}
