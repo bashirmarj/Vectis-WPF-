@@ -274,7 +274,7 @@ const Index = () => {
                     className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none ${
                       isHovered ? "grayscale-0 scale-110" : "grayscale"
                     } ${capability.imageStyle || ""}`}
-                    style={{ backgroundImage: `url(${capability.image})` }}
+                    style={{ backgroundImage: `url(${capability.image}?v=${Date.now()})` }}
                   />
                   <div
                     className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
