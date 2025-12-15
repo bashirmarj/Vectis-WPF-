@@ -411,16 +411,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Stats Section - Solid Black Background */}
-      <section className="relative z-10 py-16 bg-black border-t border-white/10">
-        <div className="container-custom">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            {stats.map((stat, index) => (
-              <AnimatedCounter key={index} value={stat.value} label={stat.label} delay={index * 100} />
-            ))}
-          </div>
-        </div>
-      </section>
 
       <Footer />
     </div>
