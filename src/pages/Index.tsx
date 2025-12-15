@@ -43,7 +43,7 @@ const Index = () => {
       title: "WIRE EDM",
       description: "Complex geometries with tight tolerances in hardened materials.",
       image: wireEdmImg,
-      imageStyle: "bg-[length:70%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:50%] bg-center bg-no-repeat",
     },
     {
       title: "SHEET METAL",
