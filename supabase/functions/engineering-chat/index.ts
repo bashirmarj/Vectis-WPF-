@@ -804,6 +804,47 @@ QUALITY REQUIREMENTS:
 
 When answering, be precise with calculations and show work when asked. Recommend specific heat treatments with HRC targets. Suggest nearest standard stock sizes. Consider cost and manufacturability. Reference the part context if provided. When discussing equipment capabilities, cite specific machine specs from this catalog.`;
 
+// Input validation for engineering chat
+const MAX_MESSAGE_LENGTH = 10000;
+const MAX_MESSAGES = 50;
+
+function validateChatInput(data: any): { valid: boolean; error?: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+  
+  const { messages } = data;
+  
+  if (!messages || !Array.isArray(messages)) {
+    return { valid: false, error: 'Messages array is required' };
+  }
+  
+  if (messages.length === 0) {
+    return { valid: false, error: 'At least one message is required' };
+  }
+  
+  if (messages.length > MAX_MESSAGES) {
+    return { valid: false, error: `Maximum ${MAX_MESSAGES} messages allowed per request` };
+  }
+  
+  for (const msg of messages) {
+    if (!msg.role || !msg.content) {
+      return { valid: false, error: 'Each message must have role and content' };
+    }
+    if (!['user', 'assistant', 'system'].includes(msg.role)) {
+      return { valid: false, error: 'Invalid message role' };
+    }
+    if (typeof msg.content !== 'string') {
+      return { valid: false, error: 'Message content must be a string' };
+    }
+    if (msg.content.length > MAX_MESSAGE_LENGTH) {
+      return { valid: false, error: `Message content must be less than ${MAX_MESSAGE_LENGTH} characters` };
+    }
+  }
+  
+  return { valid: true };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -811,7 +852,19 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, partContext } = await req.json();
+    // Parse and validate request body
+    const rawBody = await req.json();
+    const validation = validateChatInput(rawBody);
+    
+    if (!validation.valid) {
+      console.warn("Input validation failed:", validation.error);
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const { messages, partContext } = rawBody;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
