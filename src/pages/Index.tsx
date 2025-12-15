@@ -48,7 +48,7 @@ const Index = () => {
       title: "SHEET METAL",
       description: "Laser cutting, bending, and forming at any scale.",
       image: sheetMetalImg,
-      imageStyle: "bg-[length:85%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:95%] bg-center bg-no-repeat",
     },
     {
       title: "HEAT TREATMENT",
@@ -72,8 +72,14 @@ const Index = () => {
 
   // Create 8x duplicated array for smooth infinite scroll
   const capabilitiesData = [
-    ...capabilities, ...capabilities, ...capabilities, ...capabilities,
-    ...capabilities, ...capabilities, ...capabilities, ...capabilities
+    ...capabilities,
+    ...capabilities,
+    ...capabilities,
+    ...capabilities,
+    ...capabilities,
+    ...capabilities,
+    ...capabilities,
+    ...capabilities,
   ];
 
   // Drag to scroll state
@@ -110,7 +116,7 @@ const Index = () => {
       if (!isDragging) {
         positionRef.current -= AUTO_SPEED;
       }
-      
+
       // Real-time position wrapping
       if (positionRef.current <= -WRAP_WIDTH) {
         positionRef.current += WRAP_WIDTH;
@@ -135,7 +141,7 @@ const Index = () => {
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     setStartX(clientX);
     dragStartPositionRef.current = positionRef.current;
   };
@@ -146,8 +152,8 @@ const Index = () => {
 
   const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging) return;
-    
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const delta = clientX - startX;
     positionRef.current = dragStartPositionRef.current + delta;
 
@@ -169,7 +175,7 @@ const Index = () => {
     <div className="min-h-screen overflow-x-hidden bg-black">
       {/* Fixed Particle Background with CNC image, grid, vignette, and particles */}
       <ParticleBackground />
-      
+
       {/* Navigation */}
       <Navigation />
 
@@ -188,15 +194,18 @@ const Index = () => {
               Custom <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
                 Manufacturing
-              </span> <br />
-              <span style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }} className="text-transparent">
+              </span>{" "}
+              <br />
+              <span style={{ WebkitTextStroke: "1px rgba(255,255,255,0.3)" }} className="text-transparent">
                 From Concept
-              </span> <br />
+              </span>{" "}
+              <br />
               To Completion
             </h1>
 
             <p className="text-gray-400 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light">
-              Precision engineering and turnkey manufacturing solutions. We combine traditional craftsmanship with AI-driven automation to deliver parts faster.
+              Precision engineering and turnkey manufacturing solutions. We combine traditional craftsmanship with
+              AI-driven automation to deliver parts faster.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -221,9 +230,7 @@ const Index = () => {
           <AnimatedSection animation="fadeUp" className="mb-16">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-1 bg-primary rounded-full"></div>
-              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">
-                What We Do
-              </span>
+              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">What We Do</span>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white">Our Services</h2>
           </AnimatedSection>
@@ -258,9 +265,7 @@ const Index = () => {
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-1 bg-primary rounded-full"></div>
-              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">
-                Our Capabilities
-              </span>
+              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">Our Capabilities</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-white">Precision Manufacturing</h2>
           </AnimatedSection>
@@ -281,11 +286,11 @@ const Index = () => {
           <div
             ref={containerRef}
             className="flex w-max"
-            style={{ 
+            style={{
               gap: `${GAP}px`,
-              transform: 'translate3d(0px, 0, 0)', 
-              backfaceVisibility: 'hidden', 
-              willChange: 'transform' 
+              transform: "translate3d(0px, 0, 0)",
+              backfaceVisibility: "hidden",
+              willChange: "transform",
             }}
           >
             {capabilitiesData.map((capability, index) => {
@@ -296,43 +301,53 @@ const Index = () => {
                   onMouseEnter={() => handleMouseEnter(capability.title)}
                   onMouseLeave={handleMouseLeave}
                   className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none backdrop-blur-sm transition-colors duration-300 cursor-pointer ${
-                    isHovered ? 'border-primary' : 'border-white/10'
+                    isHovered ? "border-primary" : "border-white/10"
                   }`}
-                  style={{ 
-                    height: '400px', 
+                  style={{
+                    height: "400px",
                     width: `${CARD_WIDTH}px`,
-                    backgroundColor: 'rgba(5, 5, 5, 0.4)' 
+                    backgroundColor: "rgba(5, 5, 5, 0.4)",
                   }}
                 >
                   <div
                     className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none ${
-                      isHovered ? 'grayscale-0 scale-110' : 'grayscale'
+                      isHovered ? "grayscale-0 scale-110" : "grayscale"
                     } ${capability.imageStyle || ""}`}
                     style={{ backgroundImage: `url(${capability.image})` }}
                   />
-                  <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
-                    isHovered ? 'opacity-70' : 'opacity-90'
-                  }`} />
-                  
-                  <div className={`absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none ${
-                    isHovered ? '-translate-y-0' : 'translate-y-2'
-                  }`}>
-                    <span className={`text-primary text-xs font-bold uppercase tracking-widest mb-2 block transition-opacity duration-300 ${
-                      isHovered ? 'opacity-100' : 'opacity-0'
-                    }`}>
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
+                      isHovered ? "opacity-70" : "opacity-90"
+                    }`}
+                  />
+
+                  <div
+                    className={`absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none ${
+                      isHovered ? "-translate-y-0" : "translate-y-2"
+                    }`}
+                  >
+                    <span
+                      className={`text-primary text-xs font-bold uppercase tracking-widest mb-2 block transition-opacity duration-300 ${
+                        isHovered ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
                       Capability
                     </span>
                     <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
-                    <p className={`text-gray-400 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
-                      isHovered ? 'opacity-100' : 'opacity-0'
-                    }`}>
+                    <p
+                      className={`text-gray-400 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
+                        isHovered ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
                       {capability.description}
                     </p>
                   </div>
 
-                  <div className={`absolute inset-0 border-2 border-primary transition-opacity duration-300 pointer-events-none rounded-sm ${
-                    isHovered ? 'opacity-100' : 'opacity-0'
-                  }`} />
+                  <div
+                    className={`absolute inset-0 border-2 border-primary transition-opacity duration-300 pointer-events-none rounded-sm ${
+                      isHovered ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
                 </div>
               );
             })}
@@ -362,11 +377,11 @@ const Index = () => {
 
           <div className="flex flex-col md:flex-row border-t border-white/10 bg-black/40 backdrop-blur-md rounded-sm">
             {[
-              { id: '01', title: 'Upload', text: 'Submit your CAD files securely to our portal for instant parsing.' },
-              { id: '02', title: 'Quote', text: 'Get detailed pricing and lead time within 24 hours.' },
-              { id: '03', title: 'Manufacture', text: 'Production begins using high-speed 5-axis CNC centers.' },
-              { id: '04', title: 'Quality', text: 'Rigorous inspection ensures every part meets specifications.' },
-              { id: '05', title: 'Deliver', text: 'Parts are packed and shipped directly to your facility.' },
+              { id: "01", title: "Upload", text: "Submit your CAD files securely to our portal for instant parsing." },
+              { id: "02", title: "Quote", text: "Get detailed pricing and lead time within 24 hours." },
+              { id: "03", title: "Manufacture", text: "Production begins using high-speed 5-axis CNC centers." },
+              { id: "04", title: "Quality", text: "Rigorous inspection ensures every part meets specifications." },
+              { id: "05", title: "Deliver", text: "Parts are packed and shipped directly to your facility." },
             ].map((step, index) => (
               <AnimatedSection
                 key={step.id}
@@ -403,15 +418,16 @@ const Index = () => {
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp" delay={300}>
-            <Button size="lg" className="bg-primary text-white hover:bg-primary/90 uppercase tracking-widest shadow-xl" asChild>
-              <Link to="/contact">
-                Get a Quote
-              </Link>
+            <Button
+              size="lg"
+              className="bg-primary text-white hover:bg-primary/90 uppercase tracking-widest shadow-xl"
+              asChild
+            >
+              <Link to="/contact">Get a Quote</Link>
             </Button>
           </AnimatedSection>
         </div>
       </section>
-
 
       <Footer />
     </div>
