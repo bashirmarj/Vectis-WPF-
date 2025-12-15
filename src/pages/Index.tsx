@@ -182,19 +182,16 @@ const Index = () => {
             </AnimatedSection>
 
             <AnimatedSection animation="fadeUp" delay={100}>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-2 leading-tight tracking-tight">
-                <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                  Custom Manufacturing
-                </span>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-8 uppercase tracking-tight">
+                CUSTOM <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
+                  MANUFACTURING
+                </span> <br />
+                <span className="text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }}>
+                  FROM CONCEPT
+                </span> <br />
+                TO COMPLETION
               </h1>
-            </AnimatedSection>
-
-            <AnimatedSection animation="fadeUp" delay={200}>
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight tracking-tight">
-                <span className="text-outline-white">
-                  From Concept to Completion
-                </span>
-              </h2>
             </AnimatedSection>
 
             <AnimatedSection animation="fadeUp" delay={300}>
@@ -386,40 +383,33 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative z-10 py-20 md:py-32 bg-transparent backdrop-blur-sm border-t border-white/5">
+      {/* CTA Section - Solid Red Background */}
+      <section className="relative z-10 py-20 bg-primary">
         <div className="container-custom text-center">
           <AnimatedSection animation="fadeUp">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
-              <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                Ready to Start?
-              </span>
+            <h2 className="text-3xl md:text-5xl font-black text-white uppercase mb-6 tracking-tight">
+              Ready to Start?
             </h2>
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp" delay={150}>
-            <p className="text-xl text-gray-400 mb-10 max-w-lg mx-auto">
-              Let's bring your manufacturing vision to life.
+            <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
+              Let's bring your manufacturing vision to life. Get a quote in under 2 hours.
             </p>
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp" delay={300}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="uppercase tracking-wider" asChild>
-                <Link to="/contact">
-                  Get a Quote <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline-light" className="uppercase tracking-wider" asChild>
-                <Link to="/projects">View Our Work</Link>
-              </Button>
-            </div>
+            <Button size="lg" className="bg-white text-primary hover:bg-black hover:text-white uppercase tracking-widest shadow-xl" asChild>
+              <Link to="/contact">
+                Get a Quote
+              </Link>
+            </Button>
           </AnimatedSection>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="relative z-10 py-16 bg-transparent backdrop-blur-sm border-t border-white/5">
+      {/* Stats Section - Solid Black Background */}
+      <section className="relative z-10 py-16 bg-black border-t border-white/10">
         <div className="container-custom">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             {stats.map((stat, index) => (
