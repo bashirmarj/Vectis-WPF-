@@ -172,58 +172,13 @@ const Index = () => {
       {/* Navigation */}
       <Navigation />
 
-      {/* Hero Section - Matches Reference Exactly */}
-      <section className="relative min-h-screen flex items-center justify-start pt-20 pb-20 z-10">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl">
-            {/* Red accent bar */}
-            <AnimatedSection animation="fadeUp" delay={0}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-1 bg-primary"></div>
-                <span className="text-primary font-semibold tracking-[0.2em] uppercase text-sm">
-                  Advanced Manufacturing Solutions
-                </span>
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection animation="fadeUp" delay={100}>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-8 uppercase tracking-tight">
-                Custom <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
-                  Manufacturing
-                </span> <br />
-                <span className="text-transparent" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.3)' }}>
-                  From Concept
-                </span> <br />
-                To Completion
-              </h1>
-            </AnimatedSection>
-
-            <AnimatedSection animation="fadeUp" delay={300}>
-              <p className="text-gray-400 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light">
-                Precision engineering and turnkey manufacturing solutions. We combine traditional craftsmanship with AI-driven automation to deliver parts faster.
-              </p>
-            </AnimatedSection>
-
-            <AnimatedSection animation="fadeUp" delay={400}>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="group uppercase tracking-widest text-sm" asChild>
-                  <Link to="/contact">
-                    Request A Quote
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline-light" className="uppercase tracking-widest text-sm" asChild>
-                  <Link to="/capabilities">Explore Capabilities</Link>
-                </Button>
-              </div>
-            </AnimatedSection>
-          </div>
-        </div>
+      {/* Hero Section - Background Only (content will be added later) */}
+      <section className="relative min-h-screen z-10">
+        {/* Empty - ParticleBackground shows through with image, grid, vignette, and particles */}
       </section>
 
-      {/* Services Section - Transparent with glassmorphism cards */}
-      <section className="relative z-10 py-24 bg-transparent backdrop-blur-sm border-t border-white/5">
+      {/* Services Section */}
+      <section className="relative z-10 py-24 bg-black border-t border-white/5">
         <div className="container-custom">
           <AnimatedSection animation="fadeUp" className="mb-16">
             <div className="flex items-center gap-3 mb-4">
@@ -259,7 +214,7 @@ const Index = () => {
       </section>
 
       {/* Capabilities Showcase - Horizontal Marquee */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-white/5 overflow-hidden">
+      <section className="relative z-10 py-24 bg-black border-t border-white/5 overflow-hidden">
         {/* Section Header */}
         <div className="container-custom mb-12">
           <AnimatedSection animation="fadeUp">
@@ -360,7 +315,7 @@ const Index = () => {
       </section>
 
       {/* Process Section - Reference Design with Big Numbers */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-white/5 backdrop-blur-sm">
+      <section className="relative z-10 py-24 bg-black border-t border-white/5">
         <div className="container mx-auto px-6">
           <div className="mb-16 max-w-2xl">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Streamlined Workflow</h2>
