@@ -123,7 +123,7 @@ export const ParticleBackground: React.FC = () => {
     <div className="fixed inset-0 z-0 pointer-events-none">
       {/* Layer 1: Fixed background image with grayscale and slow zoom */}
       <div 
-        className="absolute inset-0 bg-cover bg-center opacity-30 grayscale animate-slow-zoom"
+        className="absolute inset-0 bg-cover bg-center opacity-40 animate-slow-zoom"
         style={{ backgroundImage: `url(${cncBackgroundClean})` }}
       />
       
