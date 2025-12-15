@@ -1,11 +1,10 @@
 import { Link } from "react-router-dom";
-import { Package, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
-import customPartsImg from "@/assets/custom-parts.jpg";
 import precisionManufacturingImg from "@/assets/precision-manufacturing.png";
 import { PartUploadForm } from "@/components/PartUploadForm";
 
@@ -17,21 +16,11 @@ const Services = () => {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden z-10">
-        <div
-          className="absolute inset-0 opacity-20 bg-cover bg-center"
-          style={{ backgroundImage: `url(${customPartsImg})` }}
-        ></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black"></div>
         <div className="container-custom relative z-10">
           <AnimatedSection animation="fadeUp">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-primary/20 backdrop-blur-md border border-primary/30 rounded-lg flex items-center justify-center">
-                <Package className="h-8 w-8 text-primary" />
-              </div>
-              <h1 className="text-5xl md:text-6xl font-bold text-white mb-0 leading-snug tracking-normal">
-                Custom Parts & Assemblies
-              </h1>
-            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-snug tracking-normal">
+              Custom Parts For Production and Prototyping
+            </h1>
             <p className="text-xl text-gray-300 leading-relaxed max-w-3xl">
               Precision-manufactured components and assemblies engineered to meet your exact specifications and quality standards.
             </p>
