@@ -43,7 +43,7 @@ const Index = () => {
       title: "WIRE EDM",
       description: "Complex geometries with tight tolerances in hardened materials.",
       image: wireEdmImg,
-      imageStyle: "bg-[length:95%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:85%] bg-center bg-no-repeat",
     },
     {
       title: "SHEET METAL",
@@ -55,7 +55,7 @@ const Index = () => {
       title: "HEAT TREATMENT",
       description: "Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment",
       image: heatTreatmentImg,
-      imageStyle: "bg-[length:160%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:120%] bg-center bg-no-repeat",
     },
     {
       title: "DIE CASTING",
