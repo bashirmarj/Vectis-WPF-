@@ -108,28 +108,30 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
-      {/* Header with Back Button */}
-      <div className="border-b bg-background px-4 py-2 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Upload
-        </Button>
-      </div>
-
-      {/* CAD Viewer Section - Full Width */}
-      <div className="flex flex-col">
-        {/* Part Name Header Box */}
-        <div className="p-4 bg-background">
-          <div className="border rounded-lg h-10 flex items-center justify-center bg-background">
-            <span className="text-sm font-medium">
-              {selectedFile.file.name.replace(/\.[^/.]+$/, "")}
-            </span>
-          </div>
+      {/* CAD Viewer Section - Constrained Width */}
+      <div className="max-w-6xl mx-auto w-full px-4 pt-4">
+        {/* Compact Header: Back Button + Part Name */}
+        <div 
+          className="rounded-t-lg py-2 px-3 flex items-center justify-between backdrop-blur-sm border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+          style={{ backgroundColor: 'rgba(60, 60, 60, 0.75)' }}
+        >
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onBack}
+            className="text-gray-300 hover:text-white hover:bg-white/10 h-7 px-2"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Back to Upload
+          </Button>
+          <span className="text-sm font-medium text-white">
+            {selectedFile.file.name.replace(/\.[^/.]+$/, "")}
+          </span>
         </div>
 
         {/* CAD Viewer Area */}
-        <div className="h-[500px] p-4">
-          <div className="h-full rounded-lg border bg-muted/20 overflow-hidden">
+        <div className="h-[480px]">
+          <div className="h-full rounded-b-lg border border-t-0 border-white/10 bg-muted/20 overflow-hidden">
             {selectedFile.meshData ? (
               <CADViewer
                 meshData={selectedFile.meshData}
@@ -169,8 +171,8 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         </div>
       </div>
 
-      {/* Configuration + Contact Information - Full Width Below CAD Viewer */}
-      <div className="border-t bg-background p-4">
+      {/* Configuration + Contact Information - Constrained Width Below CAD Viewer */}
+      <div className="max-w-6xl mx-auto w-full px-4 py-4">
         <Card>
           <CardContent className="p-4 space-y-4">
             {/* Configuration Row */}
