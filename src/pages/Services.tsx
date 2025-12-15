@@ -4,29 +4,34 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import AnimatedSection from "@/components/home/AnimatedSection";
+import ParticleBackground from "@/components/home/ParticleBackground";
 import customPartsImg from "@/assets/custom-parts.jpg";
 import { PartUploadForm } from "@/components/PartUploadForm";
 
 const Services = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-black">
       <Navigation />
+      <ParticleBackground />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 bg-accent text-accent-foreground overflow-hidden">
+      <section className="relative pt-32 pb-20 overflow-hidden z-10">
         <div
-          className="absolute inset-0 opacity-15 bg-cover bg-center"
+          className="absolute inset-0 opacity-20 bg-cover bg-center"
           style={{ backgroundImage: `url(${customPartsImg})` }}
         ></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black"></div>
         <div className="container-custom relative z-10">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-primary rounded-lg flex items-center justify-center">
-                <Package className="h-8 w-8 text-primary-foreground" />
+              <div className="w-16 h-16 bg-primary/20 backdrop-blur-md border border-primary/30 rounded-lg flex items-center justify-center">
+                <Package className="h-8 w-8 text-primary" />
               </div>
-              <h1 className="text-white mb-0">Custom Parts & Assemblies</h1>
+              <h1 className="text-5xl md:text-6xl font-bold text-white mb-0 leading-snug tracking-normal">
+                Custom Parts & Assemblies
+              </h1>
             </div>
-            <p className="text-xl text-gray-200 leading-relaxed max-w-3xl">
+            <p className="text-xl text-gray-300 leading-relaxed max-w-3xl">
               Precision-manufactured components and assemblies engineered to meet your exact specifications and quality standards.
             </p>
           </AnimatedSection>
@@ -34,25 +39,35 @@ const Services = () => {
       </section>
 
       {/* Content Section */}
-      <section className="section-spacing bg-background">
-        <div className="container-custom">
+      <section className="relative z-10 border-t border-white/5">
+        <div className="container-custom section-spacing">
           <div className="grid md:grid-cols-2 gap-12 items-start mb-16">
             <AnimatedSection animation="fadeRight">
               <img
                 src={customPartsImg}
                 alt="Custom Parts & Assemblies"
-                className="rounded-lg shadow-2xl w-full mb-8"
+                className="rounded-lg shadow-2xl w-full mb-8 border border-white/10"
               />
             </AnimatedSection>
             <AnimatedSection animation="fadeLeft" delay={100}>
-              <h2 className="mb-6">Precision Manufacturing</h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              <div className="flex items-start gap-2 mb-4">
+                <div className="w-1 h-8 bg-primary rounded-full"></div>
+                <h2 className="text-3xl font-bold text-white tracking-tight font-mono uppercase">
+                  Precision Manufacturing
+                </h2>
+              </div>
+              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
                 Our custom parts and assemblies service delivers precision-engineered components tailored to your 
                 exact specifications. Using advanced CNC machining and multi-axis manufacturing capabilities, 
                 we produce parts with tight tolerances and exceptional quality.
               </p>
               
-              <h3 className="text-xl font-bold mb-4">Key Features</h3>
+              <div className="flex items-start gap-2 mb-4">
+                <div className="w-1 h-8 bg-primary rounded-full"></div>
+                <h3 className="text-xl font-bold text-white tracking-tight font-mono uppercase">
+                  Key Features
+                </h3>
+              </div>
               <div className="space-y-3 mb-8">
                 {[
                   "CNC machining capabilities",
@@ -65,7 +80,7 @@ const Services = () => {
                   <AnimatedSection key={idx} animation="fadeLeft" delay={150 + idx * 50}>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground">{feature}</span>
+                      <span className="text-gray-300">{feature}</span>
                     </div>
                   </AnimatedSection>
                 ))}
