@@ -32,7 +32,7 @@ export const FileUploadScreen = ({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Dark themed card - matches capabilities cards styling */}
-      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden" style={{ backgroundColor: "rgba(40, 40, 40, 0.7)" }}>
+      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
         {/* Header */}
         <div className="p-6 pb-2">
           <h2 className="text-2xl font-bold text-white">Upload Your Parts</h2>
@@ -44,7 +44,7 @@ export const FileUploadScreen = ({
         {/* Content */}
         <div className="p-6 pt-4 space-y-6">
           {/* File Upload Area */}
-          <div className="border-2 border-dashed border-white/20 rounded-sm p-12 text-center hover:border-primary/50 transition-colors" style={{ backgroundColor: "rgba(35, 35, 35, 0.6)" }}>
+          <div className="border-2 border-dashed border-white/20 rounded-sm p-12 text-center hover:border-primary/50 transition-colors" style={{ backgroundColor: "rgba(50, 50, 50, 0.65)" }}>
             <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <p className="text-lg font-medium mb-2 text-white">Drop your CAD files here</p>
             <p className="text-sm text-gray-400 mb-4">
@@ -87,7 +87,7 @@ export const FileUploadScreen = ({
                   className={`p-4 rounded-sm space-y-3 border ${
                       failed ? 'border-red-500/30' : 'border-white/10'
                     }`}
-                  style={{ backgroundColor: failed ? "rgba(127, 29, 29, 0.3)" : "rgba(20, 20, 20, 0.5)" }}
+                  style={{ backgroundColor: failed ? "rgba(127, 29, 29, 0.3)" : "rgba(45, 45, 45, 0.6)" }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
@@ -177,7 +177,7 @@ export const FileUploadScreen = ({
           )}
 
           {isAnalyzing && (
-            <div className="border border-white/10 rounded-sm p-4" style={{ backgroundColor: "rgba(20, 20, 20, 0.5)" }}>
+            <div className="border border-white/10 rounded-sm p-4" style={{ backgroundColor: "rgba(45, 45, 45, 0.6)" }}>
               <p className="text-gray-300 text-sm">
                 Analyzing your CAD files... This may take a moment.
               </p>
@@ -185,7 +185,7 @@ export const FileUploadScreen = ({
           )}
 
           {hasFailedFiles && (
-            <div className="border border-white/10 rounded-sm p-4 flex items-start gap-3" style={{ backgroundColor: "rgba(20, 20, 20, 0.5)" }}>
+            <div className="border border-white/10 rounded-sm p-4 flex items-start gap-3" style={{ backgroundColor: "rgba(45, 45, 45, 0.6)" }}>
               <AlertCircle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
               <p className="text-gray-300 text-sm">
                 Failed to load your step file(s). We will still receive your request and provide you with the quotation.
