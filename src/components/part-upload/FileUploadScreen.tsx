@@ -64,7 +64,7 @@ export const FileUploadScreen = ({
   }, [onFileDrop]);
   
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       {/* Dark themed card - matches capabilities cards styling */}
       <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] transition-shadow duration-300" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
         {/* Header */}
