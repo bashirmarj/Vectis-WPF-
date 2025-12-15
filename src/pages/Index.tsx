@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, X, Check } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -13,6 +14,17 @@ import sheetMetalImg from "@/assets/sheet-metal-new.png";
 import heatTreatmentImg from "@/assets/heat-treatment-new.png";
 import dieCastingImg from "@/assets/die-casting.png";
 import wireEdmImg from "@/assets/wire-edm.png";
+
+interface Capability {
+  id: string;
+  title: string;
+  shortDescription: string;
+  fullDescription: string;
+  features: string[];
+  image: string;
+  detailImage: string;
+  imageStyle?: string;
+}
 
 const Index = () => {
   const services = [
@@ -33,35 +45,90 @@ const Index = () => {
     { value: "ISO", label: "9001 Certified" },
   ];
 
-  const capabilities = [
+  const capabilities: Capability[] = [
     {
-      title: "CNC MACHINING",
-      description: "5-axis precision milling and turning for complex geometries.",
+      id: 'cnc-machining',
+      title: 'CNC MACHINING',
+      shortDescription: 'Precision 3, 4, & 5-axis milling for complex metal and plastic parts.',
+      fullDescription: 'Leverage our advanced multi-axis machining centers for unparalleled precision. We offer automated turning and milling services optimized for both rapid prototyping and full-scale production runs. Our automated lines ensure consistency across thousands of parts.',
+      features: [
+        '3, 4, & 5-axis simultaneous milling',
+        'Tolerances down to ±0.01mm',
+        'Instant DFM & Quotes',
+        'Production as fast as 1 day',
+        'Metals: Aluminum, Steel, Titanium, Brass',
+        'Plastics: ABS, PEEK, POM, Nylon'
+      ],
       image: cncMachiningImg,
+      detailImage: 'https://images.unsplash.com/photo-1617781525628-89c0a6b32b38?q=80&w=1000&auto=format&fit=crop',
       imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
-      title: "WIRE EDM",
-      description: "Complex geometries with tight tolerances in hardened materials.",
+      id: 'wire-edm',
+      title: 'WIRE EDM',
+      shortDescription: 'Complex geometries with tight tolerances in hardened materials.',
+      fullDescription: 'Our Wire EDM service delivers exceptional precision for intricate cuts in hardened materials. Ideal for aerospace, medical, and tooling applications where conventional machining cannot achieve the required tolerances or geometries.',
+      features: [
+        'Tolerances to ±0.002mm',
+        'Any conductive material',
+        'Complex internal features',
+        'No mechanical stress on workpiece',
+        'Hardened tool steels',
+        'Carbide & exotic alloys'
+      ],
       image: wireEdmImg,
+      detailImage: 'https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?q=80&w=1000&auto=format&fit=crop',
       imageStyle: "bg-[length:65%] bg-center bg-no-repeat",
     },
     {
-      title: "SHEET METAL",
-      description: "Laser cutting, bending, and forming at any scale.",
+      id: 'sheet-metal',
+      title: 'SHEET METAL',
+      shortDescription: 'Laser cutting, bending, and assembly for durable enclosures.',
+      fullDescription: 'Our sheet metal fabrication services cover the entire production chain. We utilize high-power fiber lasers for clean cuts, CNC brakes for precise bending, and offer full assembly services including welding, riveting, and PEM insertion.',
+      features: [
+        'Laser Cutting & CNC Punching',
+        'Precision Bending & Forming',
+        'TIG, MIG, & Spot Welding',
+        'Hardware Insertion & Riveting',
+        'Powder Coating & Anodizing',
+        'Materials: Aluminum, Steel, Copper'
+      ],
       image: sheetMetalImg,
+      detailImage: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop',
       imageStyle: "bg-[length:85%] bg-center bg-no-repeat",
     },
     {
-      title: "HEAT TREATMENT",
-      description: "Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment",
+      id: 'heat-treatment',
+      title: 'HEAT TREATMENT',
+      shortDescription: 'Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment',
+      fullDescription: 'Comprehensive heat treatment services to enhance material properties. From surface hardening to vacuum treatment, we optimize parts for durability, wear resistance, and performance in demanding applications.',
+      features: [
+        'Surface Hardening',
+        'PVD/CVD Coating',
+        'Vacuum Heat Treatment',
+        'Chemical Treatment',
+        'Stress Relief Annealing',
+        'Hardness Testing & QC'
+      ],
       image: heatTreatmentImg,
+      detailImage: 'https://images.unsplash.com/photo-1588622180862-23b006730595?q=80&w=1000&auto=format&fit=crop',
       imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
-      title: "DIE CASTING",
-      description: "Precision die casting service for customized metal parts",
+      id: 'die-casting',
+      title: 'DIE CASTING',
+      shortDescription: 'High-volume metal parts with excellent surface finish.',
+      fullDescription: 'Ideal for high-volume production of metal components. Our high-pressure die casting process produces parts with near-net shape, reducing the need for post-machining. Perfect for automotive and consumer electronics housings.',
+      features: [
+        'Materials: Aluminum A380, ADC12, Zinc',
+        'High-pressure die casting',
+        'Hot & Cold chamber machines',
+        'Excellent surface consistency',
+        'Post-machining & finishing included',
+        'Scalable to 100,000+ units'
+      ],
       image: dieCastingImg,
+      detailImage: 'https://images.unsplash.com/photo-1533237264842-83675a61fb8c?q=80&w=1000&auto=format&fit=crop',
     },
   ];
 
@@ -91,6 +158,7 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const dragStartPositionRef = useRef(0);
+  const hasMovedRef = useRef(false);
 
   // Animation refs
   const positionRef = useRef(0);
@@ -99,6 +167,17 @@ const Index = () => {
   // Hover state with debouncing
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
+
+  // Modal state
+  const [selectedCapability, setSelectedCapability] = useState<Capability | null>(null);
+
+  const handleCardClick = (capability: Capability) => {
+    if (!hasMovedRef.current) {
+      setSelectedCapability(capability);
+    }
+  };
+
+  const closeModal = () => setSelectedCapability(null);
 
   const handleMouseEnter = (id: string) => {
     if (hoverTimeoutRef.current) {
@@ -113,10 +192,10 @@ const Index = () => {
     }, 100);
   };
 
-  // Animation loop - EXACTLY as reference
+  // Animation loop - pause when modal is open
   useEffect(() => {
     const animate = () => {
-      if (!isDragging) {
+      if (!isDragging && !selectedCapability) {
         positionRef.current -= AUTO_SPEED;
       }
 
@@ -140,17 +219,18 @@ const Index = () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     };
-  }, [isDragging, WRAP_WIDTH]);
+  }, [isDragging, WRAP_WIDTH, selectedCapability]);
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
+    hasMovedRef.current = false;
     const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     setStartX(clientX);
     dragStartPositionRef.current = positionRef.current;
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    setTimeout(() => setIsDragging(false), 50);
   };
 
   const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
@@ -158,9 +238,13 @@ const Index = () => {
 
     const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const delta = clientX - startX;
+    
+    if (Math.abs(delta) > 5) {
+      hasMovedRef.current = true;
+    }
+
     positionRef.current = dragStartPositionRef.current + delta;
 
-    // Real-time position wrapping during drag
     if (positionRef.current <= -WRAP_WIDTH) {
       positionRef.current += WRAP_WIDTH;
       dragStartPositionRef.current += WRAP_WIDTH;
@@ -249,12 +333,13 @@ const Index = () => {
             }}
           >
             {capabilitiesData.map((capability, index) => {
-              const isHovered = hoveredId === capability.title;
+              const isHovered = hoveredId === capability.id;
               return (
                 <div
-                  key={`${capability.title}-${index}`}
-                  onMouseEnter={() => handleMouseEnter(capability.title)}
+                  key={`${capability.id}-${index}`}
+                  onMouseEnter={() => handleMouseEnter(capability.id)}
                   onMouseLeave={handleMouseLeave}
+                  onClick={() => handleCardClick(capability)}
                   className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none backdrop-blur-sm transition-colors duration-300 cursor-pointer ${
                     isHovered ? "border-primary" : "border-white/10"
                   }`}
@@ -281,20 +366,23 @@ const Index = () => {
                       isHovered ? "-translate-y-0" : "translate-y-2"
                     }`}
                   >
-                    <span
-                      className={`text-primary text-xs font-bold uppercase tracking-widest mb-2 block transition-opacity duration-300 ${
-                        isHovered ? "opacity-100" : "opacity-0"
-                      }`}
-                    >
-                      Capability
-                    </span>
+                    <div className="flex justify-between items-start mb-2">
+                      <span
+                        className={`text-primary text-xs font-bold uppercase tracking-widest block transition-opacity duration-300 ${
+                          isHovered ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        Capability
+                      </span>
+                      <ArrowUpRight className={`w-5 h-5 text-white transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`} />
+                    </div>
                     <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
                     <p
                       className={`text-gray-400 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
                         isHovered ? "opacity-100" : "opacity-0"
                       }`}
                     >
-                      {capability.description}
+                      {capability.shortDescription}
                     </p>
                   </div>
 
@@ -385,6 +473,86 @@ const Index = () => {
       </section>
 
       <Footer />
+
+      {/* Capability Detail Modal */}
+      <AnimatePresence>
+        {selectedCapability && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeModal}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-5xl bg-card border border-white/10 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={closeModal}
+                className="absolute top-4 right-4 z-20 p-2 bg-black/50 text-white hover:bg-primary rounded-full transition-colors"
+              >
+                <X size={24} />
+              </button>
+
+              {/* Left Side: Image */}
+              <div className="w-full md:w-2/5 h-52 md:h-auto relative shrink-0">
+                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${selectedCapability.detailImage})` }} />
+                 <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/60 to-transparent" />
+                 <div className="absolute bottom-6 left-6 text-white md:hidden">
+                    <h3 className="text-3xl font-bold uppercase">{selectedCapability.title}</h3>
+                 </div>
+              </div>
+
+              {/* Right Side: Content */}
+              <div className="w-full md:w-3/5 p-6 md:p-12 overflow-y-auto bg-[#0a0a0a]">
+                <div className="hidden md:block mb-6">
+                  <h3 className="text-4xl font-black text-white uppercase mb-2">{selectedCapability.title}</h3>
+                  <div className="h-1 w-20 bg-primary" />
+                </div>
+
+                <p className="text-gray-300 text-lg leading-relaxed mb-8 font-light">
+                  {selectedCapability.fullDescription}
+                </p>
+
+                <div className="mb-10">
+                  <h4 className="text-white font-bold uppercase tracking-widest text-sm mb-4">Key Features & Specs</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedCapability.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                        <span className="text-gray-400 text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-white/10">
+                   <Button className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 px-6 uppercase tracking-wide" asChild>
+                     <Link to="/contact#send-message">
+                       Get Instant Quote <ArrowRight className="ml-2" size={18} />
+                     </Link>
+                   </Button>
+                   <Button 
+                     onClick={closeModal}
+                     variant="outline"
+                     className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 px-6 uppercase tracking-wide border-white/10"
+                   >
+                     Close Details
+                   </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
