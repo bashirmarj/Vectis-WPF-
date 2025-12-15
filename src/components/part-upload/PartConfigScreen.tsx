@@ -107,9 +107,9 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
-      {/* CAD Viewer Section - Constrained Width */}
-      <div className="max-w-5xl mx-auto w-full pt-4">
+    <div className="max-w-5xl mx-auto">
+      {/* CAD Viewer Section */}
+      <div className="pt-4">
         {/* Compact Header: Back Button + Part Name */}
         <div 
           className="rounded-t-lg py-2 px-3 flex items-center justify-between backdrop-blur-sm border border-white/10 shadow-[0_0_30px_rgba(255,255,255,0.15)]"
@@ -172,7 +172,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
       </div>
 
       {/* Configuration + Contact Information - Constrained Width Below CAD Viewer */}
-      <div className="max-w-5xl mx-auto w-full py-4">
+      <div className="py-4">
         <Card>
           <CardContent className="p-4 space-y-4">
             {/* Configuration Row */}
