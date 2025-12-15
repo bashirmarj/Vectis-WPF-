@@ -32,7 +32,7 @@ export const FileUploadScreen = ({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Dark themed card - matches capabilities cards styling */}
-      <div className="backdrop-blur-sm border border-white/10 rounded-sm overflow-hidden" style={{ backgroundColor: "rgba(30, 30, 30, 0.6)" }}>
+      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden" style={{ backgroundColor: "rgba(40, 40, 40, 0.7)" }}>
         {/* Header */}
         <div className="p-6 pb-2">
           <h2 className="text-2xl font-bold text-white">Upload Your Parts</h2>
@@ -44,7 +44,7 @@ export const FileUploadScreen = ({
         {/* Content */}
         <div className="p-6 pt-4 space-y-6">
           {/* File Upload Area */}
-          <div className="border-2 border-dashed border-white/10 rounded-sm p-12 text-center hover:border-primary/50 transition-colors" style={{ backgroundColor: "rgba(20, 20, 20, 0.5)" }}>
+          <div className="border-2 border-dashed border-white/20 rounded-sm p-12 text-center hover:border-primary/50 transition-colors" style={{ backgroundColor: "rgba(35, 35, 35, 0.6)" }}>
             <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <p className="text-lg font-medium mb-2 text-white">Drop your CAD files here</p>
             <p className="text-sm text-gray-400 mb-4">
