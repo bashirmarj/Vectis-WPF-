@@ -499,14 +499,101 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Parse request body
+    const rawBody = await req.json();
+    
+    // Handle notification-only mode (called from QuoteRequestForm after DB insert)
+    if (rawBody.notificationOnly) {
+      console.log("Processing notification-only email request");
+      
+      const { name, company, email, phone, message, quoteNumber, files = [] } = rawBody;
+      
+      const sendNotificationEmails = async () => {
+        try {
+          const accessToken = await getAccessToken();
+          const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
+
+          // Generate admin email content with all form details
+          const adminDetailsContent = `
+            ${generateDetailRow("Quote Number", quoteNumber || "Pending")}
+            ${generateDetailRow("Date", new Date().toLocaleDateString())}
+            ${generateDetailRow("Name", name)}
+            ${generateDetailRow("Company", company || "N/A")}
+            ${generateDetailRow("Email", email)}
+            ${generateDetailRow("Phone", phone || "N/A")}
+            ${message ? generateDetailRow("Project Details", message.replace(/\n/g, "<br>")) : ""}
+          `;
+
+          // Simple file list for notification
+          const fileListHtml = files.length > 0 
+            ? `<div style="margin-top: 16px;"><strong>Attached Files:</strong><ul>${files.map((f: any) => `<li>${f.name} (${(f.size / 1024).toFixed(1)} KB)</li>`).join("")}</ul></div>`
+            : "";
+
+          const adminEmailHtml = generateUnifiedEmailTemplate({
+            heroTitle: "New Quote Request",
+            heroSubtitle: `A new quotation request has been submitted by <strong>${name}</strong>.<br>Please review the details below.`,
+            quoteNumber: quoteNumber || "Pending",
+            statusStep: 1,
+            detailsContent: adminDetailsContent,
+            fileListContent: fileListHtml,
+            timelineText: `Review and respond within <strong>24-48 Hours</strong>`,
+            footerText: `${files.length} file(s) uploaded to storage.`,
+          });
+
+          // Generate customer email
+          const customerDetailsContent = `
+            ${generateDetailRow("Company", company || "N/A")}
+            ${generateDetailRow("Files Submitted", `${files.length} file(s)`)}
+          `;
+
+          const customerEmailHtml = generateUnifiedEmailTemplate({
+            heroTitle: "Request Received",
+            heroSubtitle: `Thanks for your request, <strong>${name}</strong>.<br>Our engineering team has started reviewing your files.`,
+            quoteNumber: quoteNumber || "Pending",
+            statusStep: 1,
+            detailsContent: customerDetailsContent,
+            fileListContent: fileListHtml,
+            timelineText: `Estimated Response Time: <strong>24-48 Hours</strong>`,
+          });
+
+          // Send admin email
+          const adminEncodedMessage = encodeEmailWithAttachments(
+            gmailUser,
+            `New Part Quotation Request - ${quoteNumber || "New Request"}`,
+            adminEmailHtml
+          );
+          await sendEmail(accessToken, adminEncodedMessage);
+          console.log("Admin notification email sent");
+
+          // Send customer confirmation email
+          const customerEncodedMessage = encodeEmailWithAttachments(
+            email,
+            `Quotation Request Received - ${quoteNumber || "Your Request"}`,
+            customerEmailHtml
+          );
+          await sendEmail(accessToken, customerEncodedMessage);
+          console.log("Customer notification email sent");
+        } catch (emailError) {
+          console.error("Error sending notification emails:", emailError);
+        }
+      };
+
+      // Start background email task
+      (globalThis as any).EdgeRuntime?.waitUntil(sendNotificationEmails());
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Notification emails queued" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Extract IP address from request for logging (rate limiting disabled)
     const clientIP =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 
     const ipHash = await hashIP(clientIP);
 
-    // Parse and validate request body
-    const rawBody = await req.json();
+    // Validate full quotation input (original flow)
     const validation = validateQuotationInput(rawBody);
     
     if (!validation.valid) {
