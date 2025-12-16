@@ -265,7 +265,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-black">
+    <div className="min-h-screen overflow-x-hidden bg-white">
       {/* Fixed Particle Background with CNC image, grid, vignette, and particles */}
       <ParticleBackground />
 
@@ -276,24 +276,24 @@ const Index = () => {
       <Hero />
 
       {/* Services Section */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-white/5">
+      <section className="relative z-10 py-24 bg-transparent border-t border-slate-200">
         <div className="container-custom">
           <AnimatedSection animation="fadeUp" className="mb-16">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-1 bg-primary rounded-full"></div>
-              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">What We Do</span>
+              <span className="text-sm font-mono tracking-[0.2em] text-slate-600 uppercase">What We Do</span>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white">Our Services</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900">Our Services</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 gap-8">
             {services.map((service, index) => (
               <AnimatedSection key={index} animation="fadeUp" delay={index * 150}>
-                <div className="h-full bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-8 hover:border-primary/50 transition-all duration-500 group flex flex-col">
-                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 group-hover:text-primary transition-colors">
+                <div className="h-full bg-white shadow-md border border-slate-200 rounded-xl p-8 hover:border-primary/50 transition-all duration-500 group flex flex-col">
+                  <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 group-hover:text-primary transition-colors">
                     {service.title}
                   </h3>
-                  <p className="text-gray-400 text-lg leading-relaxed flex-grow">{service.description}</p>
+                  <p className="text-slate-600 text-lg leading-relaxed flex-grow">{service.description}</p>
                   {/* Red bottom bar */}
                   <div className="mt-6 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
                 </div>
@@ -304,15 +304,15 @@ const Index = () => {
       </section>
 
       {/* Capabilities Showcase - Horizontal Marquee */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-white/5 overflow-hidden">
+      <section className="relative z-10 py-24 bg-transparent border-t border-slate-200 overflow-hidden">
         {/* Section Header */}
         <div className="container-custom mb-12">
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-1 bg-primary rounded-full"></div>
-              <span className="text-sm font-mono tracking-[0.2em] text-gray-400 uppercase">Our Capabilities</span>
+              <span className="text-sm font-mono tracking-[0.2em] text-slate-600 uppercase">Our Capabilities</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Precision Manufacturing</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Precision Manufacturing</h2>
           </AnimatedSection>
         </div>
 
@@ -346,13 +346,13 @@ const Index = () => {
                   onMouseEnter={() => handleMouseEnter(capability.id)}
                   onMouseLeave={handleMouseLeave}
                   onClick={() => handleCardClick(capability)}
-                  className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none backdrop-blur-sm transition-colors duration-300 cursor-pointer ${
-                    isHovered ? "border-primary" : "border-white/10"
+                  className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none shadow-md transition-colors duration-300 cursor-pointer ${
+                    isHovered ? "border-primary" : "border-slate-200"
                   }`}
                   style={{
                     height: "400px",
                     width: `${CARD_WIDTH}px`,
-                    backgroundColor: "rgba(5, 5, 5, 0.4)",
+                    backgroundColor: "#ffffff",
                   }}
                 >
                   <div
@@ -374,7 +374,7 @@ const Index = () => {
                     }}
                   />
                   <div
-                    className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
+                    className={`absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent transition-opacity duration-300 pointer-events-none ${
                       isHovered ? "opacity-0" : "opacity-90"
                     }`}
                   />
@@ -398,7 +398,7 @@ const Index = () => {
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
                     <p
-                      className={`text-gray-400 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
+                      className={`text-slate-300 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
                         isHovered ? "opacity-100" : "opacity-0"
                       }`}
                     >
@@ -420,7 +420,7 @@ const Index = () => {
         {/* View All Button */}
         <div className="container-custom mt-12 text-center">
           <AnimatedSection animation="fadeUp" delay={200}>
-            <Button variant="outline-light" className="group uppercase tracking-wider" asChild>
+            <Button variant="outline" className="group uppercase tracking-wider border-slate-300 text-slate-800 hover:bg-slate-100" asChild>
               <Link to="/capabilities">
                 Explore All Capabilities{" "}
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -431,14 +431,14 @@ const Index = () => {
       </section>
 
       {/* Process Section - Reference Design with Big Numbers */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-white/5">
+      <section className="relative z-10 py-24 bg-transparent border-t border-slate-200">
         <div className="container mx-auto px-6">
           <div className="mb-16 max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Streamlined Workflow</h2>
-            <p className="text-gray-400 font-light">From digital file to physical part in record time.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Streamlined Workflow</h2>
+            <p className="text-slate-600 font-light">From digital file to physical part in record time.</p>
           </div>
 
-          <div className="flex flex-col md:flex-row border-t border-white/10 bg-black/40 backdrop-blur-md rounded-sm">
+          <div className="flex flex-col md:flex-row border-t border-slate-200 bg-white shadow-md rounded-sm">
             {[
               { id: "01", title: "Upload", text: "Submit your CAD files securely to our portal for instant parsing." },
               { id: "02", title: "Quote", text: "Get detailed pricing and lead time within 24 hours." },
@@ -450,15 +450,15 @@ const Index = () => {
                 key={step.id}
                 animation="fadeUp"
                 delay={index * 100}
-                className="flex-1 p-8 border-l border-white/10 first:border-l-0 border-b md:border-b-0 border-white/10 hover:bg-white/5 transition-colors group cursor-default relative"
+                className="flex-1 p-8 border-l border-slate-200 first:border-l-0 border-b md:border-b-0 border-slate-200 hover:bg-slate-50 transition-colors group cursor-default relative"
               >
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
 
-                <span className="block text-5xl font-bold text-white/10 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 mb-6">
+                <span className="block text-5xl font-bold text-slate-200 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 mb-6">
                   {step.id}
                 </span>
-                <h3 className="text-xl font-bold text-white mb-3 uppercase tracking-wide">{step.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed font-light">{step.text}</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 uppercase tracking-wide">{step.title}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-light">{step.text}</p>
               </AnimatedSection>
             ))}
           </div>
@@ -469,13 +469,13 @@ const Index = () => {
       <section className="relative z-10 py-20 bg-transparent">
         <div className="container-custom text-center">
           <AnimatedSection animation="fadeUp">
-            <h2 className="text-3xl md:text-5xl font-black text-white uppercase mb-6 tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase mb-6 tracking-tight">
               Ready to Start?
             </h2>
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp" delay={150}>
-            <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
+            <p className="text-slate-600 text-lg mb-8 max-w-2xl mx-auto">
               Let's bring your manufacturing vision to life. Get a quote in under 2 hours.
             </p>
           </AnimatedSection>
@@ -483,7 +483,7 @@ const Index = () => {
           <AnimatedSection animation="fadeUp" delay={300}>
             <Button
               size="lg"
-              className="bg-primary text-white hover:bg-primary/90 uppercase tracking-widest shadow-xl"
+              className="bg-primary text-white hover:bg-primary/90 uppercase tracking-widest shadow-lg"
               asChild
             >
               <Link to="/contact#send-message">Get a Quote</Link>
@@ -504,7 +504,7 @@ const Index = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeModal}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
             />
 
             {/* Modal Content */}
@@ -512,12 +512,12 @@ const Index = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-5xl bg-card border border-white/10 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
+              className="relative w-full max-w-5xl bg-white border border-slate-200 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
             >
               {/* Close Button */}
               <button
                 onClick={closeModal}
-                className="absolute top-4 right-4 z-20 p-2 bg-black/50 text-white hover:bg-primary rounded-full transition-colors"
+                className="absolute top-4 right-4 z-20 p-2 bg-slate-100 text-slate-900 hover:bg-primary hover:text-white rounded-full transition-colors"
               >
                 <X size={24} />
               </button>
@@ -528,36 +528,36 @@ const Index = () => {
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: `url(${selectedCapability.detailImage})` }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-slate-900/60 to-transparent" />
                 <div className="absolute bottom-6 left-6 text-white md:hidden">
                   <h3 className="text-3xl font-bold uppercase">{selectedCapability.title}</h3>
                 </div>
               </div>
 
               {/* Right Side: Content */}
-              <div className="w-full md:w-3/5 p-6 md:p-12 overflow-y-auto bg-[#0a0a0a]">
+              <div className="w-full md:w-3/5 p-6 md:p-12 overflow-y-auto bg-white">
                 <div className="hidden md:block mb-6">
-                  <h3 className="text-4xl font-black text-white uppercase mb-2">{selectedCapability.title}</h3>
+                  <h3 className="text-4xl font-black text-slate-900 uppercase mb-2">{selectedCapability.title}</h3>
                   <div className="h-1 w-20 bg-primary" />
                 </div>
 
-                <p className="text-gray-300 text-lg leading-relaxed mb-8 font-light">
+                <p className="text-slate-600 text-lg leading-relaxed mb-8 font-light">
                   {selectedCapability.fullDescription}
                 </p>
 
                 <div className="mb-10">
-                  <h4 className="text-white font-bold uppercase tracking-widest text-sm mb-4">Key Features & Specs</h4>
+                  <h4 className="text-slate-900 font-bold uppercase tracking-widest text-sm mb-4">Key Features & Specs</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {selectedCapability.features.map((feature, idx) => (
                       <div key={idx} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-gray-400 text-sm">{feature}</span>
+                        <span className="text-slate-600 text-sm">{feature}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-white/10">
+                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-200">
                   <Button
                     className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 px-6 uppercase tracking-wide"
                     asChild
@@ -569,7 +569,7 @@ const Index = () => {
                   <Button
                     onClick={closeModal}
                     variant="outline"
-                    className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 px-6 uppercase tracking-wide border-white/10"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 py-4 px-6 uppercase tracking-wide border-slate-200"
                   >
                     Close Details
                   </Button>

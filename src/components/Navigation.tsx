@@ -51,17 +51,17 @@ const Navigation = () => {
     path: "/contact"
   }];
   const isActive = (path: string) => location.pathname === path;
-  return <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
+  return <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-            <div className="bg-white rounded-lg px-2 py-1">
+            <div className="bg-white rounded-lg px-2 py-1 border border-slate-200">
               <img src={logo} alt="Vectis Manufacturing Logo" className="h-10 w-auto" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-primary-foreground leading-tight">VECTIS</span>
-              <span className="text-sm text-primary-foreground/80 leading-tight">Manufacturing</span>
+              <span className="text-xl font-bold text-slate-900 leading-tight">VECTIS</span>
+              <span className="text-sm text-slate-600 leading-tight">Manufacturing</span>
             </div>
           </Link>
 
@@ -70,21 +70,21 @@ const Navigation = () => {
             <NavigationMenuList>
               {navItems.map(item => <NavigationMenuItem key={item.path}>
                   {item.subItems ? <>
-                      <NavigationMenuTrigger className={`!bg-transparent ${isActive(item.path) ? "text-primary !bg-primary/10" : "text-accent-foreground hover:text-primary hover:!bg-primary/5"}`}>
+                      <NavigationMenuTrigger className={`!bg-transparent ${isActive(item.path) ? "text-primary !bg-primary/10" : "text-slate-900 hover:text-primary hover:!bg-primary/5"}`}>
                         {item.name}
                       </NavigationMenuTrigger>
                       <NavigationMenuContent>
-                        <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-neutral-950/95 backdrop-blur-md border border-white/10 shadow-lg z-50">
+                        <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg z-50">
                           {item.subItems.map(subItem => <li key={subItem.path}>
                               <NavigationMenuLink asChild>
-                                <Link to={subItem.path} className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors text-accent-foreground hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary">
+                                <Link to={subItem.path} className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors text-slate-900 hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary">
                                   <div className="text-sm font-medium leading-none">{subItem.name}</div>
                                 </Link>
                               </NavigationMenuLink>
                             </li>)}
                         </ul>
                       </NavigationMenuContent>
-                    </> : <Link to={item.path} className={`inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${isActive(item.path) ? "text-primary bg-primary/10" : "text-primary-foreground"}`}>
+                    </> : <Link to={item.path} className={`inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${isActive(item.path) ? "text-primary bg-primary/10" : "text-slate-900"}`}>
                       {item.name}
                     </Link>}
                 </NavigationMenuItem>)}
@@ -99,7 +99,7 @@ const Navigation = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className="text-slate-900">
                     <User className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -124,28 +124,28 @@ const Navigation = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" onClick={() => navigate('/auth')}>
+              <Button variant="ghost" onClick={() => navigate('/auth')} className="text-slate-900">
                 Sign In
               </Button>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button className="md:hidden text-primary-foreground p-2" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">
+          <button className="md:hidden text-slate-900 p-2" onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">
             {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
         {/* Mobile Menu */}
-        {isOpen && <div className="md:hidden border-t border-white/10 bg-black/90 backdrop-blur-md">
+        {isOpen && <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md">
             <ScrollArea className="h-[calc(100vh-5rem)]">
               <div className="flex flex-col space-y-2 py-4">
                 {navItems.map(item => <div key={item.path}>
-                    <Link to={item.path} onClick={() => setIsOpen(false)} className={`flex items-center justify-between px-4 py-3 rounded-md text-sm font-semibold transition-colors ${isActive(item.path) ? "text-primary bg-primary/10" : "text-primary-foreground hover:text-primary hover:bg-primary/5"}`}>
+                    <Link to={item.path} onClick={() => setIsOpen(false)} className={`flex items-center justify-between px-4 py-3 rounded-md text-sm font-semibold transition-colors ${isActive(item.path) ? "text-primary bg-primary/10" : "text-slate-900 hover:text-primary hover:bg-primary/5"}`}>
                       {item.name}
                     </Link>
                     {item.subItems && <div className="ml-4 mt-2 space-y-2">
-                        {item.subItems.map(subItem => <Link key={subItem.path} to={subItem.path} onClick={() => setIsOpen(false)} className="block px-4 py-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                        {item.subItems.map(subItem => <Link key={subItem.path} to={subItem.path} onClick={() => setIsOpen(false)} className="block px-4 py-2 text-sm text-slate-600 hover:text-primary transition-colors">
                             {subItem.name}
                           </Link>)}
                       </div>}
