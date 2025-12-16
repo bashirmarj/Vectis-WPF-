@@ -699,17 +699,25 @@ export const PartUploadForm = () => {
 
       // Send confirmation email to the customer (non-blocking)
       try {
-        await supabase.functions.invoke('send-quote-email', {
+        await supabase.functions.invoke('send-quote-request-confirmation', {
           body: {
-            quotationId: quotation.id,
-            customerEmail: formData.contact.email,
             customerName: formData.contact.name,
+            customerEmail: formData.contact.email,
             quoteNumber: quotation.quote_number,
+            partDetails: {
+              partName: formData.partDetails.partName,
+              material: formData.partDetails.material,
+              quantity: formData.files[0]?.quantity || 1,
+              finish: formData.partDetails.finish,
+              heatTreatment: formData.partDetails.heatTreatment,
+              heatTreatmentDetails: formData.partDetails.heatTreatmentDetails,
+              threadsTolerances: formData.partDetails.threadsTolerances,
+            },
           },
         });
-        console.log('Quote confirmation email sent successfully');
+        console.log('Quote request confirmation email sent successfully');
       } catch (emailError) {
-        console.error('Failed to send quote confirmation email:', emailError);
+        console.error('Failed to send quote request confirmation email:', emailError);
       }
 
       toast({
