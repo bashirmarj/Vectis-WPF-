@@ -366,7 +366,7 @@ const Index = () => {
                           : capability.id === "wire-edm"
                             ? "65%"
                             : capability.id === "sheet-metal"
-                              ? "70%"
+                              ? "80%"
                               : capability.id === "heat-treatment"
                                 ? "80%"
                                 : "cover",
