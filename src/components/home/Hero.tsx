@@ -77,7 +77,7 @@ const Hero: React.FC = () => {
               href="#capabilities" 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="group bg-transparent border border-slate-300 hover:bg-slate-100 text-slate-800 px-8 py-4 rounded-sm font-bold uppercase tracking-widest text-sm transition-colors flex items-center justify-center gap-2"
+              className="group bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 px-8 py-4 rounded-sm font-bold uppercase tracking-widest text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
             >
               Explore Capabilities
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

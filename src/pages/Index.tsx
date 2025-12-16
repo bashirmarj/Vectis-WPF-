@@ -9,6 +9,7 @@ import AnimatedSection from "@/components/home/AnimatedSection";
 import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import Hero from "@/components/home/Hero";
+import WorkflowSection from "@/components/home/WorkflowSection";
 import cncMachiningImg from "@/assets/cnc-machining-black.png";
 import cncMachiningDetailImg from "@/assets/cnc-machining-detail.png";
 import sheetMetalImg from "@/assets/sheet-metal-black.png";
@@ -423,39 +424,7 @@ const Index = () => {
       </section>
 
       {/* Process Section - Reference Design with Big Numbers */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-slate-200">
-        <div className="container mx-auto px-6">
-          <div className="mb-16 max-w-2xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Streamlined Workflow</h2>
-            <p className="text-slate-600 font-light">From digital file to physical part in record time.</p>
-          </div>
-
-          <div className="flex flex-col md:flex-row border-t border-slate-200 bg-white shadow-md rounded-sm">
-            {[
-              { id: "01", title: "Upload", text: "Submit your CAD files securely to our portal for instant parsing." },
-              { id: "02", title: "Quote", text: "Get detailed pricing and lead time within 24 hours." },
-              { id: "03", title: "Manufacture", text: "Production begins using high-speed 5-axis CNC centers." },
-              { id: "04", title: "Quality", text: "Rigorous inspection ensures every part meets specifications." },
-              { id: "05", title: "Deliver", text: "Parts are packed and shipped directly to your facility." },
-            ].map((step, index) => (
-              <AnimatedSection
-                key={step.id}
-                animation="fadeUp"
-                delay={index * 100}
-                className="flex-1 p-8 border-l border-slate-200 first:border-l-0 border-b md:border-b-0 border-slate-200 hover:bg-slate-50 transition-colors group cursor-default relative"
-              >
-                <div className="absolute top-0 left-0 w-full h-[1px] bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-
-                <span className="block text-5xl font-bold text-slate-200 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 mb-6">
-                  {step.id}
-                </span>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 uppercase tracking-wide">{step.title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed font-light">{step.text}</p>
-              </AnimatedSection>
-            ))}
-          </div>
-        </div>
-      </section>
+      <WorkflowSection />
 
       {/* CTA Section - Transparent Background */}
       <section className="relative z-10 py-20 bg-transparent">
