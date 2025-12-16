@@ -438,20 +438,27 @@ const Index = () => {
               { id: "04", title: "Quality", text: "Rigorous inspection ensures every part meets specifications." },
               { id: "05", title: "Deliver", text: "Parts are packed and shipped directly to your facility." },
             ].map((step, index) => (
-              <AnimatedSection
+              <motion.div
                 key={step.id}
-                animation="fadeUp"
-                delay={index * 100}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ 
+                  duration: 0.6, 
+                  delay: index * 0.15,
+                  ease: "easeOut"
+                }}
+                viewport={{ once: true, amount: 0.3 }}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
                 className="flex-1 p-8 border-l border-slate-200 first:border-l-0 border-b md:border-b-0 border-slate-200 hover:bg-slate-50 transition-colors group cursor-default relative"
               >
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
 
-                <span className="block text-5xl font-bold text-slate-200 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 mb-6">
+                <span className="block text-5xl font-bold text-slate-900 group-hover:text-primary group-hover:translate-x-2 transition-all duration-300 mb-6">
                   {step.id}
                 </span>
                 <h3 className="text-xl font-bold text-slate-900 mb-3 uppercase tracking-wide">{step.title}</h3>
                 <p className="text-slate-600 text-sm leading-relaxed font-light">{step.text}</p>
-              </AnimatedSection>
+              </motion.div>
             ))}
           </div>
         </div>
