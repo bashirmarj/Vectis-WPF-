@@ -40,3 +40,12 @@ memory_limit_mb = 512
 
 [functions.get-maps-api-key]
 verify_jwt = false
+
+[functions.send-contact-message]
+verify_jwt = false
+
+[functions.send-quote-email]
+verify_jwt = false
+
+[functions.send-quote-request-confirmation]
+verify_jwt = false
