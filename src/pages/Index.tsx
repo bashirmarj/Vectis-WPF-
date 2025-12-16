@@ -98,7 +98,7 @@ const Index = () => {
       ],
       image: sheetMetalImg,
       detailImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop",
-      imageStyle: "bg-[length:70%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:81%] bg-center bg-no-repeat",
     },
     {
       id: "heat-treatment",
