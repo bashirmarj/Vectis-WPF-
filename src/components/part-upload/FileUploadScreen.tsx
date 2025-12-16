@@ -20,6 +20,8 @@ interface FileUploadScreenProps {
   onContinue: () => void;
   isAnalyzing: boolean;
   isSaving?: boolean;
+  singleFileMode?: boolean;
+  continueButtonText?: string;
 }
 
 export const FileUploadScreen = ({
@@ -30,7 +32,9 @@ export const FileUploadScreen = ({
   onRetryFile,
   onContinue,
   isAnalyzing,
-  isSaving = false
+  isSaving = false,
+  singleFileMode = false,
+  continueButtonText
 }: FileUploadScreenProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const hasFailedFiles = files.some(f => !f.isAnalyzing && !f.analysis);
@@ -44,7 +48,6 @@ export const FileUploadScreen = ({
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set isDragging to false if we're leaving the drop zone entirely
     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setIsDragging(false);
   }, []);
@@ -64,6 +67,12 @@ export const FileUploadScreen = ({
       onFileDrop(droppedFiles);
     }
   }, [onFileDrop]);
+
+  // Hide upload area if in single file mode and already has a file
+  const showUploadArea = !singleFileMode || files.length === 0;
+
+  // Determine button text
+  const buttonText = continueButtonText || (singleFileMode ? 'Continue to Configure' : 'Save & Continue to Dashboard');
   
   return (
     <div className="max-w-5xl mx-auto">
@@ -71,53 +80,62 @@ export const FileUploadScreen = ({
       <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] transition-shadow duration-300" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
         {/* Header */}
         <div className="p-6 pb-2">
-          <h2 className="text-2xl font-bold text-white">Upload Your Parts</h2>
+          <h2 className="text-2xl font-bold text-white">
+            {singleFileMode ? 'Upload Your Part' : 'Upload Your Parts'}
+          </h2>
           <p className="text-gray-400 mt-1">
-            Upload STEP or IGES files to get instant quotes for custom manufacturing
+            {singleFileMode 
+              ? 'Upload a STEP or IGES file to get an instant preview and quote'
+              : 'Upload STEP or IGES files to get instant quotes for custom manufacturing'
+            }
           </p>
         </div>
 
         {/* Content */}
         <div className="p-6 pt-4 space-y-6">
           {/* File Upload Area - with drag-and-drop */}
-          <div 
-            className={`border-2 border-dashed rounded-sm p-12 text-center transition-all duration-200 ${
-              isDragging 
-                ? 'border-primary bg-primary/10 shadow-[0_0_20px_rgba(255,255,255,0.2)]' 
-                : 'border-white/20 hover:border-primary/50'
-            }`}
-            style={{ backgroundColor: isDragging ? "rgba(50, 50, 50, 0.85)" : "rgba(50, 50, 50, 0.65)" }}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            <Upload className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
-            <p className="text-lg font-medium mb-2 text-white">
-              {isDragging ? 'Drop your files here' : 'Drop your CAD files here'}
-            </p>
-            <p className="text-sm text-gray-400 mb-4">
-              or click to browse (STEP, IGES files supported)
-            </p>
-            <input
-              type="file"
-              id="cad-files"
-              accept=".step,.stp,.iges,.igs"
-              multiple
-              onChange={onFileSelect}
-              className="hidden"
-            />
-            <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
-              <label htmlFor="cad-files" className="cursor-pointer">
-                Select Files
-              </label>
-            </Button>
-          </div>
+          {showUploadArea && (
+            <div 
+              className={`border-2 border-dashed rounded-sm p-12 text-center transition-all duration-200 ${
+                isDragging 
+                  ? 'border-primary bg-primary/10 shadow-[0_0_20px_rgba(255,255,255,0.2)]' 
+                  : 'border-white/20 hover:border-primary/50'
+              }`}
+              style={{ backgroundColor: isDragging ? "rgba(50, 50, 50, 0.85)" : "rgba(50, 50, 50, 0.65)" }}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              <Upload className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
+              <p className="text-lg font-medium mb-2 text-white">
+                {isDragging ? 'Drop your file here' : `Drop your CAD file${singleFileMode ? '' : 's'} here`}
+              </p>
+              <p className="text-sm text-gray-400 mb-4">
+                or click to browse (STEP, IGES files supported)
+              </p>
+              <input
+                type="file"
+                id="cad-files"
+                accept=".step,.stp,.iges,.igs"
+                multiple={!singleFileMode}
+                onChange={onFileSelect}
+                className="hidden"
+              />
+              <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
+                <label htmlFor="cad-files" className="cursor-pointer">
+                  Select File{singleFileMode ? '' : 's'}
+                </label>
+              </Button>
+            </div>
+          )}
 
           {/* File List */}
           {files.length > 0 && (
             <div className="space-y-3">
-              <h3 className="font-semibold text-white">Uploaded Files ({files.length})</h3>
+              <h3 className="font-semibold text-white">
+                {singleFileMode ? 'Selected File' : `Uploaded Files (${files.length})`}
+              </h3>
               {files.map((fileItem, index) => {
                 const failed = !fileItem.isAnalyzing && !fileItem.analysis;
                 const totalProgress = fileItem.uploadProgress !== undefined && fileItem.analysisProgress !== undefined
@@ -224,7 +242,7 @@ export const FileUploadScreen = ({
                     Analyzing...
                   </>
                 ) : (
-                  'Save & Continue to Dashboard'
+                  buttonText
                 )}
               </Button>
             </div>
@@ -233,7 +251,7 @@ export const FileUploadScreen = ({
           {isAnalyzing && (
             <div className="border border-white/10 rounded-sm p-4" style={{ backgroundColor: "rgba(45, 45, 45, 0.6)" }}>
               <p className="text-gray-300 text-sm">
-                Analyzing your CAD files... This may take a moment.
+                Analyzing your CAD file{singleFileMode ? '' : 's'}... This may take a moment.
               </p>
             </div>
           )}

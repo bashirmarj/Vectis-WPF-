@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FileUploadScreen } from "./part-upload/FileUploadScreen";
 import { ProjectSelector } from "./part-upload/ProjectSelector";
+import { ModeSelector } from "./part-upload/ModeSelector";
+import PartConfigScreen from "./part-upload/PartConfigScreen";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
@@ -56,11 +58,15 @@ interface FileWithQuantity {
   analysisProgress?: number;
   uploadSpeed?: number;
   analysisStatus?: string;
-  filePath?: string; // Storage path for the uploaded file
+  filePath?: string;
 }
 
+type ScreenType = "mode-select" | "project" | "upload" | "configure";
+type UploadMode = "quick" | "project" | null;
+
 export const PartUploadForm = () => {
-  const [currentScreen, setCurrentScreen] = useState<"project" | "upload" | "configure">("project");
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>("mode-select");
+  const [uploadMode, setUploadMode] = useState<UploadMode>(null);
   const [files, setFiles] = useState<FileWithQuantity[]>([]);
   const [materials, setMaterials] = useState<string[]>([]);
   const [processes, setProcesses] = useState<string[]>([]);
@@ -113,11 +119,13 @@ export const PartUploadForm = () => {
       // Step 1: Upload to Supabase Storage with progress tracking
       const fileExt = fileWithQty.file.name.split('.').pop()?.toLowerCase() || 'step';
       const fileName = `${Date.now()}_${fileWithQty.file.name}`;
-      const filePath = `uploads/${user?.id}/${selectedProjectId}/${fileName}`;
+      const storagePath = uploadMode === 'project' && selectedProjectId 
+        ? `uploads/${user?.id}/${selectedProjectId}/${fileName}`
+        : `uploads/${user?.id}/quick-quote/${fileName}`;
 
       const { data: uploadUrlData, error: uploadUrlError } = await supabase.storage
         .from('cad-files')
-        .createSignedUploadUrl(filePath);
+        .createSignedUploadUrl(storagePath);
 
       if (uploadUrlError) throw new Error(`Failed to create upload URL: ${uploadUrlError.message}`);
 
@@ -154,7 +162,7 @@ export const PartUploadForm = () => {
               ...f, 
               uploadProgress: 100,
               analysisStatus: 'Upload complete, preparing analysis...',
-              filePath: filePath
+              filePath: storagePath
             } : f)));
             resolve();
           } else {
@@ -171,12 +179,12 @@ export const PartUploadForm = () => {
       });
 
       // Store file path
-      setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, filePath } : f)));
+      setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, filePath: storagePath } : f)));
 
       // Step 2: Create signed URL for analysis
       const { data: urlData, error: urlError } = await supabase.storage
         .from('cad-files')
-        .createSignedUrl(filePath, 3600);
+        .createSignedUrl(storagePath, 3600);
 
       if (urlError) {
         throw new Error(`Failed to create signed URL: ${urlError.message}`);
@@ -339,8 +347,15 @@ export const PartUploadForm = () => {
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+    let selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
+
+    // In single file mode, only take the first file
+    if (uploadMode === 'quick') {
+      selectedFiles = [selectedFiles[0]];
+      // Clear existing files in quick mode
+      setFiles([]);
+    }
 
     const invalidFiles = selectedFiles.filter(file => !validateCADFile(file));
 
@@ -358,18 +373,26 @@ export const PartUploadForm = () => {
       quantity: 1,
     }));
 
-    const newFiles = [...files, ...filesWithQuantity];
+    const startIndex = uploadMode === 'quick' ? 0 : files.length;
+    const newFiles = uploadMode === 'quick' ? filesWithQuantity : [...files, ...filesWithQuantity];
     setFiles(newFiles);
 
     for (let idx = 0; idx < filesWithQuantity.length; idx++) {
-      const fileIndex = files.length + idx;
+      const fileIndex = startIndex + idx;
       await analyzeFile(filesWithQuantity[idx], fileIndex);
     }
   };
 
   const handleFileDrop = async (droppedFiles: FileList) => {
-    const selectedFiles = Array.from(droppedFiles);
+    let selectedFiles = Array.from(droppedFiles);
     if (selectedFiles.length === 0) return;
+
+    // In single file mode, only take the first file
+    if (uploadMode === 'quick') {
+      selectedFiles = [selectedFiles[0]];
+      // Clear existing files in quick mode
+      setFiles([]);
+    }
 
     const validFiles = selectedFiles.filter(file => validateCADFile(file));
     const invalidFiles = selectedFiles.filter(file => !validateCADFile(file));
@@ -389,11 +412,12 @@ export const PartUploadForm = () => {
       quantity: 1,
     }));
 
-    const newFiles = [...files, ...filesWithQuantity];
+    const startIndex = uploadMode === 'quick' ? 0 : files.length;
+    const newFiles = uploadMode === 'quick' ? filesWithQuantity : [...files, ...filesWithQuantity];
     setFiles(newFiles);
 
     for (let idx = 0; idx < filesWithQuantity.length; idx++) {
-      const fileIndex = files.length + idx;
+      const fileIndex = startIndex + idx;
       await analyzeFile(filesWithQuantity[idx], fileIndex);
     }
   };
@@ -417,6 +441,15 @@ export const PartUploadForm = () => {
     await analyzeFile(file, index);
   };
 
+  const handleModeSelect = (mode: "quick" | "project") => {
+    setUploadMode(mode);
+    if (mode === "quick") {
+      setCurrentScreen("upload");
+    } else {
+      setCurrentScreen("project");
+    }
+  };
+
   const handleContinueFromProject = () => {
     if (!selectedProjectId) {
       toast({
@@ -430,7 +463,16 @@ export const PartUploadForm = () => {
   };
 
   const handleContinueFromUpload = async () => {
-    if (!user || !selectedProjectId) return;
+    if (!user) return;
+    
+    // Quick Quote mode: go to configure screen
+    if (uploadMode === 'quick') {
+      setCurrentScreen("configure");
+      return;
+    }
+
+    // Project mode: save to project and redirect to dashboard
+    if (!selectedProjectId) return;
     
     const failedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
     
@@ -441,19 +483,15 @@ export const PartUploadForm = () => {
       });
     }
 
-    // Save parts directly and redirect to dashboard
     console.log("📤 Saving parts to project:", selectedProjectId);
     setUploading(true);
 
     try {
-      // Save each file as a project part
       for (const fileData of files) {
-        // First, save mesh data to cad_meshes if available
         let meshId = null;
         let thumbnailUrl = null;
 
         if (fileData.meshData && fileData.meshData.vertices?.length > 0) {
-          // Save mesh to database
           const { data: meshRecord, error: meshError } = await supabase
             .from('cad_meshes')
             .insert({
@@ -480,7 +518,6 @@ export const PartUploadForm = () => {
             console.warn('Failed to save mesh:', meshError);
           }
 
-          // Generate and upload thumbnail
           try {
             console.log('🖼️ Generating thumbnail for:', fileData.file.name);
             const thumbnailBlob = await generateThumbnail({
@@ -513,7 +550,6 @@ export const PartUploadForm = () => {
           }
         }
 
-        // Create project part
         const { error: partError } = await supabase
           .from('project_parts')
           .insert({
@@ -544,7 +580,6 @@ export const PartUploadForm = () => {
         description: `${files.length} part(s) added to your project.`,
       });
       
-      // Redirect to dashboard with project selected
       navigate(`/dashboard?project=${selectedProjectId}`);
       
     } catch (error: any) {
@@ -559,9 +594,123 @@ export const PartUploadForm = () => {
     }
   };
 
+  // Quick Quote submit handler
+  const handleQuickQuoteSubmit = async (formData: any) => {
+    if (!user) return;
+
+    setUploading(true);
+
+    try {
+      // Get client IP hash for rate limiting
+      const ipHash = btoa(navigator.userAgent + new Date().toDateString());
+
+      // Create quotation submission
+      const { data: quotation, error: quotationError } = await supabase
+        .from('quotation_submissions')
+        .insert({
+          email: formData.contact.email,
+          customer_name: formData.contact.name,
+          customer_phone: formData.contact.phone,
+          customer_company: formData.contact.company,
+          shipping_address: formData.contact.address,
+          customer_message: formData.contact.message,
+          ip_hash: ipHash,
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (quotationError) throw quotationError;
+
+      // Create line items for each file
+      for (const fileData of formData.files) {
+        let meshId = null;
+
+        // Save mesh if available
+        if (fileData.meshData && fileData.meshData.vertices?.length > 0) {
+          const { data: meshRecord, error: meshError } = await supabase
+            .from('cad_meshes')
+            .insert({
+              file_name: fileData.file.name,
+              file_hash: `${fileData.file.name}_${fileData.file.size}_${Date.now()}`,
+              quotation_id: quotation.id,
+              vertices: fileData.meshData.vertices,
+              indices: fileData.meshData.indices || [],
+              normals: fileData.meshData.normals || [],
+              triangle_count: fileData.meshData.triangle_count || 0,
+              vertex_colors: fileData.meshData.vertex_colors || [],
+              geometric_features: fileData.analysis?.geometric_features || {},
+            })
+            .select('id')
+            .single();
+
+          if (!meshError && meshRecord) {
+            meshId = meshRecord.id;
+          }
+        }
+
+        // Create line item
+        const { error: lineItemError } = await supabase
+          .from('quote_line_items')
+          .insert({
+            quotation_id: quotation.id,
+            file_name: fileData.file.name,
+            file_path: fileData.filePath || '',
+            mesh_id: meshId,
+            quantity: fileData.quantity,
+            material_type: fileData.material,
+            estimated_volume_cm3: fileData.analysis?.volume_cm3,
+            estimated_surface_area_cm2: fileData.analysis?.surface_area_cm2,
+            estimated_complexity_score: fileData.analysis?.complexity_score,
+            recommended_routings: fileData.analysis?.recommended_processes,
+            routing_reasoning: fileData.analysis?.routing_reasoning,
+          });
+
+        if (lineItemError) {
+          console.error('Failed to create line item:', lineItemError);
+        }
+      }
+
+      toast({
+        title: "✅ Quote Request Submitted",
+        description: "We'll get back to you with a quote soon!",
+      });
+
+      // Reset form
+      setFiles([]);
+      setCurrentScreen("mode-select");
+      setUploadMode(null);
+
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      toast({
+        title: "❌ Submission Failed",
+        description: error.message || "Failed to submit quote request",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUpdateFile = (index: number, updates: Partial<FileWithQuantity>) => {
+    setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, ...updates } : f)));
+  };
+
   const handleBack = () => {
-    if (currentScreen === "upload") {
-      setCurrentScreen("project");
+    if (currentScreen === "configure") {
+      setCurrentScreen("upload");
+    } else if (currentScreen === "upload") {
+      if (uploadMode === "quick") {
+        setCurrentScreen("mode-select");
+        setUploadMode(null);
+        setFiles([]);
+      } else {
+        setCurrentScreen("project");
+      }
+    } else if (currentScreen === "project") {
+      setCurrentScreen("mode-select");
+      setUploadMode(null);
     }
   };
 
@@ -614,34 +763,50 @@ export const PartUploadForm = () => {
     );
   }
 
-  // Project Selection Screen
+  // Mode Selection Screen
+  if (currentScreen === "mode-select") {
+    return <ModeSelector onSelectMode={handleModeSelect} />;
+  }
+
+  // Project Selection Screen (for project mode)
   if (currentScreen === "project") {
     return (
-      <div className="max-w-5xl mx-auto">
-        <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)]" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
-          <div className="p-6 pb-2">
-            <h2 className="text-2xl font-bold text-white">Step 1: Select Project</h2>
-            <p className="text-gray-400 mt-1">
-              Choose an existing project or create a new one to organize your parts
-            </p>
-          </div>
-          <div className="p-6 pt-4 space-y-6">
-            <ProjectSelector
-              projects={projects}
-              selectedProjectId={selectedProjectId}
-              onSelectProject={setSelectedProjectId}
-              onCreateProject={createProject}
-              loading={projectsLoading}
-            />
-            <div className="flex justify-end pt-4">
-              <Button
-                size="lg"
-                onClick={handleContinueFromProject}
-                disabled={!selectedProjectId}
-                className="bg-primary hover:bg-primary/90 text-white"
-              >
-                Continue to Upload
-              </Button>
+      <div className="space-y-4">
+        <div className="max-w-5xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="text-gray-400 hover:text-white"
+          >
+            ← Back to Mode Selection
+          </Button>
+        </div>
+        <div className="max-w-5xl mx-auto">
+          <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)]" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
+            <div className="p-6 pb-2">
+              <h2 className="text-2xl font-bold text-white">Step 1: Select Project</h2>
+              <p className="text-gray-400 mt-1">
+                Choose an existing project or create a new one to organize your parts
+              </p>
+            </div>
+            <div className="p-6 pt-4 space-y-6">
+              <ProjectSelector
+                projects={projects}
+                selectedProjectId={selectedProjectId}
+                onSelectProject={setSelectedProjectId}
+                onCreateProject={createProject}
+                loading={projectsLoading}
+              />
+              <div className="flex justify-end pt-4">
+                <Button
+                  size="lg"
+                  onClick={handleContinueFromProject}
+                  disabled={!selectedProjectId}
+                  className="bg-primary hover:bg-primary/90 text-white"
+                >
+                  Continue to Upload
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -649,17 +814,17 @@ export const PartUploadForm = () => {
     );
   }
 
+  // Upload Screen
   if (currentScreen === "upload") {
     return (
       <div className="space-y-4">
-        {/* Back button */}
         <div className="max-w-5xl mx-auto">
           <Button
             variant="ghost"
             onClick={handleBack}
             className="text-gray-400 hover:text-white"
           >
-            ← Back to Project Selection
+            ← Back to {uploadMode === 'quick' ? 'Mode Selection' : 'Project Selection'}
           </Button>
         </div>
         <FileUploadScreen
@@ -671,11 +836,29 @@ export const PartUploadForm = () => {
           onContinue={handleContinueFromUpload}
           isAnalyzing={isAnalyzing}
           isSaving={uploading}
+          singleFileMode={uploadMode === 'quick'}
+          continueButtonText={uploadMode === 'quick' ? 'Continue to Configure' : undefined}
         />
       </div>
     );
   }
 
-  // Default: redirect to project selection
+  // Configure Screen (Quick Quote mode)
+  if (currentScreen === "configure" && uploadMode === 'quick') {
+    return (
+      <PartConfigScreen
+        files={files}
+        materials={materials}
+        processes={processes}
+        onBack={handleBack}
+        onSubmit={handleQuickQuoteSubmit}
+        onUpdateFile={handleUpdateFile}
+        selectedFileIndex={selectedFileIndex}
+        onSelectFile={setSelectedFileIndex}
+        isSubmitting={uploading}
+      />
+    );
+  }
+
   return null;
 };
