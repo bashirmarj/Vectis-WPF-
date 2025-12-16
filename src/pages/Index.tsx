@@ -98,7 +98,7 @@ const Index = () => {
       ],
       image: sheetMetalImg,
       detailImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop",
-      imageStyle: "bg-[length:60%] bg-center bg-no-repeat",
+      imageStyle: "bg-[length:70%] bg-center bg-no-repeat",
     },
     {
       id: "heat-treatment",
@@ -358,13 +358,18 @@ const Index = () => {
                     className={`absolute inset-0 bg-center bg-no-repeat transition-all duration-700 pointer-events-none ${
                       isHovered ? "grayscale-0 scale-110" : "grayscale"
                     }`}
-                    style={{ 
+                    style={{
                       backgroundImage: `url(${capability.image}?v=2.0)`,
-                      backgroundSize: capability.id === 'cnc-machining' ? '80%' 
-                        : capability.id === 'wire-edm' ? '65%'
-                        : capability.id === 'sheet-metal' ? '60%'
-                        : capability.id === 'heat-treatment' ? '80%'
-                        : 'cover'
+                      backgroundSize:
+                        capability.id === "cnc-machining"
+                          ? "80%"
+                          : capability.id === "wire-edm"
+                            ? "65%"
+                            : capability.id === "sheet-metal"
+                              ? "60%"
+                              : capability.id === "heat-treatment"
+                                ? "80%"
+                                : "cover",
                     }}
                   />
                   <div
