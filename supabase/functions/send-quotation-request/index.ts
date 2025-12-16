@@ -569,7 +569,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (rawBody.notificationOnly) {
       console.log("Processing notification-only email request");
       
-      const { name, company, email, phone, message, quoteNumber, files = [] } = rawBody;
+      const { name, company, email, phone, address, message, quoteNumber, files = [] } = rawBody;
       
       const sendNotificationEmails = async () => {
         try {
@@ -625,6 +625,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${generateDetailRow("Company", company || "N/A")}
             ${generateDetailRow("Email", email)}
             ${generateDetailRow("Phone", phone || "N/A")}
+            ${address ? generateDetailRow("Shipping Address", address) : ""}
             ${parsedPartDetails}
           `;
 
@@ -666,6 +667,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${generateDetailRow("Company", company || "N/A")}
             ${generateDetailRow("Email", email)}
             ${generateDetailRow("Phone", phone || "N/A")}
+            ${address ? generateDetailRow("Shipping Address", address) : ""}
             ${parsedPartDetails}
           `;
 
