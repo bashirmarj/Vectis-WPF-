@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 const Hero: React.FC = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-start pt-20 pb-20 z-10">
+    <section className="relative min-h-screen flex items-center justify-start pt-28 pb-20 z-10">
       <div className="container mx-auto px-6">
         <div className="max-w-4xl">
           <motion.div 
@@ -28,7 +28,7 @@ const Hero: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-3xl md:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight mb-8 uppercase tracking-tight"
+            className="text-3xl md:text-5xl lg:text-6xl font-bold text-vectis-content leading-tight mb-8 uppercase tracking-tight"
           >
             Custom <br />
             {/* Seamless Gradient Animation */}
@@ -43,8 +43,7 @@ const Hero: React.FC = () => {
             >
               Manufacturing
             </motion.span> <br />
-            {/* Outline text with slate stroke */}
-            <span className="text-transparent stroke-slate-400 tracking-[0.25em]" style={{ WebkitTextStroke: '1px rgba(148,163,184,0.6)' }}>
+            <span className="text-vectis-content">
               From Concept
             </span> <br />
             To Completion
