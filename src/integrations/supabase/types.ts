@@ -149,6 +149,47 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_shared: boolean | null
+          name: string
+          parent_folder_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_shared?: boolean | null
+          name: string
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_shared?: boolean | null
+          name?: string
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_projects_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "customer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       failed_cad_analyses: {
         Row: {
           correlation_id: string
@@ -764,6 +805,84 @@ export type Database = {
         }
         Relationships: []
       }
+      project_parts: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          material: string | null
+          mesh_id: string | null
+          notes: string | null
+          part_number: string | null
+          processing_method: string | null
+          project_id: string
+          quantity: number
+          status: Database["public"]["Enums"]["part_status"]
+          subtotal: number | null
+          surface_treatment: string | null
+          thumbnail_url: string | null
+          unit_price: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          material?: string | null
+          mesh_id?: string | null
+          notes?: string | null
+          part_number?: string | null
+          processing_method?: string | null
+          project_id: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["part_status"]
+          subtotal?: number | null
+          surface_treatment?: string | null
+          thumbnail_url?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          material?: string | null
+          mesh_id?: string | null
+          notes?: string | null
+          part_number?: string | null
+          processing_method?: string | null
+          project_id?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["part_status"]
+          subtotal?: number | null
+          surface_treatment?: string | null
+          thumbnail_url?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_parts_mesh_id_fkey"
+            columns: ["mesh_id"]
+            isOneToOne: false
+            referencedRelation: "cad_meshes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_parts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "customer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotation_submissions: {
         Row: {
           created_at: string
@@ -1292,6 +1411,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      part_status:
+        | "draft"
+        | "confirmation_required"
+        | "quoted"
+        | "order_preparation"
+        | "completed"
       quotation_status:
         | "pending"
         | "reviewing"
@@ -1427,6 +1552,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      part_status: [
+        "draft",
+        "confirmation_required",
+        "quoted",
+        "order_preparation",
+        "completed",
+      ],
       quotation_status: [
         "pending",
         "reviewing",

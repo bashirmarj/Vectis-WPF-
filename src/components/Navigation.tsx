@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Phone, ChevronDown, User, LogOut } from "lucide-react";
+import { Menu, X, Phone, ChevronDown, User, LogOut, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
 import { useAuth } from "@/contexts/AuthContext";
@@ -104,14 +104,19 @@ const Navigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    My Dashboard
+                  </DropdownMenuItem>
                   {!checkingRole && isAdmin && (
                     <>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => navigate('/admin')}>
                         Admin Dashboard
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                     </>
                   )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
@@ -151,6 +156,17 @@ const Navigation = () => {
                   </Button>
                   {user ? (
                     <>
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={() => {
+                          setIsOpen(false);
+                          navigate('/dashboard');
+                        }}
+                      >
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        My Dashboard
+                      </Button>
                       {!checkingRole && isAdmin && (
                         <Button 
                           variant="outline" 
