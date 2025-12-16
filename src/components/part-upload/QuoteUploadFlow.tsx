@@ -3,7 +3,7 @@ import { ModeSelector } from './ModeSelector';
 import { FileUploadScreen } from './FileUploadScreen';
 import { QuoteConfigForm } from './QuoteConfigForm';
 import { toast } from 'sonner';
-import occtimportjs from 'occt-import-js';
+import * as occtimportjs from 'occt-import-js';
 
 type FlowStep = 'mode-selection' | 'upload' | 'configure' | 'project-select';
 type FlowMode = 'quick' | 'project';
@@ -35,7 +35,16 @@ export function QuoteUploadFlow() {
     if (occtInitialized.current && occtRef.current) return occtRef.current;
     
     try {
-      const occt = await occtimportjs();
+      // Handle both default and namespace export
+      const initFunction = (occtimportjs as any).default || occtimportjs;
+      const occt = await initFunction({
+        locateFile: (path: string) => {
+          if (path.endsWith('.wasm')) {
+            return `/node_modules/occt-import-js/dist/${path}`;
+          }
+          return path;
+        }
+      });
       occtRef.current = occt;
       occtInitialized.current = true;
       return occt;
