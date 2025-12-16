@@ -43,7 +43,7 @@ async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
   }
 }
 
-// Helper to encode email in base64url format - simple MIME structure (same as quotation emails)
+// Helper to encode email in base64url format
 function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: string): string {
   const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
 
@@ -54,12 +54,10 @@ function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: st
     `MIME-Version: 1.0`,
   ];
   
-  // Add Reply-To if provided (for contact form replies)
   if (replyTo) {
     messageParts.push(`Reply-To: ${replyTo}`);
   }
   
-  // Simple email without attachments - same as quotation emails
   messageParts.push(`Content-Type: text/html; charset=utf-8`);
   messageParts.push("Content-Transfer-Encoding: base64");
   messageParts.push("");
@@ -67,11 +65,9 @@ function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: st
 
   const rawMessage = messageParts.join("\r\n");
 
-  // Convert to base64url (Gmail API requirement)
   const encoder = new TextEncoder();
   const bytes = encoder.encode(rawMessage);
 
-  // Process in chunks to avoid stack overflow with large templates
   const chunkSize = 8192;
   let binaryString = "";
   for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -97,17 +93,62 @@ interface ContactRequest {
   email: string;
   phone?: string;
   company?: string;
-  message: string;
+  address?: string;
+  projectDescription?: string;
+  partDetails?: {
+    partName?: string;
+    material?: string;
+    quantity?: number;
+    finish?: string;
+    heatTreatment?: boolean;
+    heatTreatmentDetails?: string;
+    threadsTolerances?: string;
+  };
+  message?: string; // Legacy field for simple contact form
 }
 
-// Unified email template generator for contact messages
+// Helper to generate detail rows
+function generateDetailRow(label: string, value: string, isMultiline: boolean = false): string {
+  if (isMultiline) {
+    return `
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
+        <tr>
+          <td style="padding: 12px 15px;">
+            <span style="color: #64748b; font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">${label}</span>
+            <p style="color: #1e293b; font-size: 13px; margin: 0; line-height: 1.6; white-space: pre-line;">${value}</p>
+          </td>
+        </tr>
+      </table>
+    `;
+  }
+  return `
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
+      <tr>
+        <td style="padding: 10px 15px; width: 40%; color: #64748b; font-size: 12px; font-weight: 600; vertical-align: top;">${label}</td>
+        <td style="padding: 10px 15px; width: 60%; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right; vertical-align: top;">${value}</td>
+      </tr>
+    </table>
+  `;
+}
+
+// Generate section header
+function generateSectionHeader(title: string): string {
+  return `
+    <div style="background-color: rgba(239, 246, 255, 0.9); padding: 12px 20px; border-bottom: 1px solid #dbeafe;">
+      <h3 style="color: #1e40af; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">${title}</h3>
+    </div>
+  `;
+}
+
+// Email template generator for contact/quote messages
 function generateContactEmailTemplate(options: {
   heroTitle: string;
   heroSubtitle: string;
-  detailsContent: string;
+  projectDetailsContent: string;
+  partDetailsContent?: string;
   footerText?: string;
 }): string {
-  const { heroTitle, heroSubtitle, detailsContent, footerText } = options;
+  const { heroTitle, heroSubtitle, projectDetailsContent, partDetailsContent, footerText } = options;
 
   return `
     <!DOCTYPE html>
@@ -139,7 +180,7 @@ function generateContactEmailTemplate(options: {
             <div style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-image: url('https://res.cloudinary.com/dbcfeio6b/image/upload/v1765522367/LOGO_-_Copy-removebg-preview_gu9f3c.png'); background-repeat: no-repeat; background-position: center 22%; background-size: 80%;">
               <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%;">
               
-                <!-- 1. Brand Header - Table-based for mobile -->
+                <!-- 1. Brand Header -->
                 <div style="background-color: #000000; padding: 20px 15px; text-align: center; position: relative; z-index: 2;">
                   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                     <tr>
@@ -155,7 +196,7 @@ function generateContactEmailTemplate(options: {
                   </table>
                 </div>
 
-                <!-- 3. Hero Section -->
+                <!-- Hero Section -->
                 <div style="padding: 30px 20px 15px 20px; text-align: center; background-color: transparent;">
                   <div style="display: inline-block; width: 56px; height: 56px; border-radius: 50%; background-color: rgba(224, 242, 254, 0.85); margin-bottom: 15px; line-height: 56px;">
                     <span style="font-size: 28px; color: #0284c7; line-height: 56px; font-family: Arial, sans-serif;">&#9993;</span>
@@ -165,17 +206,22 @@ function generateContactEmailTemplate(options: {
                   <p style="color: #64748b; font-size: 14px; margin: 0; line-height: 1.5;">${heroSubtitle}</p>
                 </div>
 
-                <!-- 4. Content & Details -->
+                <!-- Content & Details -->
                 <div style="padding: 0 20px 30px 20px;">
 
-                  <!-- Details "Receipt" Card -->
+                  <!-- Project Details Card -->
                   <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 25px; overflow: hidden;">
-                    <div style="background-color: rgba(239, 246, 255, 0.9); padding: 12px 20px; border-bottom: 1px solid #dbeafe;">
-                      <h3 style="color: #1e40af; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Contact Details</h3>
-                    </div>
-                    
-                    ${detailsContent}
+                    ${generateSectionHeader("Project Details")}
+                    ${projectDetailsContent}
                   </div>
+
+                  ${partDetailsContent ? `
+                  <!-- Part Details Card -->
+                  <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 20px; overflow: hidden;">
+                    ${generateSectionHeader("Part Details")}
+                    ${partDetailsContent}
+                  </div>
+                  ` : ""}
 
                   <!-- Response Note -->
                   <div style="margin-top: 30px; text-align: center; padding: 20px; background-color: rgba(255, 251, 235, 0.9); border: 1px solid #fcd34d; border-radius: 6px;">
@@ -185,7 +231,7 @@ function generateContactEmailTemplate(options: {
                   </div>
 
                   <p style="text-align: center; color: #64748b; font-size: 14px; margin-top: 30px;">
-                    Reply directly to this email to respond to <strong>${footerText?.includes("from") ? "" : "the sender"}</strong>
+                    Reply directly to this email to respond to the sender
                   </p>
 
                 </div>
@@ -212,30 +258,6 @@ function generateContactEmailTemplate(options: {
   `;
 }
 
-// Helper to generate detail rows - Table-based for mobile compatibility
-function generateDetailRow(label: string, value: string, isMultiline: boolean = false): string {
-  if (isMultiline) {
-    return `
-      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
-        <tr>
-          <td style="padding: 12px 15px;">
-            <span style="color: #64748b; font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">${label}</span>
-            <p style="color: #1e293b; font-size: 13px; margin: 0; line-height: 1.6; white-space: pre-line;">${value}</p>
-          </td>
-        </tr>
-      </table>
-    `;
-  }
-  return `
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
-      <tr>
-        <td style="padding: 10px 15px; width: 40%; color: #64748b; font-size: 12px; font-weight: 600; vertical-align: top;">${label}</td>
-        <td style="padding: 10px 15px; width: 60%; color: #1e293b; font-size: 12px; font-weight: 600; text-align: right; vertical-align: top;">${value}</td>
-      </tr>
-    </table>
-  `;
-}
-
 // Input validation helpers
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_NAME_LENGTH = 100;
@@ -249,7 +271,7 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
     return { valid: false, error: 'Invalid request body' };
   }
   
-  const { name, email, message } = data;
+  const { name, email } = data;
   
   // Required fields
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -258,9 +280,6 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
   if (!email || typeof email !== 'string' || email.trim().length === 0) {
     return { valid: false, error: 'Email is required' };
   }
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    return { valid: false, error: 'Message is required' };
-  }
   
   // Length limits
   if (name.length > MAX_NAME_LENGTH) {
@@ -268,9 +287,6 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
   }
   if (email.length > MAX_EMAIL_LENGTH) {
     return { valid: false, error: `Email must be less than ${MAX_EMAIL_LENGTH} characters` };
-  }
-  if (message.length > MAX_MESSAGE_LENGTH) {
-    return { valid: false, error: `Message must be less than ${MAX_MESSAGE_LENGTH} characters` };
   }
   if (data.phone && data.phone.length > MAX_PHONE_LENGTH) {
     return { valid: false, error: `Phone must be less than ${MAX_PHONE_LENGTH} characters` };
@@ -287,28 +303,24 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-// Sanitize text to prevent XSS when displayed in admin UI
+// Sanitize text to prevent XSS
 function sanitizeText(text: string): string {
   return text.replace(/[<>]/g, '').trim();
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Extract client IP address (rate limiting disabled for now)
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 
     console.log("Contact form submission from IP:", clientIp);
 
-    // Hash the IP for privacy
     const ipHash = await hashIP(clientIp);
 
-    // Parse and validate request body
     const rawBody = await req.json();
     const validation = validateContactInput(rawBody);
     
@@ -325,32 +337,59 @@ const handler = async (req: Request): Promise<Response> => {
     const email = rawBody.email.trim().toLowerCase();
     const phone = rawBody.phone ? sanitizeText(rawBody.phone) : undefined;
     const company = rawBody.company ? sanitizeText(rawBody.company) : undefined;
-    const message = sanitizeText(rawBody.message);
+    const address = rawBody.address ? sanitizeText(rawBody.address) : undefined;
+    const projectDescription = rawBody.projectDescription ? sanitizeText(rawBody.projectDescription) : undefined;
+    const message = rawBody.message ? sanitizeText(rawBody.message) : undefined;
+    const partDetails = rawBody.partDetails;
 
     console.log("Processing contact form from:", email);
 
-    // Generate details content
-    const detailsContent = `
+    // Generate Project Details content
+    let projectDetailsContent = `
       ${generateDetailRow("Name", name)}
       ${company ? generateDetailRow("Company", company) : ""}
       ${generateDetailRow("Email", email)}
       ${phone ? generateDetailRow("Phone", phone) : ""}
-      ${generateDetailRow("Message", message, true)}
+      ${address ? generateDetailRow("Address", address) : ""}
+      ${projectDescription ? generateDetailRow("Project Description", projectDescription, true) : ""}
+      ${message ? generateDetailRow("Message", message, true) : ""}
     `;
 
-    // Generate email HTML using unified template
+    // Generate Part Details content if provided
+    let partDetailsContent = "";
+    if (partDetails) {
+      const rows = [];
+      if (partDetails.partName) rows.push(generateDetailRow("Part / Job Name", partDetails.partName));
+      if (partDetails.material) rows.push(generateDetailRow("Material", partDetails.material));
+      if (partDetails.quantity) rows.push(generateDetailRow("Quantity", String(partDetails.quantity)));
+      if (partDetails.finish) rows.push(generateDetailRow("Finish", partDetails.finish));
+      if (partDetails.heatTreatment) {
+        rows.push(generateDetailRow("Heat Treatment", "Required"));
+        if (partDetails.heatTreatmentDetails) {
+          rows.push(generateDetailRow("Heat Treatment Details", partDetails.heatTreatmentDetails));
+        }
+      }
+      if (partDetails.threadsTolerances) rows.push(generateDetailRow("Threads / Tolerances", partDetails.threadsTolerances, true));
+      
+      if (rows.length > 0) {
+        partDetailsContent = rows.join("");
+      }
+    }
+
+    // Generate email HTML
     const emailHtml = generateContactEmailTemplate({
-      heroTitle: "New Contact Message",
-      heroSubtitle: `You have received a new message from <strong>${name}</strong>.`,
-      detailsContent: detailsContent,
-      footerText: "This message was sent via the website contact form.",
+      heroTitle: "New Quote Request",
+      heroSubtitle: `You have received a new quote request from <strong>${name}</strong>.`,
+      projectDetailsContent: projectDetailsContent,
+      partDetailsContent: partDetailsContent || undefined,
+      footerText: "This message was sent via the website quote request form.",
     });
 
     // Get access token and send email
     const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
     const accessToken = await getAccessToken();
 
-    const encodedMessage = encodeEmail(gmailUser, `New Contact Message from ${name}`, emailHtml, email);
+    const encodedMessage = encodeEmail(gmailUser, `New Quote Request from ${name}`, emailHtml, email);
 
     await sendEmail(accessToken, encodedMessage);
 
@@ -365,7 +404,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (insertError) {
       console.error("Error recording submission:", insertError);
-      // Don't fail the request if we can't record the submission
     }
 
     return new Response(JSON.stringify({ success: true, message: "Message sent successfully" }), {
