@@ -213,6 +213,35 @@ export function QuoteRequestForm() {
         }
       }
 
+      // Send email notification with all form details
+      try {
+        const emailPayload = {
+          notificationOnly: true,
+          name: name.trim(),
+          company: company.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          message: fullMessage,
+          quoteNumber: quotation.quote_number,
+          files: files.map(f => ({
+            name: f.file.name,
+            size: f.file.size,
+            type: f.file.type
+          }))
+        };
+
+        const { error: emailError } = await supabase.functions.invoke('send-quotation-request', {
+          body: emailPayload
+        });
+
+        if (emailError) {
+          console.error('Email notification error:', emailError);
+          // Don't fail the submission if email fails - data is already saved
+        }
+      } catch (emailErr) {
+        console.error('Failed to send email notification:', emailErr);
+      }
+
       toast.success('Quote request submitted successfully! We\'ll be in touch within 24 hours.');
       
       // Reset form
