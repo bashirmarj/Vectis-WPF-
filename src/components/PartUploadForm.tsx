@@ -1,9 +1,9 @@
-import { QuoteRequestForm } from './part-upload/QuoteRequestForm';
+import { QuoteUploadFlow } from './part-upload/QuoteUploadFlow';
 
 export function PartUploadForm() {
   return (
     <div className="w-full py-8 px-4">
-      <QuoteRequestForm />
+      <QuoteUploadFlow />
     </div>
   );
 }
