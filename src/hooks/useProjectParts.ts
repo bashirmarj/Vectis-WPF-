@@ -24,6 +24,11 @@ export interface ProjectPart {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // New analysis columns
+  analysis_data: Record<string, any> | null;
+  volume_cm3: number | null;
+  surface_area_cm2: number | null;
+  complexity_score: number | null;
 }
 
 export function useProjectParts(projectId?: string) {
@@ -74,6 +79,11 @@ export function useProjectParts(projectId?: string) {
     material?: string;
     surface_treatment?: string;
     quantity?: number;
+    mesh_id?: string;
+    analysis_data?: Record<string, any>;
+    volume_cm3?: number;
+    surface_area_cm2?: number;
+    complexity_score?: number;
   }) => {
     if (!user) return null;
 
