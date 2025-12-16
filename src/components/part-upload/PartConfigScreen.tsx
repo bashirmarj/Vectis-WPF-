@@ -5,8 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, Mail, Phone, Building2, MapPin, User, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronLeft, ChevronDown, Mail, Phone, Building2, User, Loader2, Minus, Plus } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 
 interface FileWithData {
   file: File;
@@ -81,8 +84,17 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
     phone: "",
     company: "",
     address: "",
-    message: "",
+    projectDescription: "",
   });
+
+  const [partDetails, setPartDetails] = useState({
+    partName: "",
+    finish: "",
+    heatTreatment: false,
+    threadsTolerances: "",
+  });
+
+  const [isPartDetailsOpen, setIsPartDetailsOpen] = useState(false);
 
   const selectedFile = files[selectedFileIndex];
 
@@ -90,6 +102,7 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
     onSubmit({
       files: files,
       contact: contactInfo,
+      partDetails: partDetails,
     });
   };
 
@@ -100,10 +113,21 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
     }));
   };
 
+  const handlePartDetailsChange = (field: string, value: string | boolean) => {
+    setPartDetails((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleQuantityChange = (delta: number) => {
+    const newQty = Math.max(1, selectedFile.quantity + delta);
+    onUpdateFile(selectedFileIndex, { quantity: newQty });
+  };
+
   const isFormValid = () => {
-    const filesValid = files.every((f) => f.material && f.quantity > 0);
-    const contactValid = contactInfo.name && contactInfo.email && contactInfo.phone;
-    return filesValid && contactValid;
+    const contactValid = contactInfo.name && contactInfo.email && contactInfo.phone && contactInfo.company && contactInfo.projectDescription;
+    return contactValid;
   };
 
   return (
@@ -171,155 +195,264 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         </div>
       </div>
 
-      {/* Configuration + Contact Information - Constrained Width Below CAD Viewer */}
-      <div className="py-4">
+      {/* Form Sections Below CAD Viewer */}
+      <div className="py-4 space-y-4">
+        {/* PROJECT DETAILS Section */}
         <Card>
           <CardContent className="p-4 space-y-4">
-            {/* Configuration Row */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Project Details</h3>
+              <span className="text-xs text-muted-foreground">Faster quotes with CAD</span>
+            </div>
+
+            {/* Row 1: Name, Company */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="material" className="text-xs font-medium">Material *</Label>
+                <Label htmlFor="name" className="text-xs flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  Name *
+                </Label>
                 <Input
-                  id="material"
+                  id="name"
                   className="h-9"
-                  value={selectedFile.material || ""}
-                  onChange={(e) => onUpdateFile(selectedFileIndex, { material: e.target.value })}
-                  placeholder="e.g., Aluminum 6061, Steel 304..."
+                  value={contactInfo.name}
+                  onChange={(e) => handleContactInfoChange("name", e.target.value)}
+                  placeholder="Jane Smith"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="quantity" className="text-xs font-medium">Quantity *</Label>
+                <Label htmlFor="company" className="text-xs flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  Company Name *
+                </Label>
                 <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
+                  id="company"
                   className="h-9"
-                  value={selectedFile.quantity}
-                  onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
+                  value={contactInfo.company}
+                  onChange={(e) => handleContactInfoChange("company", e.target.value)}
+                  placeholder="Acme Manufacturing Ltd."
                 />
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="border-t" />
-
-            {/* Contact Information */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Contact Information</h3>
-              
-              {/* Row 1: Name, Email, Phone */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="name" className="text-xs flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    Full Name *
-                  </Label>
-                  <Input
-                    id="name"
-                    className="h-9"
-                    value={contactInfo.name}
-                    onChange={(e) => handleContactInfoChange("name", e.target.value)}
-                    placeholder="John Doe"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="email" className="text-xs flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
-                    Email *
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    className="h-9"
-                    value={contactInfo.email}
-                    onChange={(e) => handleContactInfoChange("email", e.target.value)}
-                    placeholder="john@example.com"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="phone" className="text-xs flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    Phone *
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    className="h-9"
-                    value={contactInfo.phone}
-                    onChange={(e) => handleContactInfoChange("phone", e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Company, Address */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="company" className="text-xs flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />
-                    Company
-                  </Label>
-                  <Input
-                    id="company"
-                    className="h-9"
-                    value={contactInfo.company}
-                    onChange={(e) => handleContactInfoChange("company", e.target.value)}
-                    placeholder="Acme Corp"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="address" className="text-xs flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    Shipping Address
-                  </Label>
-                  <Input
-                    id="address"
-                    className="h-9"
-                    value={contactInfo.address}
-                    onChange={(e) => handleContactInfoChange("address", e.target.value)}
-                    placeholder="123 Main St, City, State, ZIP"
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Notes - Full Width */}
+            {/* Row 2: Phone, Email */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="message" className="text-xs">Additional Notes</Label>
-                <Textarea
-                  id="message"
-                  value={contactInfo.message}
-                  onChange={(e) => handleContactInfoChange("message", e.target.value)}
-                  placeholder="Any special requirements or notes..."
-                  rows={2}
-                  className="resize-none"
+                <Label htmlFor="phone" className="text-xs flex items-center gap-1">
+                  <Phone className="w-3 h-3" />
+                  Phone Number *
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  className="h-9"
+                  value={contactInfo.phone}
+                  onChange={(e) => handleContactInfoChange("phone", e.target.value)}
+                  placeholder="(555) 123-4567"
                 />
               </div>
 
-              {/* Submit Button */}
-              <div className="flex justify-center pt-2">
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={!isFormValid() || isSubmitting} 
-                  className="w-full md:w-auto min-w-[180px]" 
-                  size="default"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    "Submit Quote Request"
-                  )}
-                </Button>
+              <div className="space-y-1">
+                <Label htmlFor="email" className="text-xs flex items-center gap-1">
+                  <Mail className="w-3 h-3" />
+                  Email *
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  className="h-9"
+                  value={contactInfo.email}
+                  onChange={(e) => handleContactInfoChange("email", e.target.value)}
+                  placeholder="you@company.com"
+                />
               </div>
+            </div>
+
+            {/* Row 3: Address with Autocomplete */}
+            <div className="space-y-1">
+              <Label htmlFor="address" className="text-xs">Address</Label>
+              <AddressAutocomplete
+                value={contactInfo.address}
+                onChange={(value) => handleContactInfoChange("address", value)}
+                placeholder="Start typing for suggestions..."
+              />
+            </div>
+
+            {/* Row 4: Project Description */}
+            <div className="space-y-1">
+              <Label htmlFor="projectDescription" className="text-xs">Project Description *</Label>
+              <Textarea
+                id="projectDescription"
+                value={contactInfo.projectDescription}
+                onChange={(e) => handleContactInfoChange("projectDescription", e.target.value)}
+                placeholder="Briefly describe the part and requirements (material, qty, finish, critical dims, deadline)."
+                rows={3}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">If no drawing, a short description is fine.</p>
             </div>
           </CardContent>
         </Card>
+
+        {/* PART DETAILS (Optional) - Collapsible */}
+        <Card>
+          <Collapsible open={isPartDetailsOpen} onOpenChange={setIsPartDetailsOpen}>
+            <CollapsibleTrigger asChild>
+              <CardContent className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Part Details (Optional)</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Click to expand and provide additional details</p>
+                  </div>
+                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isPartDetailsOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </CardContent>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <CardContent className="p-4 pt-0 space-y-4 border-t">
+                {/* Part / Job name */}
+                <div className="space-y-1 pt-4">
+                  <Label htmlFor="partName" className="text-xs">Part / Job name</Label>
+                  <Input
+                    id="partName"
+                    className="h-9"
+                    value={partDetails.partName}
+                    onChange={(e) => handlePartDetailsChange("partName", e.target.value)}
+                    placeholder="e.g., Shaft Holder Rev B"
+                  />
+                </div>
+
+                {/* Material + Quantity */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="material" className="text-xs">Material</Label>
+                    <Select
+                      value={selectedFile.material || ""}
+                      onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select Material" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {materials.map((mat) => (
+                          <SelectItem key={mat} value={mat}>{mat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Quantity</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => handleQuantityChange(-1)}
+                        disabled={selectedFile.quantity <= 1}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min="1"
+                        className="h-9 text-center w-20"
+                        value={selectedFile.quantity}
+                        onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => handleQuantityChange(1)}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Finish + Heat Treatment */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="finish" className="text-xs">Finish</Label>
+                    <Select
+                      value={partDetails.finish}
+                      onValueChange={(value) => handlePartDetailsChange("finish", value)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select Finish" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="as-machined">As Machined</SelectItem>
+                        <SelectItem value="anodized">Anodized</SelectItem>
+                        <SelectItem value="powder-coated">Powder Coated</SelectItem>
+                        <SelectItem value="polished">Polished</SelectItem>
+                        <SelectItem value="brushed">Brushed</SelectItem>
+                        <SelectItem value="bead-blasted">Bead Blasted</SelectItem>
+                        <SelectItem value="black-oxide">Black Oxide</SelectItem>
+                        <SelectItem value="zinc-plated">Zinc Plated</SelectItem>
+                        <SelectItem value="nickel-plated">Nickel Plated</SelectItem>
+                        <SelectItem value="chrome-plated">Chrome Plated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Heat Treatment</Label>
+                    <div className="flex items-center space-x-2 h-9">
+                      <Checkbox
+                        id="heatTreatment"
+                        checked={partDetails.heatTreatment}
+                        onCheckedChange={(checked) => handlePartDetailsChange("heatTreatment", !!checked)}
+                      />
+                      <label
+                        htmlFor="heatTreatment"
+                        className="text-sm text-muted-foreground cursor-pointer"
+                      >
+                        Required
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Threads / Tolerances */}
+                <div className="space-y-1">
+                  <Label htmlFor="threadsTolerances" className="text-xs">Threads / Tolerances</Label>
+                  <Textarea
+                    id="threadsTolerances"
+                    value={partDetails.threadsTolerances}
+                    onChange={(e) => handlePartDetailsChange("threadsTolerances", e.target.value)}
+                    placeholder="e.g., ±0.001&quot;, 1/4-20 UNC, Ø10 H7, true position 0.05"
+                    rows={2}
+                    className="resize-none"
+                  />
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Submit Button */}
+        <div className="flex justify-center pt-2">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!isFormValid() || isSubmitting} 
+            className="w-full md:w-auto min-w-[200px]" 
+            size="lg"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              "Submit Quote Request"
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );
