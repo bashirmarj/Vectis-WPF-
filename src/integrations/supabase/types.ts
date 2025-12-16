@@ -807,6 +807,8 @@ export type Database = {
       }
       project_parts: {
         Row: {
+          analysis_data: Json | null
+          complexity_score: number | null
           created_at: string
           file_name: string
           file_path: string
@@ -820,13 +822,17 @@ export type Database = {
           quantity: number
           status: Database["public"]["Enums"]["part_status"]
           subtotal: number | null
+          surface_area_cm2: number | null
           surface_treatment: string | null
           thumbnail_url: string | null
           unit_price: number | null
           updated_at: string
           user_id: string
+          volume_cm3: number | null
         }
         Insert: {
+          analysis_data?: Json | null
+          complexity_score?: number | null
           created_at?: string
           file_name: string
           file_path: string
@@ -840,13 +846,17 @@ export type Database = {
           quantity?: number
           status?: Database["public"]["Enums"]["part_status"]
           subtotal?: number | null
+          surface_area_cm2?: number | null
           surface_treatment?: string | null
           thumbnail_url?: string | null
           unit_price?: number | null
           updated_at?: string
           user_id: string
+          volume_cm3?: number | null
         }
         Update: {
+          analysis_data?: Json | null
+          complexity_score?: number | null
           created_at?: string
           file_name?: string
           file_path?: string
@@ -860,11 +870,13 @@ export type Database = {
           quantity?: number
           status?: Database["public"]["Enums"]["part_status"]
           subtotal?: number | null
+          surface_area_cm2?: number | null
           surface_treatment?: string | null
           thumbnail_url?: string | null
           unit_price?: number | null
           updated_at?: string
           user_id?: string
+          volume_cm3?: number | null
         }
         Relationships: [
           {

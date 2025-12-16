@@ -6,9 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FileUploadScreen } from "./part-upload/FileUploadScreen";
 import PartConfigScreen from "./part-upload/PartConfigScreen";
+import { ProjectSelector } from "./part-upload/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
+import { useCustomerProjects } from "@/hooks/useCustomerProjects";
 
 interface FileWithQuantity {
   file: File;
@@ -19,12 +21,12 @@ interface FileWithQuantity {
     vertices: number[];
     indices: number[];
     normals: number[];
-    vertex_colors?: string[]; // ✅ Added for topology colors
+    vertex_colors?: string[];
     triangle_count: number;
     face_types?: string[];
     feature_edges?: number[][][];
-    face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>; // ✅ Added for feature highlighting
-    vertex_face_ids?: number[]; // ✅ Added for face identification
+    face_mapping?: Record<number, { triangle_indices: number[]; triangle_range: [number, number] }>;
+    vertex_face_ids?: number[];
     tagged_edges?: Array<{
       feature_id: number;
       start: [number, number, number];
@@ -51,23 +53,27 @@ interface FileWithQuantity {
   };
   quote?: any;
   isAnalyzing?: boolean;
-  uploadProgress?: number; // 0-100 for storage upload phase
-  analysisProgress?: number; // 0-100 for analysis phase
-  uploadSpeed?: number; // bytes per second
-  analysisStatus?: string; // Status message for analysis phase
+  uploadProgress?: number;
+  analysisProgress?: number;
+  uploadSpeed?: number;
+  analysisStatus?: string;
+  filePath?: string; // Storage path for the uploaded file
 }
 
 export const PartUploadForm = () => {
-  const [currentScreen, setCurrentScreen] = useState<"upload" | "configure">("upload");
+  const [currentScreen, setCurrentScreen] = useState<"project" | "upload" | "configure">("project");
   const [files, setFiles] = useState<FileWithQuantity[]>([]);
   const [materials, setMaterials] = useState<string[]>([]);
   const [processes, setProcesses] = useState<string[]>([]);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  
+  const { projects, loading: projectsLoading, createProject } = useCustomerProjects();
 
   // Load materials & processes from Supabase
   useEffect(() => {
@@ -93,7 +99,7 @@ export const PartUploadForm = () => {
     fetchProcesses();
   }, []);
 
-  // ✅ FIXED: Analyze file using Supabase Edge Function with progress tracking
+  // Analyze file using Supabase Edge Function with progress tracking
   const analyzeFile = async (fileWithQty: FileWithQuantity, index: number) => {
     try {
       setFiles((prev) => prev.map((f, i) => (i === index ? { 
@@ -104,21 +110,20 @@ export const PartUploadForm = () => {
         analysisStatus: 'Preparing upload...'
       } : f)));
 
-      console.log(`📤 Sending ${fileWithQty.file.name} to edge function (may take 30-60s on first use)...`);
+      console.log(`📤 Sending ${fileWithQty.file.name} to edge function...`);
 
-      // Step 1: Upload to Supabase Storage with progress tracking using XMLHttpRequest
+      // Step 1: Upload to Supabase Storage with progress tracking
       const fileExt = fileWithQty.file.name.split('.').pop()?.toLowerCase() || 'step';
       const fileName = `${Date.now()}_${fileWithQty.file.name}`;
-      const filePath = `uploads/${fileName}`;
+      const filePath = `uploads/${user?.id}/${selectedProjectId}/${fileName}`;
 
-      // Get the upload URL from Supabase
       const { data: uploadUrlData, error: uploadUrlError } = await supabase.storage
         .from('cad-files')
         .createSignedUploadUrl(filePath);
 
       if (uploadUrlError) throw new Error(`Failed to create upload URL: ${uploadUrlError.message}`);
 
-      // Upload with progress tracking using XMLHttpRequest
+      // Upload with progress tracking
       const uploadStartTime = Date.now();
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -129,7 +134,7 @@ export const PartUploadForm = () => {
           if (event.lengthComputable) {
             const progress = Math.round((event.loaded / event.total) * 100);
             const currentTime = Date.now();
-            const timeDiff = (currentTime - lastTime) / 1000; // seconds
+            const timeDiff = (currentTime - lastTime) / 1000;
             const bytesDiff = event.loaded - lastLoaded;
             const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
 
@@ -150,7 +155,8 @@ export const PartUploadForm = () => {
             setFiles((prev) => prev.map((f, i) => (i === index ? { 
               ...f, 
               uploadProgress: 100,
-              analysisStatus: 'Upload complete, preparing analysis...'
+              analysisStatus: 'Upload complete, preparing analysis...',
+              filePath: filePath
             } : f)));
             resolve();
           } else {
@@ -166,24 +172,25 @@ export const PartUploadForm = () => {
         xhr.send(fileWithQty.file);
       });
 
+      // Store file path
+      setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, filePath } : f)));
+
       // Step 2: Create signed URL for analysis
       const { data: urlData, error: urlError } = await supabase.storage
         .from('cad-files')
-        .createSignedUrl(filePath, 3600); // 1 hour expiry
+        .createSignedUrl(filePath, 3600);
 
       if (urlError) {
         throw new Error(`Failed to create signed URL: ${urlError.message}`);
       }
 
-      // Step 3: Call edge function with simulated progress updates
-      // Simulate analysis progress updates (estimated based on typical processing time)
+      // Step 3: Call edge function with progress updates
       const progressInterval = setInterval(() => {
         setFiles((prev) => prev.map((f, i) => {
           if (i !== index) return f;
           const currentProgress = f.analysisProgress || 0;
-          if (currentProgress >= 95) return f; // Cap at 95% until complete
+          if (currentProgress >= 95) return f;
           
-          // Increment progress gradually
           const newProgress = Math.min(95, currentProgress + 5);
           const status = 
             newProgress < 30 ? 'Processing geometry...' :
@@ -193,7 +200,7 @@ export const PartUploadForm = () => {
           
           return { ...f, analysisProgress: newProgress, analysisStatus: status };
         }));
-      }, 1500); // Update every 1.5 seconds
+      }, 1500);
 
       setFiles((prev) => prev.map((f, i) => (i === index ? { 
         ...f, 
@@ -218,31 +225,10 @@ export const PartUploadForm = () => {
       }
 
       console.log("✅ Edge function response:", result);
-      console.log("📊 Available keys in response:", Object.keys(result));
       
-      // 🔍 ENHANCED DEBUGGING - Deep inspection of response structure
-      console.log("🔍 DEBUG: Detailed response structure:", {
-        hasMeshData: !!result.mesh_data,
-        hasTopLevelVertices: !!result.vertices,
-        meshDataType: typeof result.mesh_data,
-        meshDataKeys: result.mesh_data ? Object.keys(result.mesh_data) : 'null',
-        topLevelVerticesLength: result.vertices?.length || 0,
-        meshDataVerticesLength: result.mesh_data?.vertices?.length || 0,
-        // Log the actual data structure
-        meshDataSample: result.mesh_data ? {
-          vertices: result.mesh_data.vertices?.slice(0, 9),
-          indices: result.mesh_data.indices?.slice(0, 9),
-          normals: result.mesh_data.normals?.slice(0, 9),
-          keys: Object.keys(result.mesh_data)
-        } : 'null',
-        // Check if data is nested elsewhere
-        geometryVertices: result.geometry?.vertices?.length || 0,
-      });
-
-      // ✅ Extract mesh data with fallback checks at multiple levels
+      // Extract mesh data with fallback checks
       let meshData = null;
       
-      // Priority 1: Check mesh_data object
       if (result.mesh_data && (result.mesh_data.vertices || result.mesh_data.vertex_array)) {
         meshData = {
           vertices: result.mesh_data.vertices || result.mesh_data.vertex_array,
@@ -252,12 +238,10 @@ export const PartUploadForm = () => {
           tagged_edges: result.mesh_data.tagged_edges,
           edge_classifications: result.mesh_data.edge_classifications,
           triangle_count: result.mesh_data.triangle_count || (result.mesh_data.indices?.length / 3),
-          face_mapping: result.mesh_data.face_mapping, // ✅ Added for feature highlighting
-          vertex_face_ids: result.mesh_data.vertex_face_ids, // ✅ Added for face identification
+          face_mapping: result.mesh_data.face_mapping,
+          vertex_face_ids: result.mesh_data.vertex_face_ids,
         };
-      }
-      // Priority 2: Check top-level
-      else if (result.vertices || result.vertex_array) {
+      } else if (result.vertices || result.vertex_array) {
         meshData = {
           vertices: result.vertices || result.vertex_array,
           indices: result.indices || result.index_array || result.faces,
@@ -266,75 +250,36 @@ export const PartUploadForm = () => {
           tagged_edges: result.tagged_edges,
           edge_classifications: result.edge_classifications,
           triangle_count: result.triangle_count || (result.indices?.length / 3),
-          face_mapping: result.face_mapping, // ✅ Added for feature highlighting
-          vertex_face_ids: result.vertex_face_ids, // ✅ Added for face identification
+          face_mapping: result.face_mapping,
+          vertex_face_ids: result.vertex_face_ids,
         };
-      }
-      // Priority 3: Check geometry object
-      else if (result.geometry?.vertices) {
+      } else if (result.geometry?.vertices) {
         meshData = {
           vertices: result.geometry.vertices,
           indices: result.geometry.indices || result.geometry.faces,
           normals: result.geometry.normals,
           vertex_colors: result.geometry.vertex_colors,
           triangle_count: result.geometry.triangle_count,
-          face_mapping: result.geometry.face_mapping, // ✅ Added for feature highlighting
-          vertex_face_ids: result.geometry.vertex_face_ids, // ✅ Added for face identification
+          face_mapping: result.geometry.face_mapping,
+          vertex_face_ids: result.geometry.vertex_face_ids,
         };
       }
 
-      console.log("🎨 Extracted mesh data:", {
-        source: meshData ? 'found' : 'not found',
-        hasVertices: !!meshData?.vertices,
-        hasIndices: !!meshData?.indices,
-        hasNormals: !!meshData?.normals,
-        vertexCount: meshData?.vertices?.length || 0,
-        indexCount: meshData?.indices?.length || 0,
-        normalCount: meshData?.normals?.length || 0,
-        triangleCount: meshData?.triangle_count || 0,
-        hasVertexColors: !!meshData?.vertex_colors,
-        hasTaggedEdges: !!meshData?.tagged_edges,
-        hasEdgeClassifications: !!meshData?.edge_classifications,
-        hasFaceMapping: !!meshData?.face_mapping, // ✅ Added debug log
-        hasVertexFaceIds: !!meshData?.vertex_face_ids, // ✅ Added debug log
-      });
-      
       // Fetch mesh from URL if meshData is missing vertices
       if (result.mesh_url && meshData && !meshData.vertices) {
-        console.log("📥 Fetching large mesh data from:", result.mesh_url);
         try {
           const meshResponse = await fetch(result.mesh_url);
           if (meshResponse.ok) {
             meshData = await meshResponse.json();
-            console.log("✅ Large mesh data fetched successfully");
-          } else {
-            console.warn("⚠️ Failed to fetch mesh data from URL");
           }
         } catch (meshError) {
-          console.error("❌ Error fetching mesh data:", meshError);
+          console.error("Error fetching mesh data:", meshError);
         }
       }
 
-      // Add vertex_colors to meshData if available (with null safety)
       if (meshData && (result.vertex_colors || meshData.vertex_colors)) {
         meshData.vertex_colors = result.vertex_colors || meshData.vertex_colors;
       }
-
-      // Log mesh data with null safety
-      console.log("🎨 Mesh data received:", meshData ? {
-        hasVertexColors: !!meshData.vertex_colors,
-        vertexColorCount: meshData.vertex_colors?.length,
-        triangleCount: result.triangle_count || meshData.triangle_count,
-        hasVertices: !!meshData.vertices,
-        hasIndices: !!meshData.indices,
-        hasNormals: !!meshData.normals,
-        hasVertexFaceIds: !!meshData.vertex_face_ids,
-        vertexFaceIdsCount: meshData.vertex_face_ids?.length,
-        hasTaggedEdges: !!meshData.tagged_edges,
-        taggedEdgesCount: meshData.tagged_edges?.length || 0,
-        hasEdgeClassifications: !!meshData.edge_classifications,
-        edgeClassificationsCount: meshData.edge_classifications?.length || 0,
-      } : { source: 'null - backend returned no mesh data' });
 
       // Extract analysis data
       const analysis = {
@@ -344,25 +289,19 @@ export const PartUploadForm = () => {
         confidence: result.confidence,
         method: result.method,
         triangle_count: result.triangle_count,
-        geometric_features: null, // Feature recognition disabled for faster processing
+        geometric_features: null,
         recommended_processes: result.recommended_processes,
         routing_reasoning: result.routing_reasoning,
         machining_summary: result.machining_summary,
       };
 
-      console.log("💾 Storing analysis data:", {
-        hasAnalysis: !!analysis,
-        hasMeshData: !!meshData,
-      });
-
-      // ✅ Store meshData and analysis directly (no meshId caching)
       setFiles((prev) =>
         prev.map((f, i) =>
           i === index
             ? {
                 ...f,
-                meshData, // ✅ Direct mesh data for 3D viewer
-                analysis, // For FeatureTree and analysis display
+                meshData,
+                analysis,
                 isAnalyzing: false,
                 uploadProgress: 100,
                 analysisProgress: 100,
@@ -372,14 +311,12 @@ export const PartUploadForm = () => {
         ),
       );
 
-      console.log("✅ File updated with fresh mesh data (no caching)");
-
       toast({
         title: "✅ CAD Analysis Complete",
         description: `${fileWithQty.file.name} analyzed successfully`,
       });
     } catch (error: any) {
-      console.error("❌ Error analyzing file:", error);
+      console.error("Error analyzing file:", error);
       setFiles((prev) => prev.map((f, i) => (i === index ? { 
         ...f, 
         isAnalyzing: false,
@@ -389,32 +326,18 @@ export const PartUploadForm = () => {
       } : f)));
       toast({
         title: "Preview Unavailable",
-        description: "Failed to load your step file. We will still receive your request and provide you with the quotation.",
+        description: "Failed to load your step file. We will still receive your request.",
       });
     }
   };
 
-  // Validate CAD file by MIME type and extension
+  // Validate CAD file
   const validateCADFile = (file: File): boolean => {
-    const validMimeTypes = [
-      'model/step',
-      'model/step+xml', 
-      'model/iges',
-      'application/step',
-      'application/stp',
-      'application/iges',
-      'application/igs',
-      'text/plain',
-      'application/octet-stream'
-    ];
-    
     const validExtensions = ['.step', '.stp', '.iges', '.igs'];
     const hasValidExtension = validExtensions.some(ext => 
       file.name.toLowerCase().endsWith(ext)
     );
-    
-    // Accept if either MIME type or extension is valid
-    return validMimeTypes.includes(file.type) || hasValidExtension;
+    return hasValidExtension;
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -426,7 +349,7 @@ export const PartUploadForm = () => {
     if (invalidFiles.length > 0) {
       toast({
         title: "Invalid file type",
-        description: `Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}`,
+        description: `Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported.`,
         variant: "destructive",
       });
       return;
@@ -440,46 +363,30 @@ export const PartUploadForm = () => {
     const newFiles = [...files, ...filesWithQuantity];
     setFiles(newFiles);
 
-    // Analyze files sequentially
     for (let idx = 0; idx < filesWithQuantity.length; idx++) {
       const fileIndex = files.length + idx;
       await analyzeFile(filesWithQuantity[idx], fileIndex);
     }
   };
 
-  // Handle files dropped via drag-and-drop
   const handleFileDrop = async (droppedFiles: FileList) => {
     const selectedFiles = Array.from(droppedFiles);
     if (selectedFiles.length === 0) return;
 
+    const validFiles = selectedFiles.filter(file => validateCADFile(file));
     const invalidFiles = selectedFiles.filter(file => !validateCADFile(file));
 
     if (invalidFiles.length > 0) {
       toast({
         title: "Invalid file type",
-        description: `Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported. Invalid files: ${invalidFiles.map(f => f.name).join(', ')}`,
+        description: `Only STEP (.step, .stp) or IGES (.iges, .igs) files are supported.`,
         variant: "destructive",
       });
-      // Filter out invalid files and continue with valid ones
-      const validFiles = selectedFiles.filter(file => validateCADFile(file));
-      if (validFiles.length === 0) return;
-      
-      const filesWithQuantity = validFiles.map((file) => ({
-        file,
-        quantity: 1,
-      }));
-
-      const newFiles = [...files, ...filesWithQuantity];
-      setFiles(newFiles);
-
-      for (let idx = 0; idx < filesWithQuantity.length; idx++) {
-        const fileIndex = files.length + idx;
-        await analyzeFile(filesWithQuantity[idx], fileIndex);
-      }
-      return;
     }
 
-    const filesWithQuantity = selectedFiles.map((file) => ({
+    if (validFiles.length === 0) return;
+
+    const filesWithQuantity = validFiles.map((file) => ({
       file,
       quantity: 1,
     }));
@@ -487,7 +394,6 @@ export const PartUploadForm = () => {
     const newFiles = [...files, ...filesWithQuantity];
     setFiles(newFiles);
 
-    // Analyze files sequentially
     for (let idx = 0; idx < filesWithQuantity.length; idx++) {
       const fileIndex = files.length + idx;
       await analyzeFile(filesWithQuantity[idx], fileIndex);
@@ -513,98 +419,120 @@ export const PartUploadForm = () => {
     await analyzeFile(file, index);
   };
 
-  const handleContinue = () => {
-    // Check for files that failed to load
+  const handleContinueFromProject = () => {
+    if (!selectedProjectId) {
+      toast({
+        title: "Select a project",
+        description: "Please select or create a project before uploading files.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCurrentScreen("upload");
+  };
+
+  const handleContinueFromUpload = () => {
     const failedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
     
-    // Warn about failed files but allow continuing
     if (failedFiles.length > 0) {
       toast({
         title: "Some files couldn't be previewed",
-        description: "Failed to load your step file. We will still receive your request and provide you with the quotation.",
+        description: "We will still process your request.",
       });
     }
-
-    console.log(
-      "📋 Continuing with files:",
-      files.map((f) => ({
-        name: f.file.name,
-        hasMeshData: !!f.meshData,
-        hasAnalysis: !!f.analysis,
-      })),
-    );
 
     setCurrentScreen("configure");
   };
 
-  const handleBack = () => setCurrentScreen("upload");
+  const handleBack = () => {
+    if (currentScreen === "configure") {
+      setCurrentScreen("upload");
+    } else if (currentScreen === "upload") {
+      setCurrentScreen("project");
+    }
+  };
 
   const handleUpdateFile = (index: number, updates: Partial<FileWithQuantity>) => {
     setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, ...updates } : f)));
   };
 
+  // Save parts to project and redirect to dashboard
   const handleSubmit = async (formData: any) => {
-    console.log("📤 Submitting quote request:", formData);
+    if (!user || !selectedProjectId) return;
+    
+    console.log("📤 Saving parts to project:", selectedProjectId);
     setUploading(true);
 
-    // Extract contact info from the nested structure
-    const contact = formData.contact || {};
-    
     try {
-      // Convert files to base64 for transmission
-      const filesWithContent = await Promise.all(
-        files.map(async (f) => {
-          const reader = new FileReader();
-          return new Promise<any>((resolve) => {
-            reader.onload = () => {
-              const base64 = (reader.result as string).split(',')[1];
-              resolve({
-                name: f.file.name,
-                content: base64,
-                size: f.file.size,
-                quantity: f.quantity,
-                material: f.material || 'Not specified',
-                geometric_features: f.analysis?.geometric_features,
-                mesh_data: f.meshData,
-              });
-            };
-            reader.readAsDataURL(f.file);
-          });
-        })
-      );
+      // Save each file as a project part
+      for (const fileData of files) {
+        // First, save mesh data to cad_meshes if available
+        let meshId = null;
+        if (fileData.meshData && fileData.meshData.vertices?.length > 0) {
+          const { data: meshRecord, error: meshError } = await supabase
+            .from('cad_meshes')
+            .insert({
+              file_name: fileData.file.name,
+              file_hash: `${fileData.file.name}_${fileData.file.size}_${Date.now()}`,
+              vertices: fileData.meshData.vertices,
+              indices: fileData.meshData.indices || [],
+              normals: fileData.meshData.normals || [],
+              triangle_count: fileData.meshData.triangle_count || 0,
+              vertex_colors: fileData.meshData.vertex_colors || [],
+              feature_edges: fileData.meshData.feature_edges || [],
+              face_mapping: fileData.meshData.face_mapping || {},
+              vertex_face_ids: fileData.meshData.vertex_face_ids || [],
+              tagged_feature_edges: fileData.meshData.tagged_edges || [],
+              edge_classifications: fileData.meshData.edge_classifications || [],
+              geometric_features: fileData.analysis?.geometric_features || {},
+            })
+            .select('id')
+            .single();
 
-      const { data: submission, error } = await supabase.functions.invoke(
-        'send-quotation-request',
-        {
-          body: {
-            name: contact.name,
-            company: contact.company || '',
-            email: contact.email,
-            phone: contact.phone,
-            shippingAddress: contact.address || '',
-            message: contact.message || '',
-            files: filesWithContent,
-            drawingFiles: [],
+          if (!meshError && meshRecord) {
+            meshId = meshRecord.id;
+          } else {
+            console.warn('Failed to save mesh:', meshError);
           }
         }
-      );
 
-      if (error) throw error;
+        // Create project part
+        const { error: partError } = await supabase
+          .from('project_parts')
+          .insert({
+            project_id: selectedProjectId,
+            user_id: user.id,
+            file_name: fileData.file.name,
+            file_path: fileData.filePath || '',
+            mesh_id: meshId,
+            processing_method: fileData.process || formData.files?.[0]?.process || 'CNC-Milling',
+            material: fileData.material || formData.files?.[0]?.material || 'Aluminum 6061',
+            quantity: fileData.quantity,
+            analysis_data: fileData.meshData ? { meshData: fileData.meshData } : null,
+            volume_cm3: fileData.analysis?.volume_cm3 || null,
+            surface_area_cm2: fileData.analysis?.surface_area_cm2 || null,
+            complexity_score: fileData.analysis?.complexity_score || null,
+          });
+
+        if (partError) {
+          console.error('Failed to create part:', partError);
+          throw partError;
+        }
+      }
 
       toast({
-        title: "✅ Quote Submitted",
-        description: `Quote request ${submission?.quote_number || ''} submitted successfully!`,
+        title: "✅ Parts Saved",
+        description: `${files.length} part(s) added to your project.`,
       });
       
-      // Reset form and return to upload screen
-      setFiles([]);
-      setCurrentScreen("upload");
+      // Redirect to dashboard with project selected
+      navigate(`/dashboard?project=${selectedProjectId}`);
       
     } catch (error: any) {
       console.error("Submission error:", error);
       toast({
-        title: "❌ Submission Failed",
-        description: error.message || "Failed to submit quote request",
+        title: "❌ Failed to Save Parts",
+        description: error.message || "Failed to save parts to project",
         variant: "destructive",
       });
     } finally {
@@ -661,17 +589,64 @@ export const PartUploadForm = () => {
     );
   }
 
+  // Project Selection Screen
+  if (currentScreen === "project") {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)]" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
+          <div className="p-6 pb-2">
+            <h2 className="text-2xl font-bold text-white">Step 1: Select Project</h2>
+            <p className="text-gray-400 mt-1">
+              Choose an existing project or create a new one to organize your parts
+            </p>
+          </div>
+          <div className="p-6 pt-4 space-y-6">
+            <ProjectSelector
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              onSelectProject={setSelectedProjectId}
+              onCreateProject={createProject}
+              loading={projectsLoading}
+            />
+            <div className="flex justify-end pt-4">
+              <Button
+                size="lg"
+                onClick={handleContinueFromProject}
+                disabled={!selectedProjectId}
+                className="bg-primary hover:bg-primary/90 text-white"
+              >
+                Continue to Upload
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (currentScreen === "upload") {
     return (
-      <FileUploadScreen
-        files={files}
-        onFileSelect={handleFileSelect}
-        onFileDrop={handleFileDrop}
-        onRemoveFile={handleRemoveFile}
-        onRetryFile={handleRetryAnalysis}
-        onContinue={handleContinue}
-        isAnalyzing={isAnalyzing}
-      />
+      <div className="space-y-4">
+        {/* Back button */}
+        <div className="max-w-5xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="text-gray-400 hover:text-white"
+          >
+            ← Back to Project Selection
+          </Button>
+        </div>
+        <FileUploadScreen
+          files={files}
+          onFileSelect={handleFileSelect}
+          onFileDrop={handleFileDrop}
+          onRemoveFile={handleRemoveFile}
+          onRetryFile={handleRetryAnalysis}
+          onContinue={handleContinueFromUpload}
+          isAnalyzing={isAnalyzing}
+        />
+      </div>
     );
   }
 

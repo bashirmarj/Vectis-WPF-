@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Settings, Move, Copy, Trash2, Share2, Upload, FileBox, Minus, ChevronRight } from 'lucide-react';
+import { Plus, Settings, Move, Copy, Trash2, Share2, Upload, FileBox, Minus, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ import {
 import { ProjectPart, PartStatus } from '@/hooks/useProjectParts';
 import { CustomerProject } from '@/hooks/useCustomerProjects';
 import { cn } from '@/lib/utils';
+import { PartViewerDialog } from './PartViewerDialog';
 
 interface PartsTableProps {
   parts: ProjectPart[];
@@ -81,6 +82,8 @@ export function PartsTable({
 }: PartsTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [viewerPart, setViewerPart] = useState<ProjectPart | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const filteredParts = parts.filter((part) => {
     if (activeTab === 'all') return true;
@@ -128,6 +131,11 @@ export function PartsTable({
     return project?.name || 'Unknown';
   };
 
+  const handleViewPart = (part: ProjectPart) => {
+    setViewerPart(part);
+    setViewerOpen(true);
+  };
+
   const tabs: { key: FilterTab; label: string }[] = [
     { key: 'all', label: 'All' },
     { key: 'auto', label: 'Auto quotation' },
@@ -136,207 +144,223 @@ export function PartsTable({
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
-      {/* Toolbar */}
-      <div className="p-4 border-b flex items-center gap-2 flex-wrap">
-        <Button onClick={onUploadClick} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Quotation
-        </Button>
-        <Button variant="outline" size="icon">
-          <Settings className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" disabled={selectedIds.size === 0}>
-          <Move className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" disabled={selectedIds.size === 0}>
-          <Copy className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          disabled={selectedIds.size === 0}
-          onClick={handleDeleteSelected}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" disabled={selectedIds.size === 0}>
-          <Share2 className="h-4 w-4" />
-        </Button>
-      </div>
+    <>
+      <div className="flex-1 flex flex-col bg-background">
+        {/* Toolbar */}
+        <div className="p-4 border-b flex items-center gap-2 flex-wrap">
+          <Button onClick={onUploadClick} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Quotation
+          </Button>
+          <Button variant="outline" size="icon">
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" disabled={selectedIds.size === 0}>
+            <Move className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" disabled={selectedIds.size === 0}>
+            <Copy className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={selectedIds.size === 0}
+            onClick={handleDeleteSelected}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" disabled={selectedIds.size === 0}>
+            <Share2 className="h-4 w-4" />
+          </Button>
+        </div>
 
-      {/* Filter Tabs */}
-      <div className="px-4 border-b">
-        <div className="flex gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                'px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === tab.key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Filter Tabs */}
+        <div className="px-4 border-b">
+          <div className="flex gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                  activeTab === tab.key
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : filteredParts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+              <FileBox className="h-16 w-16 mb-4 opacity-50" />
+              <p className="text-lg font-medium">No parts yet</p>
+              <p className="text-sm">Upload CAD files to get started</p>
+              <Button onClick={onUploadClick} className="mt-4 gap-2">
+                <Upload className="h-4 w-4" />
+                Upload Parts
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.size === filteredParts.length && filteredParts.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead className="w-16">Preview</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Part Name</TableHead>
+                  <TableHead>Processing</TableHead>
+                  <TableHead>Material</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-28">Quantity</TableHead>
+                  <TableHead className="text-right">Subtotal</TableHead>
+                  <TableHead className="w-24">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredParts.map((part) => (
+                  <TableRow key={part.id} className={cn(selectedIds.has(part.id) && 'bg-muted/50')}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(part.id)}
+                        onCheckedChange={() => toggleSelect(part.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => handleViewPart(part)}
+                        className="w-12 h-12 bg-muted rounded flex items-center justify-center hover:bg-muted/80 transition-colors group relative cursor-pointer"
+                        title="View 3D Model"
+                      >
+                        {part.thumbnail_url ? (
+                          <img
+                            src={part.thumbnail_url}
+                            alt={part.file_name}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        ) : (
+                          <FileBox className="h-6 w-6 text-muted-foreground" />
+                        )}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                          <Eye className="h-4 w-4 text-white" />
+                        </div>
+                      </button>
+                    </TableCell>
+                    <TableCell className="font-medium">{getProjectName(part.project_id)}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium truncate max-w-[200px]">{part.file_name}</p>
+                        {part.part_number && (
+                          <p className="text-xs text-muted-foreground">{part.part_number}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={part.processing_method || ''}
+                        onValueChange={(value) => onUpdatePart(part.id, { processing_method: value })}
+                      >
+                        <SelectTrigger className="w-[150px] h-8">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {processingMethods.map((method) => (
+                            <SelectItem key={method} value={method}>
+                              {method}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={part.material || ''}
+                        onValueChange={(value) => onUpdatePart(part.id, { material: value })}
+                      >
+                        <SelectTrigger className="w-[150px] h-8">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materials.map((material) => (
+                            <SelectItem key={material} value={material}>
+                              {material}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn('font-normal', statusConfig[part.status].className)}>
+                        {statusConfig[part.status].label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleQuantityChange(part, -1)}
+                          disabled={part.quantity <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          value={part.quantity}
+                          onChange={(e) =>
+                            onUpdatePart(part.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })
+                          }
+                          className="w-14 h-7 text-center"
+                          min={1}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleQuantityChange(part, 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {part.subtotal ? `$${part.subtotal.toFixed(2)}` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" className="gap-1">
+                        Next
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        ) : filteredParts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <FileBox className="h-16 w-16 mb-4 opacity-50" />
-            <p className="text-lg font-medium">No parts yet</p>
-            <p className="text-sm">Upload CAD files to get started</p>
-            <Button onClick={onUploadClick} className="mt-4 gap-2">
-              <Upload className="h-4 w-4" />
-              Upload Parts
-            </Button>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={selectedIds.size === filteredParts.length && filteredParts.length > 0}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead className="w-16">Preview</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Part Name</TableHead>
-                <TableHead>Processing</TableHead>
-                <TableHead>Material</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-28">Quantity</TableHead>
-                <TableHead className="text-right">Subtotal</TableHead>
-                <TableHead className="w-24">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredParts.map((part) => (
-                <TableRow key={part.id} className={cn(selectedIds.has(part.id) && 'bg-muted/50')}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(part.id)}
-                      onCheckedChange={() => toggleSelect(part.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                      {part.thumbnail_url ? (
-                        <img
-                          src={part.thumbnail_url}
-                          alt={part.file_name}
-                          className="w-full h-full object-cover rounded"
-                        />
-                      ) : (
-                        <FileBox className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{getProjectName(part.project_id)}</TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium truncate max-w-[200px]">{part.file_name}</p>
-                      {part.part_number && (
-                        <p className="text-xs text-muted-foreground">{part.part_number}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={part.processing_method || ''}
-                      onValueChange={(value) => onUpdatePart(part.id, { processing_method: value })}
-                    >
-                      <SelectTrigger className="w-[150px] h-8">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {processingMethods.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {method}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={part.material || ''}
-                      onValueChange={(value) => onUpdatePart(part.id, { material: value })}
-                    >
-                      <SelectTrigger className="w-[150px] h-8">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materials.map((material) => (
-                          <SelectItem key={material} value={material}>
-                            {material}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn('font-normal', statusConfig[part.status].className)}>
-                      {statusConfig[part.status].label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleQuantityChange(part, -1)}
-                        disabled={part.quantity <= 1}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Input
-                        type="number"
-                        value={part.quantity}
-                        onChange={(e) =>
-                          onUpdatePart(part.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })
-                        }
-                        className="w-14 h-7 text-center"
-                        min={1}
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleQuantityChange(part, 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {part.subtotal ? `$${part.subtotal.toFixed(2)}` : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm" className="gap-1">
-                      Next
-                      <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-    </div>
+      {/* Part Viewer Dialog */}
+      <PartViewerDialog
+        part={viewerPart}
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+      />
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Upload, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCustomerProjects } from '@/hooks/useCustomerProjects';
@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function CustomerDashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -44,6 +45,17 @@ export default function CustomerDashboard() {
     deleteParts,
     refetch: refetchParts 
   } = useProjectParts(selectedProjectId || undefined);
+
+  // Handle project selection from URL params
+  useEffect(() => {
+    const projectId = searchParams.get('project');
+    if (projectId && projects.length > 0) {
+      const projectExists = projects.some(p => p.id === projectId);
+      if (projectExists) {
+        setSelectedProjectId(projectId);
+      }
+    }
+  }, [searchParams, projects]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -106,6 +118,11 @@ export default function CustomerDashboard() {
     refetchParts();
   };
 
+  // Redirect to services page for full upload experience
+  const handleNewQuotation = () => {
+    navigate('/services/custom-parts');
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -140,7 +157,7 @@ export default function CustomerDashboard() {
           loading={partsLoading || projectsLoading}
           onUpdatePart={updatePart}
           onDeleteParts={deleteParts}
-          onUploadClick={() => setIsUploadModalOpen(true)}
+          onUploadClick={handleNewQuotation}
         />
 
         {/* Right Panel - Report */}
