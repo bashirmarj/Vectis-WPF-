@@ -340,75 +340,65 @@ const Index = () => {
           >
             {capabilitiesData.map((capability, index) => {
               const isHovered = hoveredId === capability.id;
-              return (
+                return (
                 <div
                   key={`${capability.id}-${index}`}
                   onMouseEnter={() => handleMouseEnter(capability.id)}
                   onMouseLeave={handleMouseLeave}
                   onClick={() => handleCardClick(capability)}
-                  className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none shadow-md transition-colors duration-300 cursor-pointer ${
-                    isHovered ? "border-primary" : "border-slate-200"
+                  className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none shadow-md transition-colors duration-300 cursor-pointer flex flex-col ${
+                    isHovered ? "border-primary" : "border-border"
                   }`}
                   style={{
                     height: "400px",
                     width: `${CARD_WIDTH}px`,
-                    backgroundColor: "#ffffff",
+                    backgroundColor: "hsl(var(--card))",
                   }}
                 >
-                  <div
-                    className={`absolute inset-0 bg-center bg-no-repeat transition-all duration-700 pointer-events-none ${
-                      isHovered ? "grayscale-0 scale-110" : "grayscale"
-                    }`}
-                    style={{
-                      backgroundImage: `url(${capability.image}?v=2.0)`,
-                      backgroundSize:
-                        capability.id === "cnc-machining"
-                          ? "80%"
-                          : capability.id === "wire-edm"
-                            ? "65%"
-                            : capability.id === "sheet-metal"
-                              ? "90%"
-                              : capability.id === "heat-treatment"
-                                ? "80%"
-                                : "cover",
-                    }}
-                  />
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent transition-opacity duration-300 pointer-events-none ${
-                      isHovered ? "opacity-0" : "opacity-90"
-                    }`}
-                  />
+                  {/* Image Section */}
+                  <div className="relative h-56 overflow-hidden">
+                    <div
+                      className={`absolute inset-0 bg-center bg-no-repeat transition-all duration-700 pointer-events-none ${
+                        isHovered ? "grayscale-0 scale-110" : "grayscale"
+                      }`}
+                      style={{
+                        backgroundImage: `url(${capability.image}?v=2.0)`,
+                        backgroundSize:
+                          capability.id === "cnc-machining"
+                            ? "80%"
+                            : capability.id === "wire-edm"
+                              ? "65%"
+                              : capability.id === "sheet-metal"
+                                ? "90%"
+                                : capability.id === "heat-treatment"
+                                  ? "80%"
+                                  : "cover",
+                      }}
+                    />
+                  </div>
 
-                  <div
-                    className={`absolute bottom-0 left-0 p-6 w-full transition-transform duration-300 pointer-events-none ${
-                      isHovered ? "-translate-y-0" : "translate-y-2"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span
-                        className={`text-primary text-xs font-bold uppercase tracking-widest block transition-opacity duration-300 ${
-                          isHovered ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
+                  {/* Text Section */}
+                  <div className="flex-1 p-6 flex flex-col">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-primary text-xs font-bold uppercase tracking-widest">
                         Capability
                       </span>
                       <ArrowUpRight
-                        className={`w-5 h-5 text-white transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                        className={`w-4 h-4 text-primary transition-transform duration-300 ${isHovered ? "translate-x-1 -translate-y-1" : ""}`}
                       />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
-                    <p
-                      className={`text-slate-300 text-sm leading-relaxed whitespace-normal transition-opacity duration-300 ${
-                        isHovered ? "opacity-100" : "opacity-0"
-                      }`}
-                    >
+                    <h3 className={`text-xl font-bold mb-2 uppercase transition-colors duration-300 ${isHovered ? "text-primary" : "text-foreground"}`}>
+                      {capability.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed whitespace-normal">
                       {capability.shortDescription}
                     </p>
                   </div>
 
+                  {/* Bottom accent line */}
                   <div
-                    className={`absolute inset-0 border-2 border-primary transition-opacity duration-300 pointer-events-none rounded-sm ${
-                      isHovered ? "opacity-100" : "opacity-0"
+                    className={`absolute bottom-0 left-0 right-0 h-0.5 bg-primary transform transition-transform duration-500 origin-left ${
+                      isHovered ? "scale-x-100" : "scale-x-0"
                     }`}
                   />
                 </div>
