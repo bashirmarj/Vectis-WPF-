@@ -121,10 +121,10 @@ export const ParticleBackground: React.FC = () => {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
       {/* Layer 1: White/light background */}
-      <div className="absolute inset-0 bg-white" />
+      <div className="absolute inset-0 bg-white/50" />
 
       {/* Layer 3: Subtle vignette - white center to slate-50 edges */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.4)_0%,rgba(248,250,252,1)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2)_0%,rgba(248,250,252,0.5)_100%)]" />
 
       {/* Layer 4: Interactive particles canvas */}
       <canvas ref={canvasRef} className="absolute inset-0" />
