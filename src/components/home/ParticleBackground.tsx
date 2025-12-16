@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import heroBg from "@/assets/hero-cnc-turbine.png";
 
 interface Particle {
   x: number;
@@ -120,8 +121,14 @@ export const ParticleBackground: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
-      {/* Layer 1: White/light background */}
-      <div className="absolute inset-0 bg-white/50" />
+      {/* Layer 0: Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${heroBg})` }}
+      />
+      
+      {/* Layer 1: White/light background overlay */}
+      <div className="absolute inset-0 bg-white/30" />
 
       {/* Layer 3: Subtle vignette - white center to slate-50 edges */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2)_0%,rgba(248,250,252,0.5)_100%)]" />
