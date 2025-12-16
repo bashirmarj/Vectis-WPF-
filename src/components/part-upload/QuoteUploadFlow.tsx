@@ -1,9 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { ModeSelector } from './ModeSelector';
 import { FileUploadScreen } from './FileUploadScreen';
 import { QuoteConfigForm } from './QuoteConfigForm';
 import { toast } from 'sonner';
-import * as occtimportjs from 'occt-import-js';
+import { parseCADFile } from '@/lib/geometryAnalyzer';
 
 type FlowStep = 'mode-selection' | 'upload' | 'configure' | 'project-select';
 type FlowMode = 'quick' | 'project';
@@ -27,116 +27,62 @@ export function QuoteUploadFlow() {
   const [step, setStep] = useState<FlowStep>('mode-selection');
   const [mode, setMode] = useState<FlowMode | null>(null);
   const [files, setFiles] = useState<FileWithAnalysis[]>([]);
-  const occtInitialized = useRef(false);
-  const occtRef = useRef<any>(null);
 
-  // Initialize OCCT
-  const initOCCT = useCallback(async () => {
-    if (occtInitialized.current && occtRef.current) return occtRef.current;
-    
-    try {
-      // Handle both default and namespace export
-      const initFunction = (occtimportjs as any).default || occtimportjs;
-      const occt = await initFunction({
-        locateFile: (path: string) => {
-          if (path.endsWith('.wasm')) {
-            return `/node_modules/occt-import-js/dist/${path}`;
-          }
-          return path;
-        }
-      });
-      occtRef.current = occt;
-      occtInitialized.current = true;
-      return occt;
-    } catch (error) {
-      console.error('Failed to initialize OCCT:', error);
-      throw error;
-    }
-  }, []);
-
-  // Analyze CAD file
+  // Analyze CAD file using existing parseCADFile function
   const analyzeFile = useCallback(async (file: File, index: number) => {
     setFiles(prev => prev.map((f, i) => 
-      i === index ? { ...f, isAnalyzing: true, analysisStatus: 'Initializing...', analysisProgress: 0 } : f
+      i === index ? { ...f, isAnalyzing: true, analysisStatus: 'Parsing geometry...', analysisProgress: 30 } : f
     ));
 
     try {
-      // Initialize OCCT
-      setFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, analysisStatus: 'Loading geometry engine...', analysisProgress: 10 } : f
-      ));
-      const occt = await initOCCT();
+      const result = await parseCADFile(file);
 
-      // Read file
-      setFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, analysisStatus: 'Reading file...', analysisProgress: 30 } : f
-      ));
-      const arrayBuffer = await file.arrayBuffer();
-      const fileBuffer = new Uint8Array(arrayBuffer);
-
-      // Parse geometry
-      setFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, analysisStatus: 'Parsing geometry...', analysisProgress: 50 } : f
-      ));
-      const result = occt.ReadStepFile(fileBuffer, null);
-
-      if (!result.success || !result.meshes || result.meshes.length === 0) {
+      if (!result) {
         throw new Error('Failed to parse CAD file');
       }
 
-      // Process mesh data
       setFiles(prev => prev.map((f, i) => 
         i === index ? { ...f, analysisStatus: 'Processing mesh...', analysisProgress: 70 } : f
       ));
 
-      // Combine all meshes into a single mesh
-      let totalVertices: number[] = [];
-      let totalIndices: number[] = [];
-      let totalNormals: number[] = [];
-      let vertexOffset = 0;
+      // Convert triangles to mesh data format
+      const vertices: number[] = [];
+      const indices: number[] = [];
+      const normals: number[] = [];
 
-      for (const mesh of result.meshes) {
-        if (mesh.attributes?.position?.array) {
-          totalVertices.push(...Array.from(mesh.attributes.position.array as Float32Array));
-        }
-        if (mesh.attributes?.normal?.array) {
-          totalNormals.push(...Array.from(mesh.attributes.normal.array as Float32Array));
-        }
-        if (mesh.index?.array) {
-          const indexArray = Array.from(mesh.index.array as Uint32Array);
-          const indices = indexArray.map((idx) => idx + vertexOffset);
-          totalIndices.push(...indices);
-        }
-        vertexOffset += (mesh.attributes?.position?.array?.length || 0) / 3;
+      if (result.triangles) {
+        result.triangles.forEach((tri, triIndex) => {
+          const baseIndex = triIndex * 3;
+          
+          // Add vertices
+          vertices.push(tri.vertices[0].x, tri.vertices[0].y, tri.vertices[0].z);
+          vertices.push(tri.vertices[1].x, tri.vertices[1].y, tri.vertices[1].z);
+          vertices.push(tri.vertices[2].x, tri.vertices[2].y, tri.vertices[2].z);
+          
+          // Add indices
+          indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
+          
+          // Use triangle normal
+          const normal = tri.normal || { x: 0, y: 1, z: 0 };
+          normals.push(normal.x, normal.y, normal.z);
+          normals.push(normal.x, normal.y, normal.z);
+          normals.push(normal.x, normal.y, normal.z);
+        });
       }
 
       const meshData = {
-        vertices: totalVertices,
-        indices: totalIndices,
-        normals: totalNormals,
-        triangle_count: totalIndices.length / 3,
+        vertices,
+        indices,
+        normals,
+        triangle_count: result.triangle_count,
       };
-
-      // Calculate bounding box
-      let minX = Infinity, minY = Infinity, minZ = Infinity;
-      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-      for (let i = 0; i < totalVertices.length; i += 3) {
-        minX = Math.min(minX, totalVertices[i]);
-        minY = Math.min(minY, totalVertices[i + 1]);
-        minZ = Math.min(minZ, totalVertices[i + 2]);
-        maxX = Math.max(maxX, totalVertices[i]);
-        maxY = Math.max(maxY, totalVertices[i + 1]);
-        maxZ = Math.max(maxZ, totalVertices[i + 2]);
-      }
 
       const boundingBox = {
-        width: maxX - minX,
-        height: maxY - minY,
-        depth: maxZ - minZ,
+        width: result.part_width_cm,
+        height: result.part_height_cm,
+        depth: result.part_depth_cm,
       };
 
-      // Set analysis complete
       setFiles(prev => prev.map((f, i) => 
         i === index ? {
           ...f,
@@ -146,6 +92,8 @@ export function QuoteUploadFlow() {
           analysis: {
             meshData,
             boundingBox,
+            volume: result.volume_cm3,
+            surfaceArea: result.surface_area_cm2,
           }
         } : f
       ));
@@ -156,7 +104,7 @@ export function QuoteUploadFlow() {
         i === index ? { ...f, isAnalyzing: false, analysis: undefined, analysisStatus: 'Failed' } : f
       ));
     }
-  }, [initOCCT]);
+  }, []);
 
   // Handle mode selection
   const handleModeSelect = useCallback((selectedMode: 'quick' | 'project') => {
