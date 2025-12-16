@@ -19,6 +19,7 @@ interface FileUploadScreenProps {
   onRetryFile?: (index: number) => void;
   onContinue: () => void;
   isAnalyzing: boolean;
+  isSaving?: boolean;
 }
 
 export const FileUploadScreen = ({
@@ -28,7 +29,8 @@ export const FileUploadScreen = ({
   onRemoveFile,
   onRetryFile,
   onContinue,
-  isAnalyzing
+  isAnalyzing,
+  isSaving = false
 }: FileUploadScreenProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const hasFailedFiles = files.some(f => !f.isAnalyzing && !f.analysis);
@@ -208,16 +210,21 @@ export const FileUploadScreen = ({
               <Button
                 size="lg"
                 onClick={onContinue}
-                disabled={isAnalyzing || files.some(f => f.isAnalyzing)}
+                disabled={isAnalyzing || isSaving || files.some(f => f.isAnalyzing)}
                 className="bg-primary hover:bg-primary/90 text-white"
               >
-                {isAnalyzing ? (
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : isAnalyzing ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Analyzing...
                   </>
                 ) : (
-                  'Continue to Configuration'
+                  'Save & Continue to Dashboard'
                 )}
               </Button>
             </div>

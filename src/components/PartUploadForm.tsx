@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FileUploadScreen } from "./part-upload/FileUploadScreen";
-import PartConfigScreen from "./part-upload/PartConfigScreen";
 import { ProjectSelector } from "./part-upload/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,7 +67,6 @@ export const PartUploadForm = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   
@@ -431,7 +428,9 @@ export const PartUploadForm = () => {
     setCurrentScreen("upload");
   };
 
-  const handleContinueFromUpload = () => {
+  const handleContinueFromUpload = async () => {
+    if (!user || !selectedProjectId) return;
+    
     const failedFiles = files.filter((f) => !f.analysis && !f.isAnalyzing);
     
     if (failedFiles.length > 0) {
@@ -441,25 +440,7 @@ export const PartUploadForm = () => {
       });
     }
 
-    setCurrentScreen("configure");
-  };
-
-  const handleBack = () => {
-    if (currentScreen === "configure") {
-      setCurrentScreen("upload");
-    } else if (currentScreen === "upload") {
-      setCurrentScreen("project");
-    }
-  };
-
-  const handleUpdateFile = (index: number, updates: Partial<FileWithQuantity>) => {
-    setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, ...updates } : f)));
-  };
-
-  // Save parts to project and redirect to dashboard
-  const handleSubmit = async (formData: any) => {
-    if (!user || !selectedProjectId) return;
-    
+    // Save parts directly and redirect to dashboard
     console.log("📤 Saving parts to project:", selectedProjectId);
     setUploading(true);
 
@@ -505,8 +486,8 @@ export const PartUploadForm = () => {
             file_name: fileData.file.name,
             file_path: fileData.filePath || '',
             mesh_id: meshId,
-            processing_method: fileData.process || formData.files?.[0]?.process || 'CNC-Milling',
-            material: fileData.material || formData.files?.[0]?.material || 'Aluminum 6061',
+            processing_method: fileData.process || 'CNC-Milling',
+            material: fileData.material || 'Aluminum 6061',
             quantity: fileData.quantity,
             analysis_data: fileData.meshData ? { meshData: fileData.meshData } : null,
             volume_cm3: fileData.analysis?.volume_cm3 || null,
@@ -537,6 +518,12 @@ export const PartUploadForm = () => {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentScreen === "upload") {
+      setCurrentScreen("project");
     }
   };
 
@@ -645,22 +632,12 @@ export const PartUploadForm = () => {
           onRetryFile={handleRetryAnalysis}
           onContinue={handleContinueFromUpload}
           isAnalyzing={isAnalyzing}
+          isSaving={uploading}
         />
       </div>
     );
   }
 
-  return (
-    <PartConfigScreen
-      files={files}
-      materials={materials}
-      processes={processes}
-      onBack={handleBack}
-      onSubmit={handleSubmit}
-      onUpdateFile={handleUpdateFile}
-      selectedFileIndex={selectedFileIndex}
-      onSelectFile={setSelectedFileIndex}
-      isSubmitting={uploading}
-    />
-  );
+  // Default: redirect to project selection
+  return null;
 };
