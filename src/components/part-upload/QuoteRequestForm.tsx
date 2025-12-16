@@ -173,6 +173,9 @@ export function QuoteRequestForm() {
 
       if (quotationError) throw quotationError;
 
+      // Track uploaded file paths for email attachment
+      const uploadedFilePaths: Array<{ name: string; path: string; size: number }> = [];
+
       // Upload files if any
       if (files.length > 0) {
         for (let i = 0; i < files.length; i++) {
@@ -195,6 +198,13 @@ export function QuoteRequestForm() {
             continue;
           }
 
+          // Track uploaded file path
+          uploadedFilePaths.push({
+            name: fileData.file.name,
+            path: filePath,
+            size: fileData.file.size
+          });
+
           // Create line item for each file
           await supabase
             .from('quote_line_items')
@@ -213,7 +223,7 @@ export function QuoteRequestForm() {
         }
       }
 
-      // Send email notification with all form details
+      // Send email notification with all form details including file paths
       try {
         const emailPayload = {
           notificationOnly: true,
@@ -223,11 +233,7 @@ export function QuoteRequestForm() {
           phone: phone.trim(),
           message: fullMessage,
           quoteNumber: quotation.quote_number,
-          files: files.map(f => ({
-            name: f.file.name,
-            size: f.file.size,
-            type: f.file.type
-          }))
+          files: uploadedFilePaths // Now includes path for each file
         };
 
         const { error: emailError } = await supabase.functions.invoke('send-quotation-request', {
