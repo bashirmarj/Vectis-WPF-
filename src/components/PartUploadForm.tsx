@@ -17,6 +17,7 @@ interface FileWithQuantity {
   file: File;
   quantity: number;
   material?: string;
+  finish?: string;
   process?: string;
   meshData?: {
     vertices: number[];
@@ -659,6 +660,7 @@ export const PartUploadForm = () => {
             mesh_id: meshId,
             quantity: fileData.quantity,
             material_type: fileData.material,
+            finish_type: fileData.finish || 'As Machined',
             estimated_volume_cm3: fileData.analysis?.volume_cm3,
             estimated_surface_area_cm2: fileData.analysis?.surface_area_cm2,
             estimated_complexity_score: fileData.analysis?.complexity_score,
