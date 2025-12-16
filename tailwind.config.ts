@@ -64,9 +64,9 @@ export default {
           red: "hsl(0 84% 60%)",
           redHover: "hsl(0 84% 50%)",
           "red-hover": "hsl(0 84% 50%)",
-          bg: "hsl(0 0% 2%)",
-          surface: "hsl(0 0% 4%)",
-          muted: "hsl(0 0% 64%)",
+          bg: "#ffffff",
+          surface: "#f8fafc",
+          muted: "#475569",
         },
       },
       borderRadius: {

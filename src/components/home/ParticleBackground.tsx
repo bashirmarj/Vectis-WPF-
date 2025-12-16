@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from "react";
-import cncBackgroundClean from "@/assets/cnc-background-clean.png";
 
 interface Particle {
   x: number;
@@ -84,13 +83,13 @@ export const ParticleBackground: React.FC = () => {
         if (particle.y < 0) particle.y = canvas.height;
         if (particle.y > canvas.height) particle.y = 0;
 
-        // Draw particle
+        // Draw particle - darker nodes for light theme
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(220, 38, 38, ${particle.opacity})`;
+        ctx.fillStyle = `rgba(100, 116, 139, ${particle.opacity})`; // slate-500
         ctx.fill();
 
-        // Draw connections to nearby particles
+        // Draw connections to nearby particles - darker gray lines
         particles.slice(i + 1).forEach((other) => {
           const dx2 = particle.x - other.x;
           const dy2 = particle.y - other.y;
@@ -100,7 +99,7 @@ export const ParticleBackground: React.FC = () => {
             ctx.beginPath();
             ctx.moveTo(particle.x, particle.y);
             ctx.lineTo(other.x, other.y);
-            ctx.strokeStyle = `rgba(220, 38, 38, ${0.15 * (1 - dist2 / 120)})`;
+            ctx.strokeStyle = `rgba(148, 163, 184, ${0.3 * (1 - dist2 / 120)})`; // slate-400
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
@@ -121,24 +120,21 @@ export const ParticleBackground: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
-      {/* Layer 1: Fixed background image with grayscale and slow zoom */}
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-[0.75] animate-slow-zoom"
-        style={{ backgroundImage: `url(${cncBackgroundClean})` }}
-      />
+      {/* Layer 1: White/light background */}
+      <div className="absolute inset-0 bg-white" />
 
-      {/* Layer 2: Grid overlay */}
+      {/* Layer 2: Grid overlay - subtle gray grid lines (engineering graph paper) */}
       <div
-        className="absolute inset-0 opacity-20"
+        className="absolute inset-0 opacity-100"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            "linear-gradient(rgba(148,163,184,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.3) 1px, transparent 1px)",
           backgroundSize: "50px 50px",
         }}
       />
 
-      {/* Layer 3: Radial vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(5,5,5,0.4)_0%,rgba(5,5,5,1)_100%)]" />
+      {/* Layer 3: Subtle vignette - white center to slate-50 edges */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.4)_0%,rgba(248,250,252,1)_100%)]" />
 
       {/* Layer 4: Interactive particles canvas */}
       <canvas ref={canvasRef} className="absolute inset-0" />

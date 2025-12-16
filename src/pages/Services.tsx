@@ -9,7 +9,7 @@ import ParticleBackground from "@/components/home/ParticleBackground";
 import precisionManufacturingImg from "@/assets/precision-manufacturing.png";
 import { PartUploadForm } from "@/components/PartUploadForm";
 const Services = () => {
-  return <div className="min-h-screen bg-black">
+  return <div className="min-h-screen bg-white">
       <Navigation />
       <ParticleBackground />
 
@@ -21,13 +21,13 @@ const Services = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-5xl md:text-6xl font-bold text-white mb-6 leading-snug tracking-normal uppercase"
+            className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-snug tracking-normal uppercase"
           >
             Custom Parts For{' '}
             <motion.span 
               className="inline-block text-transparent bg-clip-text"
               style={{
-                backgroundImage: 'linear-gradient(90deg, #ffffff 0%, #ffffff 5%, hsl(var(--primary)) 15%, hsl(var(--primary)) 35%, #ffffff 45%, #ffffff 50%, #ffffff 50%, #ffffff 55%, hsl(var(--primary)) 65%, hsl(var(--primary)) 85%, #ffffff 95%, #ffffff 100%)',
+                backgroundImage: 'linear-gradient(90deg, #0f172a 0%, #0f172a 5%, hsl(var(--primary)) 15%, hsl(var(--primary)) 35%, #0f172a 45%, #0f172a 50%, #0f172a 50%, #0f172a 55%, hsl(var(--primary)) 65%, hsl(var(--primary)) 85%, #0f172a 95%, #0f172a 100%)',
                 backgroundSize: '200% auto',
               }}
               animate={{ backgroundPositionX: ['0%', '-100%'] }}
@@ -42,7 +42,7 @@ const Services = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.4 }}
-            className="text-xl text-white/80 leading-relaxed max-w-3xl"
+            className="text-xl text-slate-600 leading-relaxed max-w-3xl"
           >
             Precision-manufactured components engineered to meet your exact specifications.
           </motion.p>
@@ -50,20 +50,20 @@ const Services = () => {
       </section>
 
       {/* Content Section */}
-      <section className="relative z-10 border-t border-white/5">
+      <section className="relative z-10 border-t border-slate-200">
         <div className="container-custom py-8 md:py-12">
           <div className="grid md:grid-cols-2 gap-12 items-start mb-16">
             <AnimatedSection animation="fadeRight">
-              <img src={precisionManufacturingImg} alt="Precision Manufacturing" className="rounded-lg shadow-2xl w-full mb-8 border border-white/10" />
+              <img src={precisionManufacturingImg} alt="Precision Manufacturing" className="rounded-lg shadow-md w-full mb-8 border border-slate-200" />
             </AnimatedSection>
             <AnimatedSection animation="fadeLeft" delay={100}>
               <div className="flex items-start gap-2 mb-4">
                 <div className="w-1 h-8 bg-primary rounded-full"></div>
-                <h2 className="text-3xl font-bold text-white tracking-tight font-mono uppercase">
+                <h2 className="text-3xl font-bold text-slate-900 tracking-tight font-mono uppercase">
                   Precision Manufacturing
                 </h2>
               </div>
-              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+              <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                 Our custom parts and assemblies service delivers precision-engineered components tailored to your 
                 exact specifications. Using advanced CNC machining and multi-axis manufacturing capabilities, 
                 we produce parts with tight tolerances and exceptional quality.
@@ -71,7 +71,7 @@ const Services = () => {
               
               <div className="flex items-start gap-2 mb-4">
                 <div className="w-1 h-8 bg-primary rounded-full"></div>
-                <h3 className="text-xl font-bold text-white tracking-tight font-mono uppercase">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight font-mono uppercase">
                   Key Features
                 </h3>
               </div>
@@ -79,7 +79,7 @@ const Services = () => {
                 {["CNC machining capabilities", "Multi-axis manufacturing", "Tight tolerance production", "Material versatility", "Assembly and integration services", "Upload STEP files for instant quotation"].map((feature, idx) => <AnimatedSection key={idx} animation="fadeLeft" delay={150 + idx * 50}>
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-300">{feature}</span>
+                      <span className="text-slate-600">{feature}</span>
                     </div>
                   </AnimatedSection>)}
               </div>
