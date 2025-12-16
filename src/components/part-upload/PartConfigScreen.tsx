@@ -8,31 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Mail, Phone, Building2, MapPin, User, Loader2 } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 
-const MATERIAL_OPTIONS = [
-  "Aluminum (6061)",
-  "Stainless Steel (304L / 316L)",
-  "Alloy Steel (4140)",
-  "Carbon Steel (1018 / 1045)",
-  "Tool Steel (A2 / D2 / S7)",
-  "Copper Alloy (Brass / Bronze)",
-  "Plastic (Delrin / UHMW)",
-  "Other",
-];
-
-const FINISH_OPTIONS = [
-  "As Machined",
-  "Anodizing (Type II)",
-  "Hard Anodizing (Type III)",
-  "Passivation",
-  "Polishing",
-  "Other",
-];
-
 interface FileWithData {
   file: File;
   quantity: number;
   material?: string;
-  finish?: string;
   process?: string;
   meshData?: {
     vertices: number[];
@@ -197,39 +176,16 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
         <Card>
           <CardContent className="p-4 space-y-4">
             {/* Configuration Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="material" className="text-xs font-medium">Material *</Label>
-                <Select
+                <Input
+                  id="material"
+                  className="h-9"
                   value={selectedFile.material || ""}
-                  onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Select Material" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MATERIAL_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="finish" className="text-xs font-medium">Finish</Label>
-                <Select
-                  value={selectedFile.finish || "As Machined"}
-                  onValueChange={(value) => onUpdateFile(selectedFileIndex, { finish: value })}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Select Finish" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FINISH_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => onUpdateFile(selectedFileIndex, { material: e.target.value })}
+                  placeholder="e.g., Aluminum 6061, Steel 304..."
+                />
               </div>
 
               <div className="space-y-1">
