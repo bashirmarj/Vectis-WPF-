@@ -355,10 +355,17 @@ const Index = () => {
                   }}
                 >
                   <div
-                    className={`absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none ${
+                    className={`absolute inset-0 bg-center bg-no-repeat transition-all duration-700 pointer-events-none ${
                       isHovered ? "grayscale-0 scale-110" : "grayscale"
-                    } ${capability.imageStyle || ""}`}
-                    style={{ backgroundImage: `url(${capability.image}?v=2.0)` }}
+                    }`}
+                    style={{ 
+                      backgroundImage: `url(${capability.image}?v=2.0)`,
+                      backgroundSize: capability.id === 'cnc-machining' ? '80%' 
+                        : capability.id === 'wire-edm' ? '65%'
+                        : capability.id === 'sheet-metal' ? '60%'
+                        : capability.id === 'heat-treatment' ? '80%'
+                        : 'cover'
+                    }}
                   />
                   <div
                     className={`absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 pointer-events-none ${
