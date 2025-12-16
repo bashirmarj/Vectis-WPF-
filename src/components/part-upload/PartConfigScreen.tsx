@@ -6,10 +6,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronLeft, ChevronDown, Mail, Phone, Building2, User, Loader2, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Mail, Phone, Building2, User, Loader2, Minus, Plus } from "lucide-react";
 import { CADViewer } from "@/components/CADViewer";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+
+// Material options matching the screenshots
+const MATERIALS = [
+  { value: "aluminum-6061", label: "Aluminum (6061)" },
+  { value: "stainless-steel-304l-316l", label: "Stainless Steel (304L / 316L)" },
+  { value: "alloy-steel-4140", label: "Alloy Steel (4140)" },
+  { value: "carbon-steel-1018-1045", label: "Carbon Steel (1018 / 1045)" },
+  { value: "tool-steel-a2-d2-s7", label: "Tool Steel (A2 / D2 / S7)" },
+  { value: "copper-alloy", label: "Copper Alloy (Brass / Bronze)" },
+  { value: "plastic-delrin-uhmw", label: "Plastic (Delrin / UHMW)" },
+  { value: "other", label: "Other" },
+];
+
+// Finish options matching the screenshots
+const FINISHES = [
+  { value: "as-machined", label: "As Machined" },
+  { value: "anodizing-type-ii", label: "Anodizing (Type II)" },
+  { value: "hard-anodizing-type-iii", label: "Hard Anodizing (Type III)" },
+  { value: "passivation", label: "Passivation" },
+  { value: "polishing", label: "Polishing" },
+  { value: "other", label: "Other" },
+];
 
 interface FileWithData {
   file: File;
@@ -89,12 +110,12 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
 
   const [partDetails, setPartDetails] = useState({
     partName: "",
+    material: "",
     finish: "",
     heatTreatment: false,
+    heatTreatmentDetails: "",
     threadsTolerances: "",
   });
-
-  const [isPartDetailsOpen, setIsPartDetailsOpen] = useState(false);
 
   const selectedFile = files[selectedFileIndex];
 
@@ -295,144 +316,140 @@ const PartConfigScreen: React.FC<PartConfigScreenProps> = ({
           </CardContent>
         </Card>
 
-        {/* PART DETAILS (Optional) - Collapsible */}
+        {/* PART DETAILS (Optional) - Always Visible */}
         <Card>
-          <Collapsible open={isPartDetailsOpen} onOpenChange={setIsPartDetailsOpen}>
-            <CollapsibleTrigger asChild>
-              <CardContent className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Part Details (Optional)</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Click to expand and provide additional details</p>
-                  </div>
-                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isPartDetailsOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </CardContent>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent>
-              <CardContent className="p-4 pt-0 space-y-4 border-t">
-                {/* Part / Job name */}
-                <div className="space-y-1 pt-4">
-                  <Label htmlFor="partName" className="text-xs">Part / Job name</Label>
+          <CardContent className="p-4 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wide">Part Details (Optional)</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Provide additional details to help us quote accurately</p>
+            </div>
+
+            {/* Part / Job name */}
+            <div className="space-y-1">
+              <Label htmlFor="partName" className="text-xs">Part / Job name</Label>
+              <Input
+                id="partName"
+                className="h-9"
+                value={partDetails.partName}
+                onChange={(e) => handlePartDetailsChange("partName", e.target.value)}
+                placeholder="e.g., Shaft Holder Rev B"
+              />
+            </div>
+
+            {/* Material + Quantity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="material" className="text-xs">Material</Label>
+                <Select
+                  value={partDetails.material}
+                  onValueChange={(value) => handlePartDetailsChange("material", value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select Material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MATERIALS.map((mat) => (
+                      <SelectItem key={mat.value} value={mat.value}>{mat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Quantity</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={selectedFile.quantity <= 1}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </Button>
                   <Input
-                    id="partName"
-                    className="h-9"
-                    value={partDetails.partName}
-                    onChange={(e) => handlePartDetailsChange("partName", e.target.value)}
-                    placeholder="e.g., Shaft Holder Rev B"
+                    type="number"
+                    min="1"
+                    className="h-9 text-center w-20"
+                    value={selectedFile.quantity}
+                    onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
                   />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => handleQuantityChange(1)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
                 </div>
+              </div>
+            </div>
 
-                {/* Material + Quantity */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="material" className="text-xs">Material</Label>
-                    <Select
-                      value={selectedFile.material || ""}
-                      onValueChange={(value) => onUpdateFile(selectedFileIndex, { material: value })}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select Material" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materials.map((mat) => (
-                          <SelectItem key={mat} value={mat}>{mat}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            {/* Finish + Heat Treatment */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="finish" className="text-xs">Finish</Label>
+                <Select
+                  value={partDetails.finish}
+                  onValueChange={(value) => handlePartDetailsChange("finish", value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select Finish" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FINISHES.map((finish) => (
+                      <SelectItem key={finish.value} value={finish.value}>{finish.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-xs">Quantity</Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={() => handleQuantityChange(-1)}
-                        disabled={selectedFile.quantity <= 1}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <Input
-                        type="number"
-                        min="1"
-                        className="h-9 text-center w-20"
-                        value={selectedFile.quantity}
-                        onChange={(e) => onUpdateFile(selectedFileIndex, { quantity: parseInt(e.target.value) || 1 })}
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={() => handleQuantityChange(1)}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Finish + Heat Treatment */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="finish" className="text-xs">Finish</Label>
-                    <Select
-                      value={partDetails.finish}
-                      onValueChange={(value) => handlePartDetailsChange("finish", value)}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select Finish" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="as-machined">As Machined</SelectItem>
-                        <SelectItem value="anodized">Anodized</SelectItem>
-                        <SelectItem value="powder-coated">Powder Coated</SelectItem>
-                        <SelectItem value="polished">Polished</SelectItem>
-                        <SelectItem value="brushed">Brushed</SelectItem>
-                        <SelectItem value="bead-blasted">Bead Blasted</SelectItem>
-                        <SelectItem value="black-oxide">Black Oxide</SelectItem>
-                        <SelectItem value="zinc-plated">Zinc Plated</SelectItem>
-                        <SelectItem value="nickel-plated">Nickel Plated</SelectItem>
-                        <SelectItem value="chrome-plated">Chrome Plated</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Heat Treatment</Label>
-                    <div className="flex items-center space-x-2 h-9">
-                      <Checkbox
-                        id="heatTreatment"
-                        checked={partDetails.heatTreatment}
-                        onCheckedChange={(checked) => handlePartDetailsChange("heatTreatment", !!checked)}
-                      />
-                      <label
-                        htmlFor="heatTreatment"
-                        className="text-sm text-muted-foreground cursor-pointer"
-                      >
-                        Required
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Threads / Tolerances */}
-                <div className="space-y-1">
-                  <Label htmlFor="threadsTolerances" className="text-xs">Threads / Tolerances</Label>
-                  <Textarea
-                    id="threadsTolerances"
-                    value={partDetails.threadsTolerances}
-                    onChange={(e) => handlePartDetailsChange("threadsTolerances", e.target.value)}
-                    placeholder="e.g., ±0.001&quot;, 1/4-20 UNC, Ø10 H7, true position 0.05"
-                    rows={2}
-                    className="resize-none"
+              <div className="space-y-1">
+                <Label className="text-xs">Heat Treatment</Label>
+                <div className="flex items-center space-x-2 h-9">
+                  <Checkbox
+                    id="heatTreatment"
+                    checked={partDetails.heatTreatment}
+                    onCheckedChange={(checked) => handlePartDetailsChange("heatTreatment", !!checked)}
                   />
+                  <label
+                    htmlFor="heatTreatment"
+                    className="text-sm text-muted-foreground cursor-pointer"
+                  >
+                    Required
+                  </label>
                 </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
+              </div>
+            </div>
+
+            {/* Conditional Heat Treatment Details */}
+            {partDetails.heatTreatment && (
+              <div className="space-y-1">
+                <Label htmlFor="heatTreatmentDetails" className="text-xs">Heat Treatment Details</Label>
+                <Input
+                  id="heatTreatmentDetails"
+                  className="h-9"
+                  value={partDetails.heatTreatmentDetails}
+                  onChange={(e) => handlePartDetailsChange("heatTreatmentDetails", e.target.value)}
+                  placeholder="e.g., Hardened to 58-62 HRC, Case Hardened 0.030&quot;"
+                />
+              </div>
+            )}
+
+            {/* Threads / Tolerances */}
+            <div className="space-y-1">
+              <Label htmlFor="threadsTolerances" className="text-xs">Threads / Tolerances</Label>
+              <Textarea
+                id="threadsTolerances"
+                value={partDetails.threadsTolerances}
+                onChange={(e) => handlePartDetailsChange("threadsTolerances", e.target.value)}
+                placeholder="e.g., ±0.001&quot;, 1/4-20 UNC, Ø10 H7, true position 0.05"
+                rows={2}
+                className="resize-none"
+              />
+            </div>
+          </CardContent>
         </Card>
 
         {/* Submit Button */}

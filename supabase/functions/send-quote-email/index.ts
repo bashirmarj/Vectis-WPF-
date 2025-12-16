@@ -336,6 +336,42 @@ function generateTotalsSection(quote: any): string {
   `;
 }
 
+// Helper to generate project/part details section
+function generateProjectPartDetailsSection(quotation: any, lineItems: any[]): string {
+  const rows = [];
+  
+  // Project Details
+  if (quotation.customer_name) rows.push(generateDetailRow("Name", quotation.customer_name));
+  if (quotation.customer_company) rows.push(generateDetailRow("Company", quotation.customer_company));
+  if (quotation.email) rows.push(generateDetailRow("Email", quotation.email));
+  if (quotation.customer_phone) rows.push(generateDetailRow("Phone", quotation.customer_phone));
+  if (quotation.shipping_address) rows.push(generateDetailRow("Address", quotation.shipping_address));
+  if (quotation.customer_message) {
+    rows.push(`
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-bottom: 1px solid #e2e8f0;">
+        <tr>
+          <td style="padding: 12px 15px;">
+            <span style="color: #64748b; font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">Project Description</span>
+            <p style="color: #1e293b; font-size: 13px; margin: 0; line-height: 1.6; white-space: pre-line;">${quotation.customer_message}</p>
+          </td>
+        </tr>
+      </table>
+    `);
+  }
+
+  if (rows.length === 0) return "";
+
+  return `
+    <!-- Project Details Card -->
+    <div style="background-color: rgba(248, 250, 252, 0.85); border: 1px solid #e2e8f0; border-radius: 6px; padding: 0; margin-top: 20px; overflow: hidden;">
+      <div style="background-color: rgba(239, 246, 255, 0.9); padding: 12px 20px; border-bottom: 1px solid #dbeafe;">
+        <h3 style="color: #1e40af; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">Project Details</h3>
+      </div>
+      ${rows.join("")}
+    </div>
+  `;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -358,6 +394,17 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Quote not found");
     }
 
+    // Fetch quotation submission details (for customer info)
+    const { data: quotation, error: quotationError } = await supabase
+      .from("quotation_submissions")
+      .select("*")
+      .eq("id", quotationId)
+      .single();
+
+    if (quotationError) {
+      console.error("Error fetching quotation:", quotationError);
+    }
+
     // Fetch line items
     const { data: lineItems, error: lineItemsError } = await supabase
       .from("quote_line_items")
@@ -378,8 +425,12 @@ const handler = async (req: Request): Promise<Response> => {
       ${generateDetailRow("Valid Until", new Date(quote.valid_until).toLocaleDateString())}
     `;
 
+    // Generate project/part details section
+    const projectPartDetails = quotation ? generateProjectPartDetailsSection(quotation, lineItems || []) : "";
+
     // Build line items and totals content
     const lineItemsContent = `
+      ${projectPartDetails}
       ${generateLineItemsTable(lineItems || [])}
       ${generateTotalsSection(quote)}
       ${
