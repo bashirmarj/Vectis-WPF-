@@ -356,7 +356,7 @@ const Index = () => {
                   }}
                 >
                   {/* Image Section */}
-                  <div className="relative h-56 overflow-hidden bg-black/10">
+                  <div className="relative h-56 overflow-hidden bg-black/20">
                     <div
                       className={`absolute inset-0 bg-center bg-no-repeat transition-all duration-700 pointer-events-none ${
                         isHovered ? "grayscale-0 scale-110" : "grayscale"
