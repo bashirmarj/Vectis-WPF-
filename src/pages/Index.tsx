@@ -365,9 +365,9 @@ const Index = () => {
                         backgroundImage: `url(${capability.image}?v=2.0)`,
                         backgroundSize:
                           capability.id === "cnc-machining"
-                            ? "75%"
+                            ? "70%"
                             : capability.id === "wire-edm"
-                              ? "65%"
+                              ? "55%"
                               : capability.id === "sheet-metal"
                                 ? "90%"
                                 : capability.id === "heat-treatment"
