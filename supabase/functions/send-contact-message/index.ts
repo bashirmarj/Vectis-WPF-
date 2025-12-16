@@ -43,7 +43,7 @@ async function sendEmail(accessToken: string, rawEmail: string): Promise<void> {
   }
 }
 
-// Helper to encode email in base64url format
+// Helper to encode email in base64url format (without attachment)
 function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: string): string {
   const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
 
@@ -62,6 +62,67 @@ function encodeEmail(to: string, subject: string, htmlBody: string, replyTo?: st
   messageParts.push("Content-Transfer-Encoding: base64");
   messageParts.push("");
   messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
+
+  const rawMessage = messageParts.join("\r\n");
+
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(rawMessage);
+
+  const chunkSize = 8192;
+  let binaryString = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binaryString += String.fromCharCode(...chunk);
+  }
+
+  const base64 = btoa(binaryString);
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Helper to encode email with file attachment using MIME multipart
+function encodeEmailWithAttachment(
+  to: string, 
+  subject: string, 
+  htmlBody: string, 
+  replyTo: string | undefined,
+  attachment: { fileName: string; content: string; mimeType: string }
+): string {
+  const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
+  const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+  let messageParts = [
+    `From: "Vectis Manufacturing" <${gmailUser}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+  ];
+  
+  if (replyTo) {
+    messageParts.push(`Reply-To: ${replyTo}`);
+  }
+  
+  messageParts.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+  messageParts.push("");
+  
+  // HTML part
+  messageParts.push(`--${boundary}`);
+  messageParts.push(`Content-Type: text/html; charset=utf-8`);
+  messageParts.push(`Content-Transfer-Encoding: base64`);
+  messageParts.push("");
+  messageParts.push(btoa(unescape(encodeURIComponent(htmlBody))));
+  messageParts.push("");
+  
+  // Attachment part
+  messageParts.push(`--${boundary}`);
+  messageParts.push(`Content-Type: ${attachment.mimeType}; name="${attachment.fileName}"`);
+  messageParts.push(`Content-Disposition: attachment; filename="${attachment.fileName}"`);
+  messageParts.push(`Content-Transfer-Encoding: base64`);
+  messageParts.push("");
+  messageParts.push(attachment.content);
+  messageParts.push("");
+  
+  // End boundary
+  messageParts.push(`--${boundary}--`);
 
   const rawMessage = messageParts.join("\r\n");
 
@@ -104,7 +165,11 @@ interface ContactRequest {
     heatTreatmentDetails?: string;
     threadsTolerances?: string;
   };
-  message?: string; // Legacy field for simple contact form
+  message?: string;
+  fileData?: {
+    filePath: string;
+    fileName: string;
+  };
 }
 
 // Helper to generate detail rows
@@ -147,8 +212,10 @@ function generateContactEmailTemplate(options: {
   projectDetailsContent: string;
   partDetailsContent?: string;
   footerText?: string;
+  hasAttachment?: boolean;
+  attachmentName?: string;
 }): string {
-  const { heroTitle, heroSubtitle, projectDetailsContent, partDetailsContent, footerText } = options;
+  const { heroTitle, heroSubtitle, projectDetailsContent, partDetailsContent, footerText, hasAttachment, attachmentName } = options;
 
   return `
     <!DOCTYPE html>
@@ -223,6 +290,15 @@ function generateContactEmailTemplate(options: {
                   </div>
                   ` : ""}
 
+                  ${hasAttachment ? `
+                  <!-- Attachment Notice -->
+                  <div style="margin-top: 20px; text-align: center; padding: 15px; background-color: rgba(240, 253, 244, 0.9); border: 1px solid #bbf7d0; border-radius: 6px;">
+                    <p style="color: #166534; font-size: 14px; font-weight: 500; margin: 0;">
+                      📎 <strong>CAD File Attached:</strong> ${attachmentName}
+                    </p>
+                  </div>
+                  ` : ""}
+
                   <!-- Response Note -->
                   <div style="margin-top: 30px; text-align: center; padding: 20px; background-color: rgba(255, 251, 235, 0.9); border: 1px solid #fcd34d; border-radius: 6px;">
                     <p style="color: #92400e; font-size: 14px; font-weight: 500; margin: 0;">
@@ -264,7 +340,6 @@ const MAX_NAME_LENGTH = 100;
 const MAX_EMAIL_LENGTH = 255;
 const MAX_PHONE_LENGTH = 30;
 const MAX_COMPANY_LENGTH = 200;
-const MAX_MESSAGE_LENGTH = 5000;
 
 function validateContactInput(data: any): { valid: boolean; error?: string } {
   if (!data || typeof data !== 'object') {
@@ -273,7 +348,6 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
   
   const { name, email } = data;
   
-  // Required fields
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return { valid: false, error: 'Name is required' };
   }
@@ -281,7 +355,6 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
     return { valid: false, error: 'Email is required' };
   }
   
-  // Length limits
   if (name.length > MAX_NAME_LENGTH) {
     return { valid: false, error: `Name must be less than ${MAX_NAME_LENGTH} characters` };
   }
@@ -295,7 +368,6 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
     return { valid: false, error: `Company must be less than ${MAX_COMPANY_LENGTH} characters` };
   }
   
-  // Email format
   if (!EMAIL_REGEX.test(email)) {
     return { valid: false, error: 'Invalid email format' };
   }
@@ -306,6 +378,18 @@ function validateContactInput(data: any): { valid: boolean; error?: string } {
 // Sanitize text to prevent XSS
 function sanitizeText(text: string): string {
   return text.replace(/[<>]/g, '').trim();
+}
+
+// Get MIME type for CAD files
+function getMimeType(fileName: string): string {
+  const ext = fileName.toLowerCase().split('.').pop();
+  const mimeTypes: Record<string, string> = {
+    'step': 'application/step',
+    'stp': 'application/step',
+    'iges': 'application/iges',
+    'igs': 'application/iges',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -341,6 +425,7 @@ const handler = async (req: Request): Promise<Response> => {
     const projectDescription = rawBody.projectDescription ? sanitizeText(rawBody.projectDescription) : undefined;
     const message = rawBody.message ? sanitizeText(rawBody.message) : undefined;
     const partDetails = rawBody.partDetails;
+    const fileData = rawBody.fileData;
 
     console.log("Processing contact form from:", email);
 
@@ -376,6 +461,43 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Fetch file from Supabase Storage if fileData is provided
+    let attachment: { fileName: string; content: string; mimeType: string } | null = null;
+    
+    if (fileData?.filePath && fileData?.fileName) {
+      console.log("Fetching file from storage:", fileData.filePath);
+      try {
+        const { data: fileBlob, error: downloadError } = await supabase.storage
+          .from('cad-files')
+          .download(fileData.filePath);
+        
+        if (downloadError) {
+          console.error("Failed to download file:", downloadError);
+        } else if (fileBlob) {
+          const arrayBuffer = await fileBlob.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Convert to base64 in chunks to avoid call stack issues
+          const chunkSize = 8192;
+          let base64Content = "";
+          for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            const chunk = uint8Array.slice(i, i + chunkSize);
+            base64Content += String.fromCharCode(...chunk);
+          }
+          base64Content = btoa(base64Content);
+          
+          attachment = {
+            fileName: fileData.fileName,
+            content: base64Content,
+            mimeType: getMimeType(fileData.fileName),
+          };
+          console.log("File fetched successfully, size:", arrayBuffer.byteLength, "bytes");
+        }
+      } catch (fileError) {
+        console.error("Error fetching file:", fileError);
+      }
+    }
+
     // Generate email HTML
     const emailHtml = generateContactEmailTemplate({
       heroTitle: "New Quote Request",
@@ -383,13 +505,27 @@ const handler = async (req: Request): Promise<Response> => {
       projectDetailsContent: projectDetailsContent,
       partDetailsContent: partDetailsContent || undefined,
       footerText: "This message was sent via the website quote request form.",
+      hasAttachment: !!attachment,
+      attachmentName: attachment?.fileName,
     });
 
     // Get access token and send email
     const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
     const accessToken = await getAccessToken();
 
-    const encodedMessage = encodeEmail(gmailUser, `New Quote Request from ${name}`, emailHtml, email);
+    let encodedMessage: string;
+    if (attachment) {
+      console.log("Sending email with attachment:", attachment.fileName);
+      encodedMessage = encodeEmailWithAttachment(
+        gmailUser, 
+        `New Quote Request from ${name}`, 
+        emailHtml, 
+        email,
+        attachment
+      );
+    } else {
+      encodedMessage = encodeEmail(gmailUser, `New Quote Request from ${name}`, emailHtml, email);
+    }
 
     await sendEmail(accessToken, encodedMessage);
 

@@ -671,7 +671,7 @@ export const PartUploadForm = () => {
         }
       }
 
-      // Send notification email to the company (non-blocking)
+      // Send notification email to the company with file attachment (non-blocking)
       try {
         await supabase.functions.invoke('send-contact-message', {
           body: {
@@ -690,6 +690,10 @@ export const PartUploadForm = () => {
               heatTreatmentDetails: formData.partDetails.heatTreatmentDetails,
               threadsTolerances: formData.partDetails.threadsTolerances,
             },
+            fileData: formData.files[0]?.filePath ? {
+              filePath: formData.files[0].filePath,
+              fileName: formData.files[0].file.name,
+            } : undefined,
           },
         });
         console.log('Contact message email sent successfully');
@@ -704,6 +708,10 @@ export const PartUploadForm = () => {
             customerName: formData.contact.name,
             customerEmail: formData.contact.email,
             quoteNumber: quotation.quote_number,
+            company: formData.contact.company,
+            phone: formData.contact.phone,
+            address: formData.contact.address,
+            projectDescription: formData.contact.projectDescription,
             partDetails: {
               partName: formData.partDetails.partName,
               material: formData.partDetails.material,
