@@ -66,24 +66,6 @@ const Index = () => {
       imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
-      id: "wire-edm",
-      title: "WIRE EDM",
-      shortDescription: "Complex geometries with tight tolerances in hardened materials.",
-      fullDescription:
-        "Our Wire EDM service delivers exceptional precision for intricate cuts in hardened materials. Ideal for aerospace, medical, and tooling applications where conventional machining cannot achieve the required tolerances or geometries.",
-      features: [
-        "Tolerances to ±0.002mm",
-        "Any conductive material",
-        "Complex internal features",
-        "No mechanical stress on workpiece",
-        "Hardened tool steels",
-        "Carbide & exotic alloys",
-      ],
-      image: wireEdmImg,
-      detailImage: "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?q=80&w=1000&auto=format&fit=crop",
-      imageStyle: "bg-[length:65%] bg-center bg-no-repeat",
-    },
-    {
       id: "sheet-metal",
       title: "SHEET METAL",
       shortDescription: "Laser cutting, bending, and assembly for durable enclosures.",
@@ -100,6 +82,24 @@ const Index = () => {
       image: sheetMetalImg,
       detailImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop",
       imageStyle: "bg-[length:81%] bg-center bg-no-repeat",
+    },
+    {
+      id: "wire-edm",
+      title: "WIRE EDM",
+      shortDescription: "Complex geometries with tight tolerances in hardened materials.",
+      fullDescription:
+        "Our Wire EDM service delivers exceptional precision for intricate cuts in hardened materials. Ideal for aerospace, medical, and tooling applications where conventional machining cannot achieve the required tolerances or geometries.",
+      features: [
+        "Tolerances to ±0.002mm",
+        "Any conductive material",
+        "Complex internal features",
+        "No mechanical stress on workpiece",
+        "Hardened tool steels",
+        "Carbide & exotic alloys",
+      ],
+      image: wireEdmImg,
+      detailImage: "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?q=80&w=1000&auto=format&fit=crop",
+      imageStyle: "bg-[length:65%] bg-center bg-no-repeat",
     },
     {
       id: "heat-treatment",
