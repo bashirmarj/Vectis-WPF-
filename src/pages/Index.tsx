@@ -10,6 +10,7 @@ import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import Hero from "@/components/home/Hero";
 import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
+import cncMachiningDetailImg from "@/assets/cnc-machining-detail.png";
 import sheetMetalImg from "@/assets/sheet-metal-new.png";
 import heatTreatmentImg from "@/assets/heat-treatment-new.png";
 import dieCastingImg from "@/assets/die-casting.png";
@@ -61,7 +62,7 @@ const Index = () => {
         "Plastics: ABS, PEEK, POM, Nylon",
       ],
       image: cncMachiningImg,
-      detailImage: "https://images.unsplash.com/photo-1617781525628-89c0a6b32b38?q=80&w=1000&auto=format&fit=crop",
+      detailImage: cncMachiningDetailImg,
       imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
