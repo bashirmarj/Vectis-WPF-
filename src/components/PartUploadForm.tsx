@@ -671,6 +671,47 @@ export const PartUploadForm = () => {
         }
       }
 
+      // Send notification email to the company (non-blocking)
+      try {
+        await supabase.functions.invoke('send-contact-message', {
+          body: {
+            name: formData.contact.name,
+            email: formData.contact.email,
+            phone: formData.contact.phone,
+            company: formData.contact.company,
+            address: formData.contact.address,
+            projectDescription: formData.contact.projectDescription,
+            partDetails: {
+              partName: formData.partDetails.partName,
+              material: formData.partDetails.material,
+              quantity: formData.files[0]?.quantity || 1,
+              finish: formData.partDetails.finish,
+              heatTreatment: formData.partDetails.heatTreatment,
+              heatTreatmentDetails: formData.partDetails.heatTreatmentDetails,
+              threadsTolerances: formData.partDetails.threadsTolerances,
+            },
+          },
+        });
+        console.log('Contact message email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send contact message email:', emailError);
+      }
+
+      // Send confirmation email to the customer (non-blocking)
+      try {
+        await supabase.functions.invoke('send-quote-email', {
+          body: {
+            quotationId: quotation.id,
+            customerEmail: formData.contact.email,
+            customerName: formData.contact.name,
+            quoteNumber: quotation.quote_number,
+          },
+        });
+        console.log('Quote confirmation email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send quote confirmation email:', emailError);
+      }
+
       toast({
         title: "✅ Quote Request Submitted",
         description: "We'll get back to you with a quote soon!",
