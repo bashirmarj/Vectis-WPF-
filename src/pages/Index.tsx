@@ -9,12 +9,12 @@ import AnimatedSection from "@/components/home/AnimatedSection";
 import AnimatedCounter from "@/components/home/AnimatedCounter";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import Hero from "@/components/home/Hero";
-import cncMachiningImg from "@/assets/cnc-machining-showcase.png";
+import cncMachiningImg from "@/assets/cnc-machining-black.png";
 import cncMachiningDetailImg from "@/assets/cnc-machining-detail.png";
-import sheetMetalImg from "@/assets/sheet-metal-new.png";
-import heatTreatmentImg from "@/assets/heat-treatment-new.png";
-import dieCastingImg from "@/assets/die-casting.png";
-import wireEdmImg from "@/assets/wire-edm.png";
+import sheetMetalImg from "@/assets/sheet-metal-black.png";
+import heatTreatmentImg from "@/assets/heat-treatment-black.png";
+import dieCastingImg from "@/assets/die-casting-black.png";
+import wireEdmImg from "@/assets/wire-edm-black.png";
 
 interface Capability {
   id: string;
@@ -354,7 +354,7 @@ const Index = () => {
                   }}
                 >
                   {/* Image Section */}
-                  <div className="relative h-56 overflow-hidden bg-stone-100">
+                  <div className="relative h-56 overflow-hidden bg-black">
                     <div
                       className={`absolute inset-0 bg-center bg-no-repeat transition-all duration-700 pointer-events-none ${
                         isHovered ? "grayscale-0 scale-110" : "grayscale"
