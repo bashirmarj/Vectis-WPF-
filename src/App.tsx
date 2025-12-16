@@ -16,6 +16,7 @@ import PricingSettings from "./pages/admin/PricingSettings";
 import AdminSetup from "./pages/admin/AdminSetup";
 import Validation from "./pages/Validation";
 import NotFound from "./pages/NotFound";
+import CustomerDashboard from "./pages/CustomerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/admin/pricing-settings" element={<PricingSettings />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
             <Route path="/validation" element={<Validation />} />
+            <Route path="/dashboard" element={<CustomerDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
