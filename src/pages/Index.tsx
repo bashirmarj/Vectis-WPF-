@@ -47,88 +47,93 @@ const Index = () => {
 
   const capabilities: Capability[] = [
     {
-      id: 'cnc-machining',
-      title: 'CNC MACHINING',
-      shortDescription: 'Precision 3, 4, & 5-axis milling for complex metal and plastic parts.',
-      fullDescription: 'Leverage our advanced multi-axis machining centers for unparalleled precision. We offer automated turning and milling services optimized for both rapid prototyping and full-scale production runs. Our automated lines ensure consistency across thousands of parts.',
+      id: "cnc-machining",
+      title: "CNC MACHINING",
+      shortDescription: "Precision 3, 4, & 5-axis milling for complex metal and plastic parts.",
+      fullDescription:
+        "Leverage our advanced multi-axis machining centers for unparalleled precision. We offer automated turning and milling services optimized for both rapid prototyping and full-scale production runs. Our automated lines ensure consistency across thousands of parts.",
       features: [
-        '3, 4, & 5-axis simultaneous milling',
-        'Tolerances down to ±0.01mm',
-        'Instant DFM & Quotes',
-        'Production as fast as 1 day',
-        'Metals: Aluminum, Steel, Titanium, Brass',
-        'Plastics: ABS, PEEK, POM, Nylon'
+        "3, 4, & 5-axis simultaneous milling",
+        "Tolerances down to ±0.01mm",
+        "Instant DFM & Quotes",
+        "Production as fast as 1 day",
+        "Metals: Aluminum, Steel, Titanium, Brass",
+        "Plastics: ABS, PEEK, POM, Nylon",
       ],
       image: cncMachiningImg,
-      detailImage: 'https://images.unsplash.com/photo-1617781525628-89c0a6b32b38?q=80&w=1000&auto=format&fit=crop',
+      detailImage: "https://images.unsplash.com/photo-1617781525628-89c0a6b32b38?q=80&w=1000&auto=format&fit=crop",
       imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
-      id: 'wire-edm',
-      title: 'WIRE EDM',
-      shortDescription: 'Complex geometries with tight tolerances in hardened materials.',
-      fullDescription: 'Our Wire EDM service delivers exceptional precision for intricate cuts in hardened materials. Ideal for aerospace, medical, and tooling applications where conventional machining cannot achieve the required tolerances or geometries.',
+      id: "wire-edm",
+      title: "WIRE EDM",
+      shortDescription: "Complex geometries with tight tolerances in hardened materials.",
+      fullDescription:
+        "Our Wire EDM service delivers exceptional precision for intricate cuts in hardened materials. Ideal for aerospace, medical, and tooling applications where conventional machining cannot achieve the required tolerances or geometries.",
       features: [
-        'Tolerances to ±0.002mm',
-        'Any conductive material',
-        'Complex internal features',
-        'No mechanical stress on workpiece',
-        'Hardened tool steels',
-        'Carbide & exotic alloys'
+        "Tolerances to ±0.002mm",
+        "Any conductive material",
+        "Complex internal features",
+        "No mechanical stress on workpiece",
+        "Hardened tool steels",
+        "Carbide & exotic alloys",
       ],
       image: wireEdmImg,
-      detailImage: 'https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?q=80&w=1000&auto=format&fit=crop',
+      detailImage: "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?q=80&w=1000&auto=format&fit=crop",
       imageStyle: "bg-[length:65%] bg-center bg-no-repeat",
     },
     {
-      id: 'sheet-metal',
-      title: 'SHEET METAL',
-      shortDescription: 'Laser cutting, bending, and assembly for durable enclosures.',
-      fullDescription: 'Our sheet metal fabrication services cover the entire production chain. We utilize high-power fiber lasers for clean cuts, CNC brakes for precise bending, and offer full assembly services including welding, riveting, and PEM insertion.',
+      id: "sheet-metal",
+      title: "SHEET METAL",
+      shortDescription: "Laser cutting, bending, and assembly for durable enclosures.",
+      fullDescription:
+        "Our sheet metal fabrication services cover the entire production chain. We utilize high-power fiber lasers for clean cuts, CNC brakes for precise bending, and offer full assembly services including welding, riveting, and PEM insertion.",
       features: [
-        'Laser Cutting & CNC Punching',
-        'Precision Bending & Forming',
-        'TIG, MIG, & Spot Welding',
-        'Hardware Insertion & Riveting',
-        'Powder Coating & Anodizing',
-        'Materials: Aluminum, Steel, Copper'
+        "Laser Cutting & CNC Punching",
+        "Precision Bending & Forming",
+        "TIG, MIG, & Spot Welding",
+        "Hardware Insertion & Riveting",
+        "Powder Coating & Anodizing",
+        "Materials: Aluminum, Steel, Copper",
       ],
       image: sheetMetalImg,
-      detailImage: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop',
-      imageStyle: "bg-[length:85%] bg-center bg-no-repeat",
+      detailImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop",
+      imageStyle: "bg-[length:70%] bg-center bg-no-repeat",
     },
     {
-      id: 'heat-treatment',
-      title: 'HEAT TREATMENT',
-      shortDescription: 'Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment',
-      fullDescription: 'Comprehensive heat treatment services to enhance material properties. From surface hardening to vacuum treatment, we optimize parts for durability, wear resistance, and performance in demanding applications.',
+      id: "heat-treatment",
+      title: "HEAT TREATMENT",
+      shortDescription: "Surface Hardening, PVD/CVD Coating, Chemical and Vacuum Heat Treatment",
+      fullDescription:
+        "Comprehensive heat treatment services to enhance material properties. From surface hardening to vacuum treatment, we optimize parts for durability, wear resistance, and performance in demanding applications.",
       features: [
-        'Surface Hardening',
-        'PVD/CVD Coating',
-        'Vacuum Heat Treatment',
-        'Chemical Treatment',
-        'Stress Relief Annealing',
-        'Hardness Testing & QC'
+        "Surface Hardening",
+        "PVD/CVD Coating",
+        "Vacuum Heat Treatment",
+        "Chemical Treatment",
+        "Stress Relief Annealing",
+        "Hardness Testing & QC",
       ],
       image: heatTreatmentImg,
-      detailImage: 'https://images.unsplash.com/photo-1588622180862-23b006730595?q=80&w=1000&auto=format&fit=crop',
+      detailImage: "https://images.unsplash.com/photo-1588622180862-23b006730595?q=80&w=1000&auto=format&fit=crop",
       imageStyle: "bg-[length:80%] bg-center bg-no-repeat",
     },
     {
-      id: 'die-casting',
-      title: 'DIE CASTING',
-      shortDescription: 'High-volume metal parts with excellent surface finish.',
-      fullDescription: 'Ideal for high-volume production of metal components. Our high-pressure die casting process produces parts with near-net shape, reducing the need for post-machining. Perfect for automotive and consumer electronics housings.',
+      id: "die-casting",
+      title: "DIE CASTING",
+      shortDescription: "High-volume metal parts with excellent surface finish.",
+      fullDescription:
+        "Ideal for high-volume production of metal components. Our high-pressure die casting process produces parts with near-net shape, reducing the need for post-machining. Perfect for automotive and consumer electronics housings.",
       features: [
-        'Materials: Aluminum A380, ADC12, Zinc',
-        'High-pressure die casting',
-        'Hot & Cold chamber machines',
-        'Excellent surface consistency',
-        'Post-machining & finishing included',
-        'Scalable to 100,000+ units'
+        "Materials: Aluminum A380, ADC12, Zinc",
+        "High-pressure die casting",
+        "Hot & Cold chamber machines",
+        "Excellent surface consistency",
+        "Post-machining & finishing included",
+        "Scalable to 100,000+ units",
       ],
       image: dieCastingImg,
-      detailImage: 'https://images.unsplash.com/photo-1533237264842-83675a61fb8c?q=80&w=1000&auto=format&fit=crop',
+      detailImage: "https://images.unsplash.com/photo-1533237264842-83675a61fb8c?q=80&w=1000&auto=format&fit=crop",
     },
   ];
 
@@ -238,7 +243,7 @@ const Index = () => {
 
     const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const delta = clientX - startX;
-    
+
     if (Math.abs(delta) > 5) {
       hasMovedRef.current = true;
     }
@@ -374,7 +379,9 @@ const Index = () => {
                       >
                         Capability
                       </span>
-                      <ArrowUpRight className={`w-5 h-5 text-white transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`} />
+                      <ArrowUpRight
+                        className={`w-5 h-5 text-white transition-opacity duration-300 ${isHovered ? "opacity-100" : "opacity-0"}`}
+                      />
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2 uppercase">{capability.title}</h3>
                     <p
@@ -479,7 +486,7 @@ const Index = () => {
         {selectedCapability && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
             {/* Backdrop */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -488,14 +495,14 @@ const Index = () => {
             />
 
             {/* Modal Content */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-5xl bg-card border border-white/10 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
             >
               {/* Close Button */}
-              <button 
+              <button
                 onClick={closeModal}
                 className="absolute top-4 right-4 z-20 p-2 bg-black/50 text-white hover:bg-primary rounded-full transition-colors"
               >
@@ -504,11 +511,14 @@ const Index = () => {
 
               {/* Left Side: Image */}
               <div className="w-full md:w-2/5 h-52 md:h-auto relative shrink-0">
-                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${selectedCapability.detailImage})` }} />
-                 <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/60 to-transparent" />
-                 <div className="absolute bottom-6 left-6 text-white md:hidden">
-                    <h3 className="text-3xl font-bold uppercase">{selectedCapability.title}</h3>
-                 </div>
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${selectedCapability.detailImage})` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/60 to-transparent" />
+                <div className="absolute bottom-6 left-6 text-white md:hidden">
+                  <h3 className="text-3xl font-bold uppercase">{selectedCapability.title}</h3>
+                </div>
               </div>
 
               {/* Right Side: Content */}
@@ -535,18 +545,21 @@ const Index = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-white/10">
-                   <Button className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 px-6 uppercase tracking-wide" asChild>
-                     <Link to="/contact#send-message">
-                       Get Instant Quote <ArrowRight className="ml-2" size={18} />
-                     </Link>
-                   </Button>
-                   <Button 
-                     onClick={closeModal}
-                     variant="outline"
-                     className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 px-6 uppercase tracking-wide border-white/10"
-                   >
-                     Close Details
-                   </Button>
+                  <Button
+                    className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 px-6 uppercase tracking-wide"
+                    asChild
+                  >
+                    <Link to="/contact#send-message">
+                      Get Instant Quote <ArrowRight className="ml-2" size={18} />
+                    </Link>
+                  </Button>
+                  <Button
+                    onClick={closeModal}
+                    variant="outline"
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 px-6 uppercase tracking-wide border-white/10"
+                  >
+                    Close Details
+                  </Button>
                 </div>
               </div>
             </motion.div>
