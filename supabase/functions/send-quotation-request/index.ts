@@ -365,6 +365,69 @@ function generateDetailRow(label: string, value: string): string {
   `;
 }
 
+// Helper to generate part section header
+function generatePartHeader(partNumber: number): string {
+  return `
+    <div style="background-color: rgba(239, 246, 255, 0.9); padding: 10px 15px; border-top: 2px solid #3b82f6; margin-top: 8px;">
+      <span style="color: #1e40af; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Part ${partNumber}</span>
+    </div>
+  `;
+}
+
+// Helper to parse and format part details from message string
+function parseAndFormatPartDetails(message: string): string {
+  if (!message) return '';
+  
+  // Split by "--- Part Details ---" to separate parts
+  const parts = message.split(/---\s*Part Details\s*---/i);
+  
+  let formattedHtml = '';
+  
+  // First part may contain project-level info (before any Part Details)
+  const projectInfo = parts[0].trim();
+  if (projectInfo && projectInfo.length > 0) {
+    // Parse project info lines
+    const projectLines = projectInfo.split('\n');
+    for (const line of projectLines) {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        const label = line.substring(0, colonIndex).trim();
+        const value = line.substring(colonIndex + 1).trim();
+        if (label && value) {
+          formattedHtml += generateDetailRow(label, value);
+        }
+      }
+    }
+  }
+  
+  // Each subsequent part is a part's details
+  for (let i = 1; i < parts.length; i++) {
+    const partBlock = parts[i].trim();
+    if (!partBlock) continue;
+    
+    // Add a part header
+    formattedHtml += generatePartHeader(i);
+    
+    // Parse each line (e.g., "Part Name: Main body Rev01")
+    const lines = partBlock.split('\n');
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+      
+      const colonIndex = trimmedLine.indexOf(':');
+      if (colonIndex > 0) {
+        const label = trimmedLine.substring(0, colonIndex).trim();
+        const value = trimmedLine.substring(colonIndex + 1).trim();
+        if (label && value) {
+          formattedHtml += generateDetailRow(label, value);
+        }
+      }
+    }
+  }
+  
+  return formattedHtml;
+}
+
 // Helper to generate file list - Table-based for mobile
 function generateFileList(files: FileInfo[], drawingFiles?: FileInfo[]): string {
   const fileItems = files
@@ -513,6 +576,9 @@ const handler = async (req: Request): Promise<Response> => {
           const accessToken = await getAccessToken();
           const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
 
+          // Parse and format part details from message
+          const parsedPartDetails = message ? parseAndFormatPartDetails(message) : '';
+
           // Generate admin email content with all form details
           const adminDetailsContent = `
             ${generateDetailRow("Quote Number", quoteNumber || "Pending")}
@@ -521,12 +587,26 @@ const handler = async (req: Request): Promise<Response> => {
             ${generateDetailRow("Company", company || "N/A")}
             ${generateDetailRow("Email", email)}
             ${generateDetailRow("Phone", phone || "N/A")}
-            ${message ? generateDetailRow("Project Details", message.replace(/\n/g, "<br>")) : ""}
+            ${parsedPartDetails}
           `;
 
           // Simple file list for notification
           const fileListHtml = files.length > 0 
-            ? `<div style="margin-top: 16px;"><strong>Attached Files:</strong><ul>${files.map((f: any) => `<li>${f.name} (${(f.size / 1024).toFixed(1)} KB)</li>`).join("")}</ul></div>`
+            ? `<div style="padding: 10px 15px; background-color: rgba(255,255,255,0.7);">
+                <span style="color: #64748b; font-size: 12px; font-weight: 600; width: 100%; margin-bottom: 6px; display: block;">Uploaded Files</span>
+                ${files.map((f: any) => `
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(255, 255, 255, 0.8); border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 8px;">
+                    <tr>
+                      <td style="padding: 10px; width: 70%; vertical-align: middle;">
+                        <span style="font-size: 13px; color: #334155; font-weight: 500; word-break: break-word;">${f.name}</span>
+                      </td>
+                      <td style="padding: 10px; width: 30%; text-align: right; vertical-align: middle;">
+                        <span style="font-size: 11px; color: #64748b; font-weight: 600;">${(f.size / 1024).toFixed(1)} KB</span>
+                      </td>
+                    </tr>
+                  </table>
+                `).join("")}
+              </div>`
             : "";
 
           const adminEmailHtml = generateUnifiedEmailTemplate({
@@ -540,10 +620,15 @@ const handler = async (req: Request): Promise<Response> => {
             footerText: `${files.length} file(s) uploaded to storage.`,
           });
 
-          // Generate customer email
+          // Generate customer email with full details (same as admin)
           const customerDetailsContent = `
+            ${generateDetailRow("Quote Number", quoteNumber || "Pending")}
+            ${generateDetailRow("Date", new Date().toLocaleDateString())}
+            ${generateDetailRow("Name", name)}
             ${generateDetailRow("Company", company || "N/A")}
-            ${generateDetailRow("Files Submitted", `${files.length} file(s)`)}
+            ${generateDetailRow("Email", email)}
+            ${generateDetailRow("Phone", phone || "N/A")}
+            ${parsedPartDetails}
           `;
 
           const customerEmailHtml = generateUnifiedEmailTemplate({
