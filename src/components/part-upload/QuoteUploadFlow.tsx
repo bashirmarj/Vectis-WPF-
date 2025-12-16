@@ -3,7 +3,7 @@ import { ModeSelector } from './ModeSelector';
 import { FileUploadScreen } from './FileUploadScreen';
 import { QuoteConfigForm } from './QuoteConfigForm';
 import { toast } from 'sonner';
-import { parseCADFile } from '@/lib/geometryAnalyzer';
+import { supabase } from '@/integrations/supabase/client';
 
 type FlowStep = 'mode-selection' | 'upload' | 'configure' | 'project-select';
 type FlowMode = 'quick' | 'project';
@@ -28,59 +28,70 @@ export function QuoteUploadFlow() {
   const [mode, setMode] = useState<FlowMode | null>(null);
   const [files, setFiles] = useState<FileWithAnalysis[]>([]);
 
-  // Analyze CAD file using existing parseCADFile function
+  // Analyze CAD file using backend geometry-service via analyze-cad edge function
   const analyzeFile = useCallback(async (file: File, index: number) => {
     setFiles(prev => prev.map((f, i) => 
-      i === index ? { ...f, isAnalyzing: true, analysisStatus: 'Parsing geometry...', analysisProgress: 30 } : f
+      i === index ? { ...f, isAnalyzing: true, analysisStatus: 'Uploading file...', analysisProgress: 10 } : f
     ));
 
     try {
-      const result = await parseCADFile(file);
+      // 1. Upload to temporary storage
+      const tempPath = `temp/${crypto.randomUUID()}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('cad-files')
+        .upload(tempPath, file);
 
-      if (!result) {
-        throw new Error('Failed to parse CAD file');
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
       setFiles(prev => prev.map((f, i) => 
-        i === index ? { ...f, analysisStatus: 'Processing mesh...', analysisProgress: 70 } : f
+        i === index ? { ...f, analysisStatus: 'Creating signed URL...', analysisProgress: 25 } : f
       ));
 
-      // Convert triangles to mesh data format
-      const vertices: number[] = [];
-      const indices: number[] = [];
-      const normals: number[] = [];
+      // 2. Get signed URL
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('cad-files')
+        .createSignedUrl(tempPath, 3600);
 
-      if (result.triangles) {
-        result.triangles.forEach((tri, triIndex) => {
-          const baseIndex = triIndex * 3;
-          
-          // Add vertices
-          vertices.push(tri.vertices[0].x, tri.vertices[0].y, tri.vertices[0].z);
-          vertices.push(tri.vertices[1].x, tri.vertices[1].y, tri.vertices[1].z);
-          vertices.push(tri.vertices[2].x, tri.vertices[2].y, tri.vertices[2].z);
-          
-          // Add indices
-          indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
-          
-          // Use triangle normal
-          const normal = tri.normal || { x: 0, y: 1, z: 0 };
-          normals.push(normal.x, normal.y, normal.z);
-          normals.push(normal.x, normal.y, normal.z);
-          normals.push(normal.x, normal.y, normal.z);
-        });
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        throw new Error('Failed to create signed URL');
       }
 
-      const meshData = {
-        vertices,
-        indices,
-        normals,
-        triangle_count: result.triangle_count,
-      };
+      setFiles(prev => prev.map((f, i) => 
+        i === index ? { ...f, analysisStatus: 'Analyzing geometry...', analysisProgress: 40 } : f
+      ));
 
+      // 3. Call analyze-cad edge function (routes to geometry-service on Render.com)
+      const { data, error } = await supabase.functions.invoke('analyze-cad', {
+        body: {
+          fileName: file.name,
+          fileUrl: signedUrlData.signedUrl,
+        }
+      });
+
+      if (error) {
+        throw new Error(`Analysis failed: ${error.message}`);
+      }
+
+      setFiles(prev => prev.map((f, i) => 
+        i === index ? { ...f, analysisStatus: 'Processing mesh data...', analysisProgress: 80 } : f
+      ));
+
+      // 4. Fetch mesh data if stored separately (large meshes)
+      let meshData = data.mesh_data;
+      if (data.mesh_storage_url && !meshData) {
+        const meshResponse = await fetch(data.mesh_storage_url);
+        if (meshResponse.ok) {
+          meshData = await meshResponse.json();
+        }
+      }
+
+      // 5. Extract bounding box from response
       const boundingBox = {
-        width: result.part_width_cm,
-        height: result.part_height_cm,
-        depth: result.part_depth_cm,
+        width: data.part_width_cm || 0,
+        height: data.part_height_cm || 0,
+        depth: data.part_depth_cm || 0,
       };
 
       setFiles(prev => prev.map((f, i) => 
@@ -92,17 +103,21 @@ export function QuoteUploadFlow() {
           analysis: {
             meshData,
             boundingBox,
-            volume: result.volume_cm3,
-            surfaceArea: result.surface_area_cm2,
+            volume: data.volume_cm3,
+            surfaceArea: data.surface_area_cm2,
           }
         } : f
       ));
+
+      // Clean up temp file
+      supabase.storage.from('cad-files').remove([tempPath]).catch(console.error);
 
     } catch (error) {
       console.error('Analysis error:', error);
       setFiles(prev => prev.map((f, i) => 
         i === index ? { ...f, isAnalyzing: false, analysis: undefined, analysisStatus: 'Failed' } : f
       ));
+      toast.error(error instanceof Error ? error.message : 'Analysis failed');
     }
   }, []);
 
