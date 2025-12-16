@@ -340,7 +340,7 @@ const Index = () => {
           >
             {capabilitiesData.map((capability, index) => {
               const isHovered = hoveredId === capability.id;
-                return (
+              return (
                 <div
                   key={`${capability.id}-${index}`}
                   onMouseEnter={() => handleMouseEnter(capability.id)}
@@ -365,7 +365,7 @@ const Index = () => {
                         backgroundImage: `url(${capability.image}?v=2.0)`,
                         backgroundSize:
                           capability.id === "cnc-machining"
-                            ? "80%"
+                            ? "75%"
                             : capability.id === "wire-edm"
                               ? "65%"
                               : capability.id === "sheet-metal"
@@ -380,14 +380,14 @@ const Index = () => {
                   {/* Text Section */}
                   <div className="flex-1 p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-primary text-xs font-bold uppercase tracking-widest">
-                        Capability
-                      </span>
+                      <span className="text-primary text-xs font-bold uppercase tracking-widest">Capability</span>
                       <ArrowUpRight
                         className={`w-4 h-4 text-primary transition-transform duration-300 ${isHovered ? "translate-x-1 -translate-y-1" : ""}`}
                       />
                     </div>
-                    <h3 className={`text-xl font-bold mb-2 uppercase transition-colors duration-300 ${isHovered ? "text-primary" : "text-foreground"}`}>
+                    <h3
+                      className={`text-xl font-bold mb-2 uppercase transition-colors duration-300 ${isHovered ? "text-primary" : "text-foreground"}`}
+                    >
                       {capability.title}
                     </h3>
                     <p className="text-muted-foreground text-sm leading-relaxed whitespace-normal">
@@ -410,7 +410,11 @@ const Index = () => {
         {/* View All Button */}
         <div className="container-custom mt-12 text-center">
           <AnimatedSection animation="fadeUp" delay={200}>
-            <Button variant="outline" className="group uppercase tracking-wider border-slate-300 text-slate-800 hover:bg-slate-100" asChild>
+            <Button
+              variant="outline"
+              className="group uppercase tracking-wider border-slate-300 text-slate-800 hover:bg-slate-100"
+              asChild
+            >
               <Link to="/capabilities">
                 Explore All Capabilities{" "}
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -536,7 +540,9 @@ const Index = () => {
                 </p>
 
                 <div className="mb-10">
-                  <h4 className="text-slate-900 font-bold uppercase tracking-widest text-sm mb-4">Key Features & Specs</h4>
+                  <h4 className="text-slate-900 font-bold uppercase tracking-widest text-sm mb-4">
+                    Key Features & Specs
+                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {selectedCapability.features.map((feature, idx) => (
                       <div key={idx} className="flex items-start gap-3">
