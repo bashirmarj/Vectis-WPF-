@@ -576,6 +576,44 @@ const handler = async (req: Request): Promise<Response> => {
           const accessToken = await getAccessToken();
           const gmailUser = Deno.env.get("GMAIL_USER") || "belmarj@vectismanufacturing.com";
 
+          // Download files from storage and prepare attachments for admin email
+          const attachments: Array<{ filename: string; content: string }> = [];
+          
+          for (const file of files) {
+            if (file.path) {
+              try {
+                console.log(`Downloading file from storage: ${file.path}`);
+                const { data, error } = await supabase.storage
+                  .from('cad-files')
+                  .download(file.path);
+                
+                if (data && !error) {
+                  const buffer = await data.arrayBuffer();
+                  const bytes = new Uint8Array(buffer);
+                  
+                  // Convert to base64 in chunks to avoid stack overflow
+                  const chunkSize = 8192;
+                  let binaryString = "";
+                  for (let i = 0; i < bytes.length; i += chunkSize) {
+                    const chunk = bytes.slice(i, i + chunkSize);
+                    binaryString += String.fromCharCode(...chunk);
+                  }
+                  const base64Content = btoa(binaryString);
+                  
+                  attachments.push({
+                    filename: file.name,
+                    content: base64Content
+                  });
+                  console.log(`File downloaded and encoded: ${file.name}`);
+                } else {
+                  console.error(`Failed to download file ${file.path}:`, error);
+                }
+              } catch (downloadError) {
+                console.error(`Error downloading file ${file.path}:`, downloadError);
+              }
+            }
+          }
+
           // Parse and format part details from message
           const parsedPartDetails = message ? parseAndFormatPartDetails(message) : '';
 
@@ -617,7 +655,7 @@ const handler = async (req: Request): Promise<Response> => {
             detailsContent: adminDetailsContent,
             fileListContent: fileListHtml,
             timelineText: `Review and respond within <strong>24-48 Hours</strong>`,
-            footerText: `${files.length} file(s) uploaded to storage.`,
+            footerText: `${attachments.length} file(s) attached to this email.`,
           });
 
           // Generate customer email with full details (same as admin)
@@ -641,16 +679,17 @@ const handler = async (req: Request): Promise<Response> => {
             timelineText: `Estimated Response Time: <strong>24-48 Hours</strong>`,
           });
 
-          // Send admin email
+          // Send admin email WITH attachments
           const adminEncodedMessage = encodeEmailWithAttachments(
             gmailUser,
             `New Part Quotation Request - ${quoteNumber || "New Request"}`,
-            adminEmailHtml
+            adminEmailHtml,
+            attachments
           );
           await sendEmail(accessToken, adminEncodedMessage);
-          console.log("Admin notification email sent");
+          console.log(`Admin notification email sent with ${attachments.length} attachment(s)`);
 
-          // Send customer confirmation email
+          // Send customer confirmation email (without attachments)
           const customerEncodedMessage = encodeEmailWithAttachments(
             email,
             `Quotation Request Received - ${quoteNumber || "Your Request"}`,
