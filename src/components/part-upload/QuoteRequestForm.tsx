@@ -64,6 +64,7 @@ export function QuoteRequestForm() {
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState('As Machined');
   const [heatTreatment, setHeatTreatment] = useState(false);
+  const [heatTreatmentDetails, setHeatTreatmentDetails] = useState('');
   const [tolerances, setTolerances] = useState('');
 
   // File upload state
@@ -144,7 +145,12 @@ export function QuoteRequestForm() {
         if (material) fullMessage += `\nMaterial: ${material}`;
         fullMessage += `\nQuantity: ${quantity}`;
         fullMessage += `\nFinish: ${finish}`;
-        if (heatTreatment) fullMessage += `\nHeat Treatment: Required`;
+        if (heatTreatment) {
+          fullMessage += `\nHeat Treatment: Required`;
+          if (heatTreatmentDetails.trim()) {
+            fullMessage += ` - ${heatTreatmentDetails.trim()}`;
+          }
+        }
         if (tolerances) fullMessage += `\nThreads/Tolerances: ${tolerances}`;
       }
 
@@ -220,6 +226,7 @@ export function QuoteRequestForm() {
       setQuantity(1);
       setFinish('As Machined');
       setHeatTreatment(false);
+      setHeatTreatmentDetails('');
       setTolerances('');
       setFiles([]);
       setPartDetailsOpen(false);
@@ -458,14 +465,27 @@ export function QuoteRequestForm() {
                       <Checkbox
                         id="heatTreatment"
                         checked={heatTreatment}
-                        onCheckedChange={(checked) => setHeatTreatment(checked as boolean)}
+                        onCheckedChange={(checked) => {
+                          setHeatTreatment(checked as boolean);
+                          if (!checked) setHeatTreatmentDetails('');
+                        }}
                         className="border-white/20"
                       />
                       <label htmlFor="heatTreatment" className="text-sm text-white cursor-pointer">
                         Required
                       </label>
                     </div>
-                    <p className="text-xs text-white/60">Check if heat treatment is needed</p>
+                    {heatTreatment && (
+                      <Input
+                        value={heatTreatmentDetails}
+                        onChange={(e) => setHeatTreatmentDetails(e.target.value)}
+                        placeholder="e.g., Hardening to 58-60 HRC, Carburizing, Tempering"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      />
+                    )}
+                    <p className="text-xs text-white/60">
+                      {heatTreatment ? 'Specify the type of heat treatment needed' : 'Check if heat treatment is needed'}
+                    </p>
                   </div>
                 </div>
 
