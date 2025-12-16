@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
 import { useCustomerProjects } from "@/hooks/useCustomerProjects";
+import { generateThumbnail } from "@/lib/thumbnailGenerator";
 
 interface FileWithQuantity {
   file: File;
@@ -449,7 +450,10 @@ export const PartUploadForm = () => {
       for (const fileData of files) {
         // First, save mesh data to cad_meshes if available
         let meshId = null;
+        let thumbnailUrl = null;
+
         if (fileData.meshData && fileData.meshData.vertices?.length > 0) {
+          // Save mesh to database
           const { data: meshRecord, error: meshError } = await supabase
             .from('cad_meshes')
             .insert({
@@ -475,6 +479,38 @@ export const PartUploadForm = () => {
           } else {
             console.warn('Failed to save mesh:', meshError);
           }
+
+          // Generate and upload thumbnail
+          try {
+            console.log('🖼️ Generating thumbnail for:', fileData.file.name);
+            const thumbnailBlob = await generateThumbnail({
+              vertices: fileData.meshData.vertices,
+              indices: fileData.meshData.indices || [],
+              normals: fileData.meshData.normals || [],
+            });
+
+            const thumbnailPath = `${user.id}/${selectedProjectId}/${Date.now()}_${fileData.file.name.replace(/\.[^/.]+$/, '')}_thumb.png`;
+            
+            const { error: uploadError } = await supabase.storage
+              .from('part-thumbnails')
+              .upload(thumbnailPath, thumbnailBlob, {
+                contentType: 'image/png',
+                upsert: true,
+              });
+
+            if (!uploadError) {
+              const { data: publicUrlData } = supabase.storage
+                .from('part-thumbnails')
+                .getPublicUrl(thumbnailPath);
+              
+              thumbnailUrl = publicUrlData.publicUrl;
+              console.log('✅ Thumbnail uploaded:', thumbnailUrl);
+            } else {
+              console.warn('Failed to upload thumbnail:', uploadError);
+            }
+          } catch (thumbError) {
+            console.warn('Failed to generate thumbnail:', thumbError);
+          }
         }
 
         // Create project part
@@ -486,6 +522,7 @@ export const PartUploadForm = () => {
             file_name: fileData.file.name,
             file_path: fileData.filePath || '',
             mesh_id: meshId,
+            thumbnail_url: thumbnailUrl,
             processing_method: fileData.process || 'CNC-Milling',
             material: fileData.material || 'Aluminum 6061',
             quantity: fileData.quantity,
@@ -493,6 +530,7 @@ export const PartUploadForm = () => {
             volume_cm3: fileData.analysis?.volume_cm3 || null,
             surface_area_cm2: fileData.analysis?.surface_area_cm2 || null,
             complexity_score: fileData.analysis?.complexity_score || null,
+            status: 'draft',
           });
 
         if (partError) {
