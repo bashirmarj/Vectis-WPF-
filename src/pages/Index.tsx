@@ -304,7 +304,7 @@ const Index = () => {
       </section>
 
       {/* Capabilities Showcase - Horizontal Marquee */}
-      <section className="relative z-10 py-24 bg-transparent border-t border-slate-200 overflow-hidden">
+      <section id="capabilities" className="relative z-10 py-24 bg-transparent border-t border-slate-200 overflow-hidden">
         {/* Section Header */}
         <div className="container-custom mb-12">
           <AnimatedSection animation="fadeUp">
