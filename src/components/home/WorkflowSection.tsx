@@ -39,37 +39,25 @@ const WorkflowSection: React.FC = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex-1 p-8 border-l border-slate-200 first:border-l-0 border-b md:border-b-0 border-slate-200 cursor-default relative bg-white overflow-hidden"
+                className={`flex-1 p-8 border-l border-slate-200 first:border-l-0 border-b md:border-b-0 border-slate-200 transition-all duration-500 cursor-default relative ${
+                  isActive ? 'bg-slate-50' : 'bg-white hover:bg-slate-50'
+                }`}
               >
-                {/* Gradient Sweep Overlay */}
+                {/* Progress bar at top */}
                 <motion.div 
-                  className="absolute inset-0 pointer-events-none"
-                  initial={{ opacity: 0 }}
+                  className="absolute top-0 left-0 h-[2px] bg-primary"
+                  initial={{ width: '0%' }}
                   animate={{ 
-                    opacity: isActive ? 1 : 0,
+                    width: isActive ? '100%' : '0%',
                   }}
-                  transition={{ duration: 0.4 }}
-                >
-                  {/* Sweeping gradient that moves across */}
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/15 to-transparent"
-                    initial={{ x: '-100%' }}
-                    animate={{ 
-                      x: isActive ? '100%' : '-100%',
-                    }}
-                    transition={{ 
-                      duration: isActive ? 2.5 : 0,
-                      ease: 'linear',
-                    }}
-                  />
-                  {/* Static subtle glow background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-primary/5 to-transparent" />
-                  {/* Glowing border effect */}
-                  <div className="absolute inset-0 border-2 border-primary/20 rounded-sm" />
-                </motion.div>
+                  transition={{ 
+                    duration: isActive ? 2.5 : 0.3,
+                    ease: isActive ? 'linear' : 'easeOut'
+                  }}
+                />
 
                 <motion.span 
-                  className="block text-5xl font-bold mb-6 transition-all duration-300 relative z-10"
+                  className="block text-5xl font-bold mb-6 transition-all duration-300"
                   animate={{
                     color: isActive ? 'hsl(var(--primary))' : 'hsl(222, 47%, 11%)',
                     x: isActive ? 8 : 0,
@@ -78,8 +66,8 @@ const WorkflowSection: React.FC = () => {
                 >
                   {step.id}
                 </motion.span>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 uppercase tracking-wide relative z-10">{step.title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed font-light relative z-10">{step.text}</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 uppercase tracking-wide">{step.title}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed font-light">{step.text}</p>
               </motion.div>
             );
           })}
