@@ -237,19 +237,19 @@ export function QuoteRequestForm() {
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Request a Quote</h1>
-        <p className="text-gray-400 mb-4">Tell us about your part. We typically reply within 24 hours.</p>
+        <p className="text-white/80 mb-4">Tell us about your part. We typically reply within 24 hours.</p>
         
         {/* Feature Badges */}
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <div className="flex items-center gap-2 text-gray-300">
+          <div className="flex items-center gap-2 text-white">
             <Shield className="h-4 w-4 text-primary" />
             <span>Confidential by default</span>
           </div>
-          <div className="flex items-center gap-2 text-gray-300">
+          <div className="flex items-center gap-2 text-white">
             <Ruler className="h-4 w-4 text-primary" />
             <span>GD&T friendly</span>
           </div>
-          <div className="flex items-center gap-2 text-gray-300">
+          <div className="flex items-center gap-2 text-white">
             <Settings className="h-4 w-4 text-primary" />
             <span>HMLV ready</span>
           </div>
@@ -258,17 +258,17 @@ export function QuoteRequestForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Project Details Card */}
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-black/60 border-white/20 backdrop-blur-sm">
           <CardContent className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">Project Details</h2>
-              <span className="text-xs text-gray-400">Faster quotes with CAD or dimensions</span>
+              <span className="text-xs text-white/70">Faster quotes with CAD or dimensions</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Name */}
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-sm text-gray-300 flex items-center gap-2">
+                <Label htmlFor="name" className="text-sm text-white flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Name *
                 </Label>
@@ -277,14 +277,14 @@ export function QuoteRequestForm() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jane Smith"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   required
                 />
               </div>
 
               {/* Company */}
               <div className="space-y-1.5">
-                <Label htmlFor="company" className="text-sm text-gray-300 flex items-center gap-2">
+                <Label htmlFor="company" className="text-sm text-white flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   Company Name *
                 </Label>
@@ -293,14 +293,14 @@ export function QuoteRequestForm() {
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="Acme Manufacturing Ltd."
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   required
                 />
               </div>
 
               {/* Phone */}
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-sm text-gray-300 flex items-center gap-2">
+                <Label htmlFor="phone" className="text-sm text-white flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   Phone Number *
                 </Label>
@@ -310,15 +310,15 @@ export function QuoteRequestForm() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(555) 123-4567"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   required
                 />
-                <p className="text-xs text-gray-500">Include extension if applicable</p>
+                <p className="text-xs text-white/60">Include extension if applicable</p>
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-sm text-gray-300 flex items-center gap-2">
+                <Label htmlFor="email" className="text-sm text-white flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   Email *
                 </Label>
@@ -328,14 +328,14 @@ export function QuoteRequestForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   required
                 />
               </div>
 
               {/* Project Description */}
               <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="description" className="text-sm text-gray-300 flex items-center gap-2">
+                <Label htmlFor="description" className="text-sm text-white flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Project Description *
                 </Label>
@@ -344,10 +344,10 @@ export function QuoteRequestForm() {
                   value={projectDescription}
                   onChange={(e) => setProjectDescription(e.target.value)}
                   placeholder="Briefly describe the part and requirements (material, qty, finish, critical dims, deadline)."
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 min-h-[100px]"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-[100px]"
                   required
                 />
-                <p className="text-xs text-gray-500">If no drawing, a short description is fine.</p>
+                <p className="text-xs text-white/60">If no drawing, a short description is fine.</p>
               </div>
             </div>
           </CardContent>
@@ -355,40 +355,40 @@ export function QuoteRequestForm() {
 
         {/* Part Details Collapsible */}
         <Collapsible open={partDetailsOpen} onOpenChange={setPartDetailsOpen}>
-          <Card className="bg-white/5 border-white/10">
+          <Card className="bg-black/60 border-white/20 backdrop-blur-sm">
             <CollapsibleTrigger asChild>
-              <CardContent className="p-4 cursor-pointer hover:bg-white/5 transition-colors">
+              <CardContent className="p-4 cursor-pointer hover:bg-white/10 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                       <span className={`transform transition-transform ${partDetailsOpen ? 'rotate-90' : ''}`}>▶</span>
                       Part Details (Optional)
                     </h2>
-                    <p className="text-xs text-gray-400 mt-1">Click to expand and provide additional details if you have them</p>
+                    <p className="text-xs text-white/70 mt-1">Click to expand and provide additional details if you have them</p>
                   </div>
                 </div>
               </CardContent>
             </CollapsibleTrigger>
 
             <CollapsibleContent>
-              <CardContent className="p-6 pt-0 space-y-4 border-t border-white/10">
+              <CardContent className="p-6 pt-0 space-y-4 border-t border-white/20">
                 {/* Part Name */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="partName" className="text-sm text-gray-300">Part / Job name</Label>
+                  <Label htmlFor="partName" className="text-sm text-white">Part / Job name</Label>
                   <Input
                     id="partName"
                     value={partName}
                     onChange={(e) => setPartName(e.target.value)}
                     placeholder="e.g., Shaft Holder Rev B"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   />
-                  <p className="text-xs text-gray-500">Enter a descriptive name for your part or job</p>
+                  <p className="text-xs text-white/60">Enter a descriptive name for your part or job</p>
                 </div>
 
                 {/* Material & Quantity Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-gray-300">Material</Label>
+                    <Label className="text-sm text-white">Material</Label>
                     <Select value={material} onValueChange={setMaterial}>
                       <SelectTrigger className="bg-white/10 border-white/20 text-white">
                         <SelectValue placeholder="Select Material" />
@@ -399,11 +399,11 @@ export function QuoteRequestForm() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500">Select closest match</p>
+                    <p className="text-xs text-white/60">Select closest match</p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-gray-300">Quantity</Label>
+                    <Label className="text-sm text-white">Quantity</Label>
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -431,14 +431,14 @@ export function QuoteRequestForm() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500">Total parts needed</p>
+                    <p className="text-xs text-white/60">Total parts needed</p>
                   </div>
                 </div>
 
                 {/* Finish & Heat Treatment Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-gray-300">Finish</Label>
+                    <Label className="text-sm text-white">Finish</Label>
                     <Select value={finish} onValueChange={setFinish}>
                       <SelectTrigger className="bg-white/10 border-white/20 text-white">
                         <SelectValue />
@@ -449,11 +449,11 @@ export function QuoteRequestForm() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500">Leave as 'As Machined' if unsure</p>
+                    <p className="text-xs text-white/60">Leave as 'As Machined' if unsure</p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-gray-300">Heat Treatment</Label>
+                    <Label className="text-sm text-white">Heat Treatment</Label>
                     <div className="flex items-center space-x-2 h-10">
                       <Checkbox
                         id="heatTreatment"
@@ -461,46 +461,46 @@ export function QuoteRequestForm() {
                         onCheckedChange={(checked) => setHeatTreatment(checked as boolean)}
                         className="border-white/20"
                       />
-                      <label htmlFor="heatTreatment" className="text-sm text-gray-300 cursor-pointer">
+                      <label htmlFor="heatTreatment" className="text-sm text-white cursor-pointer">
                         Required
                       </label>
                     </div>
-                    <p className="text-xs text-gray-500">Check if heat treatment is needed</p>
+                    <p className="text-xs text-white/60">Check if heat treatment is needed</p>
                   </div>
                 </div>
 
                 {/* Threads / Tolerances */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="tolerances" className="text-sm text-gray-300">Threads / Tolerances</Label>
+                  <Label htmlFor="tolerances" className="text-sm text-white">Threads / Tolerances</Label>
                   <Textarea
                     id="tolerances"
                     value={tolerances}
                     onChange={(e) => setTolerances(e.target.value)}
                     placeholder="e.g., ±0.001&quot;, 1/4-20 UNC, Ø10 H7, true position 0.05"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   />
-                  <p className="text-xs text-gray-500">Please specify any critical dimensions, threads, or tolerance requirements</p>
+                  <p className="text-xs text-white/60">Please specify any critical dimensions, threads, or tolerance requirements</p>
                 </div>
 
                 {/* File Upload */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-gray-300">Drawings / CAD (optional)</Label>
-                  <p className="text-xs text-gray-500 mb-2">STEP, IGES, DXF, DWG, PDF, images — up to 10 files / 10MB each</p>
+                  <Label className="text-sm text-white">Drawings / CAD (optional)</Label>
+                  <p className="text-xs text-white/60 mb-2">STEP, IGES, DXF, DWG, PDF, images — up to 10 files / 10MB each</p>
                   
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
                       isDragging 
                         ? 'border-primary bg-primary/10' 
-                        : 'border-white/20 hover:border-white/40'
+                        : 'border-white/30 hover:border-white/50'
                     }`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-gray-300">Click to upload files</p>
-                    <p className="text-gray-500 text-sm">or drag and drop</p>
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-white/70" />
+                    <p className="text-white">Click to upload files</p>
+                    <p className="text-white/60 text-sm">or drag and drop</p>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -510,16 +510,16 @@ export function QuoteRequestForm() {
                       onChange={(e) => handleFileSelect(e.target.files)}
                     />
                   </div>
-                  <p className="text-xs text-gray-500">ZIP multiple drawings. Filenames help us match parts.</p>
+                  <p className="text-xs text-white/60">ZIP multiple drawings. Filenames help us match parts.</p>
 
                   {/* Uploaded Files List */}
                   {files.length > 0 && (
                     <div className="space-y-2 mt-3">
                       {files.map((fileData, index) => (
-                        <div key={index} className="flex items-center justify-between bg-white/5 rounded p-2">
+                        <div key={index} className="flex items-center justify-between bg-white/10 rounded p-2">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                            <span className="text-sm text-gray-300 truncate">{fileData.file.name}</span>
+                            <FileText className="h-4 w-4 text-white/70 flex-shrink-0" />
+                            <span className="text-sm text-white truncate">{fileData.file.name}</span>
                             {fileData.status === 'uploading' && (
                               <Loader2 className="h-4 w-4 animate-spin text-primary" />
                             )}
@@ -534,7 +534,7 @@ export function QuoteRequestForm() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-gray-400 hover:text-white"
+                            className="h-6 w-6 text-white/70 hover:text-white"
                             onClick={() => removeFile(index)}
                           >
                             <X className="h-4 w-4" />
@@ -568,26 +568,26 @@ export function QuoteRequestForm() {
       </form>
 
       {/* Footer Feature Badges */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-white/10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-white/20">
         <div className="text-center">
           <Settings className="h-6 w-6 mx-auto mb-2 text-primary" />
           <p className="text-sm font-medium text-white">Tight-tolerance CNC</p>
-          <p className="text-xs text-gray-500">Precision machining to ±0.0001"</p>
+          <p className="text-xs text-white/60">Precision machining to ±0.0001"</p>
         </div>
         <div className="text-center">
           <Award className="h-6 w-6 mx-auto mb-2 text-primary" />
           <p className="text-sm font-medium text-white">35+ years experience</p>
-          <p className="text-xs text-gray-500">Decades of precision mfg</p>
+          <p className="text-xs text-white/60">Decades of precision mfg</p>
         </div>
         <div className="text-center">
           <Clock className="h-6 w-6 mx-auto mb-2 text-primary" />
           <p className="text-sm font-medium text-white">95% on-time delivery</p>
-          <p className="text-xs text-gray-500">Reliable delivery when you need it</p>
+          <p className="text-xs text-white/60">Reliable delivery when you need it</p>
         </div>
         <div className="text-center">
           <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
           <p className="text-sm font-medium text-white">NDA on request</p>
-          <p className="text-xs text-gray-500">Confidential by default</p>
+          <p className="text-xs text-white/60">Confidential by default</p>
         </div>
       </div>
     </div>
