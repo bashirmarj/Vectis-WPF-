@@ -346,9 +346,7 @@ const Index = () => {
                   onMouseEnter={() => handleMouseEnter(capability.id)}
                   onMouseLeave={handleMouseLeave}
                   onClick={() => handleCardClick(capability)}
-                  className={`relative flex-shrink-0 overflow-hidden rounded-sm border select-none shadow-md transition-colors duration-300 cursor-pointer flex flex-col ${
-                    isHovered ? "border-primary" : "border-border"
-                  }`}
+                  className="relative flex-shrink-0 overflow-hidden rounded-xl border border-primary/40 select-none shadow-[0_0_15px_rgba(200,30,50,0.15)] transition-all duration-300 cursor-pointer flex flex-col"
                   style={{
                     height: "400px",
                     width: `${CARD_WIDTH}px`,
