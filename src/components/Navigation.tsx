@@ -84,7 +84,7 @@ const Navigation = () => {
                             </li>)}
                         </ul>
                       </NavigationMenuContent>
-                    </> : <Link to={item.path} className={`inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50 ${isActive(item.path) ? "text-primary bg-primary/10" : "text-slate-900"}`}>
+                    </> : <Link to={item.path} className={`inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50 relative after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left ${isActive(item.path) ? "text-primary after:scale-x-100" : "text-slate-900"}`}>
                       {item.name}
                     </Link>}
                 </NavigationMenuItem>)}
