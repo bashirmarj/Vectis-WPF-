@@ -3,7 +3,7 @@ import { Mail, Phone } from "lucide-react";
 import logo from "@/assets/logo.png";
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  return <footer className="relative z-10 bg-slate-50 text-slate-900 border-t border-slate-200">
+  return <footer className="relative z-10 bg-transparent text-slate-900 border-t border-slate-200">
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
