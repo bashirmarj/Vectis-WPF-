@@ -31,7 +31,7 @@ export const ParticleBackground: React.FC = () => {
     window.addEventListener("resize", resizeCanvas);
 
     // Initialize particles
-    const particleCount = 80;
+    const particleCount = 120;
     particlesRef.current = Array.from({ length: particleCount }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
