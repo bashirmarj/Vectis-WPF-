@@ -266,7 +266,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white">
+    <div className="min-h-screen overflow-x-hidden bg-[#F0EFEA]">
       {/* Fixed Particle Background with CNC image, grid, vignette, and particles */}
       <ParticleBackground />
 
@@ -290,7 +290,7 @@ const Index = () => {
           <div className="grid md:grid-cols-2 gap-8">
             {services.map((service, index) => (
               <AnimatedSection key={index} animation="fadeUp" delay={index * 150}>
-                <div className="h-full bg-white shadow-md border border-slate-200 rounded-xl p-8 hover:border-primary/50 transition-all duration-500 group flex flex-col">
+                <div className="h-full bg-[#F0EFEA] shadow-md border border-slate-200 rounded-xl p-8 hover:border-primary/50 transition-all duration-500 group flex flex-col">
                   <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4 group-hover:text-primary transition-colors">
                     {service.title}
                   </h3>
@@ -473,7 +473,7 @@ const Index = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-5xl bg-white border border-slate-200 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
+              className="relative w-full max-w-5xl bg-[#F0EFEA] border border-slate-200 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
             >
               {/* Close Button */}
               <button
@@ -496,7 +496,7 @@ const Index = () => {
               </div>
 
               {/* Right Side: Content */}
-              <div className="w-full md:w-3/5 p-6 md:p-12 overflow-y-auto bg-white">
+              <div className="w-full md:w-3/5 p-6 md:p-12 overflow-y-auto bg-[#F0EFEA]">
                 <div className="hidden md:block mb-6">
                   <h3 className="text-4xl font-black text-slate-900 uppercase mb-2">{selectedCapability.title}</h3>
                   <div className="h-1 w-20 bg-primary" />
