@@ -51,12 +51,12 @@ const Navigation = () => {
     path: "/contact"
   }];
   const isActive = (path: string) => location.pathname === path;
-  return <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+  return <nav className="fixed top-0 left-0 right-0 z-50 bg-[#F0EFEA]/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-            <div className="bg-white rounded-lg px-2 py-1 border border-slate-200">
+            <div className="bg-[#F0EFEA] rounded-lg px-2 py-1 border border-slate-200">
               <img src={logo} alt="Vectis Manufacturing Logo" className="h-10 w-auto" />
             </div>
             <div className="flex flex-col">
@@ -74,7 +74,7 @@ const Navigation = () => {
                         {item.name}
                       </NavigationMenuTrigger>
                       <NavigationMenuContent>
-                        <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg z-50">
+                        <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-[#F0EFEA]/95 backdrop-blur-md border border-slate-200 shadow-lg z-50">
                           {item.subItems.map(subItem => <li key={subItem.path}>
                               <NavigationMenuLink asChild>
                                 <Link to={subItem.path} className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors text-slate-900 hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary">
@@ -137,7 +137,7 @@ const Navigation = () => {
         </div>
 
         {/* Mobile Menu */}
-        {isOpen && <div className="md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md">
+        {isOpen && <div className="md:hidden border-t border-slate-200 bg-[#F0EFEA]/95 backdrop-blur-md">
             <ScrollArea className="h-[calc(100vh-5rem)]">
               <div className="flex flex-col space-y-2 py-4">
                 {navItems.map(item => <div key={item.path}>
