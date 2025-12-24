@@ -64,7 +64,7 @@ export default {
           red: "hsl(0 84% 60%)",
           redHover: "hsl(0 84% 50%)",
           "red-hover": "hsl(0 84% 50%)",
-          bg: "#ffffff",
+          bg: "#F0EFEA",
           surface: "#f8fafc",
           muted: "#475569",
         },

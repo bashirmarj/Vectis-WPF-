@@ -7,6 +7,24 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Custom scrollbar styling - matches beige theme */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F0EFEA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c7c6c1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a7a3;
+}
+
 /* Premium Chat Widget Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
