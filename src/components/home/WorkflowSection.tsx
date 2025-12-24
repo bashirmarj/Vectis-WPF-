@@ -40,12 +40,13 @@ const WorkflowSection: React.FC = () => {
       <div className="container mx-auto px-6">
         
         {/* Header */}
-        <div className="text-center mb-24">
-          <span className="text-primary font-bold uppercase tracking-widest text-xs mb-3 block">Workflow</span>
-          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 uppercase tracking-tight mb-4">
-            Streamlined Workflow
-          </h2>
-          <p className="text-slate-900 max-w-xl mx-auto text-lg">
+        <div className="mb-16">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-1 bg-primary rounded-full"></div>
+            <span className="text-sm font-mono tracking-[0.2em] text-slate-900 uppercase">Workflow</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900">Streamlined Workflow</h2>
+          <p className="text-slate-900 text-lg mt-4 max-w-2xl">
             From digital file to physical part in record time.
           </p>
         </div>
