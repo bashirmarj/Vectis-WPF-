@@ -53,7 +53,7 @@ const Hero: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.6 }}
-            className="text-slate-600 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light"
+            className="text-slate-900 text-lg md:text-xl max-w-2xl mb-10 leading-relaxed font-light"
           >
             Precision engineering and turnkey manufacturing solutions. We combine traditional craftsmanship with AI-driven automation to deliver parts faster.
           </motion.p>
