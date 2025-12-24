@@ -311,7 +311,7 @@ const Index = () => {
           <AnimatedSection animation="fadeUp">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-1 bg-primary rounded-full"></div>
-              <span className="text-sm font-mono tracking-[0.2em] text-slate-600 uppercase">Our Capabilities</span>
+              <span className="text-sm font-mono tracking-[0.2em] text-slate-900 uppercase">Our Capabilities</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Precision Manufacturing</h2>
           </AnimatedSection>
@@ -436,7 +436,7 @@ const Index = () => {
           </AnimatedSection>
 
           <AnimatedSection animation="fadeUp" delay={150}>
-            <p className="text-slate-600 text-lg mb-8 max-w-2xl mx-auto">
+            <p className="text-slate-900 text-lg mb-8 max-w-2xl mx-auto">
               Let's bring your manufacturing vision to life. Get a quote in under 2 hours.
             </p>
           </AnimatedSection>

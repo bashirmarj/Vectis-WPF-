@@ -14,7 +14,7 @@ const Footer = () => {
               </div>
               <span className="text-xl font-bold text-slate-900">VECTIS</span>
             </div>
-            <p className="text-slate-600 text-sm">
+            <p className="text-slate-900 text-sm">
               Precision manufacturing solutions from design to delivery. Your trusted partner for custom engineering excellence.
             </p>
           </div>
@@ -24,22 +24,22 @@ const Footer = () => {
             <h3 className="font-semibold text-lg mb-4 text-slate-900">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/about" className="text-slate-600 hover:text-primary transition-colors text-sm">
+                <Link to="/about" className="text-slate-900 hover:text-primary transition-colors text-sm">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="text-slate-600 hover:text-primary transition-colors text-sm">
+                <Link to="/services" className="text-slate-900 hover:text-primary transition-colors text-sm">
                   Services
                 </Link>
               </li>
               <li>
-                <Link to="/capabilities" className="text-slate-600 hover:text-primary transition-colors text-sm">
+                <Link to="/capabilities" className="text-slate-900 hover:text-primary transition-colors text-sm">
                   Capabilities
                 </Link>
               </li>
               <li>
-                <Link to="/projects" className="text-slate-600 hover:text-primary transition-colors text-sm">
+                <Link to="/projects" className="text-slate-900 hover:text-primary transition-colors text-sm">
                   Projects
                 </Link>
               </li>
@@ -50,10 +50,10 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold text-lg mb-4 text-slate-900">Services</h3>
             <ul className="space-y-2">
-              <li className="text-slate-600 text-sm">Custom Manufacturing</li>
-              <li className="text-slate-600 text-sm">Prototype Design</li>
-              <li className="text-slate-600 text-sm">Custom Parts & Assemblies</li>
-              <li className="text-slate-600 text-sm">Turnkey Solutions</li>
+              <li className="text-slate-900 text-sm">Custom Manufacturing</li>
+              <li className="text-slate-900 text-sm">Prototype Design</li>
+              <li className="text-slate-900 text-sm">Custom Parts & Assemblies</li>
+              <li className="text-slate-900 text-sm">Turnkey Solutions</li>
             </ul>
           </div>
 
@@ -61,15 +61,15 @@ const Footer = () => {
           <div>
             <h3 className="font-semibold text-lg mb-4 text-slate-900">Contact Us</h3>
             <ul className="space-y-3">
-              <li className="flex items-start space-x-2 text-slate-600 text-sm">
+              <li className="flex items-start space-x-2 text-slate-900 text-sm">
                 <Phone className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>437 433-6300</span>
               </li>
-              <li className="flex items-start space-x-2 text-slate-600 text-sm">
+              <li className="flex items-start space-x-2 text-slate-900 text-sm">
                 <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>info@vectismanufacturing.com</span>
               </li>
-              <li className="flex items-start space-x-2 text-slate-600 text-sm">
+              <li className="flex items-start space-x-2 text-slate-900 text-sm">
                 
                 
               </li>
@@ -77,7 +77,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-slate-200 mt-8 pt-8 text-center text-slate-600 text-sm">
+        <div className="border-t border-slate-200 mt-8 pt-8 text-center text-slate-900 text-sm">
           <p>&copy; {currentYear} Vectis Manufacturing. All rights reserved.</p>
         </div>
       </div>
