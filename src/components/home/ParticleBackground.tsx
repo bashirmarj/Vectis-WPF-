@@ -124,11 +124,11 @@ export const ParticleBackground: React.FC = () => {
       {/* Layer 0: Background Image */}
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${heroBg})` }} />
 
-      {/* Layer 1: Beige background overlay */}
+      {/* Layer 1: White/light background overlay */}
       <div className="absolute inset-0 bg-[#F0EFEA]/50" />
 
-      {/* Layer 3: Subtle vignette - beige tone with subtle depth */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(240,239,234,0)_0%,rgba(240,239,234,0.5)_100%)]" />
+      {/* Layer 3: Subtle vignette - white center to slate-50 edges */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2)_0%,rgba(248,250,252,0.5)_100%)]" />
 
       {/* Layer 4: Interactive particles canvas */}
       <canvas ref={canvasRef} className="absolute inset-0" />
