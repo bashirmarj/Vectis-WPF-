@@ -43,9 +43,9 @@ const WorkflowSection: React.FC = () => {
         <div className="text-center mb-24">
           <span className="text-primary font-bold uppercase tracking-widest text-xs mb-3 block">Workflow</span>
           <h2 className="text-3xl md:text-5xl font-bold text-slate-900 uppercase tracking-tight mb-4">
-            Streamlined <span className="text-slate-400">Workflow</span>
+            Streamlined Workflow
           </h2>
-          <p className="text-slate-500 max-w-xl mx-auto text-lg">
+          <p className="text-slate-900 max-w-xl mx-auto text-lg">
             From digital file to physical part in record time.
           </p>
         </div>
@@ -126,7 +126,7 @@ const WorkflowSection: React.FC = () => {
 
                   {/* --- DESCRIPTION TEXT (Below) --- */}
                   <div className={`transition-all duration-500 max-w-[220px] px-2 ${isActive || isComplete ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
-                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                    <p className="text-sm text-slate-900 font-medium leading-relaxed">
                         {step.text}
                     </p>
                   </div>
