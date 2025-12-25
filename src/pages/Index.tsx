@@ -13,6 +13,7 @@ import WorkflowSection from "@/components/home/WorkflowSection";
 import cncMachiningImg from "@/assets/cnc-machining-black.png";
 import cncMachiningDetailImg from "@/assets/cnc-machining-detail.png";
 import sheetMetalImg from "@/assets/sheet-metal-black.png";
+import sheetMetalDetailImg from "@/assets/sheet-metal-detail.png";
 import heatTreatmentImg from "@/assets/heat-treatment-black.png";
 import dieCastingImg from "@/assets/die-casting-black.png";
 import wireEdmImg from "@/assets/wire-edm-black.png";
@@ -81,7 +82,7 @@ const Index = () => {
         "Materials: Aluminum, Steel, Copper",
       ],
       image: sheetMetalImg,
-      detailImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop",
+      detailImage: sheetMetalDetailImg,
       imageStyle: "bg-[length:81%] bg-center bg-no-repeat",
     },
     {
