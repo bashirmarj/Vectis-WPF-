@@ -54,9 +54,9 @@ const About = () => {
       {/* Mission & Vision */}
       <section className="relative z-10 border-t border-gray-200">
         <div className="container-custom section-spacing">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <AnimatedSection animation="fadeRight">
-              <div className="relative rounded-lg shadow-xl border border-gray-200 overflow-hidden aspect-[4/3]">
+          <div className="grid md:grid-cols-2 gap-12 items-stretch">
+            <AnimatedSection animation="fadeRight" className="h-full">
+              <div className="relative rounded-lg shadow-xl border border-gray-200 overflow-hidden h-full">
                 <img 
                   src={missionHeroImg} 
                   alt="Precision CNC machined part with engineering drawings" 
