@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
-import aboutManufacturingImg from "@/assets/about-manufacturing.jpg";
+import missionHeroImg from "@/assets/mission-hero.png";
 const About = () => {
   const values = [{
     icon: Target,
@@ -56,7 +56,14 @@ const About = () => {
         <div className="container-custom section-spacing">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <AnimatedSection animation="fadeRight">
-              <img src={aboutManufacturingImg} alt="Precision manufacturing equipment at Vectis facility" className="rounded-lg shadow-xl border border-gray-200" />
+              <div className="relative rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+                <img 
+                  src={missionHeroImg} 
+                  alt="Precision CNC machined part with engineering drawings" 
+                  className="w-full h-auto" 
+                />
+                <div className="absolute inset-0 bg-[#F5F5F2]/30"></div>
+              </div>
             </AnimatedSection>
             <AnimatedSection animation="fadeLeft" delay={100}>
               <div className="space-y-8">
