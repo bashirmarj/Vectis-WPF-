@@ -143,11 +143,12 @@ const About = () => {
       <section className="relative z-10 border-t border-gray-200">
         <div className="container-custom section-spacing">
           <AnimatedSection animation="fadeUp">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <div className="flex items-start gap-2 mb-4 justify-center">
-                <div className="w-1 h-8 bg-primary rounded-full"></div>
-                <h2 className="text-3xl font-bold text-black tracking-tight font-mono uppercase">Our Core Values</h2>
+            <div className="max-w-4xl mb-16">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-1 bg-primary rounded-full"></div>
+                <span className="text-sm font-mono tracking-[0.2em] text-black uppercase">Our Values</span>
               </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">Core Principles</h2>
               <p className="text-lg text-black/70">
                 The principles that guide every project and partnership we undertake.
               </p>
