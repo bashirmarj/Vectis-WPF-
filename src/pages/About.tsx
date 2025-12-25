@@ -108,7 +108,7 @@ const About = () => {
             {values.map((value, index) => {
             const Icon = value.icon;
             return <AnimatedSection key={index} animation="fadeUp" delay={index * 100}>
-                  <Card className="h-full bg-white/80 backdrop-blur-md border border-gray-200 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
+                  <Card className="h-full bg-[#F5F5F2] backdrop-blur-md border border-gray-200 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
                     <CardContent className="p-6">
                       <div className="w-14 h-14 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
                         <Icon className="h-7 w-7 text-primary" />
@@ -142,7 +142,7 @@ const About = () => {
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {["Aerospace", "Automotive", "Medical Devices", "Industrial Equipment", "Energy & Power", "Defense & Military"].map((industry, index) => <AnimatedSection key={industry} animation="scaleIn" delay={index * 50}>
-                    <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-lg p-4 font-semibold text-center text-gray-700 hover:border-primary/50 hover:text-primary transition-colors">
+                    <div className="bg-[#F5F5F2] backdrop-blur-md border border-gray-200 rounded-lg p-4 font-semibold text-center text-gray-700 hover:border-primary/50 hover:text-primary transition-colors">
                       {industry}
                     </div>
                   </AnimatedSection>)}
