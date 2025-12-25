@@ -1,11 +1,40 @@
 import { Target, Award, Users, TrendingUp } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import missionHeroImg from "@/assets/mission-hero.png";
+
 const About = () => {
+  const textRef = useRef<HTMLDivElement>(null);
+  const [imageHeight, setImageHeight] = useState<number | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    const textEl = textRef.current;
+    if (!textEl) return;
+
+    const updateHeight = () => {
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      if (isDesktop) {
+        setImageHeight(textEl.offsetHeight);
+      } else {
+        setImageHeight(undefined);
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(textEl);
+    window.addEventListener('resize', updateHeight);
+    updateHeight();
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, []);
+
   const values = [{
     icon: Target,
     title: "Precision First",
@@ -23,6 +52,7 @@ const About = () => {
     title: "Continuous Innovation",
     description: "Investing in the latest technology and techniques to deliver superior results."
   }];
+
   return <div className="min-h-screen bg-[#F5F5F2]">
       <Navigation />
       <ParticleBackground />
@@ -54,9 +84,12 @@ const About = () => {
       {/* Mission & Vision */}
       <section className="relative z-10 border-t border-gray-200">
         <div className="container-custom section-spacing">
-          <div className="grid md:grid-cols-2 gap-12 items-stretch">
-            <AnimatedSection animation="fadeRight" className="h-full">
-              <div className="relative rounded-lg shadow-xl border border-gray-200 overflow-hidden h-full">
+          <div className="grid md:grid-cols-2 gap-12 items-start">
+            <AnimatedSection animation="fadeRight">
+              <div 
+                className="relative rounded-lg shadow-xl border border-gray-200 overflow-hidden"
+                style={{ height: imageHeight ? `${imageHeight}px` : 'auto' }}
+              >
                 <img 
                   src={missionHeroImg} 
                   alt="Precision CNC machined part with engineering drawings" 
@@ -66,7 +99,7 @@ const About = () => {
               </div>
             </AnimatedSection>
             <AnimatedSection animation="fadeLeft" delay={100}>
-              <div className="space-y-8">
+              <div ref={textRef} className="space-y-8">
                 <div>
                   <div className="flex items-start gap-2 mb-4">
                     <div className="w-1 h-8 bg-primary rounded-full"></div>
