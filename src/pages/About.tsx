@@ -192,6 +192,8 @@ const About = () => {
               <p className="text-lg text-black/70 mb-12">
                 Our diverse experience spans multiple sectors, giving us unique insights into the specific challenges and requirements of each industry we serve.
               </p>
+            </div>
+            <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {["Aerospace", "Automotive", "Medical Devices", "Industrial Equipment", "Energy & Power", "Defense & Military"].map((industry, index) => <AnimatedSection key={industry} animation="scaleIn" delay={index * 50}>
                     <div className="bg-[#F5F5F2] backdrop-blur-md border border-gray-200 rounded-lg p-4 font-semibold text-center text-black/80 hover:border-primary/50 hover:text-primary transition-colors">
