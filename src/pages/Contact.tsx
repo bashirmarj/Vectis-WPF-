@@ -128,7 +128,7 @@ const Contact = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[#F5F5F2]">
       <Navigation />
       <ParticleBackground />
 
@@ -138,14 +138,14 @@ const Contact = () => {
           className="absolute inset-0 opacity-20 bg-cover bg-center"
           style={{ backgroundImage: `url(${capabilitiesImg})` }}
         ></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F5F5F2]/60 via-[#F5F5F2]/40 to-[#F5F5F2]"></div>
         <div className="container-custom relative z-10">
           <AnimatedSection animation="fadeUp">
             <div className="max-w-3xl">
-              <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-snug tracking-normal">
+              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-snug tracking-normal">
                 Contact Us
               </h1>
-              <p className="text-xl text-gray-300 leading-relaxed">
+              <p className="text-xl text-gray-600 leading-relaxed">
                 Get in touch to discuss your manufacturing project. Our team is ready to provide expert guidance and competitive quotes.
               </p>
             </div>
@@ -154,17 +154,17 @@ const Contact = () => {
       </section>
 
       {/* Contact Form & Info */}
-      <section className="relative z-10 border-t border-white/5">
+      <section className="relative z-10 border-t border-gray-200">
         <div className="container-custom section-spacing">
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Contact Form */}
             <div className="lg:col-span-2">
               <AnimatedSection animation="fadeRight">
-                <Card className="bg-black/40 backdrop-blur-md border border-white/10" id="send-message">
+                <Card className="bg-white/80 backdrop-blur-md border border-gray-200 shadow-lg" id="send-message">
                   <CardContent className="p-8">
                     <div className="flex items-start gap-2 mb-6">
                       <div className="w-1 h-8 bg-primary rounded-full"></div>
-                      <h2 className="text-3xl font-bold text-white tracking-tight font-mono uppercase">Send Us a Message</h2>
+                      <h2 className="text-3xl font-bold text-gray-900 tracking-tight font-mono uppercase">Send Us a Message</h2>
                     </div>
                     {isRateLimited && rateLimitRemaining && (
                       <div className="mb-6 p-4 bg-destructive/20 border border-destructive/30 rounded-lg">
@@ -176,7 +176,7 @@ const Contact = () => {
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
-                          <label htmlFor="name" className="block text-sm font-semibold mb-2 text-gray-300">
+                          <label htmlFor="name" className="block text-sm font-semibold mb-2 text-gray-700">
                             Name *
                           </label>
                           <Input
@@ -186,11 +186,11 @@ const Contact = () => {
                             onChange={handleChange}
                             required
                             placeholder="John Doe"
-                            className="bg-black/50 border-white/20 text-white placeholder:text-gray-500 focus:border-primary"
+                            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-primary"
                           />
                         </div>
                         <div>
-                          <label htmlFor="email" className="block text-sm font-semibold mb-2 text-gray-300">
+                          <label htmlFor="email" className="block text-sm font-semibold mb-2 text-gray-700">
                             Email *
                           </label>
                           <Input
@@ -201,13 +201,13 @@ const Contact = () => {
                             onChange={handleChange}
                             required
                             placeholder="john@company.com"
-                            className="bg-black/50 border-white/20 text-white placeholder:text-gray-500 focus:border-primary"
+                            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-primary"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label htmlFor="phone" className="block text-sm font-semibold mb-2 text-gray-300">
+                        <label htmlFor="phone" className="block text-sm font-semibold mb-2 text-gray-700">
                           Phone
                         </label>
                         <Input
@@ -217,12 +217,12 @@ const Contact = () => {
                           value={formData.phone}
                           onChange={handleChange}
                           placeholder="(123) 456-7890"
-                          className="bg-black/50 border-white/20 text-white placeholder:text-gray-500 focus:border-primary"
+                          className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-primary"
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="message" className="block text-sm font-semibold mb-2 text-gray-300">
+                        <label htmlFor="message" className="block text-sm font-semibold mb-2 text-gray-700">
                           Message *
                         </label>
                         <Textarea
@@ -233,7 +233,7 @@ const Contact = () => {
                           required
                           rows={6}
                           placeholder="Please provide details about your inquiry..."
-                          className="bg-black/50 border-white/20 text-white placeholder:text-gray-500 focus:border-primary resize-none"
+                          className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-primary resize-none"
                         />
                       </div>
 
@@ -257,16 +257,16 @@ const Contact = () => {
                 const Icon = info.icon;
                 return (
                   <AnimatedSection key={index} animation="fadeLeft" delay={index * 100}>
-                    <Card className="bg-black/40 backdrop-blur-md border border-white/10 hover:border-primary/50 transition-colors">
+                    <Card className="bg-white/80 backdrop-blur-md border border-gray-200 hover:border-primary/50 transition-colors shadow-sm">
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
                             <Icon className="h-6 w-6 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-bold text-lg mb-2 text-white">{info.title}</h3>
+                            <h3 className="font-bold text-lg mb-2 text-gray-900">{info.title}</h3>
                             {info.details.map((detail, idx) => (
-                              <p key={idx} className="text-gray-400 text-sm">
+                              <p key={idx} className="text-gray-600 text-sm">
                                 {detail}
                               </p>
                             ))}
@@ -277,20 +277,6 @@ const Contact = () => {
                   </AnimatedSection>
                 );
               })}
-
-              <AnimatedSection animation="fadeLeft" delay={400}>
-                <Card className="bg-primary/10 border border-primary/30">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-lg mb-2 text-white">Emergency Services</h3>
-                    <p className="text-gray-300 text-sm mb-2">
-                      Need urgent manufacturing support?
-                    </p>
-                    <p className="text-gray-300 text-sm">
-                      24/7 Emergency: <span className="font-bold text-primary">(800) 911-MACH</span>
-                    </p>
-                  </CardContent>
-                </Card>
-              </AnimatedSection>
             </div>
           </div>
         </div>
