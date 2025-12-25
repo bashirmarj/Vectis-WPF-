@@ -13,7 +13,7 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #F0EFEA;
+  background: #F5F5F2;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -55,14 +55,14 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Industrial Manufacturing Color Palette - Beige Theme */
-    --background: 48 16% 93%;
+    /* Industrial Manufacturing Color Palette - Light Beige Theme */
+    --background: 60 12% 95%;
     --foreground: 220 15% 15%;
 
-    --card: 48 16% 93%;
+    --card: 60 12% 95%;
     --card-foreground: 220 15% 15%;
 
-    --popover: 48 16% 93%;
+    --popover: 60 12% 95%;
     --popover-foreground: 220 15% 15%;
 
     /* Primary: Industrial Red */

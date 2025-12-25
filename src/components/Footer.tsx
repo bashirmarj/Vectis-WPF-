@@ -9,7 +9,7 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="bg-[#F0EFEA] rounded-lg px-2 py-1 border border-slate-200">
+              <div className="bg-[#F5F5F2] rounded-lg px-2 py-1 border border-slate-200">
                 <img src={logo} alt="Vectis Manufacturing Logo" className="h-10 w-auto" />
               </div>
               <span className="text-xl font-bold text-slate-900">VECTIS</span>
