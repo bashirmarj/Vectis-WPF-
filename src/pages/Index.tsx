@@ -406,21 +406,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* View All Button */}
-        <div className="container-custom mt-12 text-center">
-          <AnimatedSection animation="fadeUp" delay={200}>
-            <Button
-              variant="outline"
-              className="group uppercase tracking-wider border-slate-300 text-slate-800 hover:bg-slate-100"
-              asChild
-            >
-              <Link to="/capabilities">
-                Explore All Capabilities{" "}
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
-          </AnimatedSection>
-        </div>
       </section>
 
       {/* Process Section - Reference Design with Big Numbers */}
