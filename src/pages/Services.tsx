@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
-import precisionManufacturingImg from "@/assets/precision-manufacturing.png";
+import precisionManufacturingImg from "@/assets/precision-manufacturing-worker.png";
 import { PartUploadForm } from "@/components/PartUploadForm";
 const Services = () => {
   return <div className="min-h-screen bg-white">
