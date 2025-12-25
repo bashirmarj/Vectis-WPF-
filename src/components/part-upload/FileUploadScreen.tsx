@@ -76,14 +76,14 @@ export const FileUploadScreen = ({
   
   return (
     <div className="max-w-5xl mx-auto">
-      {/* Dark themed card - matches capabilities cards styling */}
-      <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)] transition-shadow duration-300" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
+      {/* Light themed card - matches website beige theme */}
+      <div className="backdrop-blur-sm border border-gray-300 rounded-sm overflow-hidden shadow-lg" style={{ backgroundColor: "rgba(245, 245, 242, 0.95)" }}>
         {/* Header */}
         <div className="p-6 pb-2">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold text-gray-900">
             {singleFileMode ? 'Upload Your Part' : 'Upload Your Parts'}
           </h2>
-          <p className="text-gray-400 mt-1">
+          <p className="text-gray-600 mt-1">
             {singleFileMode 
               ? 'Upload a STEP or IGES file to get an instant preview and quote'
               : 'Upload STEP or IGES files to get instant quotes for custom manufacturing'
@@ -98,20 +98,20 @@ export const FileUploadScreen = ({
             <div 
               className={`border-2 border-dashed rounded-sm p-12 text-center transition-all duration-200 ${
                 isDragging 
-                  ? 'border-primary bg-primary/10 shadow-[0_0_20px_rgba(255,255,255,0.2)]' 
-                  : 'border-white/20 hover:border-primary/50'
+                  ? 'border-primary bg-primary/10 shadow-lg' 
+                  : 'border-gray-300 hover:border-primary/50'
               }`}
-              style={{ backgroundColor: isDragging ? "rgba(50, 50, 50, 0.85)" : "rgba(50, 50, 50, 0.65)" }}
+              style={{ backgroundColor: isDragging ? "rgba(255, 255, 255, 0.9)" : "rgba(255, 255, 255, 0.7)" }}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              <Upload className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-gray-400'}`} />
-              <p className="text-lg font-medium mb-2 text-white">
+              <Upload className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-primary' : 'text-gray-500'}`} />
+              <p className="text-lg font-medium mb-2 text-gray-900">
                 {isDragging ? 'Drop your file here' : `Drop your CAD file${singleFileMode ? '' : 's'} here`}
               </p>
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm text-gray-600 mb-4">
                 or click to browse (STEP, IGES files supported)
               </p>
               <input
@@ -133,7 +133,7 @@ export const FileUploadScreen = ({
           {/* File List */}
           {files.length > 0 && (
             <div className="space-y-3">
-              <h3 className="font-semibold text-white">
+              <h3 className="font-semibold text-gray-900">
                 {singleFileMode ? 'Selected File' : `Uploaded Files (${files.length})`}
               </h3>
               {files.map((fileItem, index) => {
@@ -152,26 +152,25 @@ export const FileUploadScreen = ({
                   <div
                     key={index}
                   className={`p-4 rounded-sm space-y-3 border ${
-                      failed ? 'border-red-500/30' : 'border-white/10'
+                      failed ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'
                     }`}
-                  style={{ backgroundColor: failed ? "rgba(127, 29, 29, 0.3)" : "rgba(45, 45, 45, 0.6)" }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
                         {failed ? (
-                          <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
                         ) : (
                           <File className="h-5 w-5 text-primary flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate text-white">{fileItem.file.name}</p>
-                          <p className="text-sm text-gray-400">
+                          <p className="font-medium truncate text-gray-900">{fileItem.file.name}</p>
+                          <p className="text-sm text-gray-600">
                             {(fileItem.file.size / 1024).toFixed(2)} KB
                             {fileItem.uploadSpeed && fileItem.isAnalyzing && (
                               <span className="ml-2">• {formatSpeed(fileItem.uploadSpeed)}</span>
                             )}
-                            {failed && <span className="text-red-400 ml-2">• Preview unavailable</span>}
-                            {fileItem.analysis && <span className="text-green-400 ml-2">• Complete</span>}
+                            {failed && <span className="text-red-500 ml-2">• Preview unavailable</span>}
+                            {fileItem.analysis && <span className="text-green-600 ml-2">• Complete</span>}
                           </p>
                         </div>
                       </div>
@@ -184,7 +183,7 @@ export const FileUploadScreen = ({
                             size="sm"
                             variant="outline"
                             onClick={() => onRetryFile(index)}
-                            className="gap-2 border-white/20 text-white hover:bg-white/10"
+                            className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100"
                           >
                             <RefreshCw className="h-4 w-4" />
                             Retry
@@ -195,7 +194,7 @@ export const FileUploadScreen = ({
                           variant="ghost"
                           onClick={() => onRemoveFile(index)}
                           disabled={fileItem.isAnalyzing}
-                          className="text-gray-400 hover:text-white hover:bg-white/10"
+                          className="text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -206,14 +205,14 @@ export const FileUploadScreen = ({
                     {fileItem.isAnalyzing && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400">
+                          <span className="text-gray-600">
                             {fileItem.analysisStatus || 'Processing...'}
                           </span>
                           <span className="font-medium text-primary">
                             {Math.round(totalProgress)}%
                           </span>
                         </div>
-                        <Progress value={totalProgress} className="h-2 bg-gray-700" />
+                        <Progress value={totalProgress} className="h-2 bg-gray-200" />
                       </div>
                     )}
                   </div>
@@ -249,17 +248,17 @@ export const FileUploadScreen = ({
           )}
 
           {isAnalyzing && (
-            <div className="border border-white/10 rounded-sm p-4" style={{ backgroundColor: "rgba(45, 45, 45, 0.6)" }}>
-              <p className="text-gray-300 text-sm">
+            <div className="border border-gray-200 rounded-sm p-4 bg-white">
+              <p className="text-gray-700 text-sm">
                 Analyzing your CAD file{singleFileMode ? '' : 's'}... This may take a moment.
               </p>
             </div>
           )}
 
           {hasFailedFiles && (
-            <div className="border border-white/10 rounded-sm p-4 flex items-start gap-3" style={{ backgroundColor: "rgba(45, 45, 45, 0.6)" }}>
-              <AlertCircle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-              <p className="text-gray-300 text-sm">
+            <div className="border border-gray-200 rounded-sm p-4 flex items-start gap-3 bg-amber-50">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-gray-700 text-sm">
                 Failed to load your step file(s). We will still receive your request and provide you with the quotation.
               </p>
             </div>

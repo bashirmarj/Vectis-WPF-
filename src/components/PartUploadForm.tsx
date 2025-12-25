@@ -833,16 +833,16 @@ export const PartUploadForm = () => {
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-600 hover:text-gray-900"
           >
             ← Back to Mode Selection
           </Button>
         </div>
         <div className="max-w-5xl mx-auto">
-          <div className="backdrop-blur-sm border border-white/20 rounded-sm overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.15)]" style={{ backgroundColor: "rgba(60, 60, 60, 0.75)" }}>
+          <div className="backdrop-blur-sm border border-gray-300 rounded-sm overflow-hidden shadow-lg" style={{ backgroundColor: "rgba(245, 245, 242, 0.95)" }}>
             <div className="p-6 pb-2">
-              <h2 className="text-2xl font-bold text-white">Step 1: Select Project</h2>
-              <p className="text-gray-400 mt-1">
+              <h2 className="text-2xl font-bold text-gray-900">Step 1: Select Project</h2>
+              <p className="text-gray-600 mt-1">
                 Choose an existing project or create a new one to organize your parts
               </p>
             </div>
@@ -879,7 +879,7 @@ export const PartUploadForm = () => {
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-600 hover:text-gray-900"
           >
             ← Back to {uploadMode === 'quick' ? 'Mode Selection' : 'Project Selection'}
           </Button>
