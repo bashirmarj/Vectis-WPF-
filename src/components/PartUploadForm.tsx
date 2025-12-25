@@ -830,13 +830,12 @@ export const PartUploadForm = () => {
     return (
       <div className="space-y-4">
         <div className="max-w-5xl mx-auto">
-          <Button
-            variant="ghost"
+          <button
             onClick={handleBack}
-            className="text-gray-600 hover:text-gray-900"
+            className="inline-flex items-center text-gray-600 hover:text-primary transition-colors relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left font-medium"
           >
             ← Back to Mode Selection
-          </Button>
+          </button>
         </div>
         <div className="max-w-5xl mx-auto">
           <div className="backdrop-blur-sm border border-gray-300 rounded-sm overflow-hidden shadow-lg" style={{ backgroundColor: "rgba(245, 245, 242, 0.95)" }}>
@@ -876,13 +875,12 @@ export const PartUploadForm = () => {
     return (
       <div className="space-y-4">
         <div className="max-w-5xl mx-auto">
-          <Button
-            variant="ghost"
+          <button
             onClick={handleBack}
-            className="text-gray-600 hover:text-gray-900"
+            className="inline-flex items-center text-gray-600 hover:text-primary transition-colors relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left font-medium"
           >
             ← Back to {uploadMode === 'quick' ? 'Mode Selection' : 'Project Selection'}
-          </Button>
+          </button>
         </div>
         <FileUploadScreen
           files={files}
