@@ -461,13 +461,6 @@ const Index = () => {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-5xl bg-[#F5F5F2] border border-slate-200 rounded-2xl shadow-2xl flex flex-col md:flex-row max-h-[85vh] overflow-hidden"
             >
-              {/* Close Button */}
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 z-20 p-2 bg-slate-100 text-slate-900 hover:bg-primary hover:text-white rounded-full transition-colors"
-              >
-                <X size={24} />
-              </button>
 
               {/* Left Side: Image */}
               <div className="w-full md:w-2/5 h-52 md:h-auto relative shrink-0 bg-slate-100">
