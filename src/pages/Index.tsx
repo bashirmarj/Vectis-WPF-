@@ -459,7 +459,7 @@ const Index = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-5xl bg-[#F5F5F2] border border-slate-200 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[75vh] overflow-hidden"
+              className="relative w-full max-w-5xl bg-[#F5F5F2] border border-slate-200 rounded-sm shadow-2xl flex flex-col md:flex-row max-h-[85vh] overflow-hidden"
             >
               {/* Close Button */}
               <button
@@ -470,26 +470,26 @@ const Index = () => {
               </button>
 
               {/* Left Side: Image */}
-              <div className="w-full md:w-2/5 h-52 md:h-auto relative shrink-0">
+              <div className="w-full md:w-2/5 h-52 md:h-auto relative shrink-0 bg-slate-100">
                 <div
-                  className="absolute inset-0 bg-cover bg-center"
+                  className="absolute inset-0 bg-contain bg-center bg-no-repeat"
                   style={{ backgroundImage: `url(${selectedCapability.detailImage})` }}
                 />
               </div>
 
               {/* Right Side: Content */}
-              <div className="w-full md:w-3/5 p-6 md:p-12 overflow-y-auto bg-[#F5F5F2]">
-                <div className="hidden md:block mb-6">
-                  <h3 className="text-4xl font-black text-slate-900 uppercase mb-2">{selectedCapability.title}</h3>
+              <div className="w-full md:w-3/5 p-4 md:p-8 overflow-y-auto bg-[#F5F5F2]">
+                <div className="hidden md:block mb-4">
+                  <h3 className="text-2xl font-black text-slate-900 uppercase mb-2">{selectedCapability.title}</h3>
                   <div className="h-1 w-20 bg-primary" />
                 </div>
 
-                <p className="text-slate-600 text-lg leading-relaxed mb-8 font-light">
+                <p className="text-slate-600 text-base leading-relaxed mb-4 font-light">
                   {selectedCapability.fullDescription}
                 </p>
 
-                <div className="mb-10">
-                  <h4 className="text-slate-900 font-bold uppercase tracking-widest text-sm mb-4">
+                <div className="mb-6">
+                  <h4 className="text-slate-900 font-bold uppercase tracking-widest text-sm mb-3">
                     Key Features & Specs
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
