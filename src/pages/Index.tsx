@@ -475,10 +475,6 @@ const Index = () => {
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: `url(${selectedCapability.detailImage})` }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-slate-900/60 to-transparent" />
-                <div className="absolute bottom-6 left-6 text-white md:hidden">
-                  <h3 className="text-3xl font-bold uppercase">{selectedCapability.title}</h3>
-                </div>
               </div>
 
               {/* Right Side: Content */}
