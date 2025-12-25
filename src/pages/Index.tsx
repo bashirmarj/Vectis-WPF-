@@ -461,6 +461,13 @@ const Index = () => {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-5xl bg-[#F5F5F2] border border-slate-200 rounded-2xl shadow-2xl flex flex-col md:flex-row max-h-[85vh] overflow-hidden"
             >
+              {/* Close Button */}
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 z-20 p-2 bg-slate-100 text-slate-900 hover:bg-primary hover:text-white rounded-full transition-colors"
+              >
+                <X size={24} />
+              </button>
 
               {/* Left Side: Image */}
               <div className="w-full md:w-2/5 h-52 md:h-auto relative shrink-0 bg-slate-100">
@@ -497,19 +504,12 @@ const Index = () => {
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-200">
                   <Button
-                    className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 px-6 uppercase tracking-wide"
+                    className="w-full bg-primary hover:bg-primary/90 text-white py-4 px-6 uppercase tracking-wide"
                     asChild
                   >
                     <Link to="/contact#send-message">
                       Get Instant Quote <ArrowRight className="ml-2" size={18} />
                     </Link>
-                  </Button>
-                  <Button
-                    onClick={closeModal}
-                    variant="outline"
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-900 py-4 px-6 uppercase tracking-wide border-slate-200"
-                  >
-                    Close Details
                   </Button>
                 </div>
               </div>
