@@ -55,14 +55,14 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Industrial Manufacturing Color Palette */
-    --background: 0 0% 98%;
+    /* Industrial Manufacturing Color Palette - Beige Theme */
+    --background: 48 16% 93%;
     --foreground: 220 15% 15%;
 
-    --card: 0 0% 100%;
+    --card: 48 16% 93%;
     --card-foreground: 220 15% 15%;
 
-    --popover: 0 0% 100%;
+    --popover: 48 16% 93%;
     --popover-foreground: 220 15% 15%;
 
     /* Primary: Industrial Red */
