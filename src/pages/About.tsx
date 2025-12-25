@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import AnimatedSection from "@/components/home/AnimatedSection";
 import ParticleBackground from "@/components/home/ParticleBackground";
 import aboutManufacturingImg from "@/assets/about-manufacturing.jpg";
-import capabilitiesImg from "@/assets/capabilities-bg.jpg";
 const About = () => {
   const values = [{
     icon: Target,
@@ -30,10 +29,6 @@ const About = () => {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden z-10">
-        <div className="absolute inset-0 opacity-20 bg-cover bg-center" style={{
-        backgroundImage: `url(${capabilitiesImg})`
-      }}></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#F5F5F2]/60 via-[#F5F5F2]/40 to-[#F5F5F2]"></div>
         <div className="container-custom relative z-10">
           <AnimatedSection animation="fadeUp">
             <div className="max-w-3xl">
