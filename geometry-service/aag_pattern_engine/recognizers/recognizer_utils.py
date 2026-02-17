@@ -354,21 +354,38 @@ def _are_faces_geometrically_continuous(face1_id: int, face2_id: int, aag_graph)
     """
     # Handle both object and dict
     if hasattr(aag_graph, 'nodes'):
-        nodes = aag_graph.nodes
+        raw_nodes = aag_graph.nodes
     elif isinstance(aag_graph, dict) and 'nodes' in aag_graph:
-        nodes = aag_graph['nodes']
+        raw_nodes = aag_graph['nodes']
     else:
         return False
-        
-    node1 = nodes.get(face1_id)
-    node2 = nodes.get(face2_id)
-    
+
+    # Normalize: list of GraphNode objects → dict keyed by face_id
+    if isinstance(raw_nodes, list):
+        nodes_dict = {n.face_id: n for n in raw_nodes if hasattr(n, 'face_id')}
+    else:
+        nodes_dict = raw_nodes
+
+    def _get(node, key, default=None):
+        if isinstance(node, dict):
+            return node.get(key, default)
+        val = getattr(node, key, None)
+        if val is None:
+            val = default
+        # surface_type may be a SurfaceType enum — return its .value string
+        elif key == 'surface_type' and hasattr(val, 'value'):
+            val = val.value
+        return val
+
+    node1 = nodes_dict.get(face1_id)
+    node2 = nodes_dict.get(face2_id)
+
     if not node1 or not node2:
         return False
-        
+
     # Must have same surface type
-    type1 = node1.get('surface_type')
-    type2 = node2.get('surface_type')
+    type1 = _get(node1, 'surface_type')
+    type2 = _get(node2, 'surface_type')
     
     if type1 != type2:
         return False
@@ -376,34 +393,34 @@ def _are_faces_geometrically_continuous(face1_id: int, face2_id: int, aag_graph)
     # For cylinders: check radius and axis alignment
     if type1 == 'cylinder':
         # Check radius
-        r1 = node1.get('radius', 0)
-        r2 = node2.get('radius', 0)
+        r1 = _get(node1, 'radius', 0)
+        r2 = _get(node2, 'radius', 0)
         if abs(r1 - r2) > 1e-4:
             return False
-            
+
         # Check axis alignment
-        axis1 = node1.get('axis', [0,0,1])
-        axis2 = node2.get('axis', [0,0,1])
-        
+        axis1 = _get(node1, 'axis', [0,0,1])
+        axis2 = _get(node2, 'axis', [0,0,1])
+
         # Dot product should be close to 1 (parallel) or -1 (anti-parallel)
         dot = abs(sum(a*b for a,b in zip(axis1, axis2)))
         if dot < 0.99:
             return False
-            
+
         return True
-        
+
     # For planes: check normal alignment and coplanarity
     if type1 == 'plane':
-        normal1 = node1.get('normal', [0,0,1])
-        normal2 = node2.get('normal', [0,0,1])
-        
+        normal1 = _get(node1, 'normal', [0,0,1])
+        normal2 = _get(node2, 'normal', [0,0,1])
+
         dot = abs(sum(a*b for a,b in zip(normal1, normal2)))
         if dot < 0.99:
             return False
-            
+
         # Check coplanarity (distance from plane 1 to center of 2)
-        center2 = node2.get('center', [0,0,0])
-        center1 = node1.get('center', [0,0,0])
+        center2 = _get(node2, 'center', [0,0,0])
+        center1 = _get(node1, 'center', [0,0,0])
         
         # Vector from 1 to 2
         diff = [c2 - c1 for c1, c2 in zip(center1, center2)]

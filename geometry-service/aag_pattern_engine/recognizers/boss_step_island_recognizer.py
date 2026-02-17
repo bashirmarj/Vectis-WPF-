@@ -35,6 +35,8 @@ class BossRecognizer:
     def __init__(self, aag_graph):
         self.aag = aag_graph
         self.detected_bosses = []
+        # Use detected orientation from AAG builder, default Z-up
+        self.up_axis = np.array(getattr(aag_graph, 'up_axis', [0, 0, 1]))
         
     def recognize(self) -> List[Dict]:
         """Main recognition entry point."""
@@ -143,24 +145,24 @@ class BossRecognizer:
         }
         
     def _is_horizontal(self, face_data: Dict) -> bool:
-        """Check if face is horizontal."""
+        """Check if face is horizontal (normal aligned with detected up-axis)."""
         normal = np.array(face_data.get('normal', [0, 0, 1]))
-        z_alignment = abs(normal[2])
-        return z_alignment > (1.0 - HORIZONTAL_TOLERANCE)
+        alignment = abs(np.dot(normal, self.up_axis))
+        return alignment > (1.0 - HORIZONTAL_TOLERANCE)
         
     def _is_vertical_wall(self, top_id: int, wall_id: int) -> bool:
-        """Check if face is vertical wall relative to top."""
+        """Check if face is vertical wall (normal perpendicular to up-axis)."""
         wall_face = self.aag.nodes[wall_id]
-        
+
         surf_type = wall_face.get('surface_type')
         if surf_type not in ['plane', 'cylinder']:
             return False
-            
+
         if surf_type == 'plane':
             normal = np.array(wall_face.get('normal', [0, 0, 1]))
-            z_component = abs(normal[2])
-            return z_component < HORIZONTAL_TOLERANCE
-            
+            up_component = abs(np.dot(normal, self.up_axis))
+            return up_component < HORIZONTAL_TOLERANCE
+
         return True
         
     def _validate_feature_topology(self, top_id: int, wall_ids: List[int]) -> Tuple[bool, str]:
@@ -222,53 +224,72 @@ class BossRecognizer:
         return None
         
     def _compute_height(self, top_id: int, wall_ids: List[int]) -> float:
-        # Compute boss height (Z-extent from base to top).
-        # 
+        # Compute boss height (extent along up-axis from base to top).
+        #
         # Args:
         #     top_id: Top face ID
         #     wall_ids: Wall face IDs
-        #     
+        #
         # Returns:
         #     Height in mm
         all_face_ids = [top_id] + wall_ids
-        
-        z_coords = []
-        
+
+        heights = []
+
         for face_id in all_face_ids:
             face = self.aag.nodes[face_id]
-            center = face.get('center', [0, 0, 0])
-            z_coords.append(center[2])
-            
-        if not z_coords:
+            center = np.array(face.get('center', [0, 0, 0]))
+            heights.append(np.dot(center, self.up_axis))
+
+        if not heights:
             return 0.0
-            
-        height = max(z_coords) - min(z_coords)
-        
-        # Convert to mm if needed
+
+        height = max(heights) - min(heights)
+
+        # Convert to mm if needed (model units may be meters)
         if height < 1.0:
+            height *= 1000.0
+
+        return height
+
+    def _classify_boss_type(self, top_id: int, wall_ids: List[int], height: float) -> str:
+        # Classify boss type based on wall geometry.
+        #
+        # Args:
+        #     top_id: Top face ID
+        #     wall_ids: Wall face IDs
+        #     height: Boss height in mm
+        #
+        # Returns:
+        #     Boss type string
+        planar_walls = 0
+        cylindrical_walls = 0
+
+        for wall_id in wall_ids:
+            wall = self.aag.nodes[wall_id]
             surf_type = wall.get('surface_type')
-            
+
             if surf_type == 'plane':
                 planar_walls += 1
             elif surf_type == 'cylinder':
                 cylindrical_walls += 1
-                
+
         # Classification rules
         if cylindrical_walls > 0 and planar_walls == 0:
             return 'circular_boss'
-            
+
         if planar_walls == 4:
             # Check if step (wide and shallow)
             top = self.aag.nodes[top_id]
             area = top.get('area', 0) * (1000**2)
-            
+
             estimated_width = np.sqrt(area)
-            
+
             if height < estimated_width / 4:
                 return 'step'
             else:
                 return 'rectangular_boss'
-                
+
         return 'irregular_boss'
         
     def _print_statistics(self):

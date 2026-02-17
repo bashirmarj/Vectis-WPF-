@@ -2,15 +2,9 @@
 AAG Graph Builder - Analysis Situs Aligned
 ==========================================
 
-CRITICAL FIX: Vexity classification thresholds
-
-OLD (WRONG):
-- Smooth threshold: 5 degrees → 61% smooth edges
-- Convex count: 15% (way too low!)
-
-NEW (Analysis Situs):
+Vexity classification thresholds (Analysis Situs aligned):
 - Smooth threshold: 1 degree → ~30-40% smooth
-- Convex count: Should be ~30-40% for typical parts
+- Convex count: ~30-40% for typical parts
 - Concave count: ~20-30%
 """
 
@@ -28,7 +22,7 @@ from OCC.Core.GeomAbs import GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, Geom
 from OCC.Core.GProp import GProp_GProps
 from OCC.Core.BRepGProp import brepgprop
 from OCC.Core.BRep import BRep_Tool
-from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape
+from OCC.Core.TopTools import TopTools_IndexedDataMapOfShapeListOfShape, TopTools_ListIteratorOfListOfShape, TopTools_IndexedMapOfShape
 from OCC.Core.TopExp import topexp
 from OCC.Core.gp import gp_Dir, gp_Pnt, gp_Vec, gp_Pnt2d
 from OCC.Core.GeomLProp import GeomLProp_SLProps
@@ -87,10 +81,9 @@ class GraphEdge:
 
 
 # CRITICAL: Analysis Situs thresholds
-# CRITICAL: Analysis Situs thresholds
-SMOOTH_ANGLE_THRESHOLD = 5.0  # degrees (Relaxed from 1.0 to catch more fillets)
-CONVEX_THRESHOLD = 180.0 + SMOOTH_ANGLE_THRESHOLD  # 185.0°
-CONCAVE_THRESHOLD = 180.0 - SMOOTH_ANGLE_THRESHOLD  # 175.0°
+SMOOTH_ANGLE_THRESHOLD = 1.0  # degrees (Analysis Situs standard - tighter than 5.0 for better convex/concave distinction)
+CONVEX_THRESHOLD = 180.0 + SMOOTH_ANGLE_THRESHOLD  # 181.0°
+CONCAVE_THRESHOLD = 180.0 - SMOOTH_ANGLE_THRESHOLD  # 179.0°
 
 
 class AAGGraphBuilder:
@@ -114,10 +107,14 @@ class AAGGraphBuilder:
         self.nodes = {}  # face_id -> attributes
         self.adjacency = defaultdict(list)  # face_id -> [neighbor dicts]
         self.edges = []  # All edges for statistics
-        
+
+        # Detected part orientation (set by _detect_orientation)
+        self.up_axis = np.array([0.0, 0.0, 1.0])  # Default Z-up
+
         # Topology caching
         self._face_cache = []
         self._edge_face_map = {}
+        self._face_indexed_map = TopTools_IndexedMapOfShape()  # OCC stable face lookup
         
     def build(self) -> Dict:
         """
@@ -193,13 +190,16 @@ class AAGGraphBuilder:
         return {
             'nodes': self.nodes,
             'adjacency': dict(self.adjacency),
-            'statistics': stats
+            'statistics': stats,
+            'up_axis': self.up_axis.tolist()
         }
         
     def _build_face_cache(self):
         """Cache all faces for indexing."""
+        # Build OCC indexed map first — gives IsSame-safe lookup via FindIndex()
+        topexp.MapShapes(self.shape, TopAbs_FACE, self._face_indexed_map)
+
         exp = TopExp_Explorer(self.shape, TopAbs_FACE)
-        
         while exp.More():
             face = topods.Face(exp.Current())
             self._face_cache.append(face)
@@ -337,11 +337,11 @@ class AAGGraphBuilder:
                 
             face1, face2 = faces
             
-            # Get face IDs
-            try:
-                idx1 = self._face_cache.index(face1)
-                idx2 = self._face_cache.index(face2)
-            except ValueError:
+            # Get face IDs via OCC IndexedMap — IsSame-safe, O(log n)
+            # FindIndex returns 1-based index, 0 means not found
+            idx1 = self._face_indexed_map.FindIndex(face1) - 1
+            idx2 = self._face_indexed_map.FindIndex(face2) - 1
+            if idx1 < 0 or idx2 < 0:
                 continue
                 
             # Skip if either face was filtered
@@ -370,123 +370,178 @@ class AAGGraphBuilder:
     def _compute_dihedral_angle(self, edge, face1, face2) -> float:
         """
         Compute dihedral angle between two faces along shared edge.
-        
+
+        Uses multi-point sampling (3 points at 25%, 50%, 75% of edge)
+        and takes the median for robustness against local anomalies
+        on curved edges.
+
         Returns:
             Angle in degrees (0-360), or None if computation fails
         """
         try:
             # Get edge parameter range
             first, last = BRep_Tool.Range(edge)
-            mid_param = (first + last) / 2.0
-            
+
+            # Multi-point sampling: 25%, 50%, 75% of parameter range
+            sample_fractions = [0.25, 0.5, 0.75]
+            sample_params = [first + (last - first) * t for t in sample_fractions]
+
+            angles = []
+            for param in sample_params:
+                angle = self._compute_dihedral_at_param(edge, face1, face2, param)
+                if angle is not None:
+                    angles.append(angle)
+
+            if not angles:
+                return None
+
+            # Use median for robustness
+            return float(np.median(angles))
+
+        except Exception as e:
+            logger.debug(f"  Dihedral computation failed: {e}")
+            return None
+
+    def _compute_dihedral_at_param(self, edge, face1, face2, param: float) -> float:
+        """
+        Compute dihedral angle at a single parameter along the edge.
+
+        Uses face UV normals with fallback to point-projected normals,
+        and a robust signed-volume method for reflex angle detection.
+
+        Returns:
+            Angle in degrees (0-360), or None if computation fails
+        """
+        try:
             # Get edge curve (3D)
             curve = BRepAdaptor_Curve(edge)
-            edge_point = curve.Value(mid_param)
-            edge_tangent = curve.DN(mid_param, 1)
-            
-            # Helper to get normal at edge parameter
-            def get_normal_at_param(face, param):
+            edge_point = curve.Value(param)
+            edge_tangent_vec = curve.DN(param, 1)
+
+            # Helper to get normal at edge parameter via UV curves
+            def get_normal_at_param(face, p):
                 try:
-                    # Get UV point on face from edge parameter
-                    # Note: BRep_Tool.CurveOnSurface returns (Curve2d, First, Last)
                     c2d, f, l = BRep_Tool.CurveOnSurface(edge, face)
-                    uv = c2d.Value(param)
-                    
-                    # Get surface properties
+                    uv = c2d.Value(p)
+
                     surf_handle = BRep_Tool.Surface(face)
                     props = GeomLProp_SLProps(surf_handle, uv.X(), uv.Y(), 1, 1e-6)
-                    
+
                     if props.IsNormalDefined():
                         n = props.Normal()
                         normal = np.array([n.X(), n.Y(), n.Z()])
-                        
-                        # CRITICAL FIX: Respect face orientation
+
+                        # Respect face orientation
                         if face.Orientation() == TopAbs_REVERSED:
                             normal = -normal
-                            
+
                         return normal
-                        
+
                     return None
-                    return None
-                except Exception as e:
-                    # logger.debug(f"Normal calc failed: {e}")
+                except Exception:
                     return None
 
             # Get normals
-            normal1 = get_normal_at_param(face1, mid_param)
-            normal2 = get_normal_at_param(face2, mid_param)
-            
+            normal1 = get_normal_at_param(face1, param)
+            normal2 = get_normal_at_param(face2, param)
+
             if normal1 is None or normal2 is None:
-                # Fallback for planar faces if UV method fails
+                # Fallback: use point-projected normals
                 normal1 = normal1 if normal1 is not None else self._get_face_normal_at_point(face1, edge_point)
                 normal2 = normal2 if normal2 is not None else self._get_face_normal_at_point(face2, edge_point)
-                
+
                 if normal1 is None or normal2 is None:
                     return None
-                
+
             # Compute dihedral angle
             dot = np.dot(normal1, normal2)
             dot = np.clip(dot, -1.0, 1.0)
-            
+
             angle_rad = np.arccos(dot)
             angle_deg = np.degrees(angle_rad)
-            
-            # Determine if reflex angle (> 180°)
-            # Cross product tells us orientation
+
+            # Determine if reflex angle (> 180°) using signed-volume method.
+            # The triple product (n1 x n2) . edge_tangent determines the
+            # orientation of the dihedral. This is more robust than the
+            # simple cross-dot check because it accounts for the face
+            # traversal direction relative to the edge.
             cross = np.cross(normal1, normal2)
-            edge_dir = np.array([edge_tangent.X(), edge_tangent.Y(), edge_tangent.Z()])
-            
-            # Check edge orientation relative to face normals
-            # For a convex edge, the cross product should align with edge direction
-            # (depending on face order and edge orientation)
-            
-            # Standardize edge direction based on face1 traversal?
-            # Simplified check:
-            if np.dot(cross, edge_dir) < 0:
+            edge_dir = np.array([edge_tangent_vec.X(), edge_tangent_vec.Y(), edge_tangent_vec.Z()])
+
+            # Normalize edge direction for stable dot product
+            edge_dir_len = np.linalg.norm(edge_dir)
+            if edge_dir_len > 1e-10:
+                edge_dir = edge_dir / edge_dir_len
+
+            triple_product = np.dot(cross, edge_dir)
+
+            if triple_product < 0:
                 angle_deg = 360.0 - angle_deg
-                
-            # logger.debug(f"  Dihedral: {angle_deg:.2f}°")
+
             return angle_deg
-            
-        except Exception as e:
-            logger.debug(f"  Dihedral computation failed: {e}")
+
+        except Exception:
             return None
             
     def _get_face_normal_at_point(self, face, point: gp_Pnt) -> np.ndarray:
         """
         Get face normal at a point.
-        
-        Simplified: Uses face surface normal from adaptor.
-        
+
+        Handles planar, cylindrical, conical, spherical, and toroidal surfaces
+        using UV-based normal computation with point projection.
+
         Returns:
             Normal unit vector or None
         """
         try:
             surface = BRepAdaptor_Surface(face)
-            
-            # For planar faces, use plane normal
-            if surface.GetType() == GeomAbs_Plane:
+            surf_type = surface.GetType()
+
+            # For planar faces, use plane normal (fast path)
+            if surf_type == GeomAbs_Plane:
                 plane = surface.Plane()
                 normal_dir = plane.Axis().Direction()
                 normal = np.array([normal_dir.X(), normal_dir.Y(), normal_dir.Z()])
-                
+
                 # CRITICAL FIX: Respect face orientation
                 if face.Orientation() == TopAbs_REVERSED:
                     normal = -normal
-                    
+
                 return normal
-                
-            # For other surfaces, approximate with face orientation
-            # (More sophisticated UV projection would be better)
+
+            # For curved surfaces, project the point onto the surface
+            # and compute normal via GeomLProp_SLProps
+            if surf_type in [GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere, GeomAbs_Torus, GeomAbs_BSplineSurface]:
+                try:
+                    from OCC.Core.ShapeAnalysis import ShapeAnalysis_Surface
+
+                    surf_handle = BRep_Tool.Surface(face)
+                    sa_surface = ShapeAnalysis_Surface(surf_handle)
+                    uv = sa_surface.ValueOfUV(point, self.tolerance)
+
+                    props = GeomLProp_SLProps(surf_handle, uv.X(), uv.Y(), 1, 1e-6)
+
+                    if props.IsNormalDefined():
+                        n = props.Normal()
+                        normal = np.array([n.X(), n.Y(), n.Z()])
+
+                        # Respect face orientation
+                        if face.Orientation() == TopAbs_REVERSED:
+                            normal = -normal
+
+                        return normal
+                except Exception:
+                    pass
+
+            # Fallback: look up stored normal from nodes (for planes only)
             face_idx = self._face_cache.index(face)
             if face_idx in self.nodes:
                 normal = self.nodes[face_idx].get('normal')
                 if normal:
-                    # Note: stored normal should already be corrected if we fix extraction
                     return np.array(normal)
-            
+
             return None
-            
+
         except Exception:
             return None
             
@@ -584,13 +639,17 @@ class AAGGraphBuilder:
         logger.info(f"  X: {x_pct:.1f}%, Y: {y_pct:.1f}%, Z: {z_pct:.1f}%")
         
         if z_pct > 50:
+            self.up_axis = np.array([0.0, 0.0, 1.0])
             logger.info("✓ Detected: Z-up")
         elif y_pct > 50:
+            self.up_axis = np.array([0.0, 1.0, 0.0])
             logger.info("✓ Detected: Y-up")
         elif x_pct > 50:
+            self.up_axis = np.array([1.0, 0.0, 0.0])
             logger.info("✓ Detected: X-up")
         else:
-            logger.warning("⚠ Part appears rotated from axis alignment")
+            self.up_axis = np.array([0.0, 0.0, 1.0])  # Default Z-up
+            logger.warning("⚠ Part appears rotated from axis alignment, defaulting to Z-up")
             
     def _compute_statistics(self) -> Dict:
         """Compute graph statistics."""

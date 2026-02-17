@@ -45,6 +45,8 @@ class PocketRecognizer:
     def __init__(self, aag_graph):
         self.aag = aag_graph
         self.detected_pockets = []
+        # Use detected orientation from AAG builder, default Z-up
+        self.up_axis = np.array(getattr(aag_graph, 'up_axis', [0, 0, 1]))
         
     def recognize(self) -> List[Dict]:
         """Main recognition entry point."""
@@ -105,29 +107,31 @@ class PocketRecognizer:
             # Get normal of first face
             base_node = self.aag.nodes[fid]
             base_normal = np.array(base_node.get('normal', [0,0,1]))
-            base_z = base_node.get('center', [0,0,0])[2]
-            
+            base_center = np.array(base_node.get('center', [0,0,0]))
+            base_height = np.dot(base_center, self.up_axis)
+
             while queue:
                 current = queue.pop(0)
                 group.append(current)
-                
+
                 # Check neighbors
                 neighbors = self.aag.get_adjacent_faces(current)
                 for nid in neighbors:
                     if nid in visited or nid not in face_set:
                         continue
-                        
+
                     # Check if coplanar
                     node = self.aag.nodes[nid]
                     normal = np.array(node.get('normal', [0,0,1]))
-                    center = node.get('center', [0,0,0])
-                    
+                    center = np.array(node.get('center', [0,0,0]))
+
                     # Check normal alignment
                     if abs(np.dot(base_normal, normal)) < 0.99:
                         continue
-                        
-                    # Check Z-height (coplanarity)
-                    if abs(center[2] - base_z) > 0.001: # 1 micron
+
+                    # Check height along up-axis (coplanarity)
+                    height = np.dot(center, self.up_axis)
+                    if abs(height - base_height) > 0.001:  # 1 micron
                         continue
                         
                     visited.add(nid)
@@ -207,6 +211,32 @@ class PocketRecognizer:
         # Collect all face IDs
         all_faces = bottom_ids + walls
         
+        # Evidence-based confidence scoring
+        confidence = 0.5  # base
+
+        # Has multiple walls (closed pocket boundary)
+        if len(walls) >= 3:
+            confidence += 0.15
+        elif len(walls) >= 2:
+            confidence += 0.1
+
+        # Reasonable depth
+        if depth >= MIN_POCKET_DEPTH:
+            confidence += 0.1
+
+        # Reasonable area
+        if bottom_area >= MIN_POCKET_AREA:
+            confidence += 0.1
+
+        # Has validated concave walls
+        confidence += 0.1
+
+        # Known pocket type (not irregular)
+        if pocket_type != 'irregular_pocket':
+            confidence += 0.05
+
+        confidence = min(1.0, confidence)
+
         pocket_dict = {
             'type': pocket_type,
             'face_ids': all_faces,
@@ -214,53 +244,58 @@ class PocketRecognizer:
             'wall_faces': walls,
             'depth': depth,
             'area': bottom_area,
-            'confidence': 0.8
+            'confidence': confidence
         }
         return standardize_feature_output(pocket_dict)
         
     def _is_horizontal(self, face_data: Dict) -> bool:
         """
-        Check if face is horizontal (normal close to Z-axis).
-        
+        Check if face is horizontal (normal aligned with detected up-axis).
+
+        Uses the detected part orientation rather than hardcoding Z-up,
+        so parts in any orientation are handled correctly.
+
         Args:
             face_data: Face attributes dict
-            
+
         Returns:
             True if horizontal
         """
         normal = np.array(face_data.get('normal', [0, 0, 1]))
-        
-        # Dot product with Z-axis
-        z_alignment = abs(normal[2])
-        
-        return z_alignment > (1.0 - HORIZONTAL_TOLERANCE)
+
+        # Dot product with detected up-axis
+        alignment = abs(np.dot(normal, self.up_axis))
+
+        return alignment > (1.0 - HORIZONTAL_TOLERANCE)
         
     def _is_vertical_wall(self, bottom_id: int, wall_id: int) -> bool:
         """
         Check if face is vertical wall relative to bottom.
-        
+
+        A vertical wall has its normal perpendicular to the detected up-axis.
+
         Args:
             bottom_id: Bottom face ID
             wall_id: Candidate wall face ID
-            
+
         Returns:
             True if valid vertical wall
         """
         wall_face = self.aag.nodes[wall_id]
-        
+
         # Must be planar or cylindrical
         surf_type = wall_face.get('surface_type')
         if surf_type not in ['plane', 'cylinder']:
             return False
-            
-        # For planar walls, check normal is horizontal
+
+        # For planar walls, check normal is perpendicular to up-axis
         if surf_type == 'plane':
             normal = np.array(wall_face.get('normal', [0, 0, 1]))
-            z_component = abs(normal[2])
-            
-            # Should be nearly horizontal (small Z component)
-            return z_component < HORIZONTAL_TOLERANCE
-            
+            up_component = abs(np.dot(normal, self.up_axis))
+
+            # Should be nearly perpendicular (small dot product with up-axis)
+            return up_component < HORIZONTAL_TOLERANCE
+
         # Cylindrical walls always valid
         return True
         
@@ -327,6 +362,8 @@ class PocketRecognizer:
         # Let depth validation downstream handle classification
         
         # Continue with pocket candidate (removed convex filter)
+        return True
+
     def _get_edge_between(self, face1_id: int, face2_id: int) -> Optional[Dict]:
         """Get edge data between two faces."""
         for neighbor in self.aag.adjacency.get(face1_id, []):
@@ -337,35 +374,37 @@ class PocketRecognizer:
         
     def _compute_depth(self, bottom_ids: List[int], wall_ids: List[int]) -> float:
         """
-        Compute pocket depth (Z-extent from bottom to top).
-        
+        Compute pocket depth (extent along up-axis from bottom to top).
+
+        Projects face centers onto the detected up-axis for orientation-
+        independent depth measurement.
+
         Args:
             bottom_ids: List of Bottom face IDs
             wall_ids: Wall face IDs
-            
+
         Returns:
             Depth in mm
         """
-        # Get Z-coordinates of all faces
         all_face_ids = bottom_ids + wall_ids
-        
-        z_coords = []
-        
+
+        heights = []
+
         for face_id in all_face_ids:
             face = self.aag.nodes[face_id]
-            center = face.get('center', [0, 0, 0])
-            z_coords.append(center[2])
-            
-        if not z_coords:
+            center = np.array(face.get('center', [0, 0, 0]))
+            heights.append(np.dot(center, self.up_axis))
+
+        if not heights:
             return 0.0
-            
-        # Depth is Z-range
-        depth = max(z_coords) - min(z_coords)
-        
-        # Convert to mm if needed
+
+        # Depth is range along up-axis
+        depth = max(heights) - min(heights)
+
+        # Convert to mm if needed (model units may be meters)
         if depth < 1.0:
             depth *= 1000.0
-            
+
         return depth
         
     def _classify_pocket_type(self, bottom_ids: List[int], wall_ids: List[int], depth: float) -> str:

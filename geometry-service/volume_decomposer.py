@@ -346,7 +346,7 @@ class VolumeDecomposer:
         
         exp = TopExp_Explorer(shape, TopAbs_FACE)
         while exp.More():
-            face = exp.Current()
+            face = topods.Face(exp.Current())
             surf = BRepAdaptor_Surface(face)
             if surf.GetType() == GeomAbs_Plane:
                 props = GProp_GProps()

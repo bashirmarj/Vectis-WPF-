@@ -154,6 +154,28 @@ class HoleRecognizer:
         # Check if through hole (no planar bottom)
         has_bottom, bottom_type, bottom_angle = self._analyze_bottom(face_id)
         
+        # Evidence-based confidence scoring
+        confidence = 0.5  # base
+
+        # Angular span: full cylinder (close to 360) is strong evidence
+        confidence += 0.2 * min(1.0, angle_deg / 360.0)
+
+        # Bottom validation completed successfully
+        if has_bottom is not None:
+            confidence += 0.1
+
+        # Adjacency topology: holes typically have 1-3 adjacent faces
+        adj_count = len(self.aag.get_adjacent_faces(face_id))
+        if 1 <= adj_count <= 3:
+            confidence += 0.1
+
+        # Reasonable aspect ratio (depth/diameter)
+        aspect = depth / diameter if diameter > 0 else 0
+        if 0.1 <= aspect <= 25.0:
+            confidence += 0.1
+
+        confidence = min(1.0, confidence)
+
         hole_dict = {
             'type': 'through_hole' if not has_bottom else 'blind_hole',
             'face_ids': [face_id],
@@ -169,7 +191,7 @@ class HoleRecognizer:
                 'depth': depth
             }],
             'fullyRecognized': True,
-            'confidence': 0.9
+            'confidence': confidence
         }
         return standardize_feature_output(hole_dict)
         
@@ -306,10 +328,10 @@ class HoleRecognizer:
         # Perpendicular distance
         perp_dist = np.linalg.norm(center_diff - projection_length * axis1)
         
-        # Convert to mm if needed
-        if perp_dist < 1.0:
-            perp_dist *= 1000.0
-            
+        # Convert to mm (assume model is in meters if values are small)
+        # Use same conversion factor as diameter calculation (radius * 2000)
+        perp_dist *= 1000.0
+
         return perp_dist < COAXIAL_TOLERANCE
         
     def _merge_group(self, group: List[Dict], cones: List[Dict]) -> Dict:
