@@ -54,10 +54,10 @@ Given that feature description, do this:
       - Find the highest number N
       - Use N+1 for the new branch number
 
-   d. Run the script `.specify/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS"` with the calculated number and short-name:
+   d. Run the script `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS"` with the calculated number and short-name:
       - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-      - Bash example: `.specify/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS" --number 5 --short-name "user-auth" "Add user authentication"`
-      - PowerShell example: `.specify/scripts/powershell/create-new-feature.ps1 -Json "$ARGUMENTS" -Number 5 -ShortName "user-auth" "Add user authentication"`
+      - Bash example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
+      - PowerShell example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
 
    **IMPORTANT**:
    - Check all three sources (remote branches, local branches, specs directories) to find the highest number
@@ -66,7 +66,7 @@ Given that feature description, do this:
    - You must only ever run this script once per feature
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for
    - The JSON output will contain BRANCH_NAME and SPEC_FILE paths
-   - For single quotes in args like "I'm Groot", use PowerShell single-quote escaping: e.g 'I''m Groot' (or double-quote: "I'm Groot")
+   - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 3. Load `.specify/templates/spec-template.md` to understand required sections.
 
